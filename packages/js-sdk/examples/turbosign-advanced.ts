@@ -48,12 +48,13 @@ async function advancedExample() {
     // If document is pending, you can resend emails
     if (status.status === 'sent') {
       console.log('\nResending signature emails...');
-      await TurboSign.resend(documentId);
+      // Resend to all recipients (empty array or specific recipient IDs)
+      await TurboSign.resend(documentId, []);
       console.log('Emails resent successfully');
     }
 
-    // To cancel a signature request
-    // await TurboSign.void(documentId);
+    // To cancel a signature request (requires a reason)
+    // await TurboSign.void(documentId, 'Document needs to be revised');
     // console.log('Document voided');
 
   } catch (error) {

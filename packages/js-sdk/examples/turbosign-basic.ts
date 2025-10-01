@@ -49,14 +49,20 @@ async function basicSignatureExample() {
           x: 100,
           y: 650,
           width: 200,
-          height: 50
+          height: 50,
+          pageWidth: 612,   // Standard US Letter width in points
+          pageHeight: 792   // Standard US Letter height in points
         },
         {
           type: 'date',
           recipientId: recipients.recipients[0].id,
           page: 1,
           x: 100,
-          y: 600
+          y: 600,
+          width: 150,
+          height: 30,
+          pageWidth: 612,
+          pageHeight: 792
         },
         {
           type: 'signature',
@@ -65,14 +71,20 @@ async function basicSignatureExample() {
           x: 350,
           y: 650,
           width: 200,
-          height: 50
+          height: 50,
+          pageWidth: 612,
+          pageHeight: 792
         },
         {
           type: 'date',
           recipientId: recipients.recipients[1].id,
           page: 1,
           x: 350,
-          y: 600
+          y: 600,
+          width: 150,
+          height: 30,
+          pageWidth: 612,
+          pageHeight: 792
         }
       ],
       webhookUrl: 'https://your-app.com/webhooks/signature-completed',

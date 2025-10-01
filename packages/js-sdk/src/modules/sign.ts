@@ -41,6 +41,7 @@ export class TurboSign {
    *
    * @param file - PDF file to upload (File or Buffer)
    * @param name - Optional custom name for the document
+   * @param description - Optional description for the document
    * @returns Document upload response with documentId
    *
    * @example
@@ -51,7 +52,8 @@ export class TurboSign {
    */
   static async uploadDocument(
     file: File | Buffer,
-    name?: string
+    name?: string,
+    description?: string
   ): Promise<UploadDocumentResponse> {
     const client = this.getClient();
     const additionalData: Record<string, any> = {};
@@ -59,12 +61,51 @@ export class TurboSign {
     if (name) {
       additionalData.name = name;
     }
+    if (description) {
+      additionalData.description = description;
+    }
 
     const response = await client.uploadFile<{ data: UploadDocumentResponse }>(
       '/turbosign/documents/upload',
       file,
       'file',
       additionalData
+    );
+    return response.data;
+  }
+
+  /**
+   * Create a signature document from an existing deliverable
+   *
+   * @param deliverableId - ID of the deliverable to create a signature document from
+   * @param name - Optional custom name for the document
+   * @param description - Optional description for the document
+   * @returns Document upload response with documentId
+   *
+   * @example
+   * ```typescript
+   * const upload = await TurboSign.createFromDeliverable('deliverable-id', 'Contract.pdf');
+   * console.log(upload.documentId);
+   * ```
+   */
+  static async createFromDeliverable(
+    deliverableId: string,
+    name?: string,
+    description?: string
+  ): Promise<UploadDocumentResponse> {
+    const client = this.getClient();
+    const body: Record<string, any> = { deliverableId };
+
+    if (name) {
+      body.name = name;
+    }
+    if (description) {
+      body.description = description;
+    }
+
+    const response = await client.post<{ data: UploadDocumentResponse }>(
+      '/turbosign/documents/from-deliverable',
+      body
     );
     return response.data;
   }
@@ -215,16 +256,20 @@ export class TurboSign {
    * Void a document (cancel signature request)
    *
    * @param documentId - ID of the document to void
+   * @param reason - Reason for voiding the document
    * @returns Void confirmation
    *
    * @example
    * ```typescript
-   * await TurboSign.void(documentId);
+   * await TurboSign.void(documentId, 'Document needs to be revised');
    * ```
    */
-  static async void(documentId: string): Promise<VoidDocumentResponse> {
+  static async void(documentId: string, reason: string): Promise<VoidDocumentResponse> {
     const client = this.getClient();
-    const response = await client.post<{ data: VoidDocumentResponse }>(`/turbosign/documents/${documentId}/void`);
+    const response = await client.post<{ data: VoidDocumentResponse }>(
+      `/turbosign/documents/${documentId}/void`,
+      { reason }
+    );
     return response.data;
   }
 
@@ -232,23 +277,26 @@ export class TurboSign {
    * Resend signature request email to recipients
    *
    * @param documentId - ID of the document
-   * @param recipientId - Optional specific recipient ID to resend to
+   * @param recipientIds - Array of recipient IDs to resend emails to
    * @returns Resend confirmation
    *
    * @example
    * ```typescript
-   * await TurboSign.resend(documentId);
+   * // Resend to specific recipients
+   * await TurboSign.resend(documentId, [recipientId1, recipientId2]);
+   *
+   * // Resend to all recipients
+   * await TurboSign.resend(documentId, []);
    * ```
    */
   static async resend(
     documentId: string,
-    recipientId?: string
+    recipientIds: string[]
   ): Promise<ResendEmailResponse> {
     const client = this.getClient();
-    const body = recipientId ? { recipientIds: [recipientId] } : { recipientIds: [] };
     const response = await client.post<{ data: ResendEmailResponse }>(
       `/turbosign/documents/${documentId}/resend-email`,
-      body
+      { recipientIds }
     );
     return response.data;
   }
