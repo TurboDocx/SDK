@@ -60,12 +60,13 @@ export class TurboSign {
       additionalData.name = name;
     }
 
-    return await client.uploadFile<UploadDocumentResponse>(
-      '/sign/upload',
+    const response = await client.uploadFile<{ data: UploadDocumentResponse }>(
+      '/turbosign/documents/upload',
       file,
-      'document',
+      'file',
       additionalData
     );
+    return response.data;
   }
 
   /**
@@ -88,10 +89,11 @@ export class TurboSign {
     recipients: AddRecipientsRequest['recipients']
   ): Promise<AddRecipientsResponse> {
     const client = this.getClient();
-    return await client.post<AddRecipientsResponse>(
-      `/sign/${documentId}/recipients`,
-      { recipients }
+    const response = await client.post<{ data: AddRecipientsResponse }>(
+      `/turbosign/documents/${documentId}/update-with-recipients`,
+      { document: {}, recipients }
     );
+    return response.data;
   }
 
   /**
@@ -133,10 +135,11 @@ export class TurboSign {
     request: PrepareSigningRequest
   ): Promise<PrepareSigningResponse> {
     const client = this.getClient();
-    return await client.post<PrepareSigningResponse>(
-      `/sign/${documentId}/prepare`,
-      request
+    const response = await client.post<{ data: PrepareSigningResponse }>(
+      `/turbosign/documents/${documentId}/prepare-for-signing`,
+      request.fields
     );
+    return response.data;
   }
 
   /**
@@ -221,7 +224,8 @@ export class TurboSign {
    */
   static async void(documentId: string): Promise<VoidDocumentResponse> {
     const client = this.getClient();
-    return await client.post<VoidDocumentResponse>(`/sign/${documentId}/void`);
+    const response = await client.post<{ data: VoidDocumentResponse }>(`/turbosign/documents/${documentId}/void`);
+    return response.data;
   }
 
   /**
@@ -241,11 +245,12 @@ export class TurboSign {
     recipientId?: string
   ): Promise<ResendEmailResponse> {
     const client = this.getClient();
-    const body = recipientId ? { recipientId } : undefined;
-    return await client.post<ResendEmailResponse>(
-      `/sign/${documentId}/resend`,
+    const body = recipientId ? { recipientIds: [recipientId] } : { recipientIds: [] };
+    const response = await client.post<{ data: ResendEmailResponse }>(
+      `/turbosign/documents/${documentId}/resend-email`,
       body
     );
+    return response.data;
   }
 
   /**
@@ -262,7 +267,8 @@ export class TurboSign {
    */
   static async getAuditTrail(documentId: string): Promise<AuditTrailResponse> {
     const client = this.getClient();
-    return await client.get<AuditTrailResponse>(`/sign/${documentId}/audit-trail`);
+    const response = await client.get<{ data: AuditTrailResponse }>(`/turbosign/documents/${documentId}/audit-trail`);
+    return response.data;
   }
 
   /**
@@ -277,9 +283,10 @@ export class TurboSign {
    * // Save to file or process the PDF
    * ```
    */
-  static async download(documentId: string): Promise<Response> {
+  static async download(documentId: string): Promise<Blob> {
     const client = this.getClient();
-    return await client.get<Response>(`/sign/${documentId}/download`);
+    const response = await client.get<Blob>(`/turbosign/documents/${documentId}/download`);
+    return response;
   }
 
   /**
@@ -296,6 +303,7 @@ export class TurboSign {
    */
   static async getStatus(documentId: string): Promise<DocumentStatusResponse> {
     const client = this.getClient();
-    return await client.get<DocumentStatusResponse>(`/sign/${documentId}`);
+    const response = await client.get<{ data: DocumentStatusResponse }>(`/turbosign/documents/${documentId}/status`);
+    return response.data;
   }
 }

@@ -2,7 +2,17 @@
  * TypeScript types for TurboSign module
  */
 
-export type SignatureFieldType = 'signature' | 'initial' | 'date' | 'text' | 'checkbox';
+export type SignatureFieldType =
+  | 'signature'
+  | 'initial'
+  | 'date'
+  | 'text'
+  | 'full_name'
+  | 'title'
+  | 'company'
+  | 'first_name'
+  | 'last_name'
+  | 'email';
 
 export interface SignatureField {
   /** Type of signature field */
@@ -15,10 +25,18 @@ export interface SignatureField {
   x: number;
   /** Y coordinate position on the page */
   y: number;
-  /** Width of the field (optional) */
-  width?: number;
-  /** Height of the field (optional) */
-  height?: number;
+  /** Width of the field in points (required for coordinate-based fields) */
+  width: number;
+  /** Height of the field in points (required for coordinate-based fields) */
+  height: number;
+  /** Page width in points (required for coordinate-based fields) */
+  pageWidth: number;
+  /** Page height in points (required for coordinate-based fields) */
+  pageHeight: number;
+  /** Default value for the field */
+  defaultValue?: string;
+  /** Whether this is a multiline text field */
+  isMultiline?: boolean;
   /** Whether this field is required */
   required?: boolean;
   /** Label for the field */
