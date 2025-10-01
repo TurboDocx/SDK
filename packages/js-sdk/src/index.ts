@@ -1,25 +1,15 @@
 /**
- * TurboDocx JavaScript SDK
- *
- * Official SDK for TurboDocx API
+ * TurboDocx SDK - Main entry point
  */
 
-export class TurboDocxClient {
-  private apiKey: string;
-  private baseUrl: string;
+// Export modules
+export { TurboSign } from './modules/sign';
 
-  constructor(apiKey: string, baseUrl: string = 'https://api.turbodocx.com') {
-    this.apiKey = apiKey;
-    this.baseUrl = baseUrl;
-  }
+// Export types
+export * from './types/sign';
 
-  /**
-   * Placeholder method - will be generated from OpenAPI specs
-   */
-  async getStatus(): Promise<{ status: string }> {
-    // Implementation will be generated from API specs
-    return { status: 'ok' };
-  }
-}
+// Export errors
+export * from './utils/errors';
 
-export default TurboDocxClient;
+// Export HTTP client config type
+export type { HttpClientConfig } from './http';

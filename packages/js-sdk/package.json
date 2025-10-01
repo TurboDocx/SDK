@@ -1,19 +1,30 @@
 {
   "name": "@turbodocx/sdk",
   "version": "0.1.0",
-  "description": "TurboDocx JavaScript SDK",
+  "description": "TurboDocx JavaScript SDK - Digital signatures, document generation, and AI-powered workflows",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "echo 'no tests yet'"
+    "test": "echo 'no tests yet'",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "turbodocx",
     "document",
     "generation",
     "api",
-    "sdk"
+    "sdk",
+    "signature",
+    "turbosign",
+    "esignature",
+    "digital-signature",
+    "document-automation"
   ],
   "author": "TurboDocx",
   "license": "MIT",
@@ -21,5 +32,12 @@
     "type": "git",
     "url": "https://github.com/TurboDocx/SDK.git",
     "directory": "packages/js-sdk"
+  },
+  "homepage": "https://www.turbodocx.com",
+  "bugs": {
+    "url": "https://github.com/TurboDocx/SDK/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
