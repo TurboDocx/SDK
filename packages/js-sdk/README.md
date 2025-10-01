@@ -10,7 +10,9 @@ npm install @turbodocx/sdk
 
 ## Quick Start
 
-### TurboSign - Digital Signatures
+### ✨ TurboSign - Digital Signatures Made Simple
+
+The easiest way to get documents signed:
 
 ```typescript
 import { TurboSign } from '@turbodocx/sdk';
@@ -20,24 +22,60 @@ TurboSign.configure({
   apiKey: process.env.TURBODOCX_API_KEY
 });
 
-// Upload document and get it signed
-const result = await TurboSign.createSignatureRequest({
+// 🎉 That's it! One method call does everything:
+const result = await TurboSign.send({
   file: pdfBuffer,
   recipients: [
-    { email: 'john@example.com', name: 'John Doe' }
+    { email: 'john@example.com', name: 'John Doe' },
+    { email: 'jane@example.com', name: 'Jane Smith' }
   ],
   fields: [
-    {
-      type: 'signature',
-      recipientId: 'john@example.com',
-      page: 1,
-      x: 100,
-      y: 650
-    }
+    { type: 'signature', page: 1, x: 100, y: 650, recipientIndex: 0 },
+    { type: 'date', page: 1, x: 100, y: 600, recipientIndex: 0 },
+    { type: 'signature', page: 1, x: 350, y: 650, recipientIndex: 1 }
   ]
 });
 
 console.log('Sign URL:', result.recipients[0].signUrl);
+```
+
+**What just happened? 🤔**
+- ✅ Document uploaded
+- ✅ Recipients added with beautiful auto-generated colors
+- ✅ Signing order auto-assigned based on array position (no manual ordering!)
+- ✅ Field sizes auto-filled with smart defaults
+- ✅ Emails sent to all recipients
+- ✅ Ready to sign!
+
+**Want more control?** You can override any defaults:
+
+```typescript
+const result = await TurboSign.send({
+  file: pdfBuffer,
+  fileName: 'Partnership Agreement',  // Custom name
+  description: 'Q1 2025 Partnership Agreement',
+  recipients: [
+    {
+      email: 'ceo@company.com',
+      name: 'Jane CEO',
+      color: 'hsl(200, 75%, 50%)',  // Custom color
+      lightColor: 'hsl(200, 75%, 93%)'
+    }
+  ],
+  fields: [
+    {
+      type: 'signature',
+      page: 1,
+      x: 100,
+      y: 650,
+      width: 250,  // Custom width
+      height: 60,  // Custom height
+      recipientEmail: 'ceo@company.com'  // Use email instead of index
+    }
+  ],
+  webhookUrl: 'https://your-app.com/webhook',
+  sendEmails: false  // Don't send emails yet
+});
 ```
 
 ## Features
@@ -83,9 +121,28 @@ import type { SignatureField, PrepareSigningRequest } from '@turbodocx/sdk';
 
 See the [examples](./examples) directory for complete working examples:
 
-- `turbosign-basic.ts` - Basic 3-step signature workflow
-- `turbosign-complete-workflow.ts` - Streamlined single-call workflow
+- `turbosign-send-simple.ts` - ✨ **Magical one-liner** (recommended for most use cases)
+- `turbosign-send-with-emails.ts` - Using recipientEmail for explicit field assignment
+- `turbosign-basic.ts` - Manual 3-step signature workflow
+- `turbosign-complete-workflow.ts` - Alternative single-call workflow
+- `turbosign-from-deliverable.ts` - Creating signature docs from existing deliverables
 - `turbosign-advanced.ts` - Status checking, downloading, and management
+
+### API Methods
+
+**Recommended (Simplest):**
+- `TurboSign.send()` - ✨ Magical one-liner with intelligent defaults
+
+**Advanced (More Control):**
+- `TurboSign.uploadDocument()` - Upload a PDF
+- `TurboSign.saveDocumentDetails()` - Add/update recipients
+- `TurboSign.prepareForSigning()` - Place fields and send
+- `TurboSign.createFromDeliverable()` - Create from existing document
+- `TurboSign.getStatus()` - Check document status
+- `TurboSign.download()` - Get signed PDF
+- `TurboSign.getAuditTrail()` - Download audit trail
+- `TurboSign.void()` - Cancel signature request
+- `TurboSign.resend()` - Resend to recipients
 
 ## License
 

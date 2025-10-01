@@ -18,9 +18,16 @@ import {
   DocumentFieldResponse,
   SignatureDocumentListItem,
   RecipientFieldResponse,
+  SendDocumentRequest,
+  SendDocumentResponse,
   SubmitSignedDocumentResponse,
   PublicDocumentStatusResponse,
 } from '../types/sign';
+import {
+  generateRecipientColors,
+  normalizeFields,
+  extractFileName
+} from '../utils/field-helpers';
 
 export class TurboSign {
   private static client: HttpClient;
@@ -257,6 +264,175 @@ export class TurboSign {
       message: params.message,
       sendEmails: params.sendEmails,
     });
+  }
+
+  /**
+   * ✨ Magical one-liner: Send a document for signature
+   *
+   * This is the simplest way to get a document signed. Just provide your file,
+   * recipients, and fields - we handle all the complexity for you!
+   *
+   * **Key Features:**
+   * - 🎨 Auto-generates beautiful recipient colors
+   * - 📋 Signing order based on array position (no manual ordering needed)
+   * - 📏 Smart field size defaults based on type
+   * - 📄 Auto-extracts document name from filename
+   * - ✉️ Sends emails by default (sendEmails: true)
+   * - 🎯 Use recipientEmail OR recipientIndex in fields (no manual ID mapping!)
+   *
+   * @param request - Send document request with file, recipients, and fields
+   * @returns Document ready for signing with recipient sign URLs
+   *
+   * @example
+   * ```typescript
+   * // The simplest possible signature request
+   * const result = await TurboSign.send({
+   *   file: pdfFile,
+   *   recipients: [
+   *     { email: 'john@example.com', name: 'John Doe' },
+   *     { email: 'jane@example.com', name: 'Jane Smith' }
+   *   ],
+   *   fields: [
+   *     { type: 'signature', page: 1, x: 100, y: 650, recipientIndex: 0 },
+   *     { type: 'date', page: 1, x: 100, y: 600, recipientIndex: 0 },
+   *     { type: 'signature', page: 1, x: 350, y: 650, recipientIndex: 1 }
+   *   ]
+   * });
+   *
+   * console.log(result.recipients[0].signUrl);
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // Using recipientEmail instead of recipientIndex
+   * const result = await TurboSign.send({
+   *   file: pdfFile,
+   *   fileName: 'Partnership Agreement',
+   *   description: 'Q1 2024 Partnership Agreement',
+   *   recipients: [
+   *     { email: 'ceo@company.com', name: 'Jane CEO' },
+   *     { email: 'legal@partner.com', name: 'John Legal' }
+   *   ],
+   *   fields: [
+   *     {
+   *       type: 'signature',
+   *       page: 1,
+   *       x: 100,
+   *       y: 500,
+   *       recipientEmail: 'ceo@company.com'
+   *     },
+   *     {
+   *       type: 'signature',
+   *       page: 2,
+   *       x: 100,
+   *       y: 500,
+   *       recipientEmail: 'legal@partner.com'
+   *     }
+   *   ],
+   *   webhookUrl: 'https://your-app.com/webhooks/signature'
+   * });
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // With custom recipient colors
+   * const result = await TurboSign.send({
+   *   file: pdfFile,
+   *   recipients: [
+   *     {
+   *       email: 'john@example.com',
+   *       name: 'John Doe',
+   *       color: 'hsl(200, 75%, 50%)',
+   *       lightColor: 'hsl(200, 75%, 93%)'
+   *     }
+   *   ],
+   *   fields: [
+   *     { type: 'signature', page: 1, x: 100, y: 650, recipientIndex: 0 }
+   *   ]
+   * });
+   * ```
+   */
+  static async send(request: SendDocumentRequest): Promise<SendDocumentResponse> {
+    // Step 1: Upload document
+    const fileName = extractFileName(request.file, request.fileName);
+    const upload = await this.uploadDocument(
+      request.file,
+      fileName,
+      request.description
+    );
+
+    // Step 2: Prepare recipients with auto-generated colors and signing order
+    const recipientsWithMetadata = request.recipients.map((recipient, index) => {
+      const colors = recipient.color && recipient.lightColor
+        ? { color: recipient.color, lightColor: recipient.lightColor }
+        : generateRecipientColors(index);
+
+      return {
+        name: recipient.name,
+        email: recipient.email,
+        signingOrder: index + 1, // Array index determines signing order
+        metadata: colors
+      };
+    });
+
+    // Step 3: Save document details with recipients
+    const documentDetails = await this.saveDocumentDetails(
+      upload.documentId,
+      {
+        name: fileName,
+        description: request.description
+      },
+      recipientsWithMetadata
+    );
+
+    // Step 4: Create maps for recipient lookup
+    const recipientEmailToId = new Map(
+      documentDetails.recipients.map(r => [r.email, r.id!])
+    );
+    const recipientIndexToId = new Map(
+      documentDetails.recipients.map((r, idx) => [idx, r.id!])
+    );
+
+    // Step 5: Normalize fields (apply defaults, map recipients)
+    const normalizedFields = normalizeFields(
+      request.fields,
+      recipientEmailToId,
+      recipientIndexToId
+    );
+
+    // Step 6: Prepare for signing
+    const prepared = await this.prepareForSigning(upload.documentId, {
+      fields: normalizedFields,
+      webhookUrl: request.webhookUrl,
+      message: request.message,
+      sendEmails: request.sendEmails !== false // Default to true
+    });
+
+    // Step 7: Return enriched response with color information
+    return {
+      documentId: prepared.documentId,
+      status: prepared.status,
+      recipients: prepared.recipients.map((recipient, index) => {
+        const colors = request.recipients[index]?.color && request.recipients[index]?.lightColor
+          ? {
+              color: request.recipients[index].color!,
+              lightColor: request.recipients[index].lightColor!
+            }
+          : generateRecipientColors(index);
+
+        return {
+          id: recipient.id,
+          email: recipient.email,
+          name: recipient.name,
+          signingOrder: index + 1,
+          status: recipient.status,
+          signUrl: recipient.signUrl || '',
+          color: colors.color,
+          lightColor: colors.lightColor
+        };
+      }),
+      preparedAt: prepared.preparedAt
+    };
   }
 
   /**

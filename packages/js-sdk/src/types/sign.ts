@@ -282,3 +282,119 @@ export interface PublicDocumentStatusResponse {
   isSignable: boolean;
   error?: string;
 }
+
+// ============================================
+// SIMPLIFIED API TYPES (for TurboSign.send)
+// ============================================
+
+/**
+ * Simplified recipient - no manual order assignment needed
+ * Signing order is automatically determined by array position
+ */
+export interface SimplifiedRecipient {
+  /** Recipient's email address */
+  email: string;
+  /** Recipient's full name */
+  name: string;
+  /** Optional custom message for this recipient */
+  message?: string;
+  /** Optional custom color (auto-generated if not provided) */
+  color?: string;
+  /** Optional light variant color (auto-generated if not provided) */
+  lightColor?: string;
+}
+
+/**
+ * Simplified field supporting multiple ways to specify recipient
+ */
+export type SimplifiedField = {
+  /** Field type */
+  type: SignatureFieldType;
+  /** Page number (1-indexed) */
+  page: number;
+  /** Whether field is required (default: true) */
+  required?: boolean;
+  /** Default value */
+  defaultValue?: string;
+  /** Label for the field */
+  label?: string;
+  /** Whether this is a multiline text field */
+  isMultiline?: boolean;
+} & (
+  | {
+      /** Template-based positioning using text anchors */
+      anchor: string;
+      /** Placement relative to anchor */
+      placement?: 'replace' | 'before' | 'after';
+      /** Size of the field */
+      size?: { width: number; height: number };
+      /** Offset from anchor position */
+      offset?: { x: number; y: number };
+      /** Case sensitive anchor search */
+      caseSensitive?: boolean;
+      /** Use regex for anchor */
+      useRegex?: boolean;
+    }
+  | {
+      /** Coordinate-based positioning */
+      x: number;
+      y: number;
+      /** Field width (auto-filled with defaults if not provided) */
+      width?: number;
+      /** Field height (auto-filled with defaults if not provided) */
+      height?: number;
+      /** Page width (auto-detected from PDF or defaults to 612) */
+      pageWidth?: number;
+      /** Page height (auto-detected from PDF or defaults to 792) */
+      pageHeight?: number;
+    }
+) &
+  (
+    | { recipientEmail: string }
+    | { recipientIndex: number }
+  );
+
+/**
+ * Request for the magical TurboSign.send() method
+ */
+export interface SendDocumentRequest {
+  /** PDF file to send for signature */
+  file: File | Buffer;
+  /** Recipients who will sign (order in array determines signing order) */
+  recipients: SimplifiedRecipient[];
+  /** Signature fields to place on document */
+  fields: SimplifiedField[];
+  /** Document name (auto-extracted from filename if not provided) */
+  fileName?: string;
+  /** Document description */
+  description?: string;
+  /** Webhook URL for completion notifications */
+  webhookUrl?: string;
+  /** Custom message to all signers */
+  message?: string;
+  /** Whether to send emails immediately (default: true) */
+  sendEmails?: boolean;
+}
+
+/**
+ * Response from TurboSign.send()
+ */
+export interface SendDocumentResponse {
+  /** Document ID */
+  documentId: string;
+  /** Document status */
+  status: 'prepared' | 'sent';
+  /** Recipients with their sign URLs */
+  recipients: Array<{
+    id: string;
+    email: string;
+    name: string;
+    signingOrder: number;
+    status: 'pending' | 'completed' | 'declined';
+    signUrl: string;
+    color: string;
+    lightColor: string;
+  }>;
+  /** When the document was prepared */
+  preparedAt: string;
+}
