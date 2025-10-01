@@ -69,9 +69,9 @@ async function completeWorkflowExample() {
           pageHeight: 792
         }
       ],
-      webhookUrl: 'https://your-app.com/webhooks/signature',
       message: 'Please review and sign this contract.',
       sendEmails: true
+      // Webhooks are configured at org level - see webhooks-setup.ts example
     });
 
     console.log('Signature request created!');

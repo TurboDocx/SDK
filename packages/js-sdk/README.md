@@ -73,8 +73,58 @@ const result = await TurboSign.send({
       recipientEmail: 'ceo@company.com'  // Use email instead of index
     }
   ],
-  webhookUrl: 'https://your-app.com/webhook',
   sendEmails: false  // Don't send emails yet
+});
+```
+
+### 🔔 Webhooks - Real-time Event Notifications
+
+Set up webhooks to receive notifications when signatures are completed or voided. Webhooks are configured **once at the organization level** and apply to all signature events.
+
+```typescript
+import { Webhooks, WebhookEvent } from '@turbodocx/sdk';
+
+// Configure Webhooks
+Webhooks.configure({
+  apiKey: process.env.TURBODOCX_API_KEY
+});
+
+// Create webhook (one-time setup)
+const webhook = await Webhooks.create(
+  'signature-webhook',
+  ['https://your-app.com/webhooks/turbosign'],
+  [
+    WebhookEvent.SIGNATURE_DOCUMENT_COMPLETED,
+    WebhookEvent.SIGNATURE_DOCUMENT_VOIDED
+  ]
+);
+
+// 🔐 IMPORTANT: Save the secret securely!
+console.log('Webhook Secret:', webhook.secret);
+// This secret is only shown ONCE - save it for signature verification!
+```
+
+**Monitoring & Management:**
+
+```typescript
+// Test your webhook
+await Webhooks.test('signature-webhook');
+
+// Get webhook statistics
+const stats = await Webhooks.getStats('signature-webhook', 7);
+console.log(`Success rate: ${stats.summary.successRate}%`);
+
+// View failed deliveries
+const deliveries = await Webhooks.getDeliveries('signature-webhook', {
+  isDelivered: false
+});
+
+// Replay a failed delivery
+await Webhooks.replayDelivery('signature-webhook', deliveryId);
+
+// Update webhook config
+await Webhooks.update('signature-webhook', {
+  urls: ['https://new-url.com/webhooks/turbosign']
 });
 ```
 
@@ -87,6 +137,14 @@ const result = await TurboSign.send({
   - Track signing status
   - Download signed documents
   - Audit trails
+
+- **Webhooks**: Organization-wide event notifications
+  - Configure webhook endpoints
+  - Subscribe to signature events
+  - Monitor delivery success/failure
+  - Test webhooks before going live
+  - Replay failed deliveries
+  - View detailed statistics
 
 ## Authentication
 
@@ -121,6 +179,7 @@ import type { SignatureField, PrepareSigningRequest } from '@turbodocx/sdk';
 
 See the [examples](./examples) directory for complete working examples:
 
+**TurboSign Examples:**
 - `turbosign-send-simple.ts` - ✨ **Magical one-liner** (recommended for most use cases)
 - `turbosign-send-with-emails.ts` - Using recipientEmail for explicit field assignment
 - `turbosign-basic.ts` - Manual 3-step signature workflow
@@ -128,12 +187,16 @@ See the [examples](./examples) directory for complete working examples:
 - `turbosign-from-deliverable.ts` - Creating signature docs from existing deliverables
 - `turbosign-advanced.ts` - Status checking, downloading, and management
 
+**Webhook Examples:**
+- `webhooks-setup.ts` - Setting up webhooks for signature events (with verification code)
+- `webhooks-monitoring.ts` - Monitoring deliveries, stats, testing, and management
+
 ### API Methods
 
-**Recommended (Simplest):**
+**TurboSign - Recommended (Simplest):**
 - `TurboSign.send()` - ✨ Magical one-liner with intelligent defaults
 
-**Advanced (More Control):**
+**TurboSign - Advanced (More Control):**
 - `TurboSign.uploadDocument()` - Upload a PDF
 - `TurboSign.saveDocumentDetails()` - Add/update recipients
 - `TurboSign.prepareForSigning()` - Place fields and send
@@ -143,6 +206,21 @@ See the [examples](./examples) directory for complete working examples:
 - `TurboSign.getAuditTrail()` - Download audit trail
 - `TurboSign.void()` - Cancel signature request
 - `TurboSign.resend()` - Resend to recipients
+
+**Webhooks - Configuration:**
+- `Webhooks.create()` - Set up new webhook (returns secret once!)
+- `Webhooks.list()` - List all webhooks
+- `Webhooks.get()` - Get webhook details
+- `Webhooks.update()` - Update webhook config
+- `Webhooks.delete()` - Remove webhook
+- `Webhooks.regenerateSecret()` - Generate new secret
+
+**Webhooks - Monitoring & Testing:**
+- `Webhooks.test()` - Send test event
+- `Webhooks.getDeliveries()` - View delivery history
+- `Webhooks.replayDelivery()` - Retry failed delivery
+- `Webhooks.getStats()` - Get detailed statistics
+- `Webhooks.sendNotification()` - Send manual notification
 
 ## License
 

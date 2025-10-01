@@ -102,8 +102,6 @@ export interface AddRecipientsResponse {
 export interface PrepareSigningRequest {
   /** List of signature fields to place on the document */
   fields: SignatureField[] | TemplateField[];
-  /** Webhook URL to receive signature completion events */
-  webhookUrl?: string;
   /** Custom message to all signers */
   message?: string;
   /** Whether to send email notifications immediately */
@@ -368,8 +366,6 @@ export interface SendDocumentRequest {
   fileName?: string;
   /** Document description */
   description?: string;
-  /** Webhook URL for completion notifications */
-  webhookUrl?: string;
   /** Custom message to all signers */
   message?: string;
   /** Whether to send emails immediately (default: true) */

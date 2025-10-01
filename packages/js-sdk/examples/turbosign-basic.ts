@@ -102,8 +102,8 @@ async function basicSignatureExample() {
           pageHeight: 792
         }
       ],
-      webhookUrl: 'https://your-app.com/webhooks/signature-completed',
       sendEmails: true
+      // Webhooks are configured at org level - see webhooks-setup.ts example
     });
 
     console.log('Document prepared!');

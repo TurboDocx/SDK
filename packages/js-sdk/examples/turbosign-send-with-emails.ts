@@ -114,8 +114,8 @@ async function sendWithEmailsExample() {
           y: 550,
           recipientEmail: 'cfo@company-c.com'
         }
-      ],
-      webhookUrl: 'https://your-app.com/webhooks/multi-party-signed'
+      ]
+      // Webhooks are configured at organization level - see webhooks-setup.ts
     });
 
     console.log('Document sent successfully!\n');

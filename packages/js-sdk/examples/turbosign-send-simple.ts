@@ -42,9 +42,9 @@ async function magicalSendExample() {
         { type: 'date', page: 1, x: 100, y: 600, recipientIndex: 0 },
         { type: 'signature', page: 1, x: 350, y: 650, recipientIndex: 1 },
         { type: 'date', page: 1, x: 350, y: 600, recipientIndex: 1 }
-      ],
-      webhookUrl: 'https://your-app.com/webhooks/signature',
+      ]
       // sendEmails defaults to true - no need to specify!
+      // Webhooks are configured at org level - see webhooks-setup.ts example
     });
 
     console.log('🎉 Document sent successfully!\n');

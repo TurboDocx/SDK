@@ -154,6 +154,9 @@ export class TurboSign {
   /**
    * Step 3: Prepare document for signing by placing signature fields
    *
+   * Note: Webhooks are configured at the organization level using the Webhooks module,
+   * not per-signature request. See Webhooks.create() to set up webhooks.
+   *
    * @param documentId - ID of the document
    * @param request - Signature fields and configuration
    * @returns Document ready for signing with recipient sign URLs
@@ -180,7 +183,6 @@ export class TurboSign {
    *       y: 300
    *     }
    *   ],
-   *   webhookUrl: 'https://your-app.com/webhook',
    *   sendEmails: true
    * });
    * ```
@@ -200,10 +202,13 @@ export class TurboSign {
   /**
    * Complete workflow: Upload, add recipients, and prepare in one call
    *
+   * Note: Webhooks are configured at the organization level using the Webhooks module,
+   * not per-signature request. See Webhooks.create() to set up webhooks.
+   *
    * @param file - PDF file to upload
    * @param recipients - Recipients who will sign
    * @param fields - Signature fields configuration
-   * @param options - Additional options (webhookUrl, message, etc.)
+   * @param options - Additional options (message, sendEmails)
    * @returns Prepared document with sign URLs
    *
    * @example
@@ -216,7 +221,7 @@ export class TurboSign {
    *   fields: [
    *     { type: 'signature', recipientId: 'will-be-assigned', page: 1, x: 100, y: 200 }
    *   ],
-   *   webhookUrl: 'https://your-app.com/webhook'
+   *   message: 'Please sign this document'
    * });
    * ```
    */
@@ -225,7 +230,6 @@ export class TurboSign {
     fileName?: string;
     recipients: AddRecipientsRequest['recipients'];
     fields: PrepareSigningRequest['fields'];
-    webhookUrl?: string;
     message?: string;
     sendEmails?: boolean;
   }): Promise<PrepareSigningResponse> {
@@ -260,7 +264,6 @@ export class TurboSign {
     // Step 4: Prepare for signing
     return await this.prepareForSigning(upload.documentId, {
       fields: fieldsWithRecipientIds,
-      webhookUrl: params.webhookUrl,
       message: params.message,
       sendEmails: params.sendEmails,
     });
@@ -279,6 +282,9 @@ export class TurboSign {
    * - 📄 Auto-extracts document name from filename
    * - ✉️ Sends emails by default (sendEmails: true)
    * - 🎯 Use recipientEmail OR recipientIndex in fields (no manual ID mapping!)
+   *
+   * **Note:** Webhooks are configured at the organization level using the Webhooks module.
+   * See Webhooks.create() to set up event notifications.
    *
    * @param request - Send document request with file, recipients, and fields
    * @returns Document ready for signing with recipient sign URLs
@@ -328,8 +334,7 @@ export class TurboSign {
    *       y: 500,
    *       recipientEmail: 'legal@partner.com'
    *     }
-   *   ],
-   *   webhookUrl: 'https://your-app.com/webhooks/signature'
+   *   ]
    * });
    * ```
    *
@@ -403,7 +408,6 @@ export class TurboSign {
     // Step 6: Prepare for signing
     const prepared = await this.prepareForSigning(upload.documentId, {
       fields: normalizedFields,
-      webhookUrl: request.webhookUrl,
       message: request.message,
       sendEmails: request.sendEmails !== false // Default to true
     });
