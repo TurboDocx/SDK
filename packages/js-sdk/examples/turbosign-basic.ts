@@ -22,21 +22,36 @@ async function basicSignatureExample() {
     const upload = await TurboSign.uploadDocument(pdfFile, 'Contract.pdf');
     console.log('Document uploaded:', upload.documentId);
 
-    // Step 2: Add recipients
+    // Step 2: Add recipients and update document details
     console.log('Adding recipients...');
-    const recipients = await TurboSign.addRecipients(upload.documentId, [
+    const result = await TurboSign.saveDocumentDetails(
+      upload.documentId,
       {
-        email: 'john.doe@example.com',
-        name: 'John Doe',
-        order: 1
+        name: 'Contract Agreement - Updated',
+        description: 'This document requires electronic signatures from both parties. Please review all content carefully before signing.'
       },
-      {
-        email: 'jane.smith@example.com',
-        name: 'Jane Smith',
-        order: 2
-      }
-    ]);
-    console.log('Recipients added:', recipients.recipients.length);
+      [
+        {
+          name: 'John Smith',
+          email: 'john.smith@company.com',
+          signingOrder: 1,
+          metadata: {
+            color: 'hsl(200, 75%, 50%)',
+            lightColor: 'hsl(200, 75%, 93%)'
+          }
+        },
+        {
+          name: 'Jane Doe',
+          email: 'jane.doe@partner.com',
+          signingOrder: 2,
+          metadata: {
+            color: 'hsl(270, 75%, 50%)',
+            lightColor: 'hsl(270, 75%, 93%)'
+          }
+        }
+      ]
+    );
+    console.log('Recipients added:', result.recipients.length);
 
     // Step 3: Prepare for signing with signature fields
     console.log('Preparing document for signing...');
@@ -44,7 +59,7 @@ async function basicSignatureExample() {
       fields: [
         {
           type: 'signature',
-          recipientId: recipients.recipients[0].id,
+          recipientId: result.recipients[0].id,
           page: 1,
           x: 100,
           y: 650,
@@ -55,7 +70,7 @@ async function basicSignatureExample() {
         },
         {
           type: 'date',
-          recipientId: recipients.recipients[0].id,
+          recipientId: result.recipients[0].id,
           page: 1,
           x: 100,
           y: 600,
@@ -66,7 +81,7 @@ async function basicSignatureExample() {
         },
         {
           type: 'signature',
-          recipientId: recipients.recipients[1].id,
+          recipientId: result.recipients[1].id,
           page: 1,
           x: 350,
           y: 650,
@@ -77,7 +92,7 @@ async function basicSignatureExample() {
         },
         {
           type: 'date',
-          recipientId: recipients.recipients[1].id,
+          recipientId: result.recipients[1].id,
           page: 1,
           x: 350,
           y: 600,

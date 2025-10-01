@@ -29,15 +29,26 @@ async function createFromDeliverableExample() {
 
     // Now continue with the normal signing workflow
     console.log('\nAdding recipients...');
-    const recipients = await TurboSign.addRecipients(upload.documentId, [
+    const result = await TurboSign.saveDocumentDetails(
+      upload.documentId,
       {
-        email: 'signer@example.com',
-        name: 'John Doe',
-        order: 1
-      }
-    ]);
+        name: 'Contract from Deliverable - Updated',
+        description: 'This document was created from an existing deliverable and requires your signature.'
+      },
+      [
+        {
+          name: 'John Doe',
+          email: 'signer@example.com',
+          signingOrder: 1,
+          metadata: {
+            color: 'hsl(200, 75%, 50%)',
+            lightColor: 'hsl(200, 75%, 93%)'
+          }
+        }
+      ]
+    );
 
-    console.log('Recipients added:', recipients.recipients.length);
+    console.log('Recipients added:', result.recipients.length);
 
     // Add signature fields
     console.log('\nPreparing for signing...');
@@ -45,7 +56,7 @@ async function createFromDeliverableExample() {
       fields: [
         {
           type: 'signature',
-          recipientId: recipients.recipients[0].id,
+          recipientId: result.recipients[0].id,
           page: 1,
           x: 100,
           y: 650,
@@ -56,7 +67,7 @@ async function createFromDeliverableExample() {
         },
         {
           type: 'date',
-          recipientId: recipients.recipients[0].id,
+          recipientId: result.recipients[0].id,
           page: 1,
           x: 100,
           y: 600,
