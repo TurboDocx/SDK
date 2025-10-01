@@ -163,7 +163,7 @@ export interface DocumentStatusResponse {
   /** Document ID */
   documentId: string;
   /** Current document status */
-  status: 'draft' | 'prepared' | 'sent' | 'completed' | 'voided';
+  status: 'draft' | 'setup_complete' | 'review_ready' | 'under_review' | 'completed' | 'voided';
   /** Document name */
   name: string;
   /** List of recipients and their status */
@@ -174,4 +174,111 @@ export interface DocumentStatusResponse {
   updatedAt: string;
   /** When the document was completed (if applicable) */
   completedAt?: string;
+}
+
+export interface RecipientMetadata {
+  /** UI color for recipient */
+  color?: string;
+  /** Light variant color */
+  lightColor?: string;
+}
+
+export interface DocumentWithRecipients {
+  /** Document details */
+  document: {
+    id: string;
+    name: string;
+    description: string;
+    pdfFileId?: string;
+    status: DocumentStatusResponse['status'];
+    createdOn: string;
+    accessToken?: string;
+  };
+  /** Recipients with metadata */
+  recipients: Array<{
+    id?: string;
+    documentId?: string;
+    name: string;
+    email: string;
+    signingOrder: number;
+    status?: string;
+    accessToken?: string;
+    signedOn?: Date;
+    metadata?: RecipientMetadata;
+  }>;
+  /** Optional description */
+  description?: string;
+}
+
+export interface DocumentFileResponse {
+  /** File as Blob */
+  fileAsBlob: Blob;
+  /** File as Uint8Array */
+  fileAsUint8Array: Uint8Array;
+}
+
+export interface DocumentFieldResponse {
+  id: string;
+  type: string;
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  pageWidth: number;
+  pageHeight: number;
+  recipientId: string;
+  value?: string;
+  templateData?: any;
+  calculatedFromTemplate?: boolean;
+  recipient?: {
+    name: string;
+    email: string;
+    metadata?: RecipientMetadata;
+  };
+}
+
+export interface SignatureDocumentListItem {
+  id: string;
+  name: string;
+  description: string;
+  status: DocumentStatusResponse['status'];
+  pdfFileId: string;
+  createdBy: string;
+  createdOn: string;
+  updatedOn: string;
+  recipients: Array<{
+    id: string;
+    name: string;
+    email: string;
+    status: string;
+    signingOrder: number;
+  }>;
+  metadata?: {
+    senderName?: string;
+  };
+}
+
+export interface RecipientFieldResponse {
+  id: string;
+  type: string;
+  page: number;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  pageWidth: number;
+  pageHeight: number;
+  defaultValue?: string;
+  value?: string | null;
+  isMultiline?: boolean;
+}
+
+export interface SubmitSignedDocumentResponse {
+  message: string;
+  isFreePlan: boolean;
+}
+
+export interface PublicDocumentStatusResponse {
+  status: string;
+  isSignable: boolean;
+  error?: string;
 }

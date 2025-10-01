@@ -13,6 +13,13 @@ import {
   ResendEmailResponse,
   AuditTrailResponse,
   DocumentStatusResponse,
+  DocumentWithRecipients,
+  DocumentFileResponse,
+  DocumentFieldResponse,
+  SignatureDocumentListItem,
+  RecipientFieldResponse,
+  SubmitSignedDocumentResponse,
+  PublicDocumentStatusResponse,
 } from '../types/sign';
 
 export class TurboSign {
@@ -353,5 +360,304 @@ export class TurboSign {
     const client = this.getClient();
     const response = await client.get<{ data: DocumentStatusResponse }>(`/turbosign/documents/${documentId}/status`);
     return response.data;
+  }
+
+  /**
+   * Get document with recipients including their metadata (colors, etc.)
+   *
+   * @param documentId - ID of the document
+   * @returns Document with recipients and metadata
+   *
+   * @example
+   * ```typescript
+   * const docWithRecipients = await TurboSign.getDocumentWithRecipients(documentId);
+   * console.log(docWithRecipients.recipients[0].metadata?.color);
+   * ```
+   */
+  static async getDocumentWithRecipients(documentId: string): Promise<DocumentWithRecipients> {
+    const client = this.getClient();
+    const response = await client.get<{ data: DocumentWithRecipients }>(
+      `/turbosign/documents/${documentId}/with-recipients`
+    );
+    return response.data;
+  }
+
+  /**
+   * Get document file as Blob and Uint8Array
+   *
+   * @param documentId - ID of the document
+   * @returns Document file as blob and uint8array
+   *
+   * @example
+   * ```typescript
+   * const file = await TurboSign.getDocumentFile(documentId);
+   * // Use file.fileAsBlob or file.fileAsUint8Array
+   * ```
+   */
+  static async getDocumentFile(documentId: string): Promise<DocumentFileResponse> {
+    const client = this.getClient();
+    const response = await client.get<ArrayBuffer>(`/turbosign/documents/${documentId}/file`);
+    const arrayBuffer = response as unknown as ArrayBuffer;
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const blob = new Blob([uint8Array], { type: 'application/pdf' });
+
+    return {
+      fileAsBlob: blob,
+      fileAsUint8Array: uint8Array,
+    };
+  }
+
+  /**
+   * Get all fields for a document (authenticated endpoint for document owner/QA)
+   *
+   * @param documentId - ID of the document
+   * @returns Array of fields with recipient information
+   *
+   * @example
+   * ```typescript
+   * const fields = await TurboSign.getDocumentFields(documentId);
+   * fields.forEach(field => console.log(field.type, field.recipient?.name));
+   * ```
+   */
+  static async getDocumentFields(documentId: string): Promise<DocumentFieldResponse[]> {
+    const client = this.getClient();
+    const response = await client.get<{ data: DocumentFieldResponse[] }>(
+      `/turbosign/documents/${documentId}/fields`
+    );
+    return response.data;
+  }
+
+  /**
+   * Get all signature documents for the organization dashboard
+   *
+   * @returns Array of signature documents with recipients
+   *
+   * @example
+   * ```typescript
+   * const { documents } = await TurboSign.getSignatureDocuments();
+   * documents.forEach(doc => console.log(doc.name, doc.status));
+   * ```
+   */
+  static async getSignatureDocuments(): Promise<{ documents: SignatureDocumentListItem[] }> {
+    const client = this.getClient();
+    const response = await client.get<{ data: { documents: SignatureDocumentListItem[] } }>(
+      '/turbosign/documents/signature-documents'
+    );
+    return response.data;
+  }
+
+  /**
+   * Download the public key for a document
+   *
+   * @param documentId - ID of the document
+   * @returns Public key as string
+   *
+   * @example
+   * ```typescript
+   * const publicKey = await TurboSign.downloadDocumentPublicKey(documentId);
+   * console.log(publicKey);
+   * ```
+   */
+  static async downloadDocumentPublicKey(documentId: string): Promise<string> {
+    const client = this.getClient();
+    const response = await client.get<string>(
+      `/turbosign/documents/${documentId}/public-key/download`
+    );
+    return response;
+  }
+
+  /**
+   * Save document details with recipients (combines document update and recipient management)
+   *
+   * @param documentId - ID of the document
+   * @param documentData - Document name and description
+   * @param recipients - Recipients to add to the document
+   * @returns Updated document with recipients
+   *
+   * @example
+   * ```typescript
+   * const result = await TurboSign.saveDocumentDetails(
+   *   documentId,
+   *   { name: 'Updated Contract', description: 'Q4 2024' },
+   *   [{ email: 'john@example.com', name: 'John Doe', signingOrder: 1 }]
+   * );
+   * ```
+   */
+  static async saveDocumentDetails(
+    documentId: string,
+    documentData: { name?: string; description?: string },
+    recipients: Array<{
+      name: string;
+      email: string;
+      signingOrder: number;
+      metadata?: { color?: string; lightColor?: string };
+    }>
+  ): Promise<DocumentWithRecipients> {
+    const client = this.getClient();
+    const response = await client.post<{ data: DocumentWithRecipients }>(
+      `/turbosign/documents/${documentId}/update-with-recipients`,
+      { document: documentData, recipients }
+    );
+    return response.data;
+  }
+
+  // ============================================
+  // PUBLIC ENDPOINTS (for recipient signing)
+  // ============================================
+
+  /**
+   * Get document file using recipient token (public endpoint)
+   *
+   * @param documentId - ID of the document
+   * @param recipientToken - Token for the recipient
+   * @returns Document file as blob and uint8array
+   *
+   * @example
+   * ```typescript
+   * const file = await TurboSign.getDocumentFileWithRecipientToken(documentId, token);
+   * ```
+   */
+  static async getDocumentFileWithRecipientToken(
+    documentId: string,
+    recipientToken: string
+  ): Promise<DocumentFileResponse> {
+    const client = this.getClient();
+    const response = await client.get<ArrayBuffer>(
+      `/turbosign/public/documents/${documentId}/file?recipientToken=${recipientToken}`
+    );
+    const arrayBuffer = response as unknown as ArrayBuffer;
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const blob = new Blob([uint8Array], { type: 'application/pdf' });
+
+    return {
+      fileAsBlob: blob,
+      fileAsUint8Array: uint8Array,
+    };
+  }
+
+  /**
+   * Get fields for a recipient to sign using recipient token (public endpoint)
+   *
+   * @param documentId - ID of the document
+   * @param recipientToken - Token for the recipient
+   * @returns Array of fields to be signed
+   *
+   * @example
+   * ```typescript
+   * const fields = await TurboSign.getRecipientFieldsWithToken(documentId, token);
+   * ```
+   */
+  static async getRecipientFieldsWithToken(
+    documentId: string,
+    recipientToken: string
+  ): Promise<RecipientFieldResponse[]> {
+    const client = this.getClient();
+    const response = await client.get<{ data: RecipientFieldResponse[] }>(
+      `/turbosign/public/documents/${documentId}/fields/recipient?recipientToken=${recipientToken}`
+    );
+    return response.data;
+  }
+
+  /**
+   * Record user consent to terms of service (public endpoint)
+   *
+   * @param documentId - ID of the document
+   * @param recipientToken - Token for the recipient
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * await TurboSign.recordTermsOfServiceConsent(documentId, token);
+   * ```
+   */
+  static async recordTermsOfServiceConsent(
+    documentId: string,
+    recipientToken: string
+  ): Promise<{ success: boolean }> {
+    const client = this.getClient();
+    const response = await client.post<{ data: { success: boolean } }>(
+      `/turbosign/public/documents/${documentId}/consent?recipientToken=${recipientToken}`,
+      {}
+    );
+    return response.data;
+  }
+
+  /**
+   * Submit a signed document with field values using recipient token (public endpoint)
+   *
+   * @param documentId - ID of the document
+   * @param recipientToken - Token for the recipient
+   * @param fieldValues - Field values to submit
+   * @returns Submission response
+   *
+   * @example
+   * ```typescript
+   * const result = await TurboSign.submitSignedDocumentWithToken(
+   *   documentId,
+   *   token,
+   *   [
+   *     { fieldId: 'field-1', value: 'signature-data-url', isTextSignature: false },
+   *     { fieldId: 'field-2', value: 'John Doe', isTextSignature: true, fontFamily: 'Arial' }
+   *   ]
+   * );
+   * ```
+   */
+  static async submitSignedDocumentWithToken(
+    documentId: string,
+    recipientToken: string,
+    fieldValues?: Array<{
+      fieldId: string;
+      value: string;
+      isTextSignature?: boolean;
+      fontFamily?: string;
+    }>
+  ): Promise<SubmitSignedDocumentResponse> {
+    const client = this.getClient();
+    const response = await client.post<SubmitSignedDocumentResponse>(
+      `/turbosign/public/documents/${documentId}/sign?recipientToken=${recipientToken}`,
+      fieldValues || []
+    );
+    return response;
+  }
+
+  /**
+   * Get public document status using recipient token (public endpoint)
+   *
+   * @param documentId - ID of the document
+   * @param recipientToken - Token for the recipient
+   * @returns Document status and signability
+   *
+   * @example
+   * ```typescript
+   * const status = await TurboSign.getPublicDocumentStatus(documentId, token);
+   * if (!status.isSignable) {
+   *   console.error(status.error);
+   * }
+   * ```
+   */
+  static async getPublicDocumentStatus(
+    documentId: string,
+    recipientToken: string
+  ): Promise<PublicDocumentStatusResponse> {
+    const client = this.getClient();
+    const response = await client.get<{ data: { status: string } }>(
+      `/turbosign/public/documents/${documentId}/status?recipientToken=${recipientToken}`
+    );
+
+    const status = response.data.status;
+    const isSignable = status !== 'completed' && status !== 'voided';
+
+    let error: string | undefined;
+    if (status === 'completed') {
+      error = 'This document has already been completed and cannot be signed again.';
+    } else if (status === 'voided') {
+      error = 'This document has been voided and is no longer valid for signing.';
+    }
+
+    return {
+      status,
+      isSignable,
+      error,
+    };
   }
 }
