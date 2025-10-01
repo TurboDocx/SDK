@@ -1,0 +1,19 @@
+{
+  "name": "turbodocx-apis",
+  "private": true,
+  "workspaces": [
+    "packages/js-sdk"
+  ],
+  "scripts": {
+    "build": "npm run build -w packages/js-sdk",
+    "lint": "echo 'add eslint here'",
+    "test": "echo 'add jest here'",
+    "codegen": "node tools/codegen.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "openapi-typescript": "^6.7.0",
+    "@redocly/openapi-cli": "^1.21.0",
+    "@stoplight/spectral-cli": "^6.11.1"
+  }
+}

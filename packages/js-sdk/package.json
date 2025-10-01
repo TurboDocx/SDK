@@ -1,0 +1,25 @@
+{
+  "name": "@turbodocx/sdk",
+  "version": "0.1.0",
+  "description": "TurboDocx JavaScript SDK",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "echo 'no tests yet'"
+  },
+  "keywords": [
+    "turbodocx",
+    "document",
+    "generation",
+    "api",
+    "sdk"
+  ],
+  "author": "TurboDocx",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TurboDocx/SDK.git",
+    "directory": "packages/js-sdk"
+  }
+}

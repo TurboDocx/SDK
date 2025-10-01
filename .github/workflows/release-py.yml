@@ -1,0 +1,21 @@
+name: Release PyPI SDK
+on:
+  push:
+    branches: [main]
+    paths: ["packages/py-sdk/**"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install hatch twine
+      - run: cd packages/py-sdk && hatch build
+      - run: python -m twine upload dist/*
+        working-directory: packages/py-sdk
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
