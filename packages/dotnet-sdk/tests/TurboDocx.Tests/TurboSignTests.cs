@@ -261,4 +261,151 @@ public class TurboSignTests : IDisposable
     {
         Assert.Throws<ArgumentException>(() => new TurboDocxClient(new TurboDocxClientConfig()));
     }
+
+    [Fact]
+    public void Client_WithCustomBaseUrl_Configures()
+    {
+        using var client = new TurboDocxClient(new TurboDocxClientConfig
+        {
+            ApiKey = "test-api-key",
+            BaseUrl = "https://custom-api.example.com"
+        });
+        Assert.NotNull(client);
+        Assert.NotNull(client.TurboSign);
+    }
+
+    [Fact]
+    public async Task PrepareForReview_WithTemplateId_ReturnsDocumentId()
+    {
+        _server
+            .Given(Request.Create()
+                .WithPath("/turbosign/single/prepare-for-review")
+                .UsingPost())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(new
+                {
+                    data = new { documentId = "doc-template", status = "review_ready" }
+                })));
+
+        var result = await _client.TurboSign.PrepareForReviewAsync(new PrepareForReviewRequest
+        {
+            TemplateId = "template-xyz",
+            Recipients = new[] { new Recipient { Name = "John Doe", Email = "john@example.com", Order = 1 } },
+            Fields = new[] { new Field { Type = "signature", Page = 1, X = 100, Y = 500, Width = 200, Height = 50, RecipientOrder = 1 } }
+        });
+
+        Assert.Equal("doc-template", result.DocumentId);
+    }
+
+    [Fact]
+    public async Task PrepareForReview_WithOptionalFields_IncludesAllFields()
+    {
+        _server
+            .Given(Request.Create()
+                .WithPath("/turbosign/single/prepare-for-review")
+                .UsingPost())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(new
+                {
+                    data = new { documentId = "doc-789", status = "review_ready" }
+                })));
+
+        var result = await _client.TurboSign.PrepareForReviewAsync(new PrepareForReviewRequest
+        {
+            FileLink = "https://example.com/doc.pdf",
+            Recipients = new[] { new Recipient { Name = "John Doe", Email = "john@example.com", Order = 1 } },
+            Fields = new[] { new Field { Type = "signature", Page = 1, X = 100, Y = 500, Width = 200, Height = 50, RecipientOrder = 1 } },
+            DocumentName = "Test Contract",
+            DocumentDescription = "A test contract",
+            SenderName = "Sales Team",
+            SenderEmail = "sales@company.com",
+            CcEmails = new[] { "admin@company.com", "legal@company.com" }
+        });
+
+        Assert.Equal("doc-789", result.DocumentId);
+    }
+
+    [Fact]
+    public async Task PrepareForReview_WithFileUpload_ReturnsDocumentId()
+    {
+        _server
+            .Given(Request.Create()
+                .WithPath("/turbosign/single/prepare-for-review")
+                .UsingPost())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(new
+                {
+                    data = new { documentId = "doc-upload", status = "review_ready" }
+                })));
+
+        var result = await _client.TurboSign.PrepareForReviewAsync(new PrepareForReviewRequest
+        {
+            File = new byte[] { 0x25, 0x50, 0x44, 0x46 },
+            FileName = "contract.pdf",
+            Recipients = new[] { new Recipient { Name = "John Doe", Email = "john@example.com", Order = 1 } },
+            Fields = new[] { new Field { Type = "signature", Page = 1, X = 100, Y = 500, Width = 200, Height = 50, RecipientOrder = 1 } }
+        });
+
+        Assert.Equal("doc-upload", result.DocumentId);
+    }
+
+    [Fact]
+    public async Task PrepareForSigningSingle_WithFileUpload_ReturnsDocumentId()
+    {
+        _server
+            .Given(Request.Create()
+                .WithPath("/turbosign/single/prepare-for-signing")
+                .UsingPost())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(new
+                {
+                    data = new { documentId = "doc-upload", status = "sent", recipients = Array.Empty<object>() }
+                })));
+
+        var result = await _client.TurboSign.PrepareForSigningSingleAsync(new PrepareForSigningRequest
+        {
+            File = new byte[] { 0x25, 0x50, 0x44, 0x46 },
+            FileName = "contract.pdf",
+            Recipients = new[] { new Recipient { Name = "John Doe", Email = "john@example.com", Order = 1 } },
+            Fields = new[] { new Field { Type = "signature", Page = 1, X = 100, Y = 500, Width = 200, Height = 50, RecipientOrder = 1 } }
+        });
+
+        Assert.Equal("doc-upload", result.DocumentId);
+    }
+
+    [Fact]
+    public async Task ValidationError_ThrowsTurboDocxException()
+    {
+        _server
+            .Given(Request.Create()
+                .WithPath("/turbosign/single/prepare-for-signing")
+                .UsingPost())
+            .RespondWith(Response.Create()
+                .WithStatusCode(400)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(new
+                {
+                    message = "Validation failed: Invalid email format",
+                    code = "VALIDATION_ERROR"
+                })));
+
+        var exception = await Assert.ThrowsAsync<TurboDocxException>(
+            () => _client.TurboSign.PrepareForSigningSingleAsync(new PrepareForSigningRequest
+            {
+                FileLink = "https://example.com/doc.pdf",
+                Recipients = new[] { new Recipient { Name = "Test", Email = "invalid-email", Order = 1 } },
+                Fields = Array.Empty<Field>()
+            }));
+
+        Assert.Equal(400, exception.StatusCode);
+        Assert.Contains("Validation", exception.Message);
+    }
 }

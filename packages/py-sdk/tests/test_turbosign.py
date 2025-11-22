@@ -436,3 +436,21 @@ class TestErrorHandling:
             TurboSign.configure(api_key="test-key")
             with pytest.raises(Exception, match="Document not found"):
                 await TurboSign.get_status("invalid-doc")
+
+    @pytest.mark.asyncio
+    async def test_handle_validation_errors(self):
+        """Should handle validation errors"""
+        validation_error = Exception("Validation failed: Invalid email format")
+
+        with patch.object(TurboSign, '_get_client') as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.post = AsyncMock(side_effect=validation_error)
+            mock_get_client.return_value = mock_client
+
+            TurboSign.configure(api_key="test-key")
+            with pytest.raises(Exception, match="Validation failed"):
+                await TurboSign.prepare_for_signing_single(
+                    file_link="https://example.com/doc.pdf",
+                    recipients=[{"name": "Test", "email": "invalid-email", "order": 1}],
+                    fields=[]
+                )
