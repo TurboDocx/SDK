@@ -404,3 +404,11 @@ const result = await TurboSign.prepareForSigningSingle(options);
 ## License
 
 MIT — see [LICENSE](./LICENSE)
+
+---
+
+<div align="center">
+
+[![TurboDocx](./footer.png)](https://www.turbodocx.com)
+
+</div>
