@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+package-lock.json
 
 # Build outputs
 dist/
@@ -50,3 +51,13 @@ obj/
 *.user
 *.suo
 TestResults/
+
+# Java
+target/
+*.class
+*.jar
+
+# Ruby
+*.gem
+Gemfile.lock
+.bundle/
