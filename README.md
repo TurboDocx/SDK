@@ -64,7 +64,7 @@ Comprehensive SDKs, detailed documentation, and responsive support. Ship faster 
 
 > 🔌 **Low-code?** Check out our [n8n community node](https://www.npmjs.com/package/@turbodocx/n8n-nodes-turbodocx) for no-code/low-code workflows!
 >
-> 📝 **Microsoft Word?** Get [TurboDocx Writer](https://appsource.microsoft.com/en-us/product/office/WA200007973) from the Microsoft AppSource marketplace!
+> 📝 **Microsoft Word?** Get [TurboDocx Writer](https://appsource.microsoft.com/en-us/product/office/WA200007397) from the Microsoft AppSource marketplace!
 
 ---
 
