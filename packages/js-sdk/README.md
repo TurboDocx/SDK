@@ -1,27 +1,33 @@
 [![TurboDocx](./banner.png)](https://www.turbodocx.com)
 
-@turbodocx/sdk
-====================
+<div align="center">
+
+# @turbodocx/sdk
+
+**Official JavaScript/TypeScript SDK for TurboDocx**
+
 [![NPM Version](https://img.shields.io/npm/v/@turbodocx/sdk.svg)](https://npmjs.org/package/@turbodocx/sdk)
-[![npm](https://img.shields.io/npm/dm/@turbodocx/sdk)](https://www.npmjs.com/package/@turbodocx/sdk)
-[![GitHub Stars](https://img.shields.io/github/stars/turbodocx/sdk?style=social)](https://github.com/turbodocx/sdk)
-[![TypeScript](https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square)](https://typescript.org)
-[![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/NYKwz4BcpX)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm downloads](https://img.shields.io/npm/dm/@turbodocx/sdk)](https://www.npmjs.com/package/@turbodocx/sdk)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@turbodocx/sdk)](https://bundlephobia.com/package/@turbodocx/sdk)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-Official JavaScript/TypeScript SDK for TurboDocx API - Digital signatures, document generation, and AI-powered workflows. Full TypeScript support with comprehensive type definitions.
+[Documentation](https://www.turbodocx.com/docs) • [API Reference](https://www.turbodocx.com/docs/api) • [Examples](#examples) • [Discord](https://discord.gg/NYKwz4BcpX)
 
-## Why @turbodocx/sdk?
+</div>
 
-🚀 **Production-Ready** - Battle-tested in production environments processing thousands of documents daily.
+---
 
-🔄 **Active Maintenance** - Backed by TurboDocx with regular updates, bug fixes, and feature enhancements.
+## Features
 
-🤖 **AI-Optimized** - Designed for modern AI workflows where speed and reliability matter.
+- 🚀 **Production-Ready** — Battle-tested, processing thousands of documents daily
+- 📝 **Full TypeScript Support** — Comprehensive type definitions with IntelliSense
+- ⚡ **Lightweight** — Zero dependencies, tree-shakeable
+- 🔄 **Promise-based** — Modern async/await API
+- 🛡️ **Type-safe** — Catch errors at compile time, not runtime
+- 🤖 **100% n8n Parity** — Same operations as our n8n community nodes
 
-🛠️ **Full TypeScript Support** - Comprehensive type definitions for excellent IDE support and type safety.
-
-⚡ **100% n8n Parity** - Same operations available in our n8n community nodes, ensuring consistency across platforms.
+---
 
 ## Installation
 
@@ -29,15 +35,34 @@ Official JavaScript/TypeScript SDK for TurboDocx API - Digital signatures, docum
 npm install @turbodocx/sdk
 ```
 
+<details>
+<summary>Other package managers</summary>
+
+```bash
+# Yarn
+yarn add @turbodocx/sdk
+
+# pnpm
+pnpm add @turbodocx/sdk
+
+# Bun
+bun add @turbodocx/sdk
+```
+</details>
+
+---
+
 ## Quick Start
 
 ```typescript
 import { TurboSign } from '@turbodocx/sdk';
 
-// Configure with your API key
-TurboSign.configure({ apiKey: 'your-api-key' });
+// 1. Configure with your API key
+TurboSign.configure({
+  apiKey: process.env.TURBODOCX_API_KEY
+});
 
-// Send a document for signature
+// 2. Send a document for signature
 const result = await TurboSign.prepareForSigningSingle({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
@@ -51,24 +76,50 @@ const result = await TurboSign.prepareForSigningSingle({
 console.log('Sign URL:', result.recipients[0].signUrl);
 ```
 
-## TurboSign API
+---
 
-### Configuration
+## Configuration
 
 ```typescript
-// With API key
-TurboSign.configure({ apiKey: 'your-api-key' });
+import { TurboSign } from '@turbodocx/sdk';
 
-// With custom base URL
+// Basic configuration
+TurboSign.configure({
+  apiKey: 'your-api-key'
+});
+
+// With custom options
 TurboSign.configure({
   apiKey: 'your-api-key',
-  baseUrl: 'https://custom-api.example.com'
+  baseUrl: 'https://custom-api.example.com',  // Optional: custom API endpoint
+  timeout: 30000,                              // Optional: request timeout (ms)
 });
 ```
 
-### Prepare for Review
+### Environment Variables
 
-Upload a document for review without sending signature emails:
+We recommend using environment variables for your API key:
+
+```bash
+# .env
+TURBODOCX_API_KEY=your-api-key
+```
+
+```typescript
+TurboSign.configure({
+  apiKey: process.env.TURBODOCX_API_KEY
+});
+```
+
+---
+
+## API Reference
+
+### TurboSign
+
+#### `prepareForReview(options)`
+
+Upload a document for review without sending signature emails. Returns a preview URL.
 
 ```typescript
 const result = await TurboSign.prepareForReview({
@@ -79,86 +130,277 @@ const result = await TurboSign.prepareForReview({
   fields: [
     { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }
   ],
-  documentName: 'Contract Agreement'
+  documentName: 'Service Agreement',        // Optional
+  documentDescription: 'Q4 Contract',       // Optional
+  senderName: 'Acme Corp',                  // Optional
+  senderEmail: 'contracts@acme.com',        // Optional
+  ccEmails: ['legal@acme.com']              // Optional
 });
 
 console.log('Preview URL:', result.previewUrl);
+console.log('Document ID:', result.documentId);
 ```
 
-### Prepare for Signing
+#### `prepareForSigningSingle(options)`
 
-Upload a document and send signature request emails:
+Upload a document and immediately send signature request emails.
 
 ```typescript
 const result = await TurboSign.prepareForSigningSingle({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
-    { name: 'John Doe', email: 'john@example.com', order: 1 }
+    { name: 'Alice', email: 'alice@example.com', order: 1 },
+    { name: 'Bob', email: 'bob@example.com', order: 2 }  // Signs after Alice
   ],
   fields: [
-    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }
+    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 },
+    { type: 'signature', page: 1, x: 100, y: 600, width: 200, height: 50, recipientOrder: 2 }
   ]
 });
 
-console.log('Sign URL:', result.recipients[0].signUrl);
+// Each recipient gets a unique signing URL
+result.recipients.forEach(r => {
+  console.log(`${r.name}: ${r.signUrl}`);
+});
 ```
 
-### Get Document Status
+#### `getStatus(documentId)`
+
+Check the current status of a document.
 
 ```typescript
-const status = await TurboSign.getStatus('document-id');
-console.log('Status:', status.status); // 'pending', 'completed', 'voided'
+const status = await TurboSign.getStatus('doc-uuid-here');
+
+console.log('Document Status:', status.status);  // 'pending' | 'completed' | 'voided'
+console.log('Recipients:', status.recipients);
+
+// Check individual recipient status
+status.recipients.forEach(r => {
+  console.log(`${r.name}: ${r.status}`);  // 'pending' | 'signed' | 'declined'
+});
 ```
 
-### Download Signed Document
+#### `download(documentId)`
+
+Download the signed document as a Buffer/Blob.
 
 ```typescript
-const pdfBlob = await TurboSign.download('document-id');
+const signedPdf = await TurboSign.download('doc-uuid-here');
+
+// Node.js: Save to file
+import { writeFileSync } from 'fs';
+writeFileSync('signed-contract.pdf', signedPdf);
+
+// Browser: Trigger download
+const blob = new Blob([signedPdf], { type: 'application/pdf' });
+const url = URL.createObjectURL(blob);
+window.open(url);
 ```
 
-### Void Document
+#### `void(documentId, reason)`
+
+Cancel a signature request.
 
 ```typescript
-await TurboSign.void('document-id', 'Document needs revision');
+await TurboSign.void('doc-uuid-here', 'Contract terms changed');
 ```
 
-### Resend Email
+#### `resend(documentId, recipientIds)`
+
+Resend signature request emails to specific recipients.
 
 ```typescript
-await TurboSign.resend('document-id', ['recipient-id-1']);
+await TurboSign.resend('doc-uuid-here', ['recipient-uuid-1', 'recipient-uuid-2']);
 ```
+
+---
 
 ## Field Types
 
-| Type | Description |
-|------|-------------|
-| `signature` | Signature field |
-| `initials` | Initials field |
-| `date` | Date field (auto-filled) |
-| `text` | Text input field |
-| `checkbox` | Checkbox field |
+| Type | Description | Required | Auto-filled |
+|:-----|:------------|:---------|:------------|
+| `signature` | Signature field (draw or type) | Yes | No |
+| `initials` | Initials field | Yes | No |
+| `text` | Free-form text input | No | No |
+| `date` | Date stamp | No | Yes (signing date) |
+| `checkbox` | Checkbox / agreement | No | No |
+
+### Field Positioning
+
+```typescript
+{
+  type: 'signature',
+  page: 1,              // Page number (1-indexed)
+  x: 100,               // X position from left (pixels)
+  y: 500,               // Y position from top (pixels)
+  width: 200,           // Field width (pixels)
+  height: 50,           // Field height (pixels)
+  recipientOrder: 1,    // Which recipient this field belongs to
+  required: true        // Optional: default true for signature/initials
+}
+```
+
+---
+
+## Examples
+
+### Sequential Signing (Multiple Recipients)
+
+```typescript
+const result = await TurboSign.prepareForSigningSingle({
+  fileLink: 'https://example.com/contract.pdf',
+  recipients: [
+    { name: 'Employee', email: 'employee@company.com', order: 1 },
+    { name: 'Manager', email: 'manager@company.com', order: 2 },
+    { name: 'HR', email: 'hr@company.com', order: 3 }
+  ],
+  fields: [
+    // Employee signs first
+    { type: 'signature', page: 1, x: 100, y: 400, width: 200, height: 50, recipientOrder: 1 },
+    { type: 'date', page: 1, x: 320, y: 400, width: 100, height: 30, recipientOrder: 1 },
+    // Manager signs second
+    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 2 },
+    { type: 'date', page: 1, x: 320, y: 500, width: 100, height: 30, recipientOrder: 2 },
+    // HR signs last
+    { type: 'signature', page: 1, x: 100, y: 600, width: 200, height: 50, recipientOrder: 3 },
+    { type: 'date', page: 1, x: 320, y: 600, width: 100, height: 30, recipientOrder: 3 }
+  ]
+});
+```
+
+### Polling for Completion
+
+```typescript
+async function waitForCompletion(documentId: string, maxAttempts = 60) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const status = await TurboSign.getStatus(documentId);
+
+    if (status.status === 'completed') {
+      return await TurboSign.download(documentId);
+    }
+
+    if (status.status === 'voided') {
+      throw new Error('Document was voided');
+    }
+
+    // Wait 30 seconds between checks
+    await new Promise(r => setTimeout(r, 30000));
+  }
+
+  throw new Error('Timeout waiting for signatures');
+}
+```
+
+### With Express.js
+
+```typescript
+import express from 'express';
+import { TurboSign } from '@turbodocx/sdk';
+
+const app = express();
+
+TurboSign.configure({ apiKey: process.env.TURBODOCX_API_KEY });
+
+app.post('/api/send-contract', async (req, res) => {
+  try {
+    const result = await TurboSign.prepareForSigningSingle({
+      fileLink: req.body.pdfUrl,
+      recipients: req.body.recipients,
+      fields: req.body.fields
+    });
+
+    res.json({ success: true, documentId: result.documentId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+```
+
+---
 
 ## Error Handling
 
 ```typescript
+import { TurboSign, TurboDocxError } from '@turbodocx/sdk';
+
 try {
   await TurboSign.getStatus('invalid-id');
 } catch (error) {
-  console.error('Status:', error.statusCode);
-  console.error('Message:', error.message);
+  if (error instanceof TurboDocxError) {
+    console.error('Status:', error.statusCode);   // HTTP status code
+    console.error('Message:', error.message);     // Error message
+    console.error('Code:', error.code);           // Error code (if available)
+  } else {
+    console.error('Unexpected error:', error);
+  }
 }
 ```
+
+### Common Error Codes
+
+| Status | Meaning |
+|:-------|:--------|
+| `400` | Bad request — check your parameters |
+| `401` | Unauthorized — check your API key |
+| `404` | Document not found |
+| `429` | Rate limited — slow down requests |
+| `500` | Server error — retry with backoff |
+
+---
+
+## TypeScript
+
+Full TypeScript support with exported types:
+
+```typescript
+import {
+  TurboSign,
+  PrepareForSigningOptions,
+  PrepareForReviewOptions,
+  Recipient,
+  Field,
+  DocumentStatus,
+  TurboDocxError
+} from '@turbodocx/sdk';
+
+// Type-safe options
+const options: PrepareForSigningOptions = {
+  fileLink: 'https://example.com/contract.pdf',
+  recipients: [{ name: 'John', email: 'john@example.com', order: 1 }],
+  fields: [{ type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }]
+};
+
+const result = await TurboSign.prepareForSigningSingle(options);
+```
+
+---
 
 ## Requirements
 
 - Node.js 16+
+- TypeScript 4.7+ (if using TypeScript)
+
+---
+
+## Related Packages
+
+| Package | Description |
+|:--------|:------------|
+| [@turbodocx/n8n-nodes-turbodocx](https://www.npmjs.com/package/@turbodocx/n8n-nodes-turbodocx) | n8n community nodes |
+| [turbodocx-sdk (Python)](../py-sdk) | Python SDK |
+| [turbodocx (Go)](../go-sdk) | Go SDK |
+
+---
 
 ## Support
 
 - 📖 [Documentation](https://www.turbodocx.com/docs)
 - 💬 [Discord](https://discord.gg/NYKwz4BcpX)
-- 🐛 [Issues](https://github.com/TurboDocx/SDK/issues)
+- 🐛 [GitHub Issues](https://github.com/TurboDocx/SDK/issues)
+- 📧 [Email Support](mailto:support@turbodocx.com)
+
+---
 
 ## License
 
-MIT - see [LICENSE](./LICENSE)
+MIT — see [LICENSE](./LICENSE)

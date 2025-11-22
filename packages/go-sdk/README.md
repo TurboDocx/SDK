@@ -1,32 +1,39 @@
 [![TurboDocx](./banner.png)](https://www.turbodocx.com)
 
-turbodocx-go
-====================
+<div align="center">
+
+# turbodocx-go
+
+**Official Go SDK for TurboDocx**
+
 [![Go Reference](https://pkg.go.dev/badge/github.com/TurboDocx/SDK/packages/go-sdk.svg)](https://pkg.go.dev/github.com/TurboDocx/SDK/packages/go-sdk)
-[![GitHub Stars](https://img.shields.io/github/stars/turbodocx/sdk?style=social)](https://github.com/turbodocx/sdk)
-[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go&logoColor=white)](https://golang.org)
-[![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/NYKwz4BcpX)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go Report Card](https://goreportcard.com/badge/github.com/TurboDocx/SDK)](https://goreportcard.com/report/github.com/TurboDocx/SDK)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-Official Go SDK for TurboDocx API - Digital signatures, document generation, and AI-powered workflows. Idiomatic Go with context support.
+[Documentation](https://www.turbodocx.com/docs) • [API Reference](https://www.turbodocx.com/docs/api) • [Examples](#examples) • [Discord](https://discord.gg/NYKwz4BcpX)
 
-## Why turbodocx-go?
+</div>
 
-🚀 **Production-Ready** - Battle-tested in production environments processing thousands of documents daily.
+---
 
-🔄 **Active Maintenance** - Backed by TurboDocx with regular updates, bug fixes, and feature enhancements.
+## Features
 
-🤖 **AI-Optimized** - Designed for modern AI workflows where speed and reliability matter.
+- 🚀 **Production-Ready** — Battle-tested, processing thousands of documents daily
+- ⚡ **Context Support** — Full context.Context support for cancellation and timeouts
+- 🔒 **Type-Safe** — Strongly typed request/response structs
+- 🧵 **Concurrent Safe** — Safe for use across goroutines
+- 📦 **Zero Dependencies** — Only standard library
+- 🤖 **100% n8n Parity** — Same operations as our n8n community nodes
 
-🐹 **Idiomatic Go** - Context-aware, proper error handling, and clean API design.
-
-⚡ **100% n8n Parity** - Same operations available in our n8n community nodes.
+---
 
 ## Installation
 
 ```bash
 go get github.com/TurboDocx/SDK/packages/go-sdk
 ```
+
+---
 
 ## Quick Start
 
@@ -36,12 +43,16 @@ package main
 import (
     "context"
     "fmt"
+    "log"
+
     turbodocx "github.com/TurboDocx/SDK/packages/go-sdk"
 )
 
 func main() {
+    // 1. Create client
     client := turbodocx.NewClient("your-api-key")
 
+    // 2. Send document for signature
     result, err := client.TurboSign.PrepareForSigningSingle(context.Background(), &turbodocx.PrepareForSigningRequest{
         FileLink: "https://example.com/contract.pdf",
         Recipients: []turbodocx.Recipient{
@@ -52,96 +63,284 @@ func main() {
         },
     })
     if err != nil {
-        panic(err)
+        log.Fatal(err)
     }
 
-    fmt.Println("Sign URL:", result.Recipients[0].SignURL)
+    fmt.Printf("Sign URL: %s\n", result.Recipients[0].SignURL)
 }
 ```
 
-## TurboSign API
+---
 
-### Configuration
+## Configuration
 
 ```go
-// With API key
+// Basic client
 client := turbodocx.NewClient("your-api-key")
 
-// With custom base URL
-client := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
-    APIKey:  "your-api-key",
-    BaseURL: "https://custom-api.example.com",
-})
+// With options
+client := turbodocx.NewClient("your-api-key",
+    turbodocx.WithBaseURL("https://custom-api.example.com"),
+    turbodocx.WithTimeout(30 * time.Second),
+    turbodocx.WithHTTPClient(customHTTPClient),
+)
+
+// From environment variable
+client := turbodocx.NewClient(os.Getenv("TURBODOCX_API_KEY"))
 ```
 
-### Prepare for Review
+---
+
+## API Reference
+
+### TurboSign
+
+#### `PrepareForReview`
+
+Upload a document for review without sending signature emails.
 
 ```go
 result, err := client.TurboSign.PrepareForReview(ctx, &turbodocx.PrepareForReviewRequest{
-    FileLink:   "https://example.com/contract.pdf",
-    Recipients: []turbodocx.Recipient{{Name: "John Doe", Email: "john@example.com", Order: 1}},
-    Fields:     []turbodocx.Field{{Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 1}},
+    FileLink: "https://example.com/contract.pdf",
+    Recipients: []turbodocx.Recipient{
+        {Name: "John Doe", Email: "john@example.com", Order: 1},
+    },
+    Fields: []turbodocx.Field{
+        {Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 1},
+    },
+    DocumentName: "Service Agreement",       // Optional
+    SenderName:   "Acme Corp",               // Optional
+    SenderEmail:  "contracts@acme.com",      // Optional
 })
+
+fmt.Printf("Preview URL: %s\n", result.PreviewURL)
+fmt.Printf("Document ID: %s\n", result.DocumentID)
 ```
 
-### Prepare for Signing
+#### `PrepareForSigningSingle`
+
+Upload a document and immediately send signature request emails.
 
 ```go
 result, err := client.TurboSign.PrepareForSigningSingle(ctx, &turbodocx.PrepareForSigningRequest{
-    FileLink:   "https://example.com/contract.pdf",
-    Recipients: []turbodocx.Recipient{{Name: "John Doe", Email: "john@example.com", Order: 1}},
-    Fields:     []turbodocx.Field{{Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 1}},
+    FileLink: "https://example.com/contract.pdf",
+    Recipients: []turbodocx.Recipient{
+        {Name: "Alice", Email: "alice@example.com", Order: 1},
+        {Name: "Bob", Email: "bob@example.com", Order: 2},
+    },
+    Fields: []turbodocx.Field{
+        {Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 1},
+        {Type: "signature", Page: 1, X: 100, Y: 600, Width: 200, Height: 50, RecipientOrder: 2},
+    },
+})
+
+for _, r := range result.Recipients {
+    fmt.Printf("%s: %s\n", r.Name, r.SignURL)
+}
+```
+
+#### `GetStatus`
+
+Check the current status of a document.
+
+```go
+status, err := client.TurboSign.GetStatus(ctx, "doc-uuid-here")
+
+fmt.Printf("Status: %s\n", status.Status)  // "pending", "completed", "voided"
+
+for _, r := range status.Recipients {
+    fmt.Printf("%s: %s\n", r.Name, r.Status)
+}
+```
+
+#### `Download`
+
+Download the signed document.
+
+```go
+pdfBytes, err := client.TurboSign.Download(ctx, "doc-uuid-here")
+
+// Save to file
+err = os.WriteFile("signed-contract.pdf", pdfBytes, 0644)
+```
+
+#### `Void`
+
+Cancel a signature request.
+
+```go
+err := client.TurboSign.Void(ctx, "doc-uuid-here", "Contract terms changed")
+```
+
+#### `Resend`
+
+Resend signature request emails.
+
+```go
+err := client.TurboSign.Resend(ctx, "doc-uuid-here", []string{"recipient-uuid-1"})
+```
+
+---
+
+## Field Types
+
+| Type | Description | Required | Auto-filled |
+|:-----|:------------|:---------|:------------|
+| `signature` | Signature field (draw or type) | Yes | No |
+| `initials` | Initials field | Yes | No |
+| `text` | Free-form text input | No | No |
+| `date` | Date stamp | No | Yes (signing date) |
+| `checkbox` | Checkbox / agreement | No | No |
+
+---
+
+## Examples
+
+### Sequential Signing
+
+```go
+result, _ := client.TurboSign.PrepareForSigningSingle(ctx, &turbodocx.PrepareForSigningRequest{
+    FileLink: "https://example.com/contract.pdf",
+    Recipients: []turbodocx.Recipient{
+        {Name: "Employee", Email: "employee@company.com", Order: 1},
+        {Name: "Manager", Email: "manager@company.com", Order: 2},
+        {Name: "HR", Email: "hr@company.com", Order: 3},
+    },
+    Fields: []turbodocx.Field{
+        {Type: "signature", Page: 1, X: 100, Y: 400, Width: 200, Height: 50, RecipientOrder: 1},
+        {Type: "date", Page: 1, X: 320, Y: 400, Width: 100, Height: 30, RecipientOrder: 1},
+        {Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 2},
+        {Type: "signature", Page: 1, X: 100, Y: 600, Width: 200, Height: 50, RecipientOrder: 3},
+    },
 })
 ```
 
-### Get Document Status
+### With Context Timeout
 
 ```go
-status, err := client.TurboSign.GetStatus(ctx, "document-id")
-fmt.Println("Status:", status.Status)
+ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+defer cancel()
+
+result, err := client.TurboSign.PrepareForSigningSingle(ctx, request)
+if err != nil {
+    if errors.Is(err, context.DeadlineExceeded) {
+        log.Println("Request timed out")
+    }
+}
 ```
 
-### Download Signed Document
+### Polling for Completion
 
 ```go
-pdfBytes, err := client.TurboSign.Download(ctx, "document-id")
-os.WriteFile("signed.pdf", pdfBytes, 0644)
+func waitForCompletion(ctx context.Context, client *turbodocx.Client, documentID string) ([]byte, error) {
+    ticker := time.NewTicker(30 * time.Second)
+    defer ticker.Stop()
+
+    for {
+        select {
+        case <-ctx.Done():
+            return nil, ctx.Err()
+        case <-ticker.C:
+            status, err := client.TurboSign.GetStatus(ctx, documentID)
+            if err != nil {
+                return nil, err
+            }
+
+            switch status.Status {
+            case "completed":
+                return client.TurboSign.Download(ctx, documentID)
+            case "voided":
+                return nil, errors.New("document was voided")
+            }
+        }
+    }
+}
 ```
 
-### Void Document
+### With HTTP Handler
 
 ```go
-_, err := client.TurboSign.VoidDocument(ctx, "document-id", "Document needs revision")
+func sendContractHandler(w http.ResponseWriter, r *http.Request) {
+    client := turbodocx.NewClient(os.Getenv("TURBODOCX_API_KEY"))
+
+    var req struct {
+        PDFUrl     string               `json:"pdfUrl"`
+        Recipients []turbodocx.Recipient `json:"recipients"`
+        Fields     []turbodocx.Field     `json:"fields"`
+    }
+    json.NewDecoder(r.Body).Decode(&req)
+
+    result, err := client.TurboSign.PrepareForSigningSingle(r.Context(), &turbodocx.PrepareForSigningRequest{
+        FileLink:   req.PDFUrl,
+        Recipients: req.Recipients,
+        Fields:     req.Fields,
+    })
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    json.NewEncoder(w).Encode(map[string]string{
+        "documentId": result.DocumentID,
+    })
+}
 ```
 
-### Resend Email
-
-```go
-_, err := client.TurboSign.ResendEmail(ctx, "document-id", []string{"recipient-id-1"})
-```
+---
 
 ## Error Handling
 
 ```go
 result, err := client.TurboSign.GetStatus(ctx, "invalid-id")
 if err != nil {
-    if apiErr, ok := err.(*turbodocx.TurboDocxError); ok {
-        fmt.Println("Status:", apiErr.StatusCode)
-        fmt.Println("Message:", apiErr.Message)
+    var apiErr *turbodocx.APIError
+    if errors.As(err, &apiErr) {
+        fmt.Printf("Status: %d\n", apiErr.StatusCode)
+        fmt.Printf("Message: %s\n", apiErr.Message)
+        fmt.Printf("Code: %s\n", apiErr.Code)
+    } else {
+        fmt.Printf("Unexpected error: %v\n", err)
     }
 }
 ```
+
+### Common Error Codes
+
+| Status | Meaning |
+|:-------|:--------|
+| `400` | Bad request — check your parameters |
+| `401` | Unauthorized — check your API key |
+| `404` | Document not found |
+| `429` | Rate limited — slow down requests |
+| `500` | Server error — retry with backoff |
+
+---
 
 ## Requirements
 
 - Go 1.21+
 
+---
+
+## Related Packages
+
+| Package | Description |
+|:--------|:------------|
+| [@turbodocx/sdk (JS)](../js-sdk) | JavaScript/TypeScript SDK |
+| [turbodocx-sdk (Python)](../py-sdk) | Python SDK |
+| [@turbodocx/n8n-nodes-turbodocx](https://www.npmjs.com/package/@turbodocx/n8n-nodes-turbodocx) | n8n community nodes |
+
+---
+
 ## Support
 
 - 📖 [Documentation](https://www.turbodocx.com/docs)
 - 💬 [Discord](https://discord.gg/NYKwz4BcpX)
-- 🐛 [Issues](https://github.com/TurboDocx/SDK/issues)
+- 🐛 [GitHub Issues](https://github.com/TurboDocx/SDK/issues)
+- 📧 [Email Support](mailto:support@turbodocx.com)
+
+---
 
 ## License
 
-MIT - see [LICENSE](./LICENSE)
+MIT — see [LICENSE](./LICENSE)
