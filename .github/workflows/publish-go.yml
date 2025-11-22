@@ -1,0 +1,46 @@
+name: Publish Go SDK
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref_name, 'go-sdk-v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Download dependencies
+        run: |
+          cd packages/go-sdk
+          go mod download
+
+      - name: Run tests
+        run: |
+          cd packages/go-sdk
+          go test -v ./...
+
+  # Go modules are automatically available via GitHub
+  # Users install with: go get github.com/TurboDocx/SDK/packages/go-sdk@vX.Y.Z
+  tag:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#go-sdk-v}" >> $GITHUB_OUTPUT
+
+      - name: Create Go module tag
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag "packages/go-sdk/v${{ steps.version.outputs.version }}" || true
+          git push origin "packages/go-sdk/v${{ steps.version.outputs.version }}" || true

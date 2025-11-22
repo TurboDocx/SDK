@@ -39,3 +39,14 @@ npm-debug.log*
 .env
 .env.local
 .env.*.local
+
+# Go
+go.sum
+
+# .NET
+bin/
+obj/
+*.nupkg
+*.user
+*.suo
+TestResults/

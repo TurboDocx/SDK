@@ -52,6 +52,59 @@ jobs:
           cd packages/py-sdk
           pytest -v
 
+  test-go:
+    name: Test Go SDK
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.21', '1.22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Download dependencies
+        run: |
+          cd packages/go-sdk
+          go mod download
+
+      - name: Run tests
+        run: |
+          cd packages/go-sdk
+          go test -v ./...
+
+  test-dotnet:
+    name: Test .NET SDK
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dotnet-version: ['6.0', '7.0', '8.0']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET ${{ matrix.dotnet-version }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ matrix.dotnet-version }}
+
+      - name: Restore dependencies
+        run: |
+          cd packages/dotnet-sdk
+          dotnet restore
+
+      - name: Build
+        run: |
+          cd packages/dotnet-sdk
+          dotnet build --no-restore
+
+      - name: Run tests
+        run: |
+          cd packages/dotnet-sdk
+          dotnet test --no-build --verbosity normal
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Package info -->
+    <PackageId>TurboDocx.SDK</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>TurboDocx</Authors>
+    <Company>TurboDocx</Company>
+    <Description>Official .NET SDK for TurboDocx API - Digital signatures, document generation, and AI-powered workflows</Description>
+    <PackageTags>turbodocx;turbosign;esignature;digital-signature;document-automation;pdf;api;sdk</PackageTags>
+    <PackageProjectUrl>https://www.turbodocx.com</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/TurboDocx/SDK</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- Build settings -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>
