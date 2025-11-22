@@ -230,19 +230,19 @@ const result = await TurboSign.prepareForSigningSingle({
   ],
   fields: [
     // Fields anchored to text markers in the PDF
-    { type: 'signature', anchor: '{{SIGNATURE_ALICE}}', width: 200, height: 50, recipientOrder: 1 },
-    { type: 'date', anchor: '{{DATE_ALICE}}', width: 100, height: 30, recipientOrder: 1 },
-    { type: 'signature', anchor: '{{SIGNATURE_BOB}}', width: 200, height: 50, recipientOrder: 2 },
-    { type: 'date', anchor: '{{DATE_BOB}}', width: 100, height: 30, recipientOrder: 2 },
+    { type: 'signature', anchor: '{SIGNATURE_ALICE}', width: 200, height: 50, recipientOrder: 1 },
+    { type: 'date', anchor: '{DATE_ALICE}', width: 100, height: 30, recipientOrder: 1 },
+    { type: 'signature', anchor: '{SIGNATURE_BOB}', width: 200, height: 50, recipientOrder: 2 },
+    { type: 'date', anchor: '{DATE_BOB}', width: 100, height: 30, recipientOrder: 2 },
 
     // Text fields for additional info
-    { type: 'text', anchor: '{{TITLE_ALICE}}', width: 150, height: 25, recipientOrder: 1 },
-    { type: 'text', anchor: '{{TITLE_BOB}}', width: 150, height: 25, recipientOrder: 2 }
+    { type: 'text', anchor: '{TITLE_ALICE}', width: 150, height: 25, recipientOrder: 1 },
+    { type: 'text', anchor: '{TITLE_BOB}', width: 150, height: 25, recipientOrder: 2 }
   ]
 });
 ```
 
-> **Tip:** Template-based fields are ideal when your PDF layout may change. Add text markers like `{{SIGNATURE_1}}` to your document, and the signature fields will automatically align to them.
+> **Tip:** Template-based fields are ideal when your PDF layout may change. Add text markers like `{SIGNATURE_1}` to your document, and the signature fields will automatically align to them.
 
 ### Complete Workflow Example
 
