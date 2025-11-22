@@ -1,4 +1,4 @@
-[![TurboDocx](https://raw.githubusercontent.com/TurboDocx/SDK/main/banner.png)](https://www.turbodocx.com)
+[![TurboDocx](./banner.png)](https://www.turbodocx.com)
 
 turbodocx-sdk
 ====================
