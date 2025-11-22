@@ -1,6 +1,27 @@
-# TurboDocx Ruby SDK
+[![TurboDocx](https://raw.githubusercontent.com/TurboDocx/SDK/main/banner.png)](https://www.turbodocx.com)
 
-Official Ruby SDK for TurboDocx API - Document generation and digital signatures.
+turbodocx
+====================
+[![Gem Version](https://img.shields.io/gem/v/turbodocx.svg)](https://rubygems.org/gems/turbodocx)
+[![Gem Downloads](https://img.shields.io/gem/dt/turbodocx)](https://rubygems.org/gems/turbodocx)
+[![GitHub Stars](https://img.shields.io/github/stars/turbodocx/sdk?style=social)](https://github.com/turbodocx/sdk)
+[![Ruby](https://img.shields.io/badge/Ruby-3.0+-CC342D?logo=ruby&logoColor=white)](https://ruby-lang.org)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/NYKwz4BcpX)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Official Ruby SDK for TurboDocx API - Digital signatures, document generation, and AI-powered workflows. Clean, idiomatic Ruby with symbol-based responses.
+
+## Why turbodocx?
+
+🚀 **Production-Ready** - Battle-tested in production environments processing thousands of documents daily.
+
+🔄 **Active Maintenance** - Backed by TurboDocx with regular updates, bug fixes, and feature enhancements.
+
+🤖 **AI-Optimized** - Designed for modern AI workflows where speed and reliability matter.
+
+💎 **Idiomatic Ruby** - Keyword arguments, symbol keys, and clean exception handling.
+
+⚡ **100% n8n Parity** - Same operations available in our n8n community nodes.
 
 ## Installation
 
@@ -27,116 +48,106 @@ gem install turbodocx
 ```ruby
 require 'turbodocx'
 
-# Initialize the client
 client = TurboDocx::Client.new(api_key: 'your-api-key')
 
-# Prepare document for signing
 result = client.turbo_sign.prepare_for_signing_single(
   file_link: 'https://example.com/contract.pdf',
-  recipients: [
-    { name: 'John Doe', email: 'john@example.com', order: 1 }
-  ],
-  fields: [
-    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }
-  ]
+  recipients: [{ name: 'John Doe', email: 'john@example.com', order: 1 }],
+  fields: [{ type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }]
 )
 
-puts "Document ID: #{result[:documentId]}"
 puts "Sign URL: #{result[:recipients][0][:signUrl]}"
 ```
 
-## Configuration
+## TurboSign API
 
-### Global Configuration
-
-```ruby
-TurboDocx.configure do |config|
-  config.api_key = 'your-api-key'
-  config.base_url = 'https://api.turbodocx.com'  # optional
-end
-
-client = TurboDocx::Client.new
-```
-
-### Per-Client Configuration
+### Configuration
 
 ```ruby
+# With API key
+client = TurboDocx::Client.new(api_key: 'your-api-key')
+
+# With custom base URL
 client = TurboDocx::Client.new(
   api_key: 'your-api-key',
   base_url: 'https://custom-api.example.com'
 )
-```
 
-## TurboSign Operations
+# Global configuration
+TurboDocx.configure do |config|
+  config.api_key = 'your-api-key'
+end
+client = TurboDocx::Client.new
+```
 
 ### Prepare for Review
 
-Upload a document for review without sending signature emails:
-
 ```ruby
 result = client.turbo_sign.prepare_for_review(
-  file_link: 'https://storage.example.com/contract.pdf',
-  recipients: recipients,
-  fields: fields,
+  file_link: 'https://example.com/contract.pdf',
+  recipients: [{ name: 'John Doe', email: 'john@example.com', order: 1 }],
+  fields: [{ type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }],
   document_name: 'Contract Agreement'
 )
 ```
 
 ### Prepare for Signing
 
-Upload a document and send signature request emails:
-
 ```ruby
 result = client.turbo_sign.prepare_for_signing_single(
-  file: File.read('contract.pdf'),
-  file_name: 'contract.pdf',
-  recipients: recipients,
-  fields: fields
+  file_link: 'https://example.com/contract.pdf',
+  recipients: [{ name: 'John Doe', email: 'john@example.com', order: 1 }],
+  fields: [{ type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }]
 )
 ```
 
 ### Get Document Status
 
 ```ruby
-status = client.turbo_sign.get_status('doc-123')
+status = client.turbo_sign.get_status('document-id')
 puts "Status: #{status[:status]}"
 ```
 
 ### Download Signed Document
 
 ```ruby
-pdf_content = client.turbo_sign.download('doc-123')
-File.write('signed-document.pdf', pdf_content)
+pdf_content = client.turbo_sign.download('document-id')
+File.write('signed.pdf', pdf_content)
 ```
 
 ### Void Document
 
 ```ruby
-result = client.turbo_sign.void_document('doc-123', 'Document needs revision')
+client.turbo_sign.void_document('document-id', 'Document needs revision')
 ```
 
 ### Resend Email
 
 ```ruby
-result = client.turbo_sign.resend_email('doc-123', ['rec-1', 'rec-2'])
+client.turbo_sign.resend_email('document-id', ['recipient-id-1'])
 ```
 
 ## Error Handling
 
 ```ruby
 begin
-  client.turbo_sign.get_status('invalid-doc')
+  client.turbo_sign.get_status('invalid-id')
 rescue TurboDocx::Error => e
-  puts "Error: #{e.message}"
-  puts "Status Code: #{e.status_code}"
-  puts "Error Code: #{e.code}"
+  puts "Status: #{e.status_code}"
+  puts "Message: #{e.message}"
 end
 ```
 
 ## Requirements
 
-- Ruby 3.0 or higher
+- Ruby 3.0+
+
+## Support
+
+- 📖 [Documentation](https://www.turbodocx.com/docs)
+- 💬 [Discord](https://discord.gg/NYKwz4BcpX)
+- 🐛 [Issues](https://github.com/TurboDocx/SDK/issues)
 
 ## License
 
-MIT License
+MIT - see [LICENSE](./LICENSE)

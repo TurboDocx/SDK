@@ -1,6 +1,27 @@
-# @turbodocx/sdk
+[![TurboDocx](https://raw.githubusercontent.com/TurboDocx/SDK/main/banner.png)](https://www.turbodocx.com)
 
-Official JavaScript/TypeScript SDK for TurboDocx APIs.
+@turbodocx/sdk
+====================
+[![NPM Version](https://img.shields.io/npm/v/@turbodocx/sdk.svg)](https://npmjs.org/package/@turbodocx/sdk)
+[![npm](https://img.shields.io/npm/dm/@turbodocx/sdk)](https://www.npmjs.com/package/@turbodocx/sdk)
+[![GitHub Stars](https://img.shields.io/github/stars/turbodocx/sdk?style=social)](https://github.com/turbodocx/sdk)
+[![TypeScript](https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square)](https://typescript.org)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/NYKwz4BcpX)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Official JavaScript/TypeScript SDK for TurboDocx API - Digital signatures, document generation, and AI-powered workflows. Full TypeScript support with comprehensive type definitions.
+
+## Why @turbodocx/sdk?
+
+🚀 **Production-Ready** - Battle-tested in production environments processing thousands of documents daily.
+
+🔄 **Active Maintenance** - Backed by TurboDocx with regular updates, bug fixes, and feature enhancements.
+
+🤖 **AI-Optimized** - Designed for modern AI workflows where speed and reliability matter.
+
+🛠️ **Full TypeScript Support** - Comprehensive type definitions for excellent IDE support and type safety.
+
+⚡ **100% n8n Parity** - Same operations available in our n8n community nodes, ensuring consistency across platforms.
 
 ## Installation
 
@@ -10,224 +31,134 @@ npm install @turbodocx/sdk
 
 ## Quick Start
 
-### ✨ TurboSign - Digital Signatures Made Simple
-
-The easiest way to get documents signed:
-
 ```typescript
 import { TurboSign } from '@turbodocx/sdk';
 
 // Configure with your API key
-TurboSign.configure({
-  apiKey: process.env.TURBODOCX_API_KEY
-});
+TurboSign.configure({ apiKey: 'your-api-key' });
 
-// 🎉 That's it! One method call does everything:
-const result = await TurboSign.send({
-  file: pdfBuffer,
+// Send a document for signature
+const result = await TurboSign.prepareForSigningSingle({
+  fileLink: 'https://example.com/contract.pdf',
   recipients: [
-    { email: 'john@example.com', name: 'John Doe' },
-    { email: 'jane@example.com', name: 'Jane Smith' }
+    { name: 'John Doe', email: 'john@example.com', order: 1 }
   ],
   fields: [
-    { type: 'signature', page: 1, x: 100, y: 650, recipientIndex: 0 },
-    { type: 'date', page: 1, x: 100, y: 600, recipientIndex: 0 },
-    { type: 'signature', page: 1, x: 350, y: 650, recipientIndex: 1 }
+    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }
   ]
 });
 
 console.log('Sign URL:', result.recipients[0].signUrl);
 ```
 
-**What just happened? 🤔**
-- ✅ Document uploaded
-- ✅ Recipients added with beautiful auto-generated colors
-- ✅ Signing order auto-assigned based on array position (no manual ordering!)
-- ✅ Field sizes auto-filled with smart defaults
-- ✅ Emails sent to all recipients
-- ✅ Ready to sign!
+## TurboSign API
 
-**Want more control?** You can override any defaults:
+### Configuration
 
 ```typescript
-const result = await TurboSign.send({
-  file: pdfBuffer,
-  fileName: 'Partnership Agreement',  // Custom name
-  description: 'Q1 2025 Partnership Agreement',
+// With API key
+TurboSign.configure({ apiKey: 'your-api-key' });
+
+// With custom base URL
+TurboSign.configure({
+  apiKey: 'your-api-key',
+  baseUrl: 'https://custom-api.example.com'
+});
+```
+
+### Prepare for Review
+
+Upload a document for review without sending signature emails:
+
+```typescript
+const result = await TurboSign.prepareForReview({
+  fileLink: 'https://example.com/contract.pdf',
   recipients: [
-    {
-      email: 'ceo@company.com',
-      name: 'Jane CEO',
-      color: 'hsl(200, 75%, 50%)',  // Custom color
-      lightColor: 'hsl(200, 75%, 93%)'
-    }
+    { name: 'John Doe', email: 'john@example.com', order: 1 }
   ],
   fields: [
-    {
-      type: 'signature',
-      page: 1,
-      x: 100,
-      y: 650,
-      width: 250,  // Custom width
-      height: 60,  // Custom height
-      recipientEmail: 'ceo@company.com'  // Use email instead of index
-    }
+    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }
   ],
-  sendEmails: false  // Don't send emails yet
+  documentName: 'Contract Agreement'
 });
+
+console.log('Preview URL:', result.previewUrl);
 ```
 
-### 🔔 Webhooks - Real-time Event Notifications
+### Prepare for Signing
 
-Set up webhooks to receive notifications when signatures are completed or voided. Webhooks are configured **once at the organization level** and apply to all signature events.
+Upload a document and send signature request emails:
 
 ```typescript
-import { Webhooks, WebhookEvent } from '@turbodocx/sdk';
-
-// Configure Webhooks
-Webhooks.configure({
-  apiKey: process.env.TURBODOCX_API_KEY
-});
-
-// Create webhook (one-time setup)
-const webhook = await Webhooks.create(
-  'signature-webhook',
-  ['https://your-app.com/webhooks/turbosign'],
-  [
-    WebhookEvent.SIGNATURE_DOCUMENT_COMPLETED,
-    WebhookEvent.SIGNATURE_DOCUMENT_VOIDED
+const result = await TurboSign.prepareForSigningSingle({
+  fileLink: 'https://example.com/contract.pdf',
+  recipients: [
+    { name: 'John Doe', email: 'john@example.com', order: 1 }
+  ],
+  fields: [
+    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }
   ]
-);
-
-// 🔐 IMPORTANT: Save the secret securely!
-console.log('Webhook Secret:', webhook.secret);
-// This secret is only shown ONCE - save it for signature verification!
-```
-
-**Monitoring & Management:**
-
-```typescript
-// Test your webhook
-await Webhooks.test('signature-webhook');
-
-// Get webhook statistics
-const stats = await Webhooks.getStats('signature-webhook', 7);
-console.log(`Success rate: ${stats.summary.successRate}%`);
-
-// View failed deliveries
-const deliveries = await Webhooks.getDeliveries('signature-webhook', {
-  isDelivered: false
 });
 
-// Replay a failed delivery
-await Webhooks.replayDelivery('signature-webhook', deliveryId);
-
-// Update webhook config
-await Webhooks.update('signature-webhook', {
-  urls: ['https://new-url.com/webhooks/turbosign']
-});
+console.log('Sign URL:', result.recipients[0].signUrl);
 ```
 
-## Features
-
-- **TurboSign**: Digital signature workflows
-  - Upload documents
-  - Add recipients
-  - Place signature fields
-  - Track signing status
-  - Download signed documents
-  - Audit trails
-
-- **Webhooks**: Organization-wide event notifications
-  - Configure webhook endpoints
-  - Subscribe to signature events
-  - Monitor delivery success/failure
-  - Test webhooks before going live
-  - Replay failed deliveries
-  - View detailed statistics
-
-## Authentication
-
-Set your API key via configuration:
+### Get Document Status
 
 ```typescript
-TurboSign.configure({ apiKey: 'your-api-key' });
+const status = await TurboSign.getStatus('document-id');
+console.log('Status:', status.status); // 'pending', 'completed', 'voided'
 ```
 
-Or use environment variables:
-
-```bash
-export TURBODOCX_API_KEY=your-api-key
-```
-
-## Documentation
-
-For detailed documentation and examples, see:
-
-- [Examples](./examples) - Complete working examples
-- [TurboDocx Documentation](https://docs.turbodocx.com)
-
-## TypeScript Support
-
-This SDK is written in TypeScript and includes comprehensive type definitions.
+### Download Signed Document
 
 ```typescript
-import type { SignatureField, PrepareSigningRequest } from '@turbodocx/sdk';
+const pdfBlob = await TurboSign.download('document-id');
 ```
 
-## Examples
+### Void Document
 
-See the [examples](./examples) directory for complete working examples:
+```typescript
+await TurboSign.void('document-id', 'Document needs revision');
+```
 
-**TurboSign Examples:**
-- `turbosign-send-simple.ts` - ✨ **Magical one-liner** (recommended for most use cases)
-- `turbosign-send-with-emails.ts` - Using recipientEmail for explicit field assignment
-- `turbosign-basic.ts` - Manual 3-step signature workflow
-- `turbosign-complete-workflow.ts` - Alternative single-call workflow
-- `turbosign-from-deliverable.ts` - Creating signature docs from existing deliverables
-- `turbosign-advanced.ts` - Status checking, downloading, and management
+### Resend Email
 
-**Webhook Examples:**
-- `webhooks-setup.ts` - Setting up webhooks for signature events (with verification code)
-- `webhooks-monitoring.ts` - Monitoring deliveries, stats, testing, and management
+```typescript
+await TurboSign.resend('document-id', ['recipient-id-1']);
+```
 
-### API Methods
+## Field Types
 
-**TurboSign - Recommended (Simplest):**
-- `TurboSign.send()` - ✨ Magical one-liner with intelligent defaults
+| Type | Description |
+|------|-------------|
+| `signature` | Signature field |
+| `initials` | Initials field |
+| `date` | Date field (auto-filled) |
+| `text` | Text input field |
+| `checkbox` | Checkbox field |
 
-**TurboSign - Advanced (More Control):**
-- `TurboSign.uploadDocument()` - Upload a PDF
-- `TurboSign.saveDocumentDetails()` - Add/update recipients
-- `TurboSign.prepareForSigning()` - Place fields and send
-- `TurboSign.createFromDeliverable()` - Create from existing document
-- `TurboSign.getStatus()` - Check document status
-- `TurboSign.download()` - Get signed PDF
-- `TurboSign.getAuditTrail()` - Download audit trail
-- `TurboSign.void()` - Cancel signature request
-- `TurboSign.resend()` - Resend to recipients
+## Error Handling
 
-**Webhooks - Configuration:**
-- `Webhooks.create()` - Set up new webhook (returns secret once!)
-- `Webhooks.list()` - List all webhooks
-- `Webhooks.get()` - Get webhook details
-- `Webhooks.update()` - Update webhook config
-- `Webhooks.delete()` - Remove webhook
-- `Webhooks.regenerateSecret()` - Generate new secret
+```typescript
+try {
+  await TurboSign.getStatus('invalid-id');
+} catch (error) {
+  console.error('Status:', error.statusCode);
+  console.error('Message:', error.message);
+}
+```
 
-**Webhooks - Monitoring & Testing:**
-- `Webhooks.test()` - Send test event
-- `Webhooks.getDeliveries()` - View delivery history
-- `Webhooks.replayDelivery()` - Retry failed delivery
-- `Webhooks.getStats()` - Get detailed statistics
-- `Webhooks.sendNotification()` - Send manual notification
+## Requirements
 
-## License
-
-MIT
+- Node.js 16+
 
 ## Support
 
-- 📖 [Documentation](https://docs.turbodocx.com)
-- 💬 [Discord Community](https://discord.gg/NYKwz4BcpX)
-- 🐛 [Report Issues](https://github.com/TurboDocx/SDK/issues)
+- 📖 [Documentation](https://www.turbodocx.com/docs)
+- 💬 [Discord](https://discord.gg/NYKwz4BcpX)
+- 🐛 [Issues](https://github.com/TurboDocx/SDK/issues)
+
+## License
+
+MIT - see [LICENSE](./LICENSE)

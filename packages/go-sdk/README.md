@@ -1,6 +1,26 @@
-# TurboDocx Go SDK
+[![TurboDocx](https://raw.githubusercontent.com/TurboDocx/SDK/main/banner.png)](https://www.turbodocx.com)
 
-Official Go SDK for TurboDocx API - Digital signatures, document generation, and AI-powered workflows.
+turbodocx-go
+====================
+[![Go Reference](https://pkg.go.dev/badge/github.com/TurboDocx/SDK/packages/go-sdk.svg)](https://pkg.go.dev/github.com/TurboDocx/SDK/packages/go-sdk)
+[![GitHub Stars](https://img.shields.io/github/stars/turbodocx/sdk?style=social)](https://github.com/turbodocx/sdk)
+[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go&logoColor=white)](https://golang.org)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/NYKwz4BcpX)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Official Go SDK for TurboDocx API - Digital signatures, document generation, and AI-powered workflows. Idiomatic Go with context support.
+
+## Why turbodocx-go?
+
+🚀 **Production-Ready** - Battle-tested in production environments processing thousands of documents daily.
+
+🔄 **Active Maintenance** - Backed by TurboDocx with regular updates, bug fixes, and feature enhancements.
+
+🤖 **AI-Optimized** - Designed for modern AI workflows where speed and reliability matter.
+
+🐹 **Idiomatic Go** - Context-aware, proper error handling, and clean API design.
+
+⚡ **100% n8n Parity** - Same operations available in our n8n community nodes.
 
 ## Installation
 
@@ -16,16 +36,12 @@ package main
 import (
     "context"
     "fmt"
-    "log"
-
     turbodocx "github.com/TurboDocx/SDK/packages/go-sdk"
 )
 
 func main() {
-    // Create client with API key
     client := turbodocx.NewClient("your-api-key")
 
-    // Prepare document for signing
     result, err := client.TurboSign.PrepareForSigningSingle(context.Background(), &turbodocx.PrepareForSigningRequest{
         FileLink: "https://example.com/contract.pdf",
         Recipients: []turbodocx.Recipient{
@@ -36,45 +52,45 @@ func main() {
         },
     })
     if err != nil {
-        log.Fatal(err)
+        panic(err)
     }
 
-    fmt.Printf("Document ID: %s\n", result.DocumentID)
-    fmt.Printf("Sign URL: %s\n", result.Recipients[0].SignURL)
+    fmt.Println("Sign URL:", result.Recipients[0].SignURL)
 }
 ```
 
-## TurboSign Operations
+## TurboSign API
 
-### Prepare for Review (without sending emails)
+### Configuration
 
 ```go
-result, err := client.TurboSign.PrepareForReview(ctx, &turbodocx.PrepareForReviewRequest{
-    FileLink: "https://example.com/contract.pdf",
-    Recipients: []turbodocx.Recipient{
-        {Name: "John Doe", Email: "john@example.com", Order: 1},
-    },
-    Fields: []turbodocx.Field{
-        {Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 1},
-    },
-    DocumentName: "Contract Agreement",
+// With API key
+client := turbodocx.NewClient("your-api-key")
+
+// With custom base URL
+client := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
+    APIKey:  "your-api-key",
+    BaseURL: "https://custom-api.example.com",
 })
 ```
 
-### Prepare for Signing (sends emails immediately)
+### Prepare for Review
+
+```go
+result, err := client.TurboSign.PrepareForReview(ctx, &turbodocx.PrepareForReviewRequest{
+    FileLink:   "https://example.com/contract.pdf",
+    Recipients: []turbodocx.Recipient{{Name: "John Doe", Email: "john@example.com", Order: 1}},
+    Fields:     []turbodocx.Field{{Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 1}},
+})
+```
+
+### Prepare for Signing
 
 ```go
 result, err := client.TurboSign.PrepareForSigningSingle(ctx, &turbodocx.PrepareForSigningRequest{
-    File:     pdfBytes, // Or use FileLink, DeliverableID, TemplateID
-    FileName: "contract.pdf",
-    Recipients: []turbodocx.Recipient{
-        {Name: "John Doe", Email: "john@example.com", Order: 1},
-        {Name: "Jane Smith", Email: "jane@example.com", Order: 2},
-    },
-    Fields: []turbodocx.Field{
-        {Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 1},
-        {Type: "signature", Page: 1, X: 100, Y: 600, Width: 200, Height: 50, RecipientOrder: 2},
-    },
+    FileLink:   "https://example.com/contract.pdf",
+    Recipients: []turbodocx.Recipient{{Name: "John Doe", Email: "john@example.com", Order: 1}},
+    Fields:     []turbodocx.Field{{Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 1}},
 })
 ```
 
@@ -82,7 +98,7 @@ result, err := client.TurboSign.PrepareForSigningSingle(ctx, &turbodocx.PrepareF
 
 ```go
 status, err := client.TurboSign.GetStatus(ctx, "document-id")
-fmt.Printf("Status: %s\n", status.Status)
+fmt.Println("Status:", status.Status)
 ```
 
 ### Download Signed Document
@@ -95,37 +111,37 @@ os.WriteFile("signed.pdf", pdfBytes, 0644)
 ### Void Document
 
 ```go
-result, err := client.TurboSign.VoidDocument(ctx, "document-id", "Document needs revision")
+_, err := client.TurboSign.VoidDocument(ctx, "document-id", "Document needs revision")
 ```
 
 ### Resend Email
 
 ```go
-result, err := client.TurboSign.ResendEmail(ctx, "document-id", []string{"recipient-id-1"})
-```
-
-## Configuration
-
-```go
-// With access token instead of API key
-client := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
-    AccessToken: "your-oauth-token",
-    BaseURL:     "https://custom-api.example.com", // Optional
-})
+_, err := client.TurboSign.ResendEmail(ctx, "document-id", []string{"recipient-id-1"})
 ```
 
 ## Error Handling
 
 ```go
-result, err := client.TurboSign.GetStatus(ctx, "invalid-doc")
+result, err := client.TurboSign.GetStatus(ctx, "invalid-id")
 if err != nil {
     if apiErr, ok := err.(*turbodocx.TurboDocxError); ok {
-        fmt.Printf("API Error: %s (code: %s, status: %d)\n",
-            apiErr.Message, apiErr.Code, apiErr.StatusCode)
+        fmt.Println("Status:", apiErr.StatusCode)
+        fmt.Println("Message:", apiErr.Message)
     }
 }
 ```
 
+## Requirements
+
+- Go 1.21+
+
+## Support
+
+- 📖 [Documentation](https://www.turbodocx.com/docs)
+- 💬 [Discord](https://discord.gg/NYKwz4BcpX)
+- 🐛 [Issues](https://github.com/TurboDocx/SDK/issues)
+
 ## License
 
-MIT
+MIT - see [LICENSE](./LICENSE)
