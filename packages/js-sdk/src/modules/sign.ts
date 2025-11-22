@@ -22,6 +22,10 @@ import {
   SendDocumentResponse,
   SubmitSignedDocumentResponse,
   PublicDocumentStatusResponse,
+  PrepareForReviewRequest,
+  PrepareForReviewResponse,
+  PrepareForSigningSingleRequest,
+  PrepareForSigningSingleResponse,
 } from '../types/sign';
 import {
   generateRecipientColors,
@@ -49,6 +53,172 @@ export class TurboSign {
     }
     return this.client;
   }
+
+  // ============================================
+  // N8N PARITY METHODS (single-call operations)
+  // ============================================
+
+  /**
+   * Prepare document for review without sending emails
+   *
+   * This method uploads a document with signature fields and recipients,
+   * but does NOT send signature request emails. Use this to preview
+   * field placement before sending.
+   *
+   * @param request - Document, recipients, and fields configuration
+   * @returns Document ready for review with preview URL
+   *
+   * @example
+   * ```typescript
+   * // Using file upload
+   * const result = await TurboSign.prepareForReview({
+   *   file: pdfBuffer,
+   *   recipients: [{ name: 'John Doe', email: 'john@example.com', order: 1 }],
+   *   fields: [{ type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }]
+   * });
+   *
+   * // Using file URL
+   * const result = await TurboSign.prepareForReview({
+   *   fileLink: 'https://storage.example.com/contract.pdf',
+   *   recipients: [{ name: 'John Doe', email: 'john@example.com', order: 1 }],
+   *   fields: [{ type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }]
+   * });
+   *
+   * // Using deliverable ID (from TurboDocx document generation)
+   * const result = await TurboSign.prepareForReview({
+   *   deliverableId: 'deliverable-uuid',
+   *   recipients: [{ name: 'John Doe', email: 'john@example.com', order: 1 }],
+   *   fields: [{ type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }]
+   * });
+   * ```
+   */
+  static async prepareForReview(request: PrepareForReviewRequest): Promise<PrepareForReviewResponse> {
+    const client = this.getClient();
+
+    // Serialize recipients and fields to JSON strings (as n8n node does)
+    const recipientsJson = JSON.stringify(request.recipients);
+    const fieldsJson = JSON.stringify(request.fields);
+
+    // Build form data
+    const formData: Record<string, any> = {
+      recipients: recipientsJson,
+      fields: fieldsJson,
+    };
+
+    // Add optional fields
+    if (request.documentName) formData.documentName = request.documentName;
+    if (request.documentDescription) formData.documentDescription = request.documentDescription;
+    if (request.senderName) formData.senderName = request.senderName;
+    if (request.senderEmail) formData.senderEmail = request.senderEmail;
+    if (request.ccEmails) {
+      formData.ccEmails = Array.isArray(request.ccEmails)
+        ? request.ccEmails.join(',')
+        : request.ccEmails;
+    }
+
+    // Handle different file input methods
+    if (request.file) {
+      // File upload - use multipart form
+      const response = await client.uploadFile<{ data: PrepareForReviewResponse }>(
+        '/turbosign/single/prepare-for-review',
+        request.file,
+        'file',
+        formData
+      );
+      return response.data;
+    } else {
+      // URL, deliverable, or template - use JSON body
+      if (request.fileLink) formData.fileLink = request.fileLink;
+      if (request.deliverableId) formData.deliverableId = request.deliverableId;
+      if (request.templateId) formData.templateId = request.templateId;
+
+      const response = await client.post<{ data: PrepareForReviewResponse }>(
+        '/turbosign/single/prepare-for-review',
+        formData
+      );
+      return response.data;
+    }
+  }
+
+  /**
+   * Prepare document for signing and send emails in a single call
+   *
+   * This method uploads a document with signature fields and recipients,
+   * then immediately sends signature request emails to all recipients.
+   * This is the n8n-equivalent "Prepare for Signing" operation.
+   *
+   * @param request - Document, recipients, and fields configuration
+   * @returns Document with sign URLs for each recipient
+   *
+   * @example
+   * ```typescript
+   * // Using file upload
+   * const result = await TurboSign.prepareForSigningSingle({
+   *   file: pdfBuffer,
+   *   recipients: [
+   *     { name: 'John Doe', email: 'john@example.com', order: 1 },
+   *     { name: 'Jane Smith', email: 'jane@example.com', order: 2 }
+   *   ],
+   *   fields: [
+   *     { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 },
+   *     { type: 'signature', page: 1, x: 100, y: 600, width: 200, height: 50, recipientOrder: 2 }
+   *   ]
+   * });
+   *
+   * console.log(result.recipients[0].signUrl); // URL for first recipient to sign
+   * ```
+   */
+  static async prepareForSigningSingle(request: PrepareForSigningSingleRequest): Promise<PrepareForSigningSingleResponse> {
+    const client = this.getClient();
+
+    // Serialize recipients and fields to JSON strings (as n8n node does)
+    const recipientsJson = JSON.stringify(request.recipients);
+    const fieldsJson = JSON.stringify(request.fields);
+
+    // Build form data
+    const formData: Record<string, any> = {
+      recipients: recipientsJson,
+      fields: fieldsJson,
+    };
+
+    // Add optional fields
+    if (request.documentName) formData.documentName = request.documentName;
+    if (request.documentDescription) formData.documentDescription = request.documentDescription;
+    if (request.senderName) formData.senderName = request.senderName;
+    if (request.senderEmail) formData.senderEmail = request.senderEmail;
+    if (request.ccEmails) {
+      formData.ccEmails = Array.isArray(request.ccEmails)
+        ? request.ccEmails.join(',')
+        : request.ccEmails;
+    }
+
+    // Handle different file input methods
+    if (request.file) {
+      // File upload - use multipart form
+      const response = await client.uploadFile<{ data: PrepareForSigningSingleResponse }>(
+        '/turbosign/single/prepare-for-signing',
+        request.file,
+        'file',
+        formData
+      );
+      return response.data;
+    } else {
+      // URL, deliverable, or template - use JSON body
+      if (request.fileLink) formData.fileLink = request.fileLink;
+      if (request.deliverableId) formData.deliverableId = request.deliverableId;
+      if (request.templateId) formData.templateId = request.templateId;
+
+      const response = await client.post<{ data: PrepareForSigningSingleResponse }>(
+        '/turbosign/single/prepare-for-signing',
+        formData
+      );
+      return response.data;
+    }
+  }
+
+  // ============================================
+  // MULTI-STEP WORKFLOW METHODS
+  // ============================================
 
   /**
    * Step 1: Upload a document for signing
@@ -263,7 +433,7 @@ export class TurboSign {
 
     // Step 4: Prepare for signing
     return await this.prepareForSigning(upload.documentId, {
-      fields: fieldsWithRecipientIds,
+      fields: fieldsWithRecipientIds as PrepareSigningRequest['fields'],
       message: params.message,
       sendEmails: params.sendEmails,
     });

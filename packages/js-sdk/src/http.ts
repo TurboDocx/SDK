@@ -62,7 +62,7 @@ export class HttpClient {
 
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-        return await response.json();
+        return await response.json() as T;
       }
 
       return response as any;
@@ -116,7 +116,7 @@ export class HttpClient {
         await this.handleErrorResponse(response);
       }
 
-      return await response.json();
+      return await response.json() as T;
     } catch (error) {
       if (error instanceof TurboDocxError) {
         throw error;
@@ -130,7 +130,7 @@ export class HttpClient {
     let errorCode: string | undefined;
 
     try {
-      const errorData = await response.json();
+      const errorData = await response.json() as { message?: string; error?: string; code?: string };
       errorMessage = errorData.message || errorData.error || errorMessage;
       errorCode = errorData.code;
     } catch {

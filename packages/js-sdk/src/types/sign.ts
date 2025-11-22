@@ -394,3 +394,148 @@ export interface SendDocumentResponse {
   /** When the document was prepared */
   preparedAt: string;
 }
+
+// ============================================
+// N8N PARITY TYPES (single-call operations)
+// ============================================
+
+/**
+ * Field configuration matching n8n node schema
+ * Supports both coordinate-based and template anchor-based positioning
+ */
+export interface N8nField {
+  /** Field type */
+  type: SignatureFieldType;
+  /** Page number (1-indexed) - required for coordinate-based */
+  page?: number;
+  /** X coordinate position */
+  x?: number;
+  /** Y coordinate position */
+  y?: number;
+  /** Field width in pixels */
+  width?: number;
+  /** Field height in pixels */
+  height?: number;
+  /** Recipient order (1-indexed) - which recipient fills this field */
+  recipientOrder: number;
+  /** Template anchor configuration for dynamic positioning */
+  template?: {
+    /** Text pattern to find in document */
+    anchor: string;
+    /** Where to place field relative to anchor */
+    placement: 'replace' | 'before' | 'after' | 'above' | 'below';
+    /** Field width */
+    width: number;
+    /** Field height */
+    height: number;
+  };
+}
+
+/**
+ * Recipient configuration for n8n operations
+ */
+export interface N8nRecipient {
+  /** Recipient's full name */
+  name: string;
+  /** Recipient's email address */
+  email: string;
+  /** Signing order (1-indexed) */
+  order: number;
+}
+
+/**
+ * Request for prepareForReview - prepare document without sending emails
+ */
+export interface PrepareForReviewRequest {
+  /** PDF file as Buffer */
+  file?: Buffer;
+  /** Original filename */
+  fileName?: string;
+  /** URL to document file */
+  fileLink?: string;
+  /** TurboDocx deliverable ID */
+  deliverableId?: string;
+  /** TurboDocx template ID */
+  templateId?: string;
+  /** Recipients who will sign */
+  recipients: N8nRecipient[];
+  /** Signature fields configuration */
+  fields: N8nField[];
+  /** Document name */
+  documentName?: string;
+  /** Document description */
+  documentDescription?: string;
+  /** Sender name */
+  senderName?: string;
+  /** Sender email */
+  senderEmail?: string;
+  /** CC emails (comma-separated or array) */
+  ccEmails?: string | string[];
+}
+
+/**
+ * Response from prepareForReview
+ */
+export interface PrepareForReviewResponse {
+  /** Document ID */
+  documentId: string;
+  /** Document status */
+  status: 'review_ready' | string;
+  /** Preview URL for reviewing the document */
+  previewUrl?: string;
+  /** Recipients with their status */
+  recipients?: Array<{
+    id: string;
+    name: string;
+    email: string;
+    status: string;
+  }>;
+}
+
+/**
+ * Request for prepareForSigningSingle - prepare and send in single call
+ */
+export interface PrepareForSigningSingleRequest {
+  /** PDF file as Buffer */
+  file?: Buffer;
+  /** Original filename */
+  fileName?: string;
+  /** URL to document file */
+  fileLink?: string;
+  /** TurboDocx deliverable ID */
+  deliverableId?: string;
+  /** TurboDocx template ID */
+  templateId?: string;
+  /** Recipients who will sign */
+  recipients: N8nRecipient[];
+  /** Signature fields configuration */
+  fields: N8nField[];
+  /** Document name */
+  documentName?: string;
+  /** Document description */
+  documentDescription?: string;
+  /** Sender name */
+  senderName?: string;
+  /** Sender email */
+  senderEmail?: string;
+  /** CC emails (comma-separated or array) */
+  ccEmails?: string | string[];
+}
+
+/**
+ * Response from prepareForSigningSingle
+ */
+export interface PrepareForSigningSingleResponse {
+  /** Document ID */
+  documentId: string;
+  /** Document status */
+  status: 'sent' | string;
+  /** Recipients with their sign URLs */
+  recipients: Array<{
+    id: string;
+    name: string;
+    email: string;
+    status: string;
+    signUrl?: string;
+  }>;
+}

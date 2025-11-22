@@ -1,0 +1,60 @@
+name: Publish Python SDK
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd packages/py-sdk
+          pip install -e ".[dev]"
+          pip install build twine
+
+      - name: Run tests
+        run: |
+          cd packages/py-sdk
+          pytest -v
+
+      - name: Build package
+        run: |
+          cd packages/py-sdk
+          python -m build
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref_name, 'py-sdk-v')
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build dependencies
+        run: pip install build
+
+      - name: Build package
+        run: |
+          cd packages/py-sdk
+          python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/py-sdk/dist/

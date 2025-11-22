@@ -1,12 +1,16 @@
 """
 TurboDocx Python SDK
 
-Official SDK for TurboDocx API
+Official SDK for TurboDocx API - Digital signatures, document generation,
+and AI-powered workflows.
 """
 
 __version__ = "0.1.0"
 
 from typing import Optional
+
+from .modules.sign import TurboSign
+from .http import HttpClient, TurboDocxError, AuthenticationError, NetworkError
 
 
 class TurboDocxClient:
@@ -23,15 +27,21 @@ class TurboDocxClient:
         self.api_key = api_key
         self.base_url = base_url
 
-    def get_status(self) -> dict:
-        """
-        Placeholder method - will be generated from OpenAPI specs
+        # Configure TurboSign module
+        TurboSign.configure(api_key=api_key, base_url=base_url)
 
-        Returns:
-            dict: Status response
-        """
-        # Implementation will be generated from API specs
-        return {"status": "ok"}
+    @property
+    def sign(self) -> type:
+        """Access TurboSign module for digital signature operations"""
+        return TurboSign
 
 
-__all__ = ["TurboDocxClient", "__version__"]
+__all__ = [
+    "TurboDocxClient",
+    "TurboSign",
+    "HttpClient",
+    "TurboDocxError",
+    "AuthenticationError",
+    "NetworkError",
+    "__version__",
+]
