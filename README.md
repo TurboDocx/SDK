@@ -1,194 +1,162 @@
 [![TurboDocx](./banner.png)](https://www.turbodocx.com)
 
-@turbodocx/sdk
-====================
+# TurboDocx SDKs
+
 [![GitHub Stars](https://img.shields.io/github/stars/turbodocx/sdk?style=social)](https://github.com/turbodocx/sdk)
-[![Type Script](https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square)](https://typescript.org)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/NYKwz4BcpX)
 [![X](https://img.shields.io/badge/X-@TurboDocx-1DA1F2?logo=x&logoColor=white)](https://twitter.com/TurboDocx)
-[![Embed TurboDocx in Your App in Minutes](https://img.shields.io/badge/Embed%20TurboDocx%20in%20Your%20App%20in%20Minutes-8A2BE2)](https://www.turbodocx.com/use-cases/embedded-api?utm_source=github&utm_medium=repo&utm_campaign=open_source)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Official SDK monorepo for TurboDocx - Build powerful document generation and manipulation tools with JavaScript and TypeScript. From HTML to DOCX conversion to advanced document processing, our SDKs provide the building blocks for modern document workflows.
+Official multi-language SDK repository for TurboDocx - Document generation, digital signatures, and AI-powered workflows.
 
-## Why TurboDocx SDKs?
+## Available SDKs
 
-🚀 **Production-Ready** - Battle-tested libraries used in production environments processing thousands of documents daily.
-
-🔄 **Active Maintenance** - Backed by TurboDocx with regular updates, bug fixes, and feature enhancements. Long-term support guaranteed.
-
-🤖 **AI-Optimized** - Designed for modern AI workflows where speed and reliability matter. Perfect for AI-powered document generation.
-
-⚡ **Zero External Dependencies** - Pure JavaScript/TypeScript implementations that work in any environment without external binaries.
-
-🛠️ **Developer First** - Full TypeScript support, comprehensive documentation, and extensive examples to get you started quickly.
-
-🎯 **Enterprise Grade** - Used by enterprises worldwide for mission-critical document processing workflows.
-
-## Packages
-
-This monorepo contains the following SDK packages:
-
-### [@turbodocx/html-to-docx](./packages/html-to-docx)
-[![NPM Version](https://img.shields.io/npm/v/@turbodocx/html-to-docx.svg)](https://npmjs.org/package/@turbodocx/html-to-docx)
-[![npm](https://img.shields.io/npm/dm/@turbodocx/html-to-docx)](https://www.npmjs.com/package/@turbodocx/html-to-docx)
-
-Convert HTML to Word, Google Docs, and DOCX files with the fastest, most reliable JavaScript library available. Perfect for AI-powered document generation and enterprise reporting systems.
-
-```bash
-npm install @turbodocx/html-to-docx
-```
-
-**Key Features:**
-- Pure JavaScript implementation - no browser automation required
-- Full TypeScript support with comprehensive type definitions
-- Advanced formatting: headers, footers, page numbers, margins
-- RTL language support (Arabic, Hebrew)
-- Table formatting with border controls
-- Custom fonts and styling
-
-### More SDKs Coming Soon
-
-We're actively developing additional SDKs for the TurboDocx ecosystem:
-- PDF generation and manipulation
-- DOCX to HTML conversion
-- Template engine SDK
-- And more...
-
-## Installation
-
-Each package can be installed independently:
-
-```bash
-# HTML to DOCX converter
-npm install @turbodocx/html-to-docx
-
-# More packages coming soon...
-```
+| Language | Package | Install | Status |
+|----------|---------|---------|--------|
+| **JavaScript/TypeScript** | [@turbodocx/sdk](./packages/js-sdk) | `npm install @turbodocx/sdk` | [![npm](https://img.shields.io/badge/npm-ready-green)](https://npmjs.org/package/@turbodocx/sdk) |
+| **Python** | [turbodocx-sdk](./packages/py-sdk) | `pip install turbodocx-sdk` | [![pypi](https://img.shields.io/badge/pypi-ready-green)](https://pypi.org/project/turbodocx-sdk) |
+| **Go** | [turbodocx](./packages/go-sdk) | `go get github.com/TurboDocx/SDK/packages/go-sdk` | [![go](https://img.shields.io/badge/go-ready-green)](https://pkg.go.dev/github.com/TurboDocx/SDK/packages/go-sdk) |
+| **C# / .NET** | [TurboDocx](./packages/dotnet-sdk) | `dotnet add package TurboDocx` | [![nuget](https://img.shields.io/badge/nuget-ready-green)](https://nuget.org/packages/TurboDocx) |
+| **Java** | [turbodocx-sdk](./packages/java-sdk) | Maven Central | [![maven](https://img.shields.io/badge/maven-ready-green)](https://search.maven.org/artifact/com.turbodocx/turbodocx-sdk) |
+| **Ruby** | [turbodocx](./packages/ruby-sdk) | `gem install turbodocx` | [![gem](https://img.shields.io/badge/rubygems-ready-green)](https://rubygems.org/gems/turbodocx) |
 
 ## Quick Start
 
-### HTML to DOCX
+### JavaScript / TypeScript
 
 ```typescript
-import HtmlToDocx from "@turbodocx/html-to-docx";
+import { TurboSign } from '@turbodocx/sdk';
 
-const htmlString = `<!DOCTYPE html>
-    <html lang="en">
-        <head>
-            <meta charset="UTF-8" />
-            <title>Document</title>
-        </head>
-        <body>
-            <h1>Hello world</h1>
-            <p>This is a sample document.</p>
-        </body>
-    </html>`;
+TurboSign.configure({ apiKey: 'your-api-key' });
 
-// Convert HTML to DOCX
-const docx = await HtmlToDocx(htmlString, null, {
-  title: "My Document",
-  creator: "TurboDocx",
-  orientation: "portrait"
+const result = await TurboSign.prepareForSigningSingle({
+  fileLink: 'https://example.com/contract.pdf',
+  recipients: [{ name: 'John Doe', email: 'john@example.com', order: 1 }],
+  fields: [{ type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }]
 });
 
-// Save or process the docx buffer/blob
+console.log(result.recipients[0].signUrl);
 ```
 
-## Documentation
+### Python
 
-Each package in this monorepo has its own detailed documentation:
+```python
+from turbodocx_sdk import TurboSign
 
-- [HTML to DOCX Documentation](./packages/html-to-docx/README.md)
+TurboSign.configure(api_key='your-api-key')
 
-For comprehensive guides and API references, visit our [Documentation Site](https://www.turbodocx.com/docs).
+result = await TurboSign.prepare_for_signing_single(
+    file_link='https://example.com/contract.pdf',
+    recipients=[{'name': 'John Doe', 'email': 'john@example.com', 'order': 1}],
+    fields=[{'type': 'signature', 'page': 1, 'x': 100, 'y': 500, 'width': 200, 'height': 50, 'recipientOrder': 1}]
+)
 
-## Repository Structure
-
-This is a monorepo containing multiple SDK packages:
-
+print(result['recipients'][0]['signUrl'])
 ```
-SDK/
-├── packages/
-│   ├── html-to-docx/      # HTML to DOCX converter
-│   └── [future packages]
-├── examples/              # Shared examples across SDKs
-└── docs/                  # Shared documentation
+
+### Go
+
+```go
+import "github.com/TurboDocx/SDK/packages/go-sdk"
+
+client := turbodocx.NewClient("your-api-key")
+
+result, _ := client.TurboSign.PrepareForSigningSingle(ctx, &turbodocx.PrepareForSigningRequest{
+    FileLink:   "https://example.com/contract.pdf",
+    Recipients: []turbodocx.Recipient{{Name: "John Doe", Email: "john@example.com", Order: 1}},
+    Fields:     []turbodocx.Field{{Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 1}},
+})
+
+fmt.Println(result.Recipients[0].SignURL)
 ```
+
+### C# / .NET
+
+```csharp
+using TurboDocx;
+
+var client = new TurboDocxClient("your-api-key");
+
+var result = await client.TurboSign.PrepareForSigningSingleAsync(new PrepareForSigningRequest {
+    FileLink = "https://example.com/contract.pdf",
+    Recipients = new[] { new Recipient { Name = "John Doe", Email = "john@example.com", Order = 1 } },
+    Fields = new[] { new Field { Type = "signature", Page = 1, X = 100, Y = 500, Width = 200, Height = 50, RecipientOrder = 1 } }
+});
+
+Console.WriteLine(result.Recipients[0].SignUrl);
+```
+
+### Java
+
+```java
+import com.turbodocx.TurboDocxClient;
+import com.turbodocx.models.*;
+
+TurboDocxClient client = new TurboDocxClient.Builder()
+    .apiKey("your-api-key")
+    .build();
+
+PrepareForSigningResponse result = client.turboSign().prepareForSigningSingle(
+    new PrepareForSigningRequest.Builder()
+        .fileLink("https://example.com/contract.pdf")
+        .recipients(Arrays.asList(new Recipient("John Doe", "john@example.com", 1)))
+        .fields(Arrays.asList(new Field("signature", 1, 100, 500, 200, 50, 1)))
+        .build()
+);
+
+System.out.println(result.getRecipients().get(0).getSignUrl());
+```
+
+### Ruby
+
+```ruby
+require 'turbodocx'
+
+client = TurboDocx::Client.new(api_key: 'your-api-key')
+
+result = client.turbo_sign.prepare_for_signing_single(
+  file_link: 'https://example.com/contract.pdf',
+  recipients: [{ name: 'John Doe', email: 'john@example.com', order: 1 }],
+  fields: [{ type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }]
+)
+
+puts result[:recipients][0][:signUrl]
+```
+
+## TurboSign Operations
+
+All SDKs implement these digital signature operations with 100% API parity:
+
+| Operation | Description |
+|-----------|-------------|
+| `prepareForReview` | Upload document for review without sending emails |
+| `prepareForSigningSingle` | Upload document and send signature request emails |
+| `getStatus` | Get document signing status |
+| `download` | Download signed document |
+| `voidDocument` | Cancel/void a signature request |
+| `resendEmail` | Resend signature request emails |
 
 ## Development
 
-### Prerequisites
-
-- Node.js 16+ (18+ recommended)
-- npm or yarn
-
-### Setup
+Each SDK is independent. Clone the repo and navigate to your SDK:
 
 ```bash
-# Clone the repository
-git clone git@github.com:TurboDocx/SDK.git
-cd SDK
-
-# Install dependencies for all packages
-npm install
-
-# Build all packages
-npm run build
-
-# Run tests
-npm test
+git clone https://github.com/TurboDocx/SDK.git
+cd SDK/packages/<sdk-name>
 ```
 
-### Working with Individual Packages
-
-Each package can be developed independently:
-
-```bash
-cd packages/html-to-docx
-npm install
-npm run build
-npm test
-```
-
-## TypeScript Support
-
-All packages in this monorepo include first-class TypeScript support with comprehensive type definitions. No additional installation required.
+Then follow the SDK-specific setup instructions in its README.
 
 ## Contributing
 
-Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
+We welcome contributions! Please read our [Contributing Guide](./CONTRIBUTING.md) for details on:
 
-Please make sure to:
-- Branch new features off of `develop`
-- Update tests as appropriate
-- Follow existing code style and conventions
-- Update documentation for any API changes
-
-### Development Workflow
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## Use Cases
-
-Our SDKs power a wide range of document processing workflows:
-
-- **AI Document Generation** - Generate documents from AI-generated content
-- **Report Automation** - Automate business reports and analytics documents
-- **Template Systems** - Build dynamic document template systems
-- **Content Management** - Convert web content to downloadable documents
-- **Enterprise Applications** - Integrate document generation into enterprise software
-- **Data Export** - Export application data to professional documents
+- Setting up the development environment
+- Running tests
+- Submitting pull requests
+- Adding new SDKs
 
 ## Support
-
-**Proudly Sponsored by TurboDocx**
-[!["Proudly Sponsored by TurboDocx"](https://image.typedream.com/cdn-cgi/image/width=1920,format=auto,fit=scale-down,quality=100/https://api.typedream.com/v0/document/public/de39171b-a5c9-49c5-bd9c-c2dfd5d632a2/2PZxyx12UwC5HrIA3p6lo16fCms_Group_16_1_.png)](https://www.TurboDocx.com)
-
-### Get Help
 
 - 📖 [Documentation](https://www.turbodocx.com/docs)
 - 💬 [Discord Community](https://discord.gg/NYKwz4BcpX)
@@ -198,15 +166,13 @@ Our SDKs power a wide range of document processing workflows:
 
 ## License
 
-MIT
+MIT License - see [LICENSE](./LICENSE) for details.
 
 ## Contributors
 
 <a href="https://github.com/TurboDocx/SDK/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=turbodocx/sdk" />
 </a>
-
-Made with [contrib.rocks](https://contrib.rocks).
 
 ---
 
