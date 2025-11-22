@@ -12,7 +12,7 @@
 [![X](https://img.shields.io/badge/X-@TurboDocx-000?logo=x&logoColor=white)](https://twitter.com/TurboDocx)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[Documentation](https://www.turbodocx.com/docs) • [API Reference](https://www.turbodocx.com/docs/api) • [Discord](https://discord.gg/NYKwz4BcpX) • [Blog](https://www.turbodocx.com/blog)
+[Documentation](https://docs.turbodocx.com) • [API Reference](https://docs.turbodocx.com/api) • [Discord](https://discord.gg/NYKwz4BcpX) • [Blog](https://www.turbodocx.com/blog)
 
 </div>
 
@@ -63,6 +63,8 @@ Comprehensive SDKs, detailed documentation, and responsive support. Ship faster 
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/ruby/ruby-original.svg" width="20"/> **Ruby** | [turbodocx-sdk](./packages/ruby-sdk) | `gem install turbodocx-sdk` | [View →](./packages/ruby-sdk#readme) |
 
 > 🔌 **Low-code?** Check out our [n8n community node](https://www.npmjs.com/package/@turbodocx/n8n-nodes-turbodocx) for no-code/low-code workflows!
+>
+> 📝 **Microsoft Word?** Get [TurboDocx Writer](https://appsource.microsoft.com/en-us/product/office/WA200007973) from the Microsoft AppSource marketplace!
 
 ---
 
@@ -177,39 +179,113 @@ Send documents for legally-binding eSignatures with full audit trails.
 | `void()` | Cancel/void a signature request |
 | `resend()` | Resend signature request emails |
 
-<details>
-<summary><strong>See full example</strong></summary>
+### TurboDocx — Document Generation *(Coming Soon)*
+
+Generate documents from templates with dynamic data.
+
+---
+
+## Examples
+
+### Method 1: Coordinate-Based Signature Fields
+
+Specify exact positions for signature fields using page coordinates:
 
 ```typescript
-// 1. Send document for signature
-const { documentId } = await TurboSign.prepareForSigningSingle({
+const result = await TurboSign.prepareForSigningSingle({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
-    { name: 'Alice', email: 'alice@example.com', order: 1 },
-    { name: 'Bob', email: 'bob@example.com', order: 2 }  // Signs after Alice
+    { name: 'Alice Smith', email: 'alice@example.com', order: 1 },
+    { name: 'Bob Johnson', email: 'bob@example.com', order: 2 }
   ],
   fields: [
-    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 },
-    { type: 'signature', page: 1, x: 100, y: 600, width: 200, height: 50, recipientOrder: 2 },
-    { type: 'date', page: 1, x: 320, y: 500, width: 100, height: 30, recipientOrder: 1 },
-    { type: 'date', page: 1, x: 320, y: 600, width: 100, height: 30, recipientOrder: 2 }
+    // Alice's signature and date on page 1
+    { type: 'signature', page: 1, x: 100, y: 650, width: 200, height: 50, recipientOrder: 1 },
+    { type: 'date', page: 1, x: 320, y: 650, width: 100, height: 30, recipientOrder: 1 },
+
+    // Bob's signature and date on page 1
+    { type: 'signature', page: 1, x: 100, y: 720, width: 200, height: 50, recipientOrder: 2 },
+    { type: 'date', page: 1, x: 320, y: 720, width: 100, height: 30, recipientOrder: 2 },
+
+    // Initials on page 2
+    { type: 'initials', page: 2, x: 500, y: 750, width: 60, height: 30, recipientOrder: 1 },
+    { type: 'initials', page: 2, x: 500, y: 780, width: 60, height: 30, recipientOrder: 2 }
   ],
   documentName: 'Service Agreement',
   senderName: 'Acme Corp',
   senderEmail: 'contracts@acme.com'
 });
+```
 
-// 2. Check status (polling or webhook)
+### Method 2: Template-Based Signature Fields
+
+Use text anchors in your PDF to automatically position signature fields:
+
+```typescript
+const result = await TurboSign.prepareForSigningSingle({
+  fileLink: 'https://example.com/contract-with-placeholders.pdf',
+  recipients: [
+    { name: 'Alice Smith', email: 'alice@example.com', order: 1 },
+    { name: 'Bob Johnson', email: 'bob@example.com', order: 2 }
+  ],
+  fields: [
+    // Fields anchored to text markers in the PDF
+    { type: 'signature', anchor: '{{SIGNATURE_ALICE}}', width: 200, height: 50, recipientOrder: 1 },
+    { type: 'date', anchor: '{{DATE_ALICE}}', width: 100, height: 30, recipientOrder: 1 },
+    { type: 'signature', anchor: '{{SIGNATURE_BOB}}', width: 200, height: 50, recipientOrder: 2 },
+    { type: 'date', anchor: '{{DATE_BOB}}', width: 100, height: 30, recipientOrder: 2 },
+
+    // Text fields for additional info
+    { type: 'text', anchor: '{{TITLE_ALICE}}', width: 150, height: 25, recipientOrder: 1 },
+    { type: 'text', anchor: '{{TITLE_BOB}}', width: 150, height: 25, recipientOrder: 2 }
+  ]
+});
+```
+
+> **Tip:** Template-based fields are ideal when your PDF layout may change. Add text markers like `{{SIGNATURE_1}}` to your document, and the signature fields will automatically align to them.
+
+### Complete Workflow Example
+
+```typescript
+import { TurboSign } from '@turbodocx/sdk';
+
+TurboSign.configure({ apiKey: process.env.TURBODOCX_API_KEY });
+
+// 1. Send document for signature
+const { documentId } = await TurboSign.prepareForSigningSingle({
+  fileLink: 'https://example.com/contract.pdf',
+  recipients: [
+    { name: 'Alice', email: 'alice@example.com', order: 1 },
+    { name: 'Bob', email: 'bob@example.com', order: 2 }
+  ],
+  fields: [
+    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 },
+    { type: 'signature', page: 1, x: 100, y: 600, width: 200, height: 50, recipientOrder: 2 }
+  ]
+});
+
+console.log(`Document ID: ${documentId}`);
+
+// 2. Check status
 const status = await TurboSign.getStatus(documentId);
 console.log(`Status: ${status.status}`);  // 'pending', 'completed', 'voided'
+
+for (const recipient of status.recipients) {
+  console.log(`  ${recipient.name}: ${recipient.status}`);
+}
 
 // 3. Download when complete
 if (status.status === 'completed') {
   const signedPdf = await TurboSign.download(documentId);
-  // Save or process the signed PDF
+  // Save to file, upload to S3, etc.
 }
+
+// 4. Void if needed
+await TurboSign.void(documentId, 'Contract terms changed');
+
+// 5. Resend to specific recipients
+await TurboSign.resend(documentId, ['recipient-uuid']);
 ```
-</details>
 
 ### Field Types
 
@@ -220,40 +296,6 @@ if (status.status === 'completed') {
 | `text` | Free-form text input | No |
 | `date` | Date stamp | Yes (signing date) |
 | `checkbox` | Checkbox / agreement | No |
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Your Application                         │
-├─────────────────────────────────────────────────────────────────┤
-│  JS/TS SDK  │  Python SDK  │  Go SDK  │  .NET  │  Java  │ Ruby │
-├─────────────────────────────────────────────────────────────────┤
-│                      TurboDocx REST API                        │
-├─────────────────────────────────────────────────────────────────┤
-│    Document     │    TurboSign    │     AI        │   Storage   │
-│   Generation    │  (eSignatures)  │  Workflows    │   (S3/R2)   │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-All SDKs maintain **100% API parity** — same operations, same parameters, same responses. Switch languages without relearning.
-
----
-
-## Integrations
-
-TurboDocx plays well with your existing stack:
-
-| Platform | Integration |
-|:---------|:------------|
-| **n8n** | [@turbodocx/n8n-nodes-turbodocx](https://www.npmjs.com/package/@turbodocx/n8n-nodes-turbodocx) |
-| **Zapier** | Coming soon |
-| **Make** | Coming soon |
-| **Salesforce** | Native connector |
-| **Wrike** | Native connector |
-| **ConnectWise** | Native connector |
 
 ---
 
@@ -297,7 +339,7 @@ We're looking for community maintainers for each SDK. Interested? [Open an issue
 <table>
 <tr>
 <td align="center" width="25%">
-<a href="https://www.turbodocx.com/docs">
+<a href="https://docs.turbodocx.com">
 <img src="https://cdn-icons-png.flaticon.com/512/2991/2991112.png" width="40"/><br/>
 <strong>Documentation</strong>
 </a>
@@ -333,16 +375,8 @@ MIT License — see [LICENSE](./LICENSE) for details.
 
 <div align="center">
 
-## Contributors
+**[Website](https://www.turbodocx.com)** • **[Documentation](https://docs.turbodocx.com)** • **[Discord](https://discord.gg/NYKwz4BcpX)** • **[Twitter/X](https://twitter.com/TurboDocx)**
 
-<a href="https://github.com/TurboDocx/SDK/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=turbodocx/sdk" />
-</a>
-
----
-
-**[Website](https://www.turbodocx.com)** • **[Documentation](https://www.turbodocx.com/docs)** • **[Discord](https://discord.gg/NYKwz4BcpX)** • **[Twitter/X](https://twitter.com/TurboDocx)**
-
-<sub>Built with ❤️ by the TurboDocx team and contributors</sub>
+<sub>Built with ❤️ by the TurboDocx team</sub>
 
 </div>
