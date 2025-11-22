@@ -2,11 +2,11 @@
 
 <div align="center">
 
-# TurboDocx Java SDK
+# com.turbodocx:sdk
 
 **Official Java SDK for TurboDocx**
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.turbodocx/turbodocx-sdk.svg)](https://search.maven.org/artifact/com.turbodocx/turbodocx-sdk)
+[![Maven Central](https://img.shields.io/maven-central/v/com.turbodocx/sdk.svg)](https://search.maven.org/artifact/com.turbodocx/sdk)
 [![Java](https://img.shields.io/badge/Java-11+-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
@@ -34,7 +34,7 @@
 ```xml
 <dependency>
     <groupId>com.turbodocx</groupId>
-    <artifactId>turbodocx-sdk</artifactId>
+    <artifactId>sdk</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
@@ -42,14 +42,14 @@
 ### Gradle
 
 ```groovy
-implementation 'com.turbodocx:turbodocx-sdk:1.0.0'
+implementation 'com.turbodocx:sdk:1.0.0'
 ```
 
 <details>
 <summary>Gradle Kotlin DSL</summary>
 
 ```kotlin
-implementation("com.turbodocx:turbodocx-sdk:1.0.0")
+implementation("com.turbodocx:sdk:1.0.0")
 ```
 </details>
 

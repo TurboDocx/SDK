@@ -2,12 +2,12 @@
 
 <div align="center">
 
-# turbodocx
+# turbodocx-sdk
 
 **Official Ruby SDK for TurboDocx**
 
-[![Gem Version](https://img.shields.io/gem/v/turbodocx.svg)](https://rubygems.org/gems/turbodocx)
-[![Gem Downloads](https://img.shields.io/gem/dt/turbodocx)](https://rubygems.org/gems/turbodocx)
+[![Gem Version](https://img.shields.io/gem/v/turbodocx-sdk.svg)](https://rubygems.org/gems/turbodocx-sdk)
+[![Gem Downloads](https://img.shields.io/gem/dt/turbodocx-sdk)](https://rubygems.org/gems/turbodocx-sdk)
 [![Ruby](https://img.shields.io/badge/Ruby-3.0+-CC342D?logo=ruby&logoColor=white)](https://ruby-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
@@ -31,13 +31,13 @@
 ## Installation
 
 ```bash
-gem install turbodocx
+gem install turbodocx-sdk
 ```
 
 Or add to your Gemfile:
 
 ```ruby
-gem 'turbodocx'
+gem 'turbodocx-sdk'
 ```
 
 Then run:
@@ -51,7 +51,7 @@ bundle install
 ## Quick Start
 
 ```ruby
-require 'turbodocx'
+require 'turbodocx-sdk'
 
 # 1. Create client
 client = TurboDocx::Client.new(api_key: 'your-api-key')

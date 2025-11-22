@@ -2,12 +2,12 @@
 
 <div align="center">
 
-# turbodocx-go
+# turbodocx-sdk
 
 **Official Go SDK for TurboDocx**
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/TurboDocx/SDK/packages/go-sdk.svg)](https://pkg.go.dev/github.com/TurboDocx/SDK/packages/go-sdk)
-[![Go Report Card](https://goreportcard.com/badge/github.com/TurboDocx/SDK)](https://goreportcard.com/report/github.com/TurboDocx/SDK)
+[![Go Reference](https://pkg.go.dev/badge/github.com/turbodocx/sdk.svg)](https://pkg.go.dev/github.com/turbodocx/sdk)
+[![Go Report Card](https://goreportcard.com/badge/github.com/turbodocx/sdk)](https://goreportcard.com/report/github.com/turbodocx/sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 [Documentation](https://www.turbodocx.com/docs) • [API Reference](https://www.turbodocx.com/docs/api) • [Examples](#examples) • [Discord](https://discord.gg/NYKwz4BcpX)
@@ -30,7 +30,7 @@
 ## Installation
 
 ```bash
-go get github.com/TurboDocx/SDK/packages/go-sdk
+go get github.com/turbodocx/sdk
 ```
 
 ---
@@ -45,7 +45,7 @@ import (
     "fmt"
     "log"
 
-    turbodocx "github.com/TurboDocx/SDK/packages/go-sdk"
+    turbodocx "github.com/turbodocx/sdk"
 )
 
 func main() {

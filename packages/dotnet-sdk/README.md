@@ -2,12 +2,12 @@
 
 <div align="center">
 
-# TurboDocx .NET SDK
+# TurboDocx.Sdk
 
 **Official .NET SDK for TurboDocx**
 
-[![NuGet Version](https://img.shields.io/nuget/v/TurboDocx.svg)](https://nuget.org/packages/TurboDocx)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/TurboDocx)](https://nuget.org/packages/TurboDocx)
+[![NuGet Version](https://img.shields.io/nuget/v/TurboDocx.Sdk.svg)](https://nuget.org/packages/TurboDocx.Sdk)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/TurboDocx.Sdk)](https://nuget.org/packages/TurboDocx.Sdk)
 [![.NET](https://img.shields.io/badge/.NET-6.0+-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
@@ -31,7 +31,7 @@
 ## Installation
 
 ```bash
-dotnet add package TurboDocx
+dotnet add package TurboDocx.Sdk
 ```
 
 <details>
@@ -39,13 +39,13 @@ dotnet add package TurboDocx
 
 ```bash
 # Package Manager Console
-Install-Package TurboDocx
+Install-Package TurboDocx.Sdk
 
 # PackageReference
-<PackageReference Include="TurboDocx" Version="1.0.0" />
+<PackageReference Include="TurboDocx.Sdk" Version="1.0.0" />
 
 # Paket
-paket add TurboDocx
+paket add TurboDocx.Sdk
 ```
 </details>
 
@@ -54,7 +54,7 @@ paket add TurboDocx
 ## Quick Start
 
 ```csharp
-using TurboDocx;
+using TurboDocx.Sdk;
 
 // 1. Create client
 var client = new TurboDocxClient("your-api-key");

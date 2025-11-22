@@ -31,7 +31,7 @@ Battle-tested infrastructure processing **thousands of documents daily**. Enterp
 Average API response time under **200ms**. Optimized for high-throughput document workflows.
 
 ### 🔒 Enterprise Security
-SOC 2 Type II compliant. End-to-end encryption. Your documents never stored longer than necessary.
+End-to-end encryption. Your documents never stored longer than necessary.
 
 </td>
 <td width="50%">
@@ -57,10 +57,10 @@ Comprehensive SDKs, detailed documentation, and responsive support. Ship faster 
 |:---------|:--------|:--------|:-----|
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="20"/> **JavaScript/TypeScript** | [@turbodocx/sdk](./packages/js-sdk) | `npm install @turbodocx/sdk` | [View →](./packages/js-sdk#readme) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" width="20"/> **Python** | [turbodocx-sdk](./packages/py-sdk) | `pip install turbodocx-sdk` | [View →](./packages/py-sdk#readme) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg" width="20"/> **Go** | [turbodocx](./packages/go-sdk) | `go get github.com/TurboDocx/SDK/packages/go-sdk` | [View →](./packages/go-sdk#readme) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/csharp/csharp-original.svg" width="20"/> **C# / .NET** | [TurboDocx](./packages/dotnet-sdk) | `dotnet add package TurboDocx` | [View →](./packages/dotnet-sdk#readme) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="20"/> **Java** | [turbodocx-sdk](./packages/java-sdk) | [Maven Central](https://search.maven.org/artifact/com.turbodocx/turbodocx-sdk) | [View →](./packages/java-sdk#readme) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/ruby/ruby-original.svg" width="20"/> **Ruby** | [turbodocx](./packages/ruby-sdk) | `gem install turbodocx` | [View →](./packages/ruby-sdk#readme) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg" width="20"/> **Go** | [turbodocx-sdk](./packages/go-sdk) | `go get github.com/turbodocx/sdk` | [View →](./packages/go-sdk#readme) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/csharp/csharp-original.svg" width="20"/> **C# / .NET** | [TurboDocx.Sdk](./packages/dotnet-sdk) | `dotnet add package TurboDocx.Sdk` | [View →](./packages/dotnet-sdk#readme) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="20"/> **Java** | [com.turbodocx:sdk](./packages/java-sdk) | [Maven Central](https://search.maven.org/artifact/com.turbodocx/sdk) | [View →](./packages/java-sdk#readme) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/ruby/ruby-original.svg" width="20"/> **Ruby** | [turbodocx-sdk](./packages/ruby-sdk) | `gem install turbodocx-sdk` | [View →](./packages/ruby-sdk#readme) |
 
 > 🔌 **Low-code?** Check out our [n8n community node](https://www.npmjs.com/package/@turbodocx/n8n-nodes-turbodocx) for no-code/low-code workflows!
 
@@ -102,7 +102,7 @@ poetry add turbodocx-sdk
 <summary><strong>Go</strong></summary>
 
 ```bash
-go get github.com/TurboDocx/SDK/packages/go-sdk
+go get github.com/turbodocx/sdk
 ```
 </details>
 
@@ -110,9 +110,9 @@ go get github.com/TurboDocx/SDK/packages/go-sdk
 <summary><strong>C# / .NET</strong></summary>
 
 ```bash
-dotnet add package TurboDocx
+dotnet add package TurboDocx.Sdk
 # or
-Install-Package TurboDocx
+Install-Package TurboDocx.Sdk
 ```
 </details>
 
@@ -122,7 +122,7 @@ Install-Package TurboDocx
 ```xml
 <dependency>
     <groupId>com.turbodocx</groupId>
-    <artifactId>turbodocx-sdk</artifactId>
+    <artifactId>sdk</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
@@ -132,9 +132,9 @@ Install-Package TurboDocx
 <summary><strong>Ruby</strong></summary>
 
 ```bash
-gem install turbodocx
+gem install turbodocx-sdk
 # or add to Gemfile:
-gem 'turbodocx'
+gem 'turbodocx-sdk'
 ```
 </details>
 
