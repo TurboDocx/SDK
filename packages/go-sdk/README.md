@@ -288,6 +288,50 @@ func sendContractHandler(w http.ResponseWriter, r *http.Request) {
 
 ---
 
+## Local Testing
+
+The SDK includes a comprehensive manual test program to verify all functionality locally.
+
+### Running Manual Tests
+
+```bash
+# Navigate to the SDK directory
+cd packages/go-sdk
+
+# Run the manual test program
+go run cmd/manual/main.go
+```
+
+### What It Tests
+
+The `cmd/manual/main.go` program tests all SDK methods:
+- ✅ `PrepareForReview()` - Document upload for review
+- ✅ `PrepareForSigningSingle()` - Send for signature
+- ✅ `GetStatus()` - Check document status
+- ✅ `Download()` - Download signed document
+- ✅ `Void()` - Cancel signature request
+- ✅ `Resend()` - Resend signature emails
+
+### Configuration
+
+Before running, update the hardcoded values in `cmd/manual/main.go`:
+- `apiKey` - Your TurboDocx API key
+- `baseURL` - API endpoint (default: `http://localhost:3000`)
+- `orgID` - Your organization UUID
+- `testFilePath` - Path to a test PDF/DOCX file
+- `testEmail` - Email address for testing
+
+### Expected Output
+
+The test program will:
+1. Upload a test document
+2. Send it for signature
+3. Check the status
+4. Test void and resend operations
+5. Print results for each operation
+
+---
+
 ## Error Handling
 
 ```go

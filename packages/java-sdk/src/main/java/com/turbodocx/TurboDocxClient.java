@@ -7,7 +7,7 @@ public class TurboDocxClient {
     private final TurboSign turboSign;
 
     private TurboDocxClient(Builder builder) {
-        HttpClient httpClient = new HttpClient(builder.baseUrl, builder.apiKey, builder.accessToken);
+        HttpClient httpClient = new HttpClient(builder.baseUrl, builder.apiKey, builder.accessToken, builder.orgId);
         this.turboSign = new TurboSign(httpClient);
     }
 
@@ -24,6 +24,7 @@ public class TurboDocxClient {
     public static class Builder {
         private String apiKey;
         private String accessToken;
+        private String orgId;
         private String baseUrl;
 
         public Builder apiKey(String apiKey) {
@@ -36,6 +37,14 @@ public class TurboDocxClient {
             return this;
         }
 
+        /**
+         * Set the Organization ID (required for authentication)
+         */
+        public Builder orgId(String orgId) {
+            this.orgId = orgId;
+            return this;
+        }
+
         public Builder baseUrl(String baseUrl) {
             this.baseUrl = baseUrl;
             return this;
@@ -44,6 +53,9 @@ public class TurboDocxClient {
         public TurboDocxClient build() {
             if ((apiKey == null || apiKey.isEmpty()) && (accessToken == null || accessToken.isEmpty())) {
                 throw new IllegalArgumentException("API key or access token is required");
+            }
+            if (orgId == null || orgId.isEmpty()) {
+                throw new TurboDocxException.AuthenticationException("Organization ID (orgId) is required for authentication");
             }
             return new TurboDocxClient(this);
         }

@@ -3,11 +3,12 @@ package turbodocx
 import (
 	"context"
 	"encoding/json"
-	"strings"
+	"fmt"
+	"io"
+	"net/http"
 )
 
 // TurboSignClient provides digital signature operations
-// with 100% parity with n8n-nodes-turbodocx
 type TurboSignClient struct {
 	http *HTTPClient
 }
@@ -23,20 +24,49 @@ func NewTurboSignClient(http *HTTPClient) *TurboSignClient {
 
 // Recipient represents a document recipient
 type Recipient struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
-	Order int    `json:"order"`
+	Name         string `json:"name"`
+	Email        string `json:"email"`
+	SigningOrder int    `json:"signingOrder"`
+}
+
+// TemplateAnchor represents template anchor configuration for dynamic field positioning
+type TemplateAnchor struct {
+	Anchor        string `json:"anchor,omitempty"`
+	SearchText    string `json:"searchText,omitempty"`
+	Placement     string `json:"placement,omitempty"` // replace, before, after, above, below
+	Size          *Size  `json:"size,omitempty"`
+	Offset        *Point `json:"offset,omitempty"`
+	CaseSensitive bool   `json:"caseSensitive,omitempty"`
+	UseRegex      bool   `json:"useRegex,omitempty"`
+}
+
+// Size represents width and height
+type Size struct {
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+
+// Point represents x and y coordinates
+type Point struct {
+	X int `json:"x"`
+	Y int `json:"y"`
 }
 
 // Field represents a signature field
 type Field struct {
-	Type           string `json:"type"`
-	Page           int    `json:"page,omitempty"`
-	X              int    `json:"x,omitempty"`
-	Y              int    `json:"y,omitempty"`
-	Width          int    `json:"width,omitempty"`
-	Height         int    `json:"height,omitempty"`
-	RecipientOrder int    `json:"recipientOrder"`
+	Type            string          `json:"type"`
+	Page            int             `json:"page,omitempty"`
+	X               int             `json:"x,omitempty"`
+	Y               int             `json:"y,omitempty"`
+	Width           int             `json:"width,omitempty"`
+	Height          int             `json:"height,omitempty"`
+	RecipientEmail  string          `json:"recipientEmail"`
+	DefaultValue    string          `json:"defaultValue,omitempty"`
+	IsMultiline     bool            `json:"isMultiline,omitempty"`
+	IsReadonly      bool            `json:"isReadonly,omitempty"`
+	Required        bool            `json:"required,omitempty"`
+	BackgroundColor string          `json:"backgroundColor,omitempty"`
+	Template        *TemplateAnchor `json:"template,omitempty"`
 }
 
 // PrepareForReviewRequest is the request for PrepareForReview
@@ -64,9 +94,11 @@ type PrepareForReviewRequest struct {
 
 // PrepareForReviewResponse is the response from PrepareForReview
 type PrepareForReviewResponse struct {
-	DocumentID string                   `json:"documentId"`
-	Status     string                   `json:"status"`
-	PreviewURL string                   `json:"previewUrl,omitempty"`
+	Success    bool                      `json:"success"`
+	DocumentID string                    `json:"documentId"`
+	Status     string                    `json:"status"`
+	PreviewURL string                    `json:"previewUrl,omitempty"`
+	Message    string                    `json:"message"`
 	Recipients []RecipientStatusResponse `json:"recipients,omitempty"`
 }
 
@@ -95,9 +127,9 @@ type PrepareForSigningRequest struct {
 
 // PrepareForSigningResponse is the response from PrepareForSigningSingle
 type PrepareForSigningResponse struct {
-	DocumentID string                    `json:"documentId"`
-	Status     string                    `json:"status"`
-	Recipients []RecipientSignResponse   `json:"recipients"`
+	Success    bool   `json:"success"`
+	DocumentID string `json:"documentId"`
+	Message    string `json:"message"`
 }
 
 // RecipientStatusResponse represents a recipient's status
@@ -108,42 +140,61 @@ type RecipientStatusResponse struct {
 	Status string `json:"status"`
 }
 
-// RecipientSignResponse represents a recipient with sign URL
-type RecipientSignResponse struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Email   string `json:"email"`
-	Status  string `json:"status"`
-	SignURL string `json:"signUrl,omitempty"`
-}
-
 // DocumentStatusResponse is the response from GetStatus
+// Backend returns: { data: { status } }
 type DocumentStatusResponse struct {
-	DocumentID  string                    `json:"documentId"`
-	Status      string                    `json:"status"`
-	Name        string                    `json:"name"`
-	Recipients  []RecipientStatusResponse `json:"recipients"`
-	CreatedAt   string                    `json:"createdAt"`
-	UpdatedAt   string                    `json:"updatedAt"`
-	CompletedAt string                    `json:"completedAt,omitempty"`
+	Status string `json:"status"`
 }
 
 // VoidDocumentResponse is the response from VoidDocument
+// Backend returns: { data: { id, name, status, voidReason, voidedAt } }
 type VoidDocumentResponse struct {
-	DocumentID string `json:"documentId"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
 	Status     string `json:"status"`
+	VoidReason string `json:"voidReason"`
 	VoidedAt   string `json:"voidedAt"`
 }
 
 // ResendEmailResponse is the response from ResendEmail
+// Backend returns: { data: { success, recipientCount } }
 type ResendEmailResponse struct {
-	DocumentID string `json:"documentId"`
-	Message    string `json:"message"`
-	ResentAt   string `json:"resentAt"`
+	Success        bool `json:"success"`
+	RecipientCount int  `json:"recipientCount"`
+}
+
+// DownloadResponse is the API response for download request
+type DownloadResponse struct {
+	DownloadURL string `json:"downloadUrl"`
+	FileName    string `json:"fileName"`
+}
+
+// AuditTrailEntry represents a single audit trail entry
+type AuditTrailEntry struct {
+	Event     string                 `json:"event"`
+	Actor     string                 `json:"actor"`
+	Timestamp string                 `json:"timestamp"`
+	IPAddress string                 `json:"ipAddress,omitempty"`
+	Details   map[string]interface{} `json:"details,omitempty"`
+}
+
+// AuditTrailDocumentInfo contains document info in audit trail response
+type AuditTrailDocumentInfo struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Status      string `json:"status"`
+}
+
+// AuditTrailResponse is the response from GetAuditTrail
+// Backend returns: { data: { document: {...}, auditTrail: [...] } }
+type AuditTrailResponse struct {
+	Document   AuditTrailDocumentInfo `json:"document"`
+	AuditTrail []AuditTrailEntry      `json:"auditTrail"`
 }
 
 // ============================================
-// N8N PARITY METHODS
+// TurboSign Methods
 // ============================================
 
 // PrepareForReview prepares a document for review without sending emails.
@@ -170,12 +221,11 @@ func (c *TurboSignClient) PrepareForReview(ctx context.Context, req *PrepareForR
 		formData["senderEmail"] = req.SenderEmail
 	}
 	if len(req.CCEmails) > 0 {
-		formData["ccEmails"] = strings.Join(req.CCEmails, ",")
+		ccEmailsJSON, _ := json.Marshal(req.CCEmails)
+		formData["ccEmails"] = string(ccEmailsJSON)
 	}
 
-	var response struct {
-		Data PrepareForReviewResponse `json:"data"`
-	}
+	var response PrepareForReviewResponse
 
 	if len(req.File) > 0 {
 		fileName := req.FileName
@@ -203,11 +253,10 @@ func (c *TurboSignClient) PrepareForReview(ctx context.Context, req *PrepareForR
 		}
 	}
 
-	return &response.Data, nil
+	return &response, nil
 }
 
 // PrepareForSigningSingle prepares a document for signing and sends emails in a single call.
-// This is the n8n-equivalent "Prepare for Signing" operation.
 func (c *TurboSignClient) PrepareForSigningSingle(ctx context.Context, req *PrepareForSigningRequest) (*PrepareForSigningResponse, error) {
 	recipientsJSON, _ := json.Marshal(req.Recipients)
 	fieldsJSON, _ := json.Marshal(req.Fields)
@@ -230,12 +279,11 @@ func (c *TurboSignClient) PrepareForSigningSingle(ctx context.Context, req *Prep
 		formData["senderEmail"] = req.SenderEmail
 	}
 	if len(req.CCEmails) > 0 {
-		formData["ccEmails"] = strings.Join(req.CCEmails, ",")
+		ccEmailsJSON, _ := json.Marshal(req.CCEmails)
+		formData["ccEmails"] = string(ccEmailsJSON)
 	}
 
-	var response struct {
-		Data PrepareForSigningResponse `json:"data"`
-	}
+	var response PrepareForSigningResponse
 
 	if len(req.File) > 0 {
 		fileName := req.FileName
@@ -263,52 +311,86 @@ func (c *TurboSignClient) PrepareForSigningSingle(ctx context.Context, req *Prep
 		}
 	}
 
-	return &response.Data, nil
+	return &response, nil
 }
 
 // GetStatus gets the status of a document
 func (c *TurboSignClient) GetStatus(ctx context.Context, documentID string) (*DocumentStatusResponse, error) {
-	var response struct {
-		Data DocumentStatusResponse `json:"data"`
-	}
+	var response DocumentStatusResponse
 
 	err := c.http.Get(ctx, "/turbosign/documents/"+documentID+"/status", &response)
 	if err != nil {
 		return nil, err
 	}
 
-	return &response.Data, nil
+	return &response, nil
 }
 
-// Download downloads the signed document as bytes
+// Download downloads the signed document as bytes.
+// The backend returns a presigned S3 URL, which this method fetches.
 func (c *TurboSignClient) Download(ctx context.Context, documentID string) ([]byte, error) {
-	return c.http.GetRaw(ctx, "/turbosign/documents/"+documentID+"/download")
+	// Get presigned URL from API
+	var downloadResponse DownloadResponse
+	err := c.http.Get(ctx, "/turbosign/documents/"+documentID+"/download", &downloadResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	if downloadResponse.DownloadURL == "" {
+		return nil, fmt.Errorf("no download URL in response")
+	}
+
+	// Fetch actual file from S3
+	resp, err := http.Get(downloadResponse.DownloadURL)
+	if err != nil {
+		return nil, &NetworkError{TurboDocxError: TurboDocxError{
+			Message: fmt.Sprintf("failed to download file: %v", err),
+		}}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return nil, &NetworkError{TurboDocxError: TurboDocxError{
+			Message:    fmt.Sprintf("failed to download file: %s", resp.Status),
+			StatusCode: resp.StatusCode,
+		}}
+	}
+
+	return io.ReadAll(resp.Body)
 }
 
 // VoidDocument voids a document (cancels signature request)
 func (c *TurboSignClient) VoidDocument(ctx context.Context, documentID string, reason string) (*VoidDocumentResponse, error) {
-	var response struct {
-		Data VoidDocumentResponse `json:"data"`
-	}
+	var response VoidDocumentResponse
 
 	err := c.http.Post(ctx, "/turbosign/documents/"+documentID+"/void", map[string]string{"reason": reason}, &response)
 	if err != nil {
 		return nil, err
 	}
 
-	return &response.Data, nil
+	return &response, nil
 }
 
 // ResendEmail resends signature request email to recipients
 func (c *TurboSignClient) ResendEmail(ctx context.Context, documentID string, recipientIDs []string) (*ResendEmailResponse, error) {
-	var response struct {
-		Data ResendEmailResponse `json:"data"`
-	}
+	var response ResendEmailResponse
 
 	err := c.http.Post(ctx, "/turbosign/documents/"+documentID+"/resend-email", map[string][]string{"recipientIds": recipientIDs}, &response)
 	if err != nil {
 		return nil, err
 	}
 
-	return &response.Data, nil
+	return &response, nil
+}
+
+// GetAuditTrail gets the audit trail for a document
+func (c *TurboSignClient) GetAuditTrail(ctx context.Context, documentID string) (*AuditTrailResponse, error) {
+	var response AuditTrailResponse
+
+	err := c.http.Get(ctx, "/turbosign/documents/"+documentID+"/audit-trail", &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
 }

@@ -1,19 +1,22 @@
 """
 TurboSign Module - Digital signature operations
 
-Provides 100% parity with n8n-nodes-turbodocx operations:
+Provides single-step signature operations:
 - prepare_for_review
 - prepare_for_signing_single
 - get_status
 - download
 - void_document
 - resend_email
+- get_audit_trail
 """
 
 import json
 from typing import Any, Dict, List, Optional, Union
 
-from ..http import HttpClient
+import httpx
+
+from ..http import HttpClient, NetworkError
 
 
 class TurboSign:
@@ -26,7 +29,8 @@ class TurboSign:
         cls,
         api_key: Optional[str] = None,
         access_token: Optional[str] = None,
-        base_url: str = "https://api.turbodocx.com"
+        base_url: str = "https://api.turbodocx.com",
+        org_id: Optional[str] = None
     ) -> None:
         """
         Configure the TurboSign module with API credentials
@@ -35,11 +39,13 @@ class TurboSign:
             api_key: TurboDocx API key
             access_token: OAuth2 access token (alternative to API key)
             base_url: Base URL for the API (default: https://api.turbodocx.com)
+            org_id: Organization ID (required for authentication)
         """
         cls._client = HttpClient(
             api_key=api_key,
             access_token=access_token,
-            base_url=base_url
+            base_url=base_url,
+            org_id=org_id
         )
 
     @classmethod
@@ -47,13 +53,9 @@ class TurboSign:
         """Get the HTTP client instance, raising error if not configured"""
         if cls._client is None:
             raise RuntimeError(
-                "TurboSign not configured. Call TurboSign.configure(api_key='...') first."
+                "TurboSign not configured. Call TurboSign.configure(api_key='...', org_id='...') first."
             )
         return cls._client
-
-    # ============================================
-    # N8N PARITY METHODS (single-call operations)
-    # ============================================
 
     @classmethod
     async def prepare_for_review(
@@ -81,7 +83,9 @@ class TurboSign:
 
         Args:
             recipients: List of recipients who will sign
+                Each recipient should have: name, email, signingOrder
             fields: Signature fields configuration
+                Each field should have: type, recipientEmail, and positioning info
             file: PDF file content as bytes
             file_name: Original filename
             file_link: URL to document file
@@ -94,58 +98,75 @@ class TurboSign:
             cc_emails: List of CC email addresses
 
         Returns:
-            Document ready for review with preview URL
+            Response with documentId, status, previewUrl, and recipients
 
         Example:
             >>> result = await TurboSign.prepare_for_review(
             ...     file=pdf_bytes,
-            ...     recipients=[{"name": "John Doe", "email": "john@example.com", "order": 1}],
-            ...     fields=[{"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientOrder": 1}]
+            ...     recipients=[{"name": "John Doe", "email": "john@example.com", "signingOrder": 1}],
+            ...     fields=[{"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientEmail": "john@example.com"}]
             ... )
         """
         client = cls._get_client()
 
-        # Serialize recipients and fields to JSON strings (as n8n node does)
-        form_data: Dict[str, Any] = {
-            "recipients": json.dumps(recipients),
-            "fields": json.dumps(fields),
-        }
-
-        # Add optional fields
-        if document_name:
-            form_data["documentName"] = document_name
-        if document_description:
-            form_data["documentDescription"] = document_description
-        if sender_name:
-            form_data["senderName"] = sender_name
-        if sender_email:
-            form_data["senderEmail"] = sender_email
-        if cc_emails:
-            form_data["ccEmails"] = ",".join(cc_emails)
-
         # Handle different file input methods
         if file:
-            response = await client.upload_file(
+            # For file upload, use form data with JSON strings
+            form_data: Dict[str, Any] = {
+                "recipients": json.dumps(recipients),
+                "fields": json.dumps(fields),
+            }
+
+            # Add optional fields
+            if document_name:
+                form_data["documentName"] = document_name
+            if document_description:
+                form_data["documentDescription"] = document_description
+            if sender_name:
+                form_data["senderName"] = sender_name
+            if sender_email:
+                form_data["senderEmail"] = sender_email
+            if cc_emails:
+                form_data["ccEmails"] = json.dumps(cc_emails)
+
+            return await client.upload_file(
                 "/turbosign/single/prepare-for-review",
                 file=file,
                 file_name=file_name or "document.pdf",
                 additional_data=form_data
             )
         else:
+            # For JSON body (template_id, file_link, deliverable_id)
+            # Backend expects recipients/fields as JSON strings (same as form-data)
+            json_body: Dict[str, Any] = {
+                "recipients": json.dumps(recipients),
+                "fields": json.dumps(fields),
+            }
+
+            # Add optional fields
+            if document_name:
+                json_body["documentName"] = document_name
+            if document_description:
+                json_body["documentDescription"] = document_description
+            if sender_name:
+                json_body["senderName"] = sender_name
+            if sender_email:
+                json_body["senderEmail"] = sender_email
+            if cc_emails:
+                json_body["ccEmails"] = json.dumps(cc_emails)
+
             # URL, deliverable, or template
             if file_link:
-                form_data["fileLink"] = file_link
+                json_body["fileLink"] = file_link
             if deliverable_id:
-                form_data["deliverableId"] = deliverable_id
+                json_body["deliverableId"] = deliverable_id
             if template_id:
-                form_data["templateId"] = template_id
+                json_body["templateId"] = template_id
 
-            response = await client.post(
+            return await client.post(
                 "/turbosign/single/prepare-for-review",
-                data=form_data
+                data=json_body
             )
-
-        return response.get("data", response)
 
     @classmethod
     async def prepare_for_signing_single(
@@ -169,11 +190,12 @@ class TurboSign:
 
         This method uploads a document with signature fields and recipients,
         then immediately sends signature request emails to all recipients.
-        This is the n8n-equivalent "Prepare for Signing" operation.
 
         Args:
             recipients: List of recipients who will sign
+                Each recipient should have: name, email, signingOrder
             fields: Signature fields configuration
+                Each field should have: type, recipientEmail, and positioning info
             file: PDF file content as bytes
             file_name: Original filename
             file_link: URL to document file
@@ -186,59 +208,75 @@ class TurboSign:
             cc_emails: List of CC email addresses
 
         Returns:
-            Document with sign URLs for each recipient
+            Response with success, documentId, and message
 
         Example:
             >>> result = await TurboSign.prepare_for_signing_single(
             ...     file=pdf_bytes,
-            ...     recipients=[{"name": "John Doe", "email": "john@example.com", "order": 1}],
-            ...     fields=[{"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientOrder": 1}]
+            ...     recipients=[{"name": "John Doe", "email": "john@example.com", "signingOrder": 1}],
+            ...     fields=[{"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientEmail": "john@example.com"}]
             ... )
-            >>> print(result["recipients"][0]["signUrl"])
         """
         client = cls._get_client()
 
-        # Serialize recipients and fields to JSON strings (as n8n node does)
-        form_data: Dict[str, Any] = {
-            "recipients": json.dumps(recipients),
-            "fields": json.dumps(fields),
-        }
-
-        # Add optional fields
-        if document_name:
-            form_data["documentName"] = document_name
-        if document_description:
-            form_data["documentDescription"] = document_description
-        if sender_name:
-            form_data["senderName"] = sender_name
-        if sender_email:
-            form_data["senderEmail"] = sender_email
-        if cc_emails:
-            form_data["ccEmails"] = ",".join(cc_emails)
-
         # Handle different file input methods
         if file:
-            response = await client.upload_file(
+            # For file upload, use form data with JSON strings
+            form_data: Dict[str, Any] = {
+                "recipients": json.dumps(recipients),
+                "fields": json.dumps(fields),
+            }
+
+            # Add optional fields
+            if document_name:
+                form_data["documentName"] = document_name
+            if document_description:
+                form_data["documentDescription"] = document_description
+            if sender_name:
+                form_data["senderName"] = sender_name
+            if sender_email:
+                form_data["senderEmail"] = sender_email
+            if cc_emails:
+                form_data["ccEmails"] = json.dumps(cc_emails)
+
+            return await client.upload_file(
                 "/turbosign/single/prepare-for-signing",
                 file=file,
                 file_name=file_name or "document.pdf",
                 additional_data=form_data
             )
         else:
+            # For JSON body (template_id, file_link, deliverable_id)
+            # Backend expects recipients/fields as JSON strings (same as form-data)
+            json_body: Dict[str, Any] = {
+                "recipients": json.dumps(recipients),
+                "fields": json.dumps(fields),
+            }
+
+            # Add optional fields
+            if document_name:
+                json_body["documentName"] = document_name
+            if document_description:
+                json_body["documentDescription"] = document_description
+            if sender_name:
+                json_body["senderName"] = sender_name
+            if sender_email:
+                json_body["senderEmail"] = sender_email
+            if cc_emails:
+                json_body["ccEmails"] = json.dumps(cc_emails)
+
             # URL, deliverable, or template
             if file_link:
-                form_data["fileLink"] = file_link
+                json_body["fileLink"] = file_link
             if deliverable_id:
-                form_data["deliverableId"] = deliverable_id
+                json_body["deliverableId"] = deliverable_id
             if template_id:
-                form_data["templateId"] = template_id
+                json_body["templateId"] = template_id
 
-            response = await client.post(
+            return await client.post(
                 "/turbosign/single/prepare-for-signing",
-                data=form_data
+                data=json_body
             )
-
-        return response.get("data", response)
 
     @classmethod
     async def get_status(cls, document_id: str) -> Dict[str, Any]:
@@ -249,20 +287,22 @@ class TurboSign:
             document_id: ID of the document
 
         Returns:
-            Document status and recipient information
+            Document status with recipients information
 
         Example:
             >>> status = await TurboSign.get_status("doc-123")
             >>> print(status["status"])  # 'pending', 'completed', etc.
         """
         client = cls._get_client()
-        response = await client.get(f"/turbosign/documents/{document_id}/status")
-        return response.get("data", response)
+        return await client.get(f"/turbosign/documents/{document_id}/status")
 
     @classmethod
     async def download(cls, document_id: str) -> bytes:
         """
         Download the signed document
+
+        The backend returns a presigned S3 URL. This method fetches
+        that URL and then downloads the actual file from S3.
 
         Args:
             document_id: ID of the document
@@ -276,7 +316,24 @@ class TurboSign:
             ...     f.write(pdf_content)
         """
         client = cls._get_client()
-        return await client.get(f"/turbosign/documents/{document_id}/download")
+
+        # Get presigned URL from API
+        response = await client.get(f"/turbosign/documents/{document_id}/download")
+
+        # Response contains downloadUrl
+        download_url = response.get("downloadUrl")
+        if not download_url:
+            raise ValueError("No download URL in response")
+
+        # Fetch actual file from S3
+        async with httpx.AsyncClient() as http_client:
+            try:
+                file_response = await http_client.get(download_url)
+                if not file_response.is_success:
+                    raise NetworkError(f"Failed to download file: {file_response.status_code}")
+                return file_response.content
+            except (httpx.NetworkError, httpx.TimeoutException) as e:
+                raise NetworkError(f"Failed to download file: {e}")
 
     @classmethod
     async def void_document(cls, document_id: str, reason: str) -> Dict[str, Any]:
@@ -288,17 +345,16 @@ class TurboSign:
             reason: Reason for voiding the document
 
         Returns:
-            Void confirmation
+            Void confirmation with documentId, status, and voidedAt
 
         Example:
             >>> result = await TurboSign.void_document("doc-123", "Document needs revision")
         """
         client = cls._get_client()
-        response = await client.post(
+        return await client.post(
             f"/turbosign/documents/{document_id}/void",
             data={"reason": reason}
         )
-        return response.get("data", response)
 
     @classmethod
     async def resend_email(
@@ -314,14 +370,32 @@ class TurboSign:
             recipient_ids: List of recipient IDs to resend emails to
 
         Returns:
-            Resend confirmation
+            Resend confirmation with documentId, message, and resentAt
 
         Example:
             >>> result = await TurboSign.resend_email("doc-123", ["rec-1", "rec-2"])
         """
         client = cls._get_client()
-        response = await client.post(
+        return await client.post(
             f"/turbosign/documents/{document_id}/resend-email",
             data={"recipientIds": recipient_ids}
         )
-        return response.get("data", response)
+
+    @classmethod
+    async def get_audit_trail(cls, document_id: str) -> Dict[str, Any]:
+        """
+        Get audit trail for a document
+
+        Args:
+            document_id: ID of the document
+
+        Returns:
+            Audit trail with documentId and entries array
+
+        Example:
+            >>> audit = await TurboSign.get_audit_trail("doc-123")
+            >>> for entry in audit["entries"]:
+            ...     print(f"{entry['event']} - {entry['actor']} - {entry['timestamp']}")
+        """
+        client = cls._get_client()
+        return await client.get(f"/turbosign/documents/{document_id}/audit-trail")

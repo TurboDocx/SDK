@@ -58,9 +58,15 @@ Comprehensive SDKs, detailed documentation, and responsive support. Ship faster 
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="20"/> **JavaScript/TypeScript** | [@turbodocx/sdk](./packages/js-sdk) | `npm install @turbodocx/sdk` | [View →](./packages/js-sdk#readme) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" width="20"/> **Python** | [turbodocx-sdk](./packages/py-sdk) | `pip install turbodocx-sdk` | [View →](./packages/py-sdk#readme) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg" width="20"/> **Go** | [turbodocx-sdk](./packages/go-sdk) | `go get github.com/turbodocx/sdk` | [View →](./packages/go-sdk#readme) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/csharp/csharp-original.svg" width="20"/> **C# / .NET** | [TurboDocx.Sdk](./packages/dotnet-sdk) | `dotnet add package TurboDocx.Sdk` | [View →](./packages/dotnet-sdk#readme) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="20"/> **Java** | [com.turbodocx:sdk](./packages/java-sdk) | [Maven Central](https://search.maven.org/artifact/com.turbodocx/sdk) | [View →](./packages/java-sdk#readme) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/ruby/ruby-original.svg" width="20"/> **Ruby** | [turbodocx-sdk](./packages/ruby-sdk) | `gem install turbodocx-sdk` | [View →](./packages/ruby-sdk#readme) |
+
+### Coming Soon
+
+| Language | Status |
+|:---------|:-------|
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/csharp/csharp-original.svg" width="20"/> **C# / .NET** | 🚧 In Progress |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/ruby/ruby-original.svg" width="20"/> **Ruby** | 🚧 In Progress |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/powershell/powershell-original.svg" width="20"/> **PowerShell** | 🚧 In Progress |
 
 > 🔌 **Low-code?** Check out our [n8n community node](https://www.npmjs.com/package/@turbodocx/n8n-nodes-turbodocx) for no-code/low-code workflows!
 >
@@ -109,16 +115,6 @@ go get github.com/turbodocx/sdk
 </details>
 
 <details>
-<summary><strong>C# / .NET</strong></summary>
-
-```bash
-dotnet add package TurboDocx.Sdk
-# or
-Install-Package TurboDocx.Sdk
-```
-</details>
-
-<details>
 <summary><strong>Java</strong></summary>
 
 ```xml
@@ -127,16 +123,6 @@ Install-Package TurboDocx.Sdk
     <artifactId>sdk</artifactId>
     <version>1.0.0</version>
 </dependency>
-```
-</details>
-
-<details>
-<summary><strong>Ruby</strong></summary>
-
-```bash
-gem install turbodocx-sdk
-# or add to Gemfile:
-gem 'turbodocx-sdk'
 ```
 </details>
 
@@ -306,9 +292,7 @@ await TurboSign.resend(documentId, ['recipient-uuid']);
 | JavaScript/TypeScript | Node.js 16+ |
 | Python | Python 3.9+ |
 | Go | Go 1.21+ |
-| .NET | .NET 6.0+ |
 | Java | Java 11+ |
-| Ruby | Ruby 3.0+ |
 
 ---
 

@@ -4,23 +4,38 @@ import com.google.gson.annotations.SerializedName;
 
 /**
  * Response from voiding a document
+ * Backend returns: { data: { id, name, status, voidReason, voidedAt } }
  */
 public class VoidDocumentResponse {
-    @SerializedName("documentId")
-    private String documentId;
+    @SerializedName("id")
+    private String id;
+
+    @SerializedName("name")
+    private String name;
 
     @SerializedName("status")
     private String status;
 
+    @SerializedName("voidReason")
+    private String voidReason;
+
     @SerializedName("voidedAt")
     private String voidedAt;
 
-    public String getDocumentId() {
-        return documentId;
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public String getStatus() {
         return status;
+    }
+
+    public String getVoidReason() {
+        return voidReason;
     }
 
     public String getVoidedAt() {

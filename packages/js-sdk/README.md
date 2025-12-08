@@ -318,6 +318,50 @@ app.post('/api/send-contract', async (req, res) => {
 
 ---
 
+## Local Testing
+
+The SDK includes a comprehensive manual test script to verify all functionality locally.
+
+### Running Manual Tests
+
+```bash
+# Install dependencies
+npm install
+
+# Run the manual test script
+npx tsx manual-test.ts
+```
+
+### What It Tests
+
+The `manual-test.ts` file tests all SDK methods:
+- ✅ `prepareForReview()` - Document upload for review
+- ✅ `prepareForSigningSingle()` - Send for signature
+- ✅ `getStatus()` - Check document status
+- ✅ `download()` - Download signed document
+- ✅ `void()` - Cancel signature request
+- ✅ `resend()` - Resend signature emails
+
+### Configuration
+
+Before running, update the hardcoded values in `manual-test.ts`:
+- `API_KEY` - Your TurboDocx API key
+- `BASE_URL` - API endpoint (default: `http://localhost:3000`)
+- `ORG_ID` - Your organization UUID
+- `TEST_FILE_PATH` - Path to a test PDF/DOCX file
+- `TEST_EMAIL` - Email address for testing
+
+### Expected Output
+
+The script will:
+1. Upload a test document
+2. Send it for signature
+3. Check the status
+4. Test void and resend operations
+5. Print results for each operation
+
+---
+
 ## Error Handling
 
 ```typescript

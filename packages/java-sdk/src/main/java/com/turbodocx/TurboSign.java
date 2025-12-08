@@ -2,24 +2,28 @@ package com.turbodocx;
 
 import com.google.gson.Gson;
 import com.turbodocx.models.*;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * TurboSign client for digital signature operations
- * with 100% parity with n8n-nodes-turbodocx
+ * with 100% parity with the JS SDK
  */
 public class TurboSign {
     private final HttpClient httpClient;
     private final Gson gson;
+    private final OkHttpClient s3Client;
 
     public TurboSign(HttpClient httpClient) {
         this.httpClient = httpClient;
         this.gson = new Gson();
+        this.s3Client = new OkHttpClient();
     }
 
     /**
@@ -37,20 +41,15 @@ public class TurboSign {
                 request.getCcEmails()
         );
 
-        DataWrapper<PrepareForReviewResponse> response;
-
         if (request.hasFile()) {
             String fileName = request.getFileName() != null ? request.getFileName() : "document.pdf";
-            response = httpClient.uploadFile(
+            return httpClient.uploadFile(
                     "/turbosign/single/prepare-for-review",
                     request.getFile(),
                     fileName,
                     formData,
-                    (Class<DataWrapper<PrepareForReviewResponse>>) (Class<?>) DataWrapper.class
+                    PrepareForReviewResponse.class
             );
-            // Re-parse with correct type
-            String json = gson.toJson(response);
-            response = gson.fromJson(json, PrepareForReviewDataWrapper.class);
         } else {
             if (request.getFileLink() != null) {
                 formData.put("fileLink", request.getFileLink());
@@ -62,19 +61,17 @@ public class TurboSign {
                 formData.put("templateId", request.getTemplateId());
             }
 
-            response = httpClient.post(
+            return httpClient.post(
                     "/turbosign/single/prepare-for-review",
                     formData,
-                    PrepareForReviewDataWrapper.class
+                    PrepareForReviewResponse.class
             );
         }
-
-        return response.getData();
     }
 
     /**
      * Prepare document for signing and send emails in a single call.
-     * This is the n8n-equivalent "Prepare for Signing" operation.
+     * This is the equivalent "Prepare for Signing" operation.
      */
     public PrepareForSigningResponse prepareForSigningSingle(PrepareForSigningRequest request) throws IOException {
         Map<String, String> formData = buildFormData(
@@ -87,20 +84,15 @@ public class TurboSign {
                 request.getCcEmails()
         );
 
-        DataWrapper<PrepareForSigningResponse> response;
-
         if (request.hasFile()) {
             String fileName = request.getFileName() != null ? request.getFileName() : "document.pdf";
-            response = httpClient.uploadFile(
+            return httpClient.uploadFile(
                     "/turbosign/single/prepare-for-signing",
                     request.getFile(),
                     fileName,
                     formData,
-                    (Class<DataWrapper<PrepareForSigningResponse>>) (Class<?>) DataWrapper.class
+                    PrepareForSigningResponse.class
             );
-            // Re-parse with correct type
-            String json = gson.toJson(response);
-            response = gson.fromJson(json, PrepareForSigningDataWrapper.class);
         } else {
             if (request.getFileLink() != null) {
                 formData.put("fileLink", request.getFileLink());
@@ -112,32 +104,51 @@ public class TurboSign {
                 formData.put("templateId", request.getTemplateId());
             }
 
-            response = httpClient.post(
+            return httpClient.post(
                     "/turbosign/single/prepare-for-signing",
                     formData,
-                    PrepareForSigningDataWrapper.class
+                    PrepareForSigningResponse.class
             );
         }
-
-        return response.getData();
     }
 
     /**
      * Get the status of a document
      */
     public DocumentStatusResponse getStatus(String documentId) throws IOException {
-        DocumentStatusDataWrapper response = httpClient.get(
+        return httpClient.get(
                 "/turbosign/documents/" + documentId + "/status",
-                DocumentStatusDataWrapper.class
+                DocumentStatusResponse.class
         );
-        return response.getData();
     }
 
     /**
-     * Download the signed document
+     * Download the signed document.
+     * The backend returns a presigned S3 URL, which this method fetches.
      */
     public byte[] download(String documentId) throws IOException {
-        return httpClient.getRaw("/turbosign/documents/" + documentId + "/download");
+        // Get presigned URL from API
+        DownloadResponse downloadResponse = httpClient.get(
+                "/turbosign/documents/" + documentId + "/download",
+                DownloadResponse.class
+        );
+
+        if (downloadResponse.getDownloadUrl() == null || downloadResponse.getDownloadUrl().isEmpty()) {
+            throw new TurboDocxException("No download URL in response");
+        }
+
+        // Fetch actual file from S3
+        Request request = new Request.Builder()
+                .url(downloadResponse.getDownloadUrl())
+                .get()
+                .build();
+
+        try (Response response = s3Client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new TurboDocxException.NetworkException("Failed to download file: " + response.message());
+            }
+            return response.body() != null ? response.body().bytes() : new byte[0];
+        }
     }
 
     /**
@@ -147,12 +158,11 @@ public class TurboSign {
         Map<String, String> body = new HashMap<>();
         body.put("reason", reason);
 
-        VoidDocumentDataWrapper response = httpClient.post(
+        return httpClient.post(
                 "/turbosign/documents/" + documentId + "/void",
                 body,
-                VoidDocumentDataWrapper.class
+                VoidDocumentResponse.class
         );
-        return response.getData();
     }
 
     /**
@@ -162,12 +172,21 @@ public class TurboSign {
         Map<String, List<String>> body = new HashMap<>();
         body.put("recipientIds", recipientIds);
 
-        ResendEmailDataWrapper response = httpClient.post(
+        return httpClient.post(
                 "/turbosign/documents/" + documentId + "/resend-email",
                 body,
-                ResendEmailDataWrapper.class
+                ResendEmailResponse.class
         );
-        return response.getData();
+    }
+
+    /**
+     * Get the audit trail for a document
+     */
+    public AuditTrailResponse getAuditTrail(String documentId) throws IOException {
+        return httpClient.get(
+                "/turbosign/documents/" + documentId + "/audit-trail",
+                AuditTrailResponse.class
+        );
     }
 
     private Map<String, String> buildFormData(
@@ -196,21 +215,10 @@ public class TurboSign {
             formData.put("senderEmail", senderEmail);
         }
         if (ccEmails != null && !ccEmails.isEmpty()) {
-            formData.put("ccEmails", String.join(",", ccEmails));
+            // Use JSON for ccEmails instead of comma-join
+            formData.put("ccEmails", gson.toJson(ccEmails));
         }
 
         return formData;
     }
-
-    // Data wrapper classes for JSON deserialization
-    private static class DataWrapper<T> {
-        private T data;
-        public T getData() { return data; }
-    }
-
-    private static class PrepareForReviewDataWrapper extends DataWrapper<PrepareForReviewResponse> {}
-    private static class PrepareForSigningDataWrapper extends DataWrapper<PrepareForSigningResponse> {}
-    private static class DocumentStatusDataWrapper extends DataWrapper<DocumentStatusResponse> {}
-    private static class VoidDocumentDataWrapper extends DataWrapper<VoidDocumentResponse> {}
-    private static class ResendEmailDataWrapper extends DataWrapper<ResendEmailResponse> {}
 }
