@@ -99,7 +99,7 @@ type CreateSignatureReviewLinkResponse struct {
 	Status     string                    `json:"status"`
 	PreviewURL string                    `json:"previewUrl,omitempty"`
 	Message    string                    `json:"message"`
-	Recipients []RecipientStatusResponse `json:"recipients,omitempty"`
+	Recipients []RecipientResponse `json:"recipients,omitempty"`
 }
 
 // SendSignatureRequest is the request for SendSignature
@@ -132,35 +132,39 @@ type SendSignatureResponse struct {
 	Message    string `json:"message"`
 }
 
-// RecipientStatusResponse represents a recipient's status
-type RecipientStatusResponse struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Email  string `json:"email"`
-	Status string `json:"status"`
+// RecipientResponse represents a recipient's status
+type RecipientResponse struct {
+	ID       string `json:"id"`
+	Email    string `json:"email"`
+	Name     string `json:"name"`
+	Status   string `json:"status"`
+	SignURL  string `json:"signUrl,omitempty"`
+	SignedAt string `json:"signedAt,omitempty"`
 }
 
 // DocumentStatusResponse is the response from GetStatus
-// Backend returns: { data: { status } }
 type DocumentStatusResponse struct {
-	Status string `json:"status"`
+	DocumentID  string              `json:"documentId"`
+	Status      string              `json:"status"`
+	Name        string              `json:"name"`
+	Recipients  []RecipientResponse `json:"recipients"`
+	CreatedAt   string              `json:"createdAt"`
+	UpdatedAt   string              `json:"updatedAt"`
+	CompletedAt string              `json:"completedAt,omitempty"`
 }
 
 // VoidDocumentResponse is the response from VoidDocument
-// Backend returns: { data: { id, name, status, voidReason, voidedAt } }
 type VoidDocumentResponse struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
+	DocumentID string `json:"documentId"`
 	Status     string `json:"status"`
-	VoidReason string `json:"voidReason"`
 	VoidedAt   string `json:"voidedAt"`
 }
 
 // ResendEmailResponse is the response from ResendEmail
-// Backend returns: { data: { success, recipientCount } }
 type ResendEmailResponse struct {
-	Success        bool `json:"success"`
-	RecipientCount int  `json:"recipientCount"`
+	DocumentID string `json:"documentId"`
+	Message    string `json:"message"`
+	ResentAt   string `json:"resentAt"`
 }
 
 // DownloadResponse is the API response for download request
@@ -178,19 +182,10 @@ type AuditTrailEntry struct {
 	Details   map[string]interface{} `json:"details,omitempty"`
 }
 
-// AuditTrailDocumentInfo contains document info in audit trail response
-type AuditTrailDocumentInfo struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Status      string `json:"status"`
-}
-
 // AuditTrailResponse is the response from GetAuditTrail
-// Backend returns: { data: { document: {...}, auditTrail: [...] } }
 type AuditTrailResponse struct {
-	Document   AuditTrailDocumentInfo `json:"document"`
-	AuditTrail []AuditTrailEntry      `json:"auditTrail"`
+	DocumentID string            `json:"documentId"`
+	Entries    []AuditTrailEntry `json:"entries"`
 }
 
 // ============================================

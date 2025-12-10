@@ -8,105 +8,57 @@ import java.util.Map;
  * Response from getting audit trail
  */
 public class AuditTrailResponse {
-    @SerializedName("document")
-    private DocumentInfo document;
+    @SerializedName("documentId")
+    private String documentId;
 
-    @SerializedName("auditTrail")
-    private List<AuditTrailEntry> auditTrail;
-
-    public DocumentInfo getDocument() {
-        return document;
-    }
+    @SerializedName("entries")
+    private List<AuditTrailEntry> entries;
 
     public String getDocumentId() {
-        return document != null ? document.getId() : null;
+        return documentId;
     }
 
-    public List<AuditTrailEntry> getAuditTrail() {
-        return auditTrail;
-    }
-
-    // Alias for backwards compatibility
     public List<AuditTrailEntry> getEntries() {
-        return auditTrail;
-    }
-
-    /**
-     * Document info in audit trail response
-     */
-    public static class DocumentInfo {
-        @SerializedName("id")
-        private String id;
-
-        @SerializedName("name")
-        private String name;
-
-        public String getId() { return id; }
-        public String getName() { return name; }
+        return entries;
     }
 
     /**
      * Single audit trail entry
      */
     public static class AuditTrailEntry {
-        @SerializedName("id")
-        private String id;
+        @SerializedName("event")
+        private String event;
 
-        @SerializedName("documentId")
-        private String documentId;
-
-        @SerializedName("actionType")
-        private String actionType;
+        @SerializedName("actor")
+        private String actor;
 
         @SerializedName("timestamp")
         private String timestamp;
 
+        @SerializedName("ipAddress")
+        private String ipAddress;
+
         @SerializedName("details")
         private Map<String, Object> details;
 
-        @SerializedName("user")
-        private UserInfo user;
+        public String getEvent() {
+            return event;
+        }
 
-        @SerializedName("recipient")
-        private RecipientInfo recipient;
+        public String getActor() {
+            return actor;
+        }
 
-        public String getId() { return id; }
-        public String getDocumentId() { return documentId; }
-        public String getActionType() { return actionType; }
-        public String getTimestamp() { return timestamp; }
-        public Map<String, Object> getDetails() { return details; }
-        public UserInfo getUser() { return user; }
-        public RecipientInfo getRecipient() { return recipient; }
+        public String getTimestamp() {
+            return timestamp;
+        }
 
-        // Alias for backwards compatibility
-        public String getEvent() { return actionType; }
-    }
+        public String getIpAddress() {
+            return ipAddress;
+        }
 
-    /**
-     * User info in audit entry
-     */
-    public static class UserInfo {
-        @SerializedName("name")
-        private String name;
-
-        @SerializedName("email")
-        private String email;
-
-        public String getName() { return name; }
-        public String getEmail() { return email; }
-    }
-
-    /**
-     * Recipient info in audit entry
-     */
-    public static class RecipientInfo {
-        @SerializedName("name")
-        private String name;
-
-        @SerializedName("email")
-        private String email;
-
-        public String getName() { return name; }
-        public String getEmail() { return email; }
+        public Map<String, Object> getDetails() {
+            return details;
+        }
     }
 }

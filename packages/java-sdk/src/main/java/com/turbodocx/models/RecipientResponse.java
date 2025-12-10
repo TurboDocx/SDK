@@ -21,6 +21,9 @@ public class RecipientResponse {
     @SerializedName("signUrl")
     private String signUrl;
 
+    @SerializedName("signedAt")
+    private String signedAt;
+
     public String getId() {
         return id;
     }
@@ -39,5 +42,9 @@ public class RecipientResponse {
 
     public String getSignUrl() {
         return signUrl;
+    }
+
+    public String getSignedAt() {
+        return signedAt;
     }
 }
