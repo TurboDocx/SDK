@@ -8,10 +8,10 @@ import {
   ResendEmailResponse,
   AuditTrailResponse,
   DocumentStatusResponse,
-  PrepareForReviewRequest,
-  PrepareForReviewResponse,
-  PrepareForSigningSingleRequest,
-  PrepareForSigningSingleResponse,
+  CreateSignatureReviewLinkRequest,
+  CreateSignatureReviewLinkResponse,
+  SendSignatureRequest,
+  SendSignatureResponse,
 } from '../types/sign';
 
 export class TurboSign {
@@ -40,7 +40,7 @@ export class TurboSign {
   // ============================================
 
   /**
-   * Prepare document for review without sending emails
+   * Create signature review link without sending emails
    *
    * This method uploads a document with signature fields and recipients,
    * but does NOT send signature request emails. Use this to preview
@@ -52,28 +52,28 @@ export class TurboSign {
    * @example
    * ```typescript
    * // Using file upload
-   * const result = await TurboSign.prepareForReview({
+   * const result = await TurboSign.createSignatureReviewLink({
    *   file: pdfBuffer,
    *   recipients: [{ name: 'John Doe', email: 'john@example.com', signingOrder: 1 }],
    *   fields: [{ type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientEmail: 'john@example.com' }]
    * });
    *
    * // Using file URL
-   * const result = await TurboSign.prepareForReview({
+   * const result = await TurboSign.createSignatureReviewLink({
    *   fileLink: 'https://storage.example.com/contract.pdf',
    *   recipients: [{ name: 'John Doe', email: 'john@example.com', signingOrder: 1 }],
    *   fields: [{ type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientEmail: 'john@example.com' }]
    * });
    *
    * // Using deliverable ID (from TurboDocx document generation)
-   * const result = await TurboSign.prepareForReview({
+   * const result = await TurboSign.createSignatureReviewLink({
    *   deliverableId: 'deliverable-uuid',
    *   recipients: [{ name: 'John Doe', email: 'john@example.com', signingOrder: 1 }],
    *   fields: [{ type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientEmail: 'john@example.com' }]
    * });
    * ```
    */
-  static async prepareForReview(request: PrepareForReviewRequest): Promise<PrepareForReviewResponse> {
+  static async createSignatureReviewLink(request: CreateSignatureReviewLinkRequest): Promise<CreateSignatureReviewLinkResponse> {
     const client = this.getClient();
 
     // Serialize recipients and fields to JSON strings (as n8n node does)
@@ -100,7 +100,7 @@ export class TurboSign {
     // Handle different file input methods
     if (request.file) {
       // File upload - use multipart form
-      const response = await client.uploadFile<PrepareForReviewResponse>(
+      const response = await client.uploadFile<CreateSignatureReviewLinkResponse>(
         '/turbosign/single/prepare-for-review',
         request.file,
         'file',
@@ -113,7 +113,7 @@ export class TurboSign {
       if (request.deliverableId) formData.deliverableId = request.deliverableId;
       if (request.templateId) formData.templateId = request.templateId;
 
-      const response = await client.post<PrepareForReviewResponse>(
+      const response = await client.post<CreateSignatureReviewLinkResponse>(
         '/turbosign/single/prepare-for-review',
         formData
       );
@@ -122,7 +122,7 @@ export class TurboSign {
   }
 
   /**
-   * Prepare document for signing and send emails in a single call
+   * Send signature request and immediately send emails
    *
    * This method uploads a document with signature fields and recipients,
    * then immediately sends signature request emails to all recipients.
@@ -133,7 +133,7 @@ export class TurboSign {
    * @example
    * ```typescript
    * // Using file upload
-   * const result = await TurboSign.prepareForSigningSingle({
+   * const result = await TurboSign.sendSignature({
    *   file: pdfBuffer,
    *   recipients: [
    *     { name: 'John Doe', email: 'john@example.com', signingOrder: 1 },
@@ -146,7 +146,7 @@ export class TurboSign {
    * });
    * ```
    */
-  static async prepareForSigningSingle(request: PrepareForSigningSingleRequest): Promise<PrepareForSigningSingleResponse> {
+  static async sendSignature(request: SendSignatureRequest): Promise<SendSignatureResponse> {
     const client = this.getClient();
 
     // Serialize recipients and fields to JSON strings (as n8n node does)
@@ -173,7 +173,7 @@ export class TurboSign {
     // Handle different file input methods
     if (request.file) {
       // File upload - use multipart form
-      const response = await client.uploadFile<PrepareForSigningSingleResponse>(
+      const response = await client.uploadFile<SendSignatureResponse>(
         '/turbosign/single/prepare-for-signing',
         request.file,
         'file',
@@ -186,7 +186,7 @@ export class TurboSign {
       if (request.deliverableId) formData.deliverableId = request.deliverableId;
       if (request.templateId) formData.templateId = request.templateId;
 
-      const response = await client.post<PrepareForSigningSingleResponse>(
+      const response = await client.post<SendSignatureResponse>(
         '/turbosign/single/prepare-for-signing',
         formData
       );

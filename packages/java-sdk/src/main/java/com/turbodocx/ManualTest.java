@@ -108,10 +108,10 @@ public class ManualTest {
     // =============================================
 
     private static String testPrepareForReview() throws IOException {
-        System.out.println("\n--- Test 1: prepareForReview (using fileLink) ---");
+        System.out.println("\n--- Test 1: createSignatureReviewLink (using fileLink) ---");
 
         // Using fileLink instead of file upload
-        PrepareForReviewRequest request = new PrepareForReviewRequest.Builder()
+        CreateSignatureReviewLinkRequest request = new CreateSignatureReviewLinkRequest.Builder()
                 .fileLink(FILE_URL)
                 .recipients(Arrays.asList(
                         new Recipient("Signer One", TEST_EMAIL, 1)
@@ -123,13 +123,13 @@ public class ManualTest {
                 .documentName("Review Test Document (fileLink)")
                 .build();
 
-        PrepareForReviewResponse result = client.turboSign().prepareForReview(request);
+        CreateSignatureReviewLinkResponse result = client.turboSign().createSignatureReviewLink(request);
         System.out.println("Result: " + gson.toJson(result));
         return result.getDocumentId();
     }
 
     private static String testPrepareForSigningSingle() throws IOException {
-        System.out.println("\n--- Test 2: prepareForSigningSingle (using file buffer with template fields) ---");
+        System.out.println("\n--- Test 2: sendSignature (using file buffer with template fields) ---");
 
         byte[] pdfBytes = Files.readAllBytes(Paths.get(TEST_PDF_PATH));
 
@@ -178,7 +178,7 @@ public class ManualTest {
                 null                 // no template (coordinate-based)
         );
 
-        PrepareForSigningRequest request = new PrepareForSigningRequest.Builder()
+        SendSignatureRequest request = new SendSignatureRequest.Builder()
                 .file(pdfBytes)
                 .recipients(Arrays.asList(
                         new Recipient("Test User", TEST_EMAIL, 1)
@@ -191,7 +191,7 @@ public class ManualTest {
                 .ccEmails(Arrays.asList("cc@example.com"))
                 .build();
 
-        PrepareForSigningResponse result = client.turboSign().prepareForSigningSingle(request);
+        SendSignatureResponse result = client.turboSign().sendSignature(request);
         System.out.println("Result: " + gson.toJson(result));
         return result.getDocumentId();
     }

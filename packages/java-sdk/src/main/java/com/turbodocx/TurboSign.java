@@ -30,7 +30,7 @@ public class TurboSign {
      * Prepare document for review without sending emails.
      * Use this to preview field placement before sending.
      */
-    public PrepareForReviewResponse prepareForReview(PrepareForReviewRequest request) throws IOException {
+    public CreateSignatureReviewLinkResponse createSignatureReviewLink(CreateSignatureReviewLinkRequest request) throws IOException {
         Map<String, String> formData = buildFormData(
                 request.getRecipients(),
                 request.getFields(),
@@ -48,7 +48,7 @@ public class TurboSign {
                     request.getFile(),
                     fileName,
                     formData,
-                    PrepareForReviewResponse.class
+                    CreateSignatureReviewLinkResponse.class
             );
         } else {
             if (request.getFileLink() != null) {
@@ -64,7 +64,7 @@ public class TurboSign {
             return httpClient.post(
                     "/turbosign/single/prepare-for-review",
                     formData,
-                    PrepareForReviewResponse.class
+                    CreateSignatureReviewLinkResponse.class
             );
         }
     }
@@ -73,7 +73,7 @@ public class TurboSign {
      * Prepare document for signing and send emails in a single call.
      * This is the equivalent "Prepare for Signing" operation.
      */
-    public PrepareForSigningResponse prepareForSigningSingle(PrepareForSigningRequest request) throws IOException {
+    public SendSignatureResponse sendSignature(SendSignatureRequest request) throws IOException {
         Map<String, String> formData = buildFormData(
                 request.getRecipients(),
                 request.getFields(),
@@ -91,7 +91,7 @@ public class TurboSign {
                     request.getFile(),
                     fileName,
                     formData,
-                    PrepareForSigningResponse.class
+                    SendSignatureResponse.class
             );
         } else {
             if (request.getFileLink() != null) {
@@ -107,7 +107,7 @@ public class TurboSign {
             return httpClient.post(
                     "/turbosign/single/prepare-for-signing",
                     formData,
-                    PrepareForSigningResponse.class
+                    SendSignatureResponse.class
             );
         }
     }

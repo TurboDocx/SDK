@@ -2,8 +2,8 @@
 TurboSign Module Tests
 
 Tests for TurboSign operations:
-- prepare_for_review
-- prepare_for_signing_single
+- create_signature_review_link
+- send_signature
 - get_status
 - download
 - void_document
@@ -41,8 +41,8 @@ class TestTurboSignConfigure:
             TurboSign.configure(api_key="test-api-key")
 
 
-class TestPrepareForReview:
-    """Test prepare_for_review operation"""
+class TestCreateSignatureReviewLink:
+    """Test create_signature_review_link operation"""
 
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -64,7 +64,7 @@ class TestPrepareForReview:
         }]
 
     @pytest.mark.asyncio
-    async def test_prepare_for_review_with_file_upload(self):
+    async def test_create_signature_review_link_with_file_upload(self):
         """Should prepare document for review with file upload"""
         mock_response = {
             "success": True,
@@ -86,7 +86,7 @@ class TestPrepareForReview:
             mock_get_client.return_value = mock_client
 
             TurboSign.configure(api_key="test-key", org_id="test-org")
-            result = await TurboSign.prepare_for_review(
+            result = await TurboSign.create_signature_review_link(
                 file=b"mock-pdf-content",
                 recipients=self.mock_recipients(),
                 fields=self.mock_fields()
@@ -98,7 +98,7 @@ class TestPrepareForReview:
             assert result.get("previewUrl") is not None
 
     @pytest.mark.asyncio
-    async def test_prepare_for_review_with_file_url(self):
+    async def test_create_signature_review_link_with_file_url(self):
         """Should prepare document for review with file URL"""
         mock_response = {
             "success": True,
@@ -114,7 +114,7 @@ class TestPrepareForReview:
             mock_get_client.return_value = mock_client
 
             TurboSign.configure(api_key="test-key", org_id="test-org")
-            result = await TurboSign.prepare_for_review(
+            result = await TurboSign.create_signature_review_link(
                 file_link="https://storage.example.com/contract.pdf",
                 recipients=self.mock_recipients(),
                 fields=self.mock_fields()
@@ -126,7 +126,7 @@ class TestPrepareForReview:
             assert "fileLink" in call_args[1]["data"]
 
     @pytest.mark.asyncio
-    async def test_prepare_for_review_with_deliverable_id(self):
+    async def test_create_signature_review_link_with_deliverable_id(self):
         """Should prepare document for review with deliverable ID"""
         mock_response = {
             "success": True,
@@ -141,7 +141,7 @@ class TestPrepareForReview:
             mock_get_client.return_value = mock_client
 
             TurboSign.configure(api_key="test-key", org_id="test-org")
-            result = await TurboSign.prepare_for_review(
+            result = await TurboSign.create_signature_review_link(
                 deliverable_id="deliverable-abc",
                 recipients=self.mock_recipients(),
                 fields=self.mock_fields()
@@ -152,7 +152,7 @@ class TestPrepareForReview:
             assert "deliverableId" in call_args[1]["data"]
 
     @pytest.mark.asyncio
-    async def test_prepare_for_review_with_template_id(self):
+    async def test_create_signature_review_link_with_template_id(self):
         """Should prepare document for review with template ID"""
         mock_response = {
             "success": True,
@@ -167,7 +167,7 @@ class TestPrepareForReview:
             mock_get_client.return_value = mock_client
 
             TurboSign.configure(api_key="test-key", org_id="test-org")
-            result = await TurboSign.prepare_for_review(
+            result = await TurboSign.create_signature_review_link(
                 template_id="template-xyz",
                 recipients=self.mock_recipients(),
                 fields=self.mock_fields()
@@ -176,7 +176,7 @@ class TestPrepareForReview:
             assert result["documentId"] == "doc-template"
 
     @pytest.mark.asyncio
-    async def test_prepare_for_review_with_optional_fields(self):
+    async def test_create_signature_review_link_with_optional_fields(self):
         """Should include optional fields in request"""
         mock_response = {
             "success": True,
@@ -191,7 +191,7 @@ class TestPrepareForReview:
             mock_get_client.return_value = mock_client
 
             TurboSign.configure(api_key="test-key", org_id="test-org")
-            await TurboSign.prepare_for_review(
+            await TurboSign.create_signature_review_link(
                 file_link="https://example.com/doc.pdf",
                 recipients=self.mock_recipients(),
                 fields=self.mock_fields(),
@@ -210,8 +210,8 @@ class TestPrepareForReview:
             assert data.get("senderEmail") == "sales@company.com"
 
 
-class TestPrepareForSigningSingle:
-    """Test prepare_for_signing_single operation"""
+class TestSendSignature:
+    """Test send_signature operation"""
 
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -233,7 +233,7 @@ class TestPrepareForSigningSingle:
         }]
 
     @pytest.mark.asyncio
-    async def test_prepare_for_signing_and_send_emails(self):
+    async def test_send_signature_with_emails(self):
         """Should prepare document for signing and send emails"""
         mock_response = {
             "success": True,
@@ -247,7 +247,7 @@ class TestPrepareForSigningSingle:
             mock_get_client.return_value = mock_client
 
             TurboSign.configure(api_key="test-key", org_id="test-org")
-            result = await TurboSign.prepare_for_signing_single(
+            result = await TurboSign.send_signature(
                 file_link="https://storage.example.com/contract.pdf",
                 recipients=self.mock_recipients(),
                 fields=self.mock_fields()
@@ -274,7 +274,7 @@ class TestPrepareForSigningSingle:
             mock_get_client.return_value = mock_client
 
             TurboSign.configure(api_key="test-key", org_id="test-org")
-            result = await TurboSign.prepare_for_signing_single(
+            result = await TurboSign.send_signature(
                 file=b"mock-pdf-content",
                 file_name="contract.pdf",
                 recipients=self.mock_recipients(),
@@ -498,7 +498,7 @@ class TestErrorHandling:
 
             TurboSign.configure(api_key="test-key", org_id="test-org")
             with pytest.raises(ValidationError, match="Invalid email"):
-                await TurboSign.prepare_for_signing_single(
+                await TurboSign.send_signature(
                     file_link="https://example.com/doc.pdf",
                     recipients=[{"name": "Test", "email": "invalid-email", "signingOrder": 1}],
                     fields=[]

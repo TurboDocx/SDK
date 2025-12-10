@@ -4,9 +4,9 @@ import com.google.gson.annotations.SerializedName;
 import java.util.List;
 
 /**
- * Response from preparing a document for review
+ * Response from preparing a document for signing
  */
-public class PrepareForReviewResponse {
+public class SendSignatureResponse {
     @SerializedName("success")
     private boolean success;
 
@@ -15,9 +15,6 @@ public class PrepareForReviewResponse {
 
     @SerializedName("status")
     private String status;
-
-    @SerializedName("previewUrl")
-    private String previewUrl;
 
     @SerializedName("message")
     private String message;
@@ -35,10 +32,6 @@ public class PrepareForReviewResponse {
 
     public String getStatus() {
         return status;
-    }
-
-    public String getPreviewUrl() {
-        return previewUrl;
     }
 
     public String getMessage() {

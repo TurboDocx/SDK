@@ -32,15 +32,15 @@ TurboSign.configure(api_key=API_KEY, base_url=BASE_URL, org_id=ORG_ID)
 # TEST FUNCTIONS
 # =============================================
 
-async def test_prepare_for_review():
+async def test_create_signature_review_link():
     """Test 1: Prepare document for review (no emails sent) - using fileLink"""
-    print("\n--- Test 1: prepare_for_review (using fileLink) ---")
+    print("\n--- Test 1: create_signature_review_link (using fileLink) ---")
 
     # Using fileLink instead of file upload or templateId
     # Replace with a publicly accessible PDF/DOCX URL
     file_url = "https://example.com/sample-document.pdf"  # Replace with actual publicly accessible PDF URL
 
-    result = await TurboSign.prepare_for_review(
+    result = await TurboSign.create_signature_review_link(
         file_link=file_url,
         recipients=[
             {"name": "Signer One", "email": TEST_EMAIL, "signingOrder": 1}
@@ -73,14 +73,14 @@ async def test_prepare_for_review():
     return result.get("documentId")
 
 
-async def test_prepare_for_signing_single():
+async def test_send_signature():
     """Test 2: Prepare document for signing and send emails"""
-    print("\n--- Test 2: prepare_for_signing_single ---")
+    print("\n--- Test 2: send_signature ---")
 
     with open(TEST_PDF_PATH, "rb") as f:
         pdf_buffer = f.read()
 
-    result = await TurboSign.prepare_for_signing_single(
+    result = await TurboSign.send_signature(
         # template_id="341af877-02d4-4549-823b-87089a3f7b02",  # Replace with your template ID
         file=pdf_buffer,
         recipients=[
@@ -195,10 +195,10 @@ async def run_all_tests():
         # Uncomment and run tests as needed:
 
         # Test 1: Prepare for Review
-        # review_doc_id = await test_prepare_for_review()
+        # review_doc_id = await test_create_signature_review_link()
 
         # Test 2: Prepare for Signing (creates a new document)
-        # sign_doc_id = await test_prepare_for_signing_single()
+        # sign_doc_id = await test_send_signature()
 
         # Test 3: Get Status (replace with actual document ID)
         # await test_get_status("document-uuid-here")

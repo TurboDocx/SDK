@@ -2,8 +2,8 @@
 TurboSign Module - Digital signature operations
 
 Provides single-step signature operations:
-- prepare_for_review
-- prepare_for_signing_single
+- create_signature_review_link
+- send_signature
 - get_status
 - download
 - void_document
@@ -58,7 +58,7 @@ class TurboSign:
         return cls._client
 
     @classmethod
-    async def prepare_for_review(
+    async def create_signature_review_link(
         cls,
         recipients: List[Dict[str, Any]],
         fields: List[Dict[str, Any]],
@@ -75,7 +75,7 @@ class TurboSign:
         cc_emails: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
-        Prepare document for review without sending emails
+        Create signature review link without sending emails
 
         This method uploads a document with signature fields and recipients,
         but does NOT send signature request emails. Use this to preview
@@ -101,7 +101,7 @@ class TurboSign:
             Response with documentId, status, previewUrl, and recipients
 
         Example:
-            >>> result = await TurboSign.prepare_for_review(
+            >>> result = await TurboSign.create_signature_review_link(
             ...     file=pdf_bytes,
             ...     recipients=[{"name": "John Doe", "email": "john@example.com", "signingOrder": 1}],
             ...     fields=[{"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientEmail": "john@example.com"}]
@@ -169,7 +169,7 @@ class TurboSign:
             )
 
     @classmethod
-    async def prepare_for_signing_single(
+    async def send_signature(
         cls,
         recipients: List[Dict[str, Any]],
         fields: List[Dict[str, Any]],
@@ -186,7 +186,7 @@ class TurboSign:
         cc_emails: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
-        Prepare document for signing and send emails in a single call
+        Send signature request and immediately send emails
 
         This method uploads a document with signature fields and recipients,
         then immediately sends signature request emails to all recipients.
@@ -211,7 +211,7 @@ class TurboSign:
             Response with success, documentId, and message
 
         Example:
-            >>> result = await TurboSign.prepare_for_signing_single(
+            >>> result = await TurboSign.send_signature(
             ...     file=pdf_bytes,
             ...     recipients=[{"name": "John Doe", "email": "john@example.com", "signingOrder": 1}],
             ...     fields=[{"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientEmail": "john@example.com"}]

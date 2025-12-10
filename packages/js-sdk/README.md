@@ -63,7 +63,7 @@ TurboSign.configure({
 });
 
 // 2. Send a document for signature
-const result = await TurboSign.prepareForSigningSingle({
+const result = await TurboSign.sendSignature({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
     { name: 'John Doe', email: 'john@example.com', order: 1 }
@@ -117,12 +117,12 @@ TurboSign.configure({
 
 ### TurboSign
 
-#### `prepareForReview(options)`
+#### `createSignatureReviewLink(options)`
 
 Upload a document for review without sending signature emails. Returns a preview URL.
 
 ```typescript
-const result = await TurboSign.prepareForReview({
+const result = await TurboSign.createSignatureReviewLink({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
     { name: 'John Doe', email: 'john@example.com', order: 1 }
@@ -141,12 +141,12 @@ console.log('Preview URL:', result.previewUrl);
 console.log('Document ID:', result.documentId);
 ```
 
-#### `prepareForSigningSingle(options)`
+#### `sendSignature(options)`
 
 Upload a document and immediately send signature request emails.
 
 ```typescript
-const result = await TurboSign.prepareForSigningSingle({
+const result = await TurboSign.sendSignature({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
     { name: 'Alice', email: 'alice@example.com', order: 1 },
@@ -247,7 +247,7 @@ await TurboSign.resend('doc-uuid-here', ['recipient-uuid-1', 'recipient-uuid-2']
 ### Sequential Signing (Multiple Recipients)
 
 ```typescript
-const result = await TurboSign.prepareForSigningSingle({
+const result = await TurboSign.sendSignature({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
     { name: 'Employee', email: 'employee@company.com', order: 1 },
@@ -303,7 +303,7 @@ TurboSign.configure({ apiKey: process.env.TURBODOCX_API_KEY });
 
 app.post('/api/send-contract', async (req, res) => {
   try {
-    const result = await TurboSign.prepareForSigningSingle({
+    const result = await TurboSign.sendSignature({
       fileLink: req.body.pdfUrl,
       recipients: req.body.recipients,
       fields: req.body.fields
@@ -335,8 +335,8 @@ npx tsx manual-test.ts
 ### What It Tests
 
 The `manual-test.ts` file tests all SDK methods:
-- ✅ `prepareForReview()` - Document upload for review
-- ✅ `prepareForSigningSingle()` - Send for signature
+- ✅ `createSignatureReviewLink()` - Document upload for review
+- ✅ `sendSignature()` - Send for signature
 - ✅ `getStatus()` - Check document status
 - ✅ `download()` - Download signed document
 - ✅ `void()` - Cancel signature request
@@ -399,8 +399,8 @@ Full TypeScript support with exported types:
 ```typescript
 import {
   TurboSign,
-  PrepareForSigningOptions,
-  PrepareForReviewOptions,
+  SendSignatureRequest,
+  CreateSignatureReviewLinkRequest,
   Recipient,
   Field,
   DocumentStatus,
@@ -408,13 +408,13 @@ import {
 } from '@turbodocx/sdk';
 
 // Type-safe options
-const options: PrepareForSigningOptions = {
+const options: SendSignatureRequest = {
   fileLink: 'https://example.com/contract.pdf',
-  recipients: [{ name: 'John', email: 'john@example.com', order: 1 }],
-  fields: [{ type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }]
+  recipients: [{ name: 'John', email: 'john@example.com', signingOrder: 1 }],
+  fields: [{ type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientEmail: 'john@example.com' }]
 };
 
-const result = await TurboSign.prepareForSigningSingle(options);
+const result = await TurboSign.sendSignature(options);
 ```
 
 ---

@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Request for preparing a document for review
  */
-public class PrepareForReviewRequest {
+public class CreateSignatureReviewLinkRequest {
     private final byte[] file;
     private final String fileName;
     private final String fileLink;
@@ -19,7 +19,7 @@ public class PrepareForReviewRequest {
     private final String senderEmail;
     private final List<String> ccEmails;
 
-    private PrepareForReviewRequest(Builder builder) {
+    private CreateSignatureReviewLinkRequest(Builder builder) {
         this.file = builder.file;
         this.fileName = builder.fileName;
         this.fileLink = builder.fileLink;
@@ -160,8 +160,8 @@ public class PrepareForReviewRequest {
             return this;
         }
 
-        public PrepareForReviewRequest build() {
-            return new PrepareForReviewRequest(this);
+        public CreateSignatureReviewLinkRequest build() {
+            return new CreateSignatureReviewLinkRequest(this);
         }
     }
 }

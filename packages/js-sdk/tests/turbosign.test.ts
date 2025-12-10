@@ -2,8 +2,8 @@
  * TurboSign Module Tests
  *
  * Tests for SDK operations:
- * - prepareForReview
- * - prepareForSigningSingle
+ * - createSignatureReviewLink
+ * - sendSignature
  * - getStatus
  * - download
  * - void
@@ -60,7 +60,7 @@ describe("TurboSign Module", () => {
     });
   });
 
-  describe("prepareForReview", () => {
+  describe("createSignatureReviewLink", () => {
     const mockFile = Buffer.from("mock-pdf-content");
     const mockRecipients: N8nRecipient[] = [
       { name: "John Doe", email: "john@example.com", signingOrder: 1 },
@@ -99,7 +99,7 @@ describe("TurboSign Module", () => {
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
 
-      const result = await TurboSign.prepareForReview({
+      const result = await TurboSign.createSignatureReviewLink({
         file: mockFile,
         recipients: mockRecipients,
         fields: mockFields,
@@ -125,7 +125,7 @@ describe("TurboSign Module", () => {
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
 
-      const result = await TurboSign.prepareForReview({
+      const result = await TurboSign.createSignatureReviewLink({
         fileLink: "https://storage.example.com/contract.pdf",
         recipients: mockRecipients,
         fields: mockFields,
@@ -155,7 +155,7 @@ describe("TurboSign Module", () => {
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
 
-      const result = await TurboSign.prepareForReview({
+      const result = await TurboSign.createSignatureReviewLink({
         deliverableId: "deliverable-abc",
         recipients: mockRecipients,
         fields: mockFields,
@@ -183,7 +183,7 @@ describe("TurboSign Module", () => {
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
 
-      const result = await TurboSign.prepareForReview({
+      const result = await TurboSign.createSignatureReviewLink({
         templateId: "template-xyz",
         recipients: mockRecipients,
         fields: mockFields,
@@ -204,7 +204,7 @@ describe("TurboSign Module", () => {
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
 
-      await TurboSign.prepareForReview({
+      await TurboSign.createSignatureReviewLink({
         fileLink: "https://example.com/doc.pdf",
         recipients: mockRecipients,
         fields: mockFields,
@@ -252,7 +252,7 @@ describe("TurboSign Module", () => {
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
 
-      const result = await TurboSign.prepareForReview({
+      const result = await TurboSign.createSignatureReviewLink({
         templateId: "template-with-anchors",
         recipients: mockRecipients,
         fields: fieldsWithAnchor,
@@ -262,7 +262,7 @@ describe("TurboSign Module", () => {
     });
   });
 
-  describe("prepareForSigningSingle", () => {
+  describe("sendSignature", () => {
     const mockRecipients: N8nRecipient[] = [
       { name: "John Doe", email: "john@example.com", signingOrder: 1 },
     ];
@@ -290,7 +290,7 @@ describe("TurboSign Module", () => {
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
 
-      const result = await TurboSign.prepareForSigningSingle({
+      const result = await TurboSign.sendSignature({
         fileLink: "https://storage.example.com/contract.pdf",
         recipients: mockRecipients,
         fields: mockFields,
@@ -318,7 +318,7 @@ describe("TurboSign Module", () => {
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
 
-      const result = await TurboSign.prepareForSigningSingle({
+      const result = await TurboSign.sendSignature({
         file: mockFile,
         fileName: "contract.pdf",
         recipients: mockRecipients,
@@ -362,7 +362,7 @@ describe("TurboSign Module", () => {
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
 
-      const result = await TurboSign.prepareForSigningSingle({
+      const result = await TurboSign.sendSignature({
         fileLink: "https://example.com/doc.pdf",
         recipients: mockRecipients,
         fields: fieldsWithCheckbox,
@@ -644,7 +644,7 @@ describe("TurboSign Module", () => {
       TurboSign.configure({ apiKey: "test-key" });
 
       await expect(
-        TurboSign.prepareForSigningSingle({
+        TurboSign.sendSignature({
           fileLink: "https://example.com/doc.pdf",
           recipients: [
             { name: "Test", email: "invalid-email", signingOrder: 1 },
@@ -667,7 +667,7 @@ describe("TurboSign Module", () => {
       TurboSign.configure({ apiKey: "test-key" });
 
       await expect(
-        TurboSign.prepareForReview({
+        TurboSign.createSignatureReviewLink({
           fileLink: "https://example.com/doc.pdf",
           recipients: [
             { name: "Test", email: "test@example.com", signingOrder: 1 },

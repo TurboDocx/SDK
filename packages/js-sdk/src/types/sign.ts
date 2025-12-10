@@ -154,9 +154,9 @@ export interface N8nRecipient {
 }
 
 /**
- * Request for prepareForReview - prepare document without sending emails
+ * Request for createSignatureReviewLink - prepare document without sending emails
  */
-export interface PrepareForReviewRequest {
+export interface CreateSignatureReviewLinkRequest {
   /** PDF file as file path, Buffer, or browser File */
   file?: string | File | Buffer;
   /** Original filename (used when file is a Buffer) */
@@ -184,9 +184,9 @@ export interface PrepareForReviewRequest {
 }
 
 /**
- * Response from prepareForReview
+ * Response from createSignatureReviewLink
  */
-export interface PrepareForReviewResponse {
+export interface CreateSignatureReviewLinkResponse {
   /** Whether the request was successful */
   success: boolean;
   /** Document ID */
@@ -207,9 +207,9 @@ export interface PrepareForReviewResponse {
 }
 
 /**
- * Request for prepareForSigningSingle - prepare and send in single call
+ * Request for sendSignature - prepare and send in single call
  */
-export interface PrepareForSigningSingleRequest {
+export interface SendSignatureRequest {
   /** PDF file as file path, Buffer, or browser File */
   file?: string | File | Buffer;
   /** Original filename (used when file is a Buffer) */
@@ -237,9 +237,9 @@ export interface PrepareForSigningSingleRequest {
 }
 
 /**
- * Response from prepareForSigningSingle
+ * Response from sendSignature
  */
-export interface PrepareForSigningSingleResponse {
+export interface SendSignatureResponse {
   /** Whether the request was successful */
   success: boolean;
   /** Document ID */

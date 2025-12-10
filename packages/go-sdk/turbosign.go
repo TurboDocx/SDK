@@ -69,8 +69,8 @@ type Field struct {
 	Template        *TemplateAnchor `json:"template,omitempty"`
 }
 
-// PrepareForReviewRequest is the request for PrepareForReview
-type PrepareForReviewRequest struct {
+// CreateSignatureReviewLinkRequest is the request for CreateSignatureReviewLink
+type CreateSignatureReviewLinkRequest struct {
 	// File content (use this OR FileLink/DeliverableID/TemplateID)
 	File     []byte
 	FileName string
@@ -92,8 +92,8 @@ type PrepareForReviewRequest struct {
 	CCEmails            []string
 }
 
-// PrepareForReviewResponse is the response from PrepareForReview
-type PrepareForReviewResponse struct {
+// CreateSignatureReviewLinkResponse is the response from CreateSignatureReviewLink
+type CreateSignatureReviewLinkResponse struct {
 	Success    bool                      `json:"success"`
 	DocumentID string                    `json:"documentId"`
 	Status     string                    `json:"status"`
@@ -102,8 +102,8 @@ type PrepareForReviewResponse struct {
 	Recipients []RecipientStatusResponse `json:"recipients,omitempty"`
 }
 
-// PrepareForSigningRequest is the request for PrepareForSigningSingle
-type PrepareForSigningRequest struct {
+// SendSignatureRequest is the request for SendSignature
+type SendSignatureRequest struct {
 	// File content (use this OR FileLink/DeliverableID/TemplateID)
 	File     []byte
 	FileName string
@@ -125,8 +125,8 @@ type PrepareForSigningRequest struct {
 	CCEmails            []string
 }
 
-// PrepareForSigningResponse is the response from PrepareForSigningSingle
-type PrepareForSigningResponse struct {
+// SendSignatureResponse is the response from SendSignature
+type SendSignatureResponse struct {
 	Success    bool   `json:"success"`
 	DocumentID string `json:"documentId"`
 	Message    string `json:"message"`
@@ -197,9 +197,9 @@ type AuditTrailResponse struct {
 // TurboSign Methods
 // ============================================
 
-// PrepareForReview prepares a document for review without sending emails.
+// CreateSignatureReviewLink prepares a document for review without sending emails.
 // Use this to preview field placement before sending.
-func (c *TurboSignClient) PrepareForReview(ctx context.Context, req *PrepareForReviewRequest) (*PrepareForReviewResponse, error) {
+func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *CreateSignatureReviewLinkRequest) (*CreateSignatureReviewLinkResponse, error) {
 	recipientsJSON, _ := json.Marshal(req.Recipients)
 	fieldsJSON, _ := json.Marshal(req.Fields)
 
@@ -225,7 +225,7 @@ func (c *TurboSignClient) PrepareForReview(ctx context.Context, req *PrepareForR
 		formData["ccEmails"] = string(ccEmailsJSON)
 	}
 
-	var response PrepareForReviewResponse
+	var response CreateSignatureReviewLinkResponse
 
 	if len(req.File) > 0 {
 		fileName := req.FileName
@@ -256,8 +256,8 @@ func (c *TurboSignClient) PrepareForReview(ctx context.Context, req *PrepareForR
 	return &response, nil
 }
 
-// PrepareForSigningSingle prepares a document for signing and sends emails in a single call.
-func (c *TurboSignClient) PrepareForSigningSingle(ctx context.Context, req *PrepareForSigningRequest) (*PrepareForSigningResponse, error) {
+// SendSignature prepares a document for signing and sends emails in a single call.
+func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureRequest) (*SendSignatureResponse, error) {
 	recipientsJSON, _ := json.Marshal(req.Recipients)
 	fieldsJSON, _ := json.Marshal(req.Fields)
 
@@ -283,7 +283,7 @@ func (c *TurboSignClient) PrepareForSigningSingle(ctx context.Context, req *Prep
 		formData["ccEmails"] = string(ccEmailsJSON)
 	}
 
-	var response PrepareForSigningResponse
+	var response SendSignatureResponse
 
 	if len(req.File) > 0 {
 		fileName := req.FileName

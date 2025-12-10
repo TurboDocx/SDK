@@ -18,11 +18,11 @@ const TEST_EMAIL = "test-recipient@example.com"; // Replace with a real email to
 // TEST FUNCTIONS
 // =============================================
 
-async function testPrepareForReview() {
-  console.log("\n--- Test 1: prepareForReview ---");
+async function testCreateSignatureReviewLink() {
+  console.log("\n--- Test 1: createSignatureReviewLink ---");
   const pdfBuffer = fs.readFileSync(TEST_PDF_PATH);
 
-  const result = await TurboSign.prepareForReview({
+  const result = await TurboSign.createSignatureReviewLink({
     // file: pdfBuffer,
     templateId: "your-template-uuid-here", // Replace with your template ID
     recipients: [{ name: "Test User", email: TEST_EMAIL, signingOrder: 1 }],
@@ -60,11 +60,11 @@ async function testPrepareForReview() {
   return result.documentId;
 }
 
-async function testPrepareForSigningSingle() {
-  console.log("\n--- Test 2: prepareForSigningSingle ---");
+async function testSendSignature() {
+  console.log("\n--- Test 2: sendSignature ---");
   const pdfBuffer = fs.readFileSync(TEST_PDF_PATH);
 
-  const result = await TurboSign.prepareForSigningSingle({
+  const result = await TurboSign.sendSignature({
     file: pdfBuffer,
     // templateId: "341af877-02d4-4549-823b-87089a3f7b02",
     recipients: [{ name: "Signer One", email: TEST_EMAIL, signingOrder: 1 }],
@@ -162,11 +162,11 @@ async function runAllTests() {
   try {
     // Uncomment and run tests as needed:
 
-    // Test 1: Prepare for Review
-    // const reviewDocId = await testPrepareForReview();
+    // Test 1: Create Signature Review Link
+    // const reviewDocId = await testCreateSignatureReviewLink();
 
-    // Test 2: Prepare for Signing (creates a new document)
-    // const signDocId = await testPrepareForSigningSingle();
+    // Test 2: Send Signature (creates a new document)
+    // const signDocId = await testSendSignature();
 
     // Test 3: Get Status (replace with actual document ID)
     // await testGetStatus("document-uuid-here");

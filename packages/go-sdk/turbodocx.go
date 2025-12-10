@@ -10,7 +10,7 @@
 //	})
 //
 //	// Prepare document for signing
-//	result, err := client.TurboSign.PrepareForSigningSingle(ctx, &turbodocx.PrepareForSigningRequest{
+//	result, err := client.TurboSign.SendSignature(ctx, &turbodocx.SendSignatureRequest{
 //		FileLink: "https://example.com/contract.pdf",
 //		Recipients: []turbodocx.Recipient{
 //			{Name: "John Doe", Email: "john@example.com", SigningOrder: 1},

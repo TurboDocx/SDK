@@ -56,11 +56,11 @@ func prettyPrint(v interface{}) {
 // TEST FUNCTIONS
 // =============================================
 
-func testPrepareForReview(ctx context.Context) (string, error) {
-	fmt.Println("\n--- Test 1: PrepareForReview (using fileLink) ---")
+func testCreateSignatureReviewLink(ctx context.Context) (string, error) {
+	fmt.Println("\n--- Test 1: CreateSignatureReviewLink (using fileLink) ---")
 
 	// Using fileLink instead of file upload
-	result, err := client.TurboSign.PrepareForReview(ctx, &turbodocx.PrepareForReviewRequest{
+	result, err := client.TurboSign.CreateSignatureReviewLink(ctx, &turbodocx.CreateSignatureReviewLinkRequest{
 		FileLink: fileURL,
 		Recipients: []turbodocx.Recipient{
 			{Name: "Signer One", Email: testEmail, SigningOrder: 1},
@@ -97,10 +97,10 @@ func testPrepareForReview(ctx context.Context) (string, error) {
 	return result.DocumentID, nil
 }
 
-func testPrepareForSigningSingle(ctx context.Context, pdfBytes []byte) (string, error) {
-	fmt.Println("\n--- Test 2: PrepareForSigningSingle (using file buffer with template fields) ---")
+func testSendSignature(ctx context.Context, pdfBytes []byte) (string, error) {
+	fmt.Println("\n--- Test 2: SendSignature (using file buffer with template fields) ---")
 
-	result, err := client.TurboSign.PrepareForSigningSingle(ctx, &turbodocx.PrepareForSigningRequest{
+	result, err := client.TurboSign.SendSignature(ctx, &turbodocx.SendSignatureRequest{
 		File: pdfBytes,
 		Recipients: []turbodocx.Recipient{
 			{Name: "Test User", Email: testEmail, SigningOrder: 1},
@@ -246,11 +246,11 @@ func main() {
 	_ = pdfBytes // Suppress unused variable warning
 
 	// Test 1: Prepare for Review (uses fileLink, doesn't need pdfBytes)
-	// _, err = testPrepareForReview(ctx)
+	// _, err = testCreateSignatureReviewLink(ctx)
 	// if err != nil { handleError(err); return }
 
 	// Test 2: Prepare for Signing (creates a new document)
-	// _, err = testPrepareForSigningSingle(ctx, pdfBytes)
+	// _, err = testSendSignature(ctx, pdfBytes)
 	// if err != nil { handleError(err); return }
 
 	// Test 3: Get Status (replace with actual document ID)

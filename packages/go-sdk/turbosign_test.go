@@ -46,7 +46,7 @@ func TestClient_Configure(t *testing.T) {
 	})
 }
 
-func TestTurboSignClient_PrepareForReview(t *testing.T) {
+func TestTurboSignClient_CreateSignatureReviewLink(t *testing.T) {
 	t.Run("with file URL", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "/turbosign/single/prepare-for-review", r.URL.Path)
@@ -71,7 +71,7 @@ func TestTurboSignClient_PrepareForReview(t *testing.T) {
 			BaseURL: server.URL,
 		})
 
-		result, err := client.TurboSign.PrepareForReview(context.Background(), &PrepareForReviewRequest{
+		result, err := client.TurboSign.CreateSignatureReviewLink(context.Background(), &CreateSignatureReviewLinkRequest{
 			FileLink: "https://storage.example.com/contract.pdf",
 			Recipients: []Recipient{
 				{Name: "John Doe", Email: "john@example.com", SigningOrder: 1},
@@ -106,7 +106,7 @@ func TestTurboSignClient_PrepareForReview(t *testing.T) {
 			BaseURL: server.URL,
 		})
 
-		result, err := client.TurboSign.PrepareForReview(context.Background(), &PrepareForReviewRequest{
+		result, err := client.TurboSign.CreateSignatureReviewLink(context.Background(), &CreateSignatureReviewLinkRequest{
 			DeliverableID: "deliverable-abc",
 			Recipients: []Recipient{
 				{Name: "John Doe", Email: "john@example.com", SigningOrder: 1},
@@ -138,7 +138,7 @@ func TestTurboSignClient_PrepareForReview(t *testing.T) {
 			BaseURL: server.URL,
 		})
 
-		result, err := client.TurboSign.PrepareForReview(context.Background(), &PrepareForReviewRequest{
+		result, err := client.TurboSign.CreateSignatureReviewLink(context.Background(), &CreateSignatureReviewLinkRequest{
 			TemplateID: "template-xyz",
 			Recipients: []Recipient{
 				{Name: "John Doe", Email: "john@example.com", SigningOrder: 1},
@@ -171,7 +171,7 @@ func TestTurboSignClient_PrepareForReview(t *testing.T) {
 			BaseURL: server.URL,
 		})
 
-		result, err := client.TurboSign.PrepareForReview(context.Background(), &PrepareForReviewRequest{
+		result, err := client.TurboSign.CreateSignatureReviewLink(context.Background(), &CreateSignatureReviewLinkRequest{
 			File:     []byte("%PDF-mock-content"),
 			FileName: "contract.pdf",
 			Recipients: []Recipient{
@@ -187,7 +187,7 @@ func TestTurboSignClient_PrepareForReview(t *testing.T) {
 	})
 }
 
-func TestTurboSignClient_PrepareForSigningSingle(t *testing.T) {
+func TestTurboSignClient_SendSignature(t *testing.T) {
 	t.Run("should prepare and send", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "/turbosign/single/prepare-for-signing", r.URL.Path)
@@ -207,7 +207,7 @@ func TestTurboSignClient_PrepareForSigningSingle(t *testing.T) {
 			BaseURL: server.URL,
 		})
 
-		result, err := client.TurboSign.PrepareForSigningSingle(context.Background(), &PrepareForSigningRequest{
+		result, err := client.TurboSign.SendSignature(context.Background(), &SendSignatureRequest{
 			FileLink: "https://storage.example.com/contract.pdf",
 			Recipients: []Recipient{
 				{Name: "John Doe", Email: "john@example.com", SigningOrder: 1},
@@ -240,7 +240,7 @@ func TestTurboSignClient_PrepareForSigningSingle(t *testing.T) {
 			BaseURL: server.URL,
 		})
 
-		result, err := client.TurboSign.PrepareForSigningSingle(context.Background(), &PrepareForSigningRequest{
+		result, err := client.TurboSign.SendSignature(context.Background(), &SendSignatureRequest{
 			File:     []byte("%PDF-mock-content"),
 			FileName: "contract.pdf",
 			Recipients: []Recipient{
@@ -490,7 +490,7 @@ func TestClient_ErrorHandling(t *testing.T) {
 			BaseURL: server.URL,
 		})
 
-		_, err := client.TurboSign.PrepareForSigningSingle(context.Background(), &PrepareForSigningRequest{
+		_, err := client.TurboSign.SendSignature(context.Background(), &SendSignatureRequest{
 			FileLink: "https://example.com/doc.pdf",
 			Recipients: []Recipient{
 				{Name: "Test", Email: "invalid-email", SigningOrder: 1},

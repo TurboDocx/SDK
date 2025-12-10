@@ -19,8 +19,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * TurboSign Module Tests
  *
  * Tests for 100% parity with n8n-nodes-turbodocx operations:
- * - prepareForReview
- * - prepareForSigningSingle
+ * - createSignatureReviewLink
+ * - sendSignature
  * - getStatus
  * - download
  * - voidDocument
@@ -91,7 +91,7 @@ class TurboSignTest {
 
     @Test
     @DisplayName("should prepare document for review with file upload")
-    void prepareForReviewWithFileUpload() throws Exception {
+    void createSignatureReviewLinkWithFileUpload() throws Exception {
         Map<String, Object> responseData = new HashMap<>();
         responseData.put("success", true);
         responseData.put("documentId", "doc-123");
@@ -104,7 +104,7 @@ class TurboSignTest {
                 .setHeader("Content-Type", "application/json")
                 .setBody(gson.toJson(responseData)));
 
-        PrepareForReviewRequest request = new PrepareForReviewRequest.Builder()
+        CreateSignatureReviewLinkRequest request = new CreateSignatureReviewLinkRequest.Builder()
                 .file(new byte[]{0x25, 0x50, 0x44, 0x46}) // %PDF
                 .fileName("contract.pdf")
                 .recipients(Collections.singletonList(
@@ -113,7 +113,7 @@ class TurboSignTest {
                         new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
                 .build();
 
-        PrepareForReviewResponse result = client.turboSign().prepareForReview(request);
+        CreateSignatureReviewLinkResponse result = client.turboSign().createSignatureReviewLink(request);
 
         assertEquals("doc-123", result.getDocumentId());
         assertEquals("review_ready", result.getStatus());
@@ -126,7 +126,7 @@ class TurboSignTest {
 
     @Test
     @DisplayName("should prepare document for review with file URL")
-    void prepareForReviewWithFileUrl() throws Exception {
+    void createSignatureReviewLinkWithFileUrl() throws Exception {
         Map<String, Object> responseData = new HashMap<>();
         responseData.put("success", true);
         responseData.put("documentId", "doc-456");
@@ -138,7 +138,7 @@ class TurboSignTest {
                 .setHeader("Content-Type", "application/json")
                 .setBody(gson.toJson(responseData)));
 
-        PrepareForReviewRequest request = new PrepareForReviewRequest.Builder()
+        CreateSignatureReviewLinkRequest request = new CreateSignatureReviewLinkRequest.Builder()
                 .fileLink("https://storage.example.com/contract.pdf")
                 .recipients(Collections.singletonList(
                         new Recipient("John Doe", "john@example.com", 1)))
@@ -146,7 +146,7 @@ class TurboSignTest {
                         new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
                 .build();
 
-        PrepareForReviewResponse result = client.turboSign().prepareForReview(request);
+        CreateSignatureReviewLinkResponse result = client.turboSign().createSignatureReviewLink(request);
 
         assertEquals("doc-456", result.getDocumentId());
 
@@ -157,7 +157,7 @@ class TurboSignTest {
 
     @Test
     @DisplayName("should prepare document for review with deliverable ID")
-    void prepareForReviewWithDeliverableId() throws Exception {
+    void createSignatureReviewLinkWithDeliverableId() throws Exception {
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
@@ -167,7 +167,7 @@ class TurboSignTest {
                         "status", "review_ready"
                 ))));
 
-        PrepareForReviewRequest request = new PrepareForReviewRequest.Builder()
+        CreateSignatureReviewLinkRequest request = new CreateSignatureReviewLinkRequest.Builder()
                 .deliverableId("deliverable-abc")
                 .recipients(Collections.singletonList(
                         new Recipient("John Doe", "john@example.com", 1)))
@@ -175,14 +175,14 @@ class TurboSignTest {
                         new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
                 .build();
 
-        PrepareForReviewResponse result = client.turboSign().prepareForReview(request);
+        CreateSignatureReviewLinkResponse result = client.turboSign().createSignatureReviewLink(request);
 
         assertEquals("doc-789", result.getDocumentId());
     }
 
     @Test
     @DisplayName("should prepare document for review with template ID")
-    void prepareForReviewWithTemplateId() throws Exception {
+    void createSignatureReviewLinkWithTemplateId() throws Exception {
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
@@ -192,7 +192,7 @@ class TurboSignTest {
                         "status", "review_ready"
                 ))));
 
-        PrepareForReviewRequest request = new PrepareForReviewRequest.Builder()
+        CreateSignatureReviewLinkRequest request = new CreateSignatureReviewLinkRequest.Builder()
                 .templateId("template-xyz")
                 .recipients(Collections.singletonList(
                         new Recipient("John Doe", "john@example.com", 1)))
@@ -200,14 +200,14 @@ class TurboSignTest {
                         new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
                 .build();
 
-        PrepareForReviewResponse result = client.turboSign().prepareForReview(request);
+        CreateSignatureReviewLinkResponse result = client.turboSign().createSignatureReviewLink(request);
 
         assertEquals("doc-template", result.getDocumentId());
     }
 
     @Test
     @DisplayName("should include optional fields in request")
-    void prepareForReviewWithOptionalFields() throws Exception {
+    void createSignatureReviewLinkWithOptionalFields() throws Exception {
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
@@ -217,7 +217,7 @@ class TurboSignTest {
                         "status", "review_ready"
                 ))));
 
-        PrepareForReviewRequest request = new PrepareForReviewRequest.Builder()
+        CreateSignatureReviewLinkRequest request = new CreateSignatureReviewLinkRequest.Builder()
                 .fileLink("https://example.com/doc.pdf")
                 .recipients(Collections.singletonList(
                         new Recipient("John Doe", "john@example.com", 1)))
@@ -230,7 +230,7 @@ class TurboSignTest {
                 .ccEmails(Arrays.asList("admin@company.com", "legal@company.com"))
                 .build();
 
-        PrepareForReviewResponse result = client.turboSign().prepareForReview(request);
+        CreateSignatureReviewLinkResponse result = client.turboSign().createSignatureReviewLink(request);
 
         assertEquals("doc-optional", result.getDocumentId());
     }
@@ -241,7 +241,7 @@ class TurboSignTest {
 
     @Test
     @DisplayName("should prepare document for signing and send emails")
-    void prepareForSigningSingleWithUrl() throws Exception {
+    void sendSignatureWithUrl() throws Exception {
         Map<String, Object> recipient = new HashMap<>();
         recipient.put("id", "rec-1");
         recipient.put("name", "John Doe");
@@ -261,7 +261,7 @@ class TurboSignTest {
                 .setHeader("Content-Type", "application/json")
                 .setBody(gson.toJson(responseData)));
 
-        PrepareForSigningRequest request = new PrepareForSigningRequest.Builder()
+        SendSignatureRequest request = new SendSignatureRequest.Builder()
                 .fileLink("https://storage.example.com/contract.pdf")
                 .recipients(Collections.singletonList(
                         new Recipient("John Doe", "john@example.com", 1)))
@@ -269,7 +269,7 @@ class TurboSignTest {
                         new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
                 .build();
 
-        PrepareForSigningResponse result = client.turboSign().prepareForSigningSingle(request);
+        SendSignatureResponse result = client.turboSign().sendSignature(request);
 
         assertEquals("doc-123", result.getDocumentId());
         assertEquals("sent", result.getStatus());
@@ -283,7 +283,7 @@ class TurboSignTest {
 
     @Test
     @DisplayName("should handle file upload for signing")
-    void prepareForSigningSingleWithFileUpload() throws Exception {
+    void sendSignatureWithFileUpload() throws Exception {
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
@@ -294,7 +294,7 @@ class TurboSignTest {
                         "recipients", Collections.emptyList()
                 ))));
 
-        PrepareForSigningRequest request = new PrepareForSigningRequest.Builder()
+        SendSignatureRequest request = new SendSignatureRequest.Builder()
                 .file(new byte[]{0x25, 0x50, 0x44, 0x46})
                 .fileName("contract.pdf")
                 .recipients(Collections.singletonList(
@@ -303,7 +303,7 @@ class TurboSignTest {
                         new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
                 .build();
 
-        PrepareForSigningResponse result = client.turboSign().prepareForSigningSingle(request);
+        SendSignatureResponse result = client.turboSign().sendSignature(request);
 
         assertEquals("doc-upload", result.getDocumentId());
 
@@ -477,7 +477,7 @@ class TurboSignTest {
                         "code", "VALIDATION_ERROR"
                 ))));
 
-        PrepareForSigningRequest request = new PrepareForSigningRequest.Builder()
+        SendSignatureRequest request = new SendSignatureRequest.Builder()
                 .fileLink("https://example.com/doc.pdf")
                 .recipients(Collections.singletonList(
                         new Recipient("Test", "invalid-email", 1)))
@@ -485,7 +485,7 @@ class TurboSignTest {
                 .build();
 
         TurboDocxException.ValidationException exception = assertThrows(TurboDocxException.ValidationException.class, () -> {
-            client.turboSign().prepareForSigningSingle(request);
+            client.turboSign().sendSignature(request);
         });
 
         assertEquals(400, exception.getStatusCode());
