@@ -6,6 +6,9 @@ tests/
 *.spec.ts
 *.spec.js
 
+# test making files
+generate-all-pdfs.js
+
 # Configuration
 tsconfig.json
 jest.config.js

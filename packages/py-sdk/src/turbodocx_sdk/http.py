@@ -97,27 +97,57 @@ class HttpClient:
         api_key: Optional[str] = None,
         access_token: Optional[str] = None,
         base_url: Optional[str] = None,
-        org_id: Optional[str] = None
+        org_id: Optional[str] = None,
+        sender_email: Optional[str] = None,
+        sender_name: Optional[str] = None
     ):
         """
         Initialize HTTP client
 
         Args:
-            api_key: TurboDocx API key
+            api_key: TurboDocx API key (required)
             access_token: OAuth2 access token (alternative to API key)
-            base_url: Base URL for the API
-            org_id: Organization ID (required for authentication)
+            base_url: Base URL for the API (optional, defaults to https://api.turbodocx.com)
+            org_id: Organization ID (required)
+            sender_email: Reply-to email address for signature requests (required).
+                         This email will be used as the reply-to address when sending
+                         signature request emails. Without it, emails will default to
+                         "API Service User via TurboSign".
+            sender_name: Sender name for signature requests (optional but strongly recommended).
+                        This name will appear in signature request emails. Without this,
+                        the sender will appear as "API Service User".
         """
         self.api_key = api_key or os.environ.get("TURBODOCX_API_KEY")
         self.access_token = access_token
         self.base_url = base_url or os.environ.get("TURBODOCX_BASE_URL", "https://api.turbodocx.com")
         self.org_id = org_id or os.environ.get("TURBODOCX_ORG_ID")
+        self.sender_email = sender_email or os.environ.get("TURBODOCX_SENDER_EMAIL")
+        self.sender_name = sender_name or os.environ.get("TURBODOCX_SENDER_NAME")
 
         if not self.api_key and not self.access_token:
             raise AuthenticationError("API key or access token is required")
 
         if not self.org_id:
             raise AuthenticationError("Organization ID (org_id) is required for authentication")
+
+        if not self.sender_email:
+            raise ValidationError(
+                "sender_email is required. This email will be used as the reply-to address "
+                "for signature requests. Without it, emails will default to "
+                '"API Service User via TurboSign".'
+            )
+
+    def get_sender_config(self) -> Dict[str, Optional[str]]:
+        """
+        Get sender email and name configuration
+
+        Returns:
+            Dictionary with sender_email and sender_name
+        """
+        return {
+            "sender_email": self.sender_email,
+            "sender_name": self.sender_name,
+        }
 
     def _get_headers(self, include_content_type: bool = True) -> Dict[str, str]:
         """Get default headers for requests"""

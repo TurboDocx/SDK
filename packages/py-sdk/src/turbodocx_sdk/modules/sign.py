@@ -30,22 +30,41 @@ class TurboSign:
         api_key: Optional[str] = None,
         access_token: Optional[str] = None,
         base_url: str = "https://api.turbodocx.com",
-        org_id: Optional[str] = None
+        org_id: Optional[str] = None,
+        sender_email: Optional[str] = None,
+        sender_name: Optional[str] = None
     ) -> None:
         """
         Configure the TurboSign module with API credentials
 
         Args:
-            api_key: TurboDocx API key
+            api_key: TurboDocx API key (required)
             access_token: OAuth2 access token (alternative to API key)
-            base_url: Base URL for the API (default: https://api.turbodocx.com)
-            org_id: Organization ID (required for authentication)
+            base_url: Base URL for the API (optional, defaults to https://api.turbodocx.com)
+            org_id: Organization ID (required)
+            sender_email: Reply-to email address for signature requests (required).
+                         This email will be used as the reply-to address when sending
+                         signature request emails. Without it, emails will default to
+                         "API Service User via TurboSign".
+            sender_name: Sender name for signature requests (optional but strongly recommended).
+                        This name will appear in signature request emails. Without this,
+                        the sender will appear as "API Service User".
+
+        Example:
+            >>> TurboSign.configure(
+            ...     api_key=os.environ.get("TURBODOCX_API_KEY"),
+            ...     org_id=os.environ.get("TURBODOCX_ORG_ID"),
+            ...     sender_email="support@yourcompany.com",
+            ...     sender_name="Your Company Name"  # Strongly recommended
+            ... )
         """
         cls._client = HttpClient(
             api_key=api_key,
             access_token=access_token,
             base_url=base_url,
-            org_id=org_id
+            org_id=org_id,
+            sender_email=sender_email,
+            sender_name=sender_name
         )
 
     @classmethod
@@ -109,6 +128,9 @@ class TurboSign:
         """
         client = cls._get_client()
 
+        # Get sender config from client
+        sender_config = client.get_sender_config()
+
         # Handle different file input methods
         if file:
             # For file upload, use form data with JSON strings
@@ -122,10 +144,12 @@ class TurboSign:
                 form_data["documentName"] = document_name
             if document_description:
                 form_data["documentDescription"] = document_description
-            if sender_name:
-                form_data["senderName"] = sender_name
-            if sender_email:
-                form_data["senderEmail"] = sender_email
+
+            # Use request senderEmail/senderName if provided, otherwise fall back to configured values
+            form_data["senderEmail"] = sender_email or sender_config["sender_email"]
+            if sender_name or sender_config["sender_name"]:
+                form_data["senderName"] = sender_name or sender_config["sender_name"]
+
             if cc_emails:
                 form_data["ccEmails"] = json.dumps(cc_emails)
 
@@ -148,10 +172,12 @@ class TurboSign:
                 json_body["documentName"] = document_name
             if document_description:
                 json_body["documentDescription"] = document_description
-            if sender_name:
-                json_body["senderName"] = sender_name
-            if sender_email:
-                json_body["senderEmail"] = sender_email
+
+            # Use request senderEmail/senderName if provided, otherwise fall back to configured values
+            json_body["senderEmail"] = sender_email or sender_config["sender_email"]
+            if sender_name or sender_config["sender_name"]:
+                json_body["senderName"] = sender_name or sender_config["sender_name"]
+
             if cc_emails:
                 json_body["ccEmails"] = json.dumps(cc_emails)
 
@@ -219,6 +245,9 @@ class TurboSign:
         """
         client = cls._get_client()
 
+        # Get sender config from client
+        sender_config = client.get_sender_config()
+
         # Handle different file input methods
         if file:
             # For file upload, use form data with JSON strings
@@ -232,10 +261,12 @@ class TurboSign:
                 form_data["documentName"] = document_name
             if document_description:
                 form_data["documentDescription"] = document_description
-            if sender_name:
-                form_data["senderName"] = sender_name
-            if sender_email:
-                form_data["senderEmail"] = sender_email
+
+            # Use request senderEmail/senderName if provided, otherwise fall back to configured values
+            form_data["senderEmail"] = sender_email or sender_config["sender_email"]
+            if sender_name or sender_config["sender_name"]:
+                form_data["senderName"] = sender_name or sender_config["sender_name"]
+
             if cc_emails:
                 form_data["ccEmails"] = json.dumps(cc_emails)
 
@@ -258,10 +289,12 @@ class TurboSign:
                 json_body["documentName"] = document_name
             if document_description:
                 json_body["documentDescription"] = document_description
-            if sender_name:
-                json_body["senderName"] = sender_name
-            if sender_email:
-                json_body["senderEmail"] = sender_email
+
+            # Use request senderEmail/senderName if provided, otherwise fall back to configured values
+            json_body["senderEmail"] = sender_email or sender_config["sender_email"]
+            if sender_name or sender_config["sender_name"]:
+                json_body["senderName"] = sender_name or sender_config["sender_name"]
+
             if cc_emails:
                 json_body["ccEmails"] = json.dumps(cc_emails)
 

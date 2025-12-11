@@ -19,6 +19,23 @@ export class TurboSign {
 
   /**
    * Configure the TurboSign module with API credentials
+   *
+   * @param config - Configuration object
+   * @param config.apiKey - TurboDocx API key (required)
+   * @param config.orgId - Organization ID (required)
+   * @param config.senderEmail - Reply-to email address for signature requests (required). This email will be used as the reply-to address when sending signature request emails. Without it, emails will default to "API Service User via TurboSign".
+   * @param config.senderName - Sender name for signature requests (optional but strongly recommended). This name will appear in signature request emails. Without this, the sender will appear as "API Service User".
+   * @param config.baseUrl - API base URL (optional, defaults to https://api.turbodocx.com)
+   *
+   * @example
+   * ```typescript
+   * TurboSign.configure({
+   *   apiKey: process.env.TURBODOCX_API_KEY,
+   *   orgId: process.env.TURBODOCX_ORG_ID,
+   *   senderEmail: 'support@yourcompany.com',
+   *   senderName: 'Your Company Name'  // Strongly recommended
+   * });
+   * ```
    */
   static configure(config: HttpClientConfig): void {
     this.client = new HttpClient(config);
@@ -76,6 +93,9 @@ export class TurboSign {
   static async createSignatureReviewLink(request: CreateSignatureReviewLinkRequest): Promise<CreateSignatureReviewLinkResponse> {
     const client = this.getClient();
 
+    // Get sender config from client
+    const senderConfig = client.getSenderConfig();
+
     // Serialize recipients and fields to JSON strings (as n8n node does)
     const recipientsJson = JSON.stringify(request.recipients);
     const fieldsJson = JSON.stringify(request.fields);
@@ -89,8 +109,13 @@ export class TurboSign {
     // Add optional fields
     if (request.documentName) formData.documentName = request.documentName;
     if (request.documentDescription) formData.documentDescription = request.documentDescription;
-    if (request.senderName) formData.senderName = request.senderName;
-    if (request.senderEmail) formData.senderEmail = request.senderEmail;
+
+    // Use request senderEmail/senderName if provided, otherwise fall back to configured values
+    formData.senderEmail = request.senderEmail || senderConfig.senderEmail;
+    if (request.senderName || senderConfig.senderName) {
+      formData.senderName = request.senderName || senderConfig.senderName;
+    }
+
     if (request.ccEmails) {
       formData.ccEmails = Array.isArray(request.ccEmails)
         ? JSON.stringify(request.ccEmails)
@@ -149,6 +174,9 @@ export class TurboSign {
   static async sendSignature(request: SendSignatureRequest): Promise<SendSignatureResponse> {
     const client = this.getClient();
 
+    // Get sender config from client
+    const senderConfig = client.getSenderConfig();
+
     // Serialize recipients and fields to JSON strings (as n8n node does)
     const recipientsJson = JSON.stringify(request.recipients);
     const fieldsJson = JSON.stringify(request.fields);
@@ -162,8 +190,13 @@ export class TurboSign {
     // Add optional fields
     if (request.documentName) formData.documentName = request.documentName;
     if (request.documentDescription) formData.documentDescription = request.documentDescription;
-    if (request.senderName) formData.senderName = request.senderName;
-    if (request.senderEmail) formData.senderEmail = request.senderEmail;
+
+    // Use request senderEmail/senderName if provided, otherwise fall back to configured values
+    formData.senderEmail = request.senderEmail || senderConfig.senderEmail;
+    if (request.senderName || senderConfig.senderName) {
+      formData.senderName = request.senderName || senderConfig.senderName;
+    }
+
     if (request.ccEmails) {
       formData.ccEmails = Array.isArray(request.ccEmails)
         ? JSON.stringify(request.ccEmails)

@@ -198,6 +198,9 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 	recipientsJSON, _ := json.Marshal(req.Recipients)
 	fieldsJSON, _ := json.Marshal(req.Fields)
 
+	// Get sender config from client
+	senderEmail, senderName := c.http.GetSenderConfig()
+
 	formData := map[string]string{
 		"recipients": string(recipientsJSON),
 		"fields":     string(fieldsJSON),
@@ -209,12 +212,19 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 	if req.DocumentDescription != "" {
 		formData["documentDescription"] = req.DocumentDescription
 	}
-	if req.SenderName != "" {
-		formData["senderName"] = req.SenderName
-	}
+
+	// Use request senderEmail/senderName if provided, otherwise fall back to configured values
 	if req.SenderEmail != "" {
 		formData["senderEmail"] = req.SenderEmail
+	} else {
+		formData["senderEmail"] = senderEmail
 	}
+	if req.SenderName != "" {
+		formData["senderName"] = req.SenderName
+	} else if senderName != "" {
+		formData["senderName"] = senderName
+	}
+
 	if len(req.CCEmails) > 0 {
 		ccEmailsJSON, _ := json.Marshal(req.CCEmails)
 		formData["ccEmails"] = string(ccEmailsJSON)
@@ -256,6 +266,9 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 	recipientsJSON, _ := json.Marshal(req.Recipients)
 	fieldsJSON, _ := json.Marshal(req.Fields)
 
+	// Get sender config from client
+	senderEmail, senderName := c.http.GetSenderConfig()
+
 	formData := map[string]string{
 		"recipients": string(recipientsJSON),
 		"fields":     string(fieldsJSON),
@@ -267,12 +280,19 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 	if req.DocumentDescription != "" {
 		formData["documentDescription"] = req.DocumentDescription
 	}
-	if req.SenderName != "" {
-		formData["senderName"] = req.SenderName
-	}
+
+	// Use request senderEmail/senderName if provided, otherwise fall back to configured values
 	if req.SenderEmail != "" {
 		formData["senderEmail"] = req.SenderEmail
+	} else {
+		formData["senderEmail"] = senderEmail
 	}
+	if req.SenderName != "" {
+		formData["senderName"] = req.SenderName
+	} else if senderName != "" {
+		formData["senderName"] = senderName
+	}
+
 	if len(req.CCEmails) > 0 {
 		ccEmailsJSON, _ := json.Marshal(req.CCEmails)
 		formData["ccEmails"] = string(ccEmailsJSON)

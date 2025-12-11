@@ -1,39 +1,41 @@
 /**
- * Simple TurboSign Example - Template Anchors
+ * Example 1: Send Signature Directly - Template Anchors
  *
- * This example shows the MOST COMMON way to send a document for signature
- * using template anchors like {signature} in your PDF instead of coordinates
+ * This example sends a document directly to recipients for signature.
+ * Uses template anchors like {signature1} and {date1} in your PDF.
+ *
+ * Use this when: You want to send immediately without review
  */
 
 import { TurboSign } from '@turbodocx/sdk';
 import * as fs from 'fs';
 
-async function simpleTemplateExample() {
-  // Configure TurboSign
+async function sendDirectlyExample() {
   TurboSign.configure({
-    apiKey: process.env.TURBODOCX_API_KEY || 'your-api-key-here'
+    apiKey: process.env.TURBODOCX_API_KEY || 'your-api-key-here',
+    orgId: process.env.TURBODOCX_ORG_ID || 'your-org-id-here',
+    senderEmail: process.env.TURBODOCX_SENDER_EMAIL || 'support@yourcompany.com',
+    senderName: process.env.TURBODOCX_SENDER_NAME || 'Your Company Name'
   });
 
   try {
-    // Your PDF should have text like: {signature1}, {date1}, {signature2}, {date2}
-    const pdfFile = fs.readFileSync('./sample-contract.pdf');
+    const pdfFile = fs.readFileSync('../../ExampleAssets/sample-contract.pdf');
 
-    console.log('Sending document for signature using template anchors...\n');
+    console.log('Sending document directly to recipients...\n');
 
-    // Send signature request - fields will replace the {tags} in your PDF
     const result = await TurboSign.sendSignature({
       file: pdfFile,
       documentName: 'Partnership Agreement',
       documentDescription: 'Q1 2025 Partnership Agreement - Please review and sign',
       recipients: [
         {
-          name: 'John Doe',
-          email: 'john.doe@example.com',
+          name: 'Nicolas',
+          email: 'nicolas@turbodocx.com',
           signingOrder: 1
         },
         {
-          name: 'Jane Smith',
-          email: 'jane.smith@example.com',
+          name: 'Nicolas Signer',
+          email: 'nicolas+signer@turbodocx.com',
           signingOrder: 2
         }
       ],
@@ -41,7 +43,7 @@ async function simpleTemplateExample() {
         // First recipient's fields - using template anchors
         {
           type: 'signature',
-          recipientEmail: 'john.doe@example.com',
+          recipientEmail: 'nicolas@turbodocx.com',
           template: {
             anchor: '{signature1}',       // Text in your PDF to replace
             placement: 'replace',          // Replace the anchor text
@@ -50,7 +52,7 @@ async function simpleTemplateExample() {
         },
         {
           type: 'date',
-          recipientEmail: 'john.doe@example.com',
+          recipientEmail: 'nicolas@turbodocx.com',
           template: {
             anchor: '{date1}',
             placement: 'replace',
@@ -60,7 +62,7 @@ async function simpleTemplateExample() {
         // Second recipient's fields
         {
           type: 'signature',
-          recipientEmail: 'jane.smith@example.com',
+          recipientEmail: 'nicolas+signer@turbodocx.com',
           template: {
             anchor: '{signature2}',
             placement: 'replace',
@@ -69,7 +71,7 @@ async function simpleTemplateExample() {
         },
         {
           type: 'date',
-          recipientEmail: 'jane.smith@example.com',
+          recipientEmail: 'nicolas+signer@turbodocx.com',
           template: {
             anchor: '{date2}',
             placement: 'replace',
@@ -84,11 +86,17 @@ async function simpleTemplateExample() {
     console.log('Message:', result.message);
 
     // To get sign URLs and recipient details, use getStatus
-    const status = await TurboSign.getStatus(result.documentId);
-    console.log('\nSign URLs:');
-    status.recipients.forEach(recipient => {
-      console.log(`  ${recipient.name}: ${recipient.signUrl}`);
-    });
+    try {
+      const status = await TurboSign.getStatus(result.documentId);
+      if (status?.recipients) {
+        console.log('\nSign URLs:');
+        status.recipients.forEach(recipient => {
+          console.log(`  ${recipient.name}: ${recipient.signUrl}`);
+        });
+      }
+    } catch (statusError) {
+      console.log('\nNote: Could not fetch recipient sign URLs');
+    }
 
   } catch (error) {
     console.error('Error:', error);
@@ -96,4 +104,4 @@ async function simpleTemplateExample() {
 }
 
 // Run the example
-simpleTemplateExample();
+sendDirectlyExample();
