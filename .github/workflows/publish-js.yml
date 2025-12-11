@@ -7,7 +7,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: startsWith(github.ref_name, 'js-sdk-v')
+    if: startsWith(github.event.release.tag_name, 'js-sdk-v')
     steps:
       - uses: actions/checkout@v4
 
@@ -28,7 +28,7 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref_name, 'js-sdk-v')
+    if: startsWith(github.event.release.tag_name, 'js-sdk-v')
     permissions:
       contents: read
       id-token: write
