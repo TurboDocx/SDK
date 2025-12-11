@@ -1,0 +1,36 @@
+# Source files
+src/
+tests/
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+
+# Configuration
+tsconfig.json
+jest.config.js
+.eslintrc.*
+.prettierrc
+
+# Build artifacts
+*.tsbuildinfo
+coverage/
+.nyc_output/
+
+# Development
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+manual-test.ts
+
+# Misc
+*.map

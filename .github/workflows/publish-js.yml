@@ -7,6 +7,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: startsWith(github.ref_name, 'js-sdk-v')
     steps:
       - uses: actions/checkout@v4
 
@@ -28,6 +29,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref_name, 'js-sdk-v')
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -44,6 +48,6 @@ jobs:
         run: npm run build -w packages/js-sdk
 
       - name: Publish to npm
-        run: npm publish --access public --ignore-scripts -w packages/js-sdk
+        run: npm publish --workspace packages/js-sdk --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
