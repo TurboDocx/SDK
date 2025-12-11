@@ -1,7 +1,6 @@
 # Dependencies
 node_modules/
 .pnpm-store/
-package-lock.json
 
 # Build outputs
 dist/
@@ -83,3 +82,11 @@ target/
 *.gem
 Gemfile.lock
 .bundle/
+
+# Generated files (exclude ExampleAssets)
+*.docx
+*.pdf
+*.html
+!ExampleAssets/**
+convert-template.js
+generate-all-pdfs.js

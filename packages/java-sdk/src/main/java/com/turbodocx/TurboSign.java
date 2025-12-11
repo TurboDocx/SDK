@@ -208,12 +208,16 @@ public class TurboSign {
         if (documentDescription != null) {
             formData.put("documentDescription", documentDescription);
         }
-        if (senderName != null) {
-            formData.put("senderName", senderName);
+
+        // Use request senderEmail/senderName if provided, otherwise fall back to configured values
+        String effectiveSenderEmail = (senderEmail != null && !senderEmail.isEmpty()) ? senderEmail : httpClient.getSenderEmail();
+        formData.put("senderEmail", effectiveSenderEmail);
+
+        String effectiveSenderName = (senderName != null && !senderName.isEmpty()) ? senderName : httpClient.getSenderName();
+        if (effectiveSenderName != null && !effectiveSenderName.isEmpty()) {
+            formData.put("senderName", effectiveSenderName);
         }
-        if (senderEmail != null) {
-            formData.put("senderEmail", senderEmail);
-        }
+
         if (ccEmails != null && !ccEmails.isEmpty()) {
             // Use JSON for ccEmails instead of comma-join
             formData.put("ccEmails", gson.toJson(ccEmails));

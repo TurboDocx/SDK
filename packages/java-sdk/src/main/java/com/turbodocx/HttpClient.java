@@ -82,15 +82,33 @@ public class HttpClient {
     private final String apiKey;
     private final String accessToken;
     private final String orgId;
+    private final String senderEmail;
+    private final String senderName;
     private final Gson gson;
 
-    public HttpClient(String baseUrl, String apiKey, String accessToken, String orgId) {
+    public HttpClient(String baseUrl, String apiKey, String accessToken, String orgId, String senderEmail, String senderName) {
         this.client = new OkHttpClient();
         this.baseUrl = baseUrl != null ? baseUrl.replaceAll("/$", "") : DEFAULT_BASE_URL;
         this.apiKey = apiKey;
         this.accessToken = accessToken;
         this.orgId = orgId;
+        this.senderEmail = senderEmail;
+        this.senderName = senderName;
         this.gson = new Gson();
+    }
+
+    /**
+     * Get the sender email configuration
+     */
+    public String getSenderEmail() {
+        return senderEmail;
+    }
+
+    /**
+     * Get the sender name configuration
+     */
+    public String getSenderName() {
+        return senderName;
     }
 
     public <T> T get(String path, Class<T> responseClass) throws IOException {

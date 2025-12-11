@@ -13,7 +13,7 @@
 
 import { TurboSign } from "../src/modules/sign";
 import { HttpClient } from "../src/http";
-import type { N8nRecipient, N8nField } from "../src/types/sign";
+import type { Recipient, Field } from "../src/types/sign";
 
 // Mock the HttpClient
 jest.mock("../src/http");
@@ -29,21 +29,39 @@ describe("TurboSign Module", () => {
     jest.clearAllMocks();
     // Reset static client
     (TurboSign as any).client = undefined;
+
+    // Mock getSenderConfig to return default values
+    MockedHttpClient.prototype.getSenderConfig = jest.fn().mockReturnValue({
+      senderEmail: "test@company.com",
+      senderName: "Test Company"
+    });
   });
 
   describe("configure", () => {
     it("should configure the client with API key", () => {
-      TurboSign.configure({ apiKey: "test-api-key" });
-      expect(MockedHttpClient).toHaveBeenCalledWith({ apiKey: "test-api-key" });
+      TurboSign.configure({
+        apiKey: "test-api-key",
+        orgId: "test-org-id",
+        senderEmail: "test@company.com"
+      });
+      expect(MockedHttpClient).toHaveBeenCalledWith({
+        apiKey: "test-api-key",
+        orgId: "test-org-id",
+        senderEmail: "test@company.com"
+      });
     });
 
     it("should configure with custom base URL", () => {
       TurboSign.configure({
         apiKey: "test-api-key",
+        orgId: "test-org-id",
+        senderEmail: "test@company.com",
         baseUrl: "https://custom-api.example.com",
       });
       expect(MockedHttpClient).toHaveBeenCalledWith({
         apiKey: "test-api-key",
+        orgId: "test-org-id",
+        senderEmail: "test@company.com",
         baseUrl: "https://custom-api.example.com",
       });
     });
@@ -52,20 +70,22 @@ describe("TurboSign Module", () => {
       TurboSign.configure({
         apiKey: "test-api-key",
         orgId: "org-123",
+        senderEmail: "test@company.com"
       });
       expect(MockedHttpClient).toHaveBeenCalledWith({
         apiKey: "test-api-key",
         orgId: "org-123",
+        senderEmail: "test@company.com"
       });
     });
   });
 
   describe("createSignatureReviewLink", () => {
     const mockFile = Buffer.from("mock-pdf-content");
-    const mockRecipients: N8nRecipient[] = [
+    const mockRecipients: Recipient[] = [
       { name: "John Doe", email: "john@example.com", signingOrder: 1 },
     ];
-    const mockFields: N8nField[] = [
+    const mockFields: Field[] = [
       {
         type: "signature",
         page: 1,
@@ -235,7 +255,7 @@ describe("TurboSign Module", () => {
         message: "Document prepared for review",
       };
 
-      const fieldsWithAnchor: N8nField[] = [
+      const fieldsWithAnchor: Field[] = [
         {
           type: "signature",
           recipientEmail: "john@example.com",
@@ -263,10 +283,10 @@ describe("TurboSign Module", () => {
   });
 
   describe("sendSignature", () => {
-    const mockRecipients: N8nRecipient[] = [
+    const mockRecipients: Recipient[] = [
       { name: "John Doe", email: "john@example.com", signingOrder: 1 },
     ];
-    const mockFields: N8nField[] = [
+    const mockFields: Field[] = [
       {
         type: "signature",
         page: 1,
@@ -335,7 +355,7 @@ describe("TurboSign Module", () => {
         message: "Document sent for signing",
       };
 
-      const fieldsWithCheckbox: N8nField[] = [
+      const fieldsWithCheckbox: Field[] = [
         {
           type: "signature",
           page: 1,

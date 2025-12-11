@@ -60,35 +60,47 @@ implementation("com.turbodocx:sdk:1.0.0")
 ```java
 import com.turbodocx.TurboDocxClient;
 import com.turbodocx.models.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 
 public class Main {
-    public static void main(String[] args) {
-        // 1. Create client
+    public static void main(String[] args) throws Exception {
+        // 1. Create client with sender configuration
         TurboDocxClient client = new TurboDocxClient.Builder()
-            .apiKey("your-api-key")
+            .apiKey(System.getenv("TURBODOCX_API_KEY"))       // REQUIRED
+            .orgId(System.getenv("TURBODOCX_ORG_ID"))         // REQUIRED
+            .senderEmail(System.getenv("TURBODOCX_SENDER_EMAIL"))  // REQUIRED
+            .senderName(System.getenv("TURBODOCX_SENDER_NAME"))    // OPTIONAL (but strongly recommended)
             .build();
 
-        // 2. Send document for signature
-        PrepareForSigningResponse result = client.turboSign().prepareForSigningSingle(
-            new PrepareForSigningRequest.Builder()
-                .fileLink("https://example.com/contract.pdf")
+        // 2. Read PDF file
+        byte[] pdfFile = Files.readAllBytes(Paths.get("contract.pdf"));
+
+        // 3. Send document for signature
+        SendSignatureResponse result = client.turboSign().sendSignature(
+            new SendSignatureRequest.Builder()
+                .file(pdfFile)
+                .fileName("contract.pdf")
+                .documentName("Partnership Agreement")
                 .recipients(Arrays.asList(
                     new Recipient("John Doe", "john@example.com", 1)
                 ))
                 .fields(Arrays.asList(
                     new Field.Builder()
                         .type("signature")
-                        .page(1)
-                        .x(100).y(500)
-                        .width(200).height(50)
-                        .recipientOrder(1)
+                        .recipientEmail("john@example.com")
+                        .template(new FieldTemplate.Builder()
+                            .anchor("{signature1}")
+                            .placement("replace")
+                            .size(new FieldSize(100, 30))
+                            .build())
                         .build()
                 ))
                 .build()
         );
 
-        System.out.println("Sign URL: " + result.getRecipients().get(0).getSignUrl());
+        System.out.println("Document ID: " + result.getDocumentId());
     }
 }
 ```
@@ -98,14 +110,28 @@ public class Main {
 ## Configuration
 
 ```java
-// Basic client
+// Basic client configuration (REQUIRED)
 TurboDocxClient client = new TurboDocxClient.Builder()
-    .apiKey("your-api-key")
+    .apiKey("your-api-key")           // REQUIRED
+    .orgId("your-org-id")             // REQUIRED
+    .senderEmail("you@company.com")   // REQUIRED - reply-to address for signature requests
+    .senderName("Your Company")       // OPTIONAL but strongly recommended
     .build();
 
-// With options
+// With environment variables (recommended)
 TurboDocxClient client = new TurboDocxClient.Builder()
     .apiKey(System.getenv("TURBODOCX_API_KEY"))
+    .orgId(System.getenv("TURBODOCX_ORG_ID"))
+    .senderEmail(System.getenv("TURBODOCX_SENDER_EMAIL"))
+    .senderName(System.getenv("TURBODOCX_SENDER_NAME"))
+    .build();
+
+// With custom options
+TurboDocxClient client = new TurboDocxClient.Builder()
+    .apiKey(System.getenv("TURBODOCX_API_KEY"))
+    .orgId(System.getenv("TURBODOCX_ORG_ID"))
+    .senderEmail(System.getenv("TURBODOCX_SENDER_EMAIL"))
+    .senderName(System.getenv("TURBODOCX_SENDER_NAME"))
     .baseUrl("https://custom-api.example.com")  // Optional
     .timeout(Duration.ofSeconds(30))             // Optional
     .build();
@@ -117,9 +143,24 @@ OkHttpClient httpClient = new OkHttpClient.Builder()
     .build();
 
 TurboDocxClient client = new TurboDocxClient.Builder()
-    .apiKey("your-api-key")
+    .apiKey(System.getenv("TURBODOCX_API_KEY"))
+    .orgId(System.getenv("TURBODOCX_ORG_ID"))
+    .senderEmail(System.getenv("TURBODOCX_SENDER_EMAIL"))
+    .senderName(System.getenv("TURBODOCX_SENDER_NAME"))
     .httpClient(httpClient)
     .build();
+```
+
+**Important:** `senderEmail` is **REQUIRED**. This email will be used as the reply-to address for signature request emails. Without it, emails will default to "API Service User via TurboSign". The `senderName` is optional but strongly recommended for a professional appearance.
+
+**Environment Variables:**
+
+```bash
+# Set in your environment or application.properties
+export TURBODOCX_API_KEY=your-api-key
+export TURBODOCX_ORG_ID=your-org-id
+export TURBODOCX_SENDER_EMAIL=you@company.com
+export TURBODOCX_SENDER_NAME="Your Company Name"
 ```
 
 ---
@@ -237,6 +278,8 @@ client.turboSign().resend("doc-uuid-here", Arrays.asList("recipient-uuid-1"));
 ---
 
 ## Examples
+
+For complete, working examples including template anchors, advanced field types, and various workflows, see the [`examples/`](./examples/) directory.
 
 ### Sequential Signing
 

@@ -36,17 +36,27 @@ type Client struct {
 
 // ClientConfig holds configuration options for the client
 type ClientConfig struct {
-	// APIKey is your TurboDocx API key
+	// APIKey is your TurboDocx API key (required)
 	APIKey string
 
-	// OrgID is your Organization ID (required for authentication)
+	// OrgID is your Organization ID (required)
 	OrgID string
 
 	// AccessToken is an OAuth2 access token (alternative to APIKey)
 	AccessToken string
 
-	// BaseURL is the API base URL (default: https://api.turbodocx.com)
+	// BaseURL is the API base URL (optional, default: https://api.turbodocx.com)
 	BaseURL string
+
+	// SenderEmail is the reply-to email address for signature requests (required).
+	// This email will be used as the reply-to address when sending signature request emails.
+	// Without it, emails will default to "API Service User via TurboSign".
+	SenderEmail string
+
+	// SenderName is the sender name for signature requests (optional but strongly recommended).
+	// This name will appear in signature request emails. Without this, the sender will
+	// appear as "API Service User".
+	SenderName string
 }
 
 // NewClient creates a new TurboDocx client with the given API key and org ID
@@ -72,6 +82,15 @@ func NewClientWithConfig(config ClientConfig) (*Client, error) {
 			TurboDocxError: TurboDocxError{
 				Message:    "Organization ID (OrgID) is required for authentication",
 				StatusCode: 401,
+			},
+		}
+	}
+
+	if config.SenderEmail == "" {
+		return nil, &ValidationError{
+			TurboDocxError: TurboDocxError{
+				Message:    "SenderEmail is required. This email will be used as the reply-to address for signature requests. Without it, emails will default to \"API Service User via TurboSign\".",
+				StatusCode: 400,
 			},
 		}
 	}

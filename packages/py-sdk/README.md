@@ -57,24 +57,38 @@ conda install -c conda-forge turbodocx-sdk
 
 ```python
 import asyncio
+import os
 from turbodocx_sdk import TurboSign
 
 async def main():
-    # 1. Configure with your API key
-    TurboSign.configure(api_key="your-api-key")
+    # 1. Configure with your API key and sender information
+    TurboSign.configure(
+        api_key=os.getenv("TURBODOCX_API_KEY"),
+        org_id=os.getenv("TURBODOCX_ORG_ID"),
+        sender_email=os.getenv("TURBODOCX_SENDER_EMAIL"),  # REQUIRED
+        sender_name=os.getenv("TURBODOCX_SENDER_NAME")      # OPTIONAL (but strongly recommended)
+    )
 
     # 2. Send a document for signature
-    result = await TurboSign.prepare_for_signing_single(
-        file_link="https://example.com/contract.pdf",
+    with open("contract.pdf", "rb") as f:
+        pdf_file = f.read()
+
+    result = await TurboSign.send_signature(
+        file=pdf_file,
+        document_name="Partnership Agreement",
         recipients=[
-            {"name": "John Doe", "email": "john@example.com", "order": 1}
+            {"name": "John Doe", "email": "john@example.com", "signingOrder": 1}
         ],
         fields=[
-            {"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientOrder": 1}
+            {
+                "type": "signature",
+                "recipientEmail": "john@example.com",
+                "template": {"anchor": "{signature1}", "placement": "replace", "size": {"width": 100, "height": 30}}
+            }
         ]
     )
 
-    print(f"Sign URL: {result['recipients'][0]['signUrl']}")
+    print(f"Document ID: {result['documentId']}")
 
 asyncio.run(main())
 ```
@@ -101,32 +115,56 @@ result = TurboSignSync.prepare_for_signing_single(
 from turbodocx_sdk import TurboSign
 import os
 
-# Basic configuration
-TurboSign.configure(api_key="your-api-key")
+# Basic configuration (REQUIRED)
+TurboSign.configure(
+    api_key="your-api-key",           # REQUIRED
+    org_id="your-org-id",             # REQUIRED
+    sender_email="you@company.com",   # REQUIRED - reply-to address for signature requests
+    sender_name="Your Company"        # OPTIONAL but strongly recommended
+)
 
-# With environment variable (recommended)
-TurboSign.configure(api_key=os.environ["TURBODOCX_API_KEY"])
+# With environment variables (recommended)
+TurboSign.configure(
+    api_key=os.environ["TURBODOCX_API_KEY"],
+    org_id=os.environ["TURBODOCX_ORG_ID"],
+    sender_email=os.environ["TURBODOCX_SENDER_EMAIL"],
+    sender_name=os.environ["TURBODOCX_SENDER_NAME"]
+)
 
 # With custom options
 TurboSign.configure(
     api_key=os.environ["TURBODOCX_API_KEY"],
+    org_id=os.environ["TURBODOCX_ORG_ID"],
+    sender_email=os.environ["TURBODOCX_SENDER_EMAIL"],
+    sender_name=os.environ["TURBODOCX_SENDER_NAME"],
     base_url="https://custom-api.example.com",  # Optional
     timeout=30.0,                                # Optional: seconds
 )
 ```
+
+**Important:** `sender_email` is **REQUIRED**. This email will be used as the reply-to address for signature request emails. Without it, emails will default to "API Service User via TurboSign". The `sender_name` is optional but strongly recommended for a professional appearance.
 
 ### Environment Variables
 
 ```bash
 # .env
 TURBODOCX_API_KEY=your-api-key
+TURBODOCX_ORG_ID=your-org-id
+TURBODOCX_SENDER_EMAIL=you@company.com
+TURBODOCX_SENDER_NAME=Your Company Name
 ```
 
 ```python
 from dotenv import load_dotenv
+import os
 load_dotenv()
 
-TurboSign.configure(api_key=os.environ["TURBODOCX_API_KEY"])
+TurboSign.configure(
+    api_key=os.environ["TURBODOCX_API_KEY"],
+    org_id=os.environ["TURBODOCX_ORG_ID"],
+    sender_email=os.environ["TURBODOCX_SENDER_EMAIL"],
+    sender_name=os.environ["TURBODOCX_SENDER_NAME"]
+)
 ```
 
 ---
@@ -236,6 +274,12 @@ await TurboSign.resend("doc-uuid-here", recipient_ids=["recipient-uuid-1"])
 ---
 
 ## Examples
+
+For complete, working examples including template anchors, advanced field types, and various workflows, see the [`examples/`](./examples/) directory:
+
+- [`turbosign_send_simple.py`](./examples/turbosign_send_simple.py) - Send document directly with template anchors
+- [`turbosign_basic.py`](./examples/turbosign_basic.py) - Create review link first, then send manually
+- [`turbosign_advanced.py`](./examples/turbosign_advanced.py) - Advanced field types (checkbox, readonly, multiline text, etc.)
 
 ### Sequential Signing
 

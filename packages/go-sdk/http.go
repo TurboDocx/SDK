@@ -85,6 +85,11 @@ func NewHTTPClient(config ClientConfig) *HTTPClient {
 	}
 }
 
+// GetSenderConfig returns the sender email and name configuration
+func (c *HTTPClient) GetSenderConfig() (senderEmail, senderName string) {
+	return c.config.SenderEmail, c.config.SenderName
+}
+
 // TurboDocxError represents a base API error
 type TurboDocxError struct {
 	Message    string `json:"message"`

@@ -6,11 +6,23 @@ import * as fs from 'fs';
 import * as nodePath from 'path';
 import { TurboDocxError, AuthenticationError, ValidationError, NotFoundError, RateLimitError, NetworkError } from './utils/errors';
 
+/**
+ * Configuration for the TurboDocx HTTP client
+ *
+ * @property apiKey - TurboDocx API key (required)
+ * @property orgId - Organization ID (required)
+ * @property senderEmail - Reply-to email address for signature requests (required). This email will be used as the reply-to address when sending signature request emails. If not provided, emails will default to "API Service User via TurboSign".
+ * @property senderName - Sender name for signature requests (optional but strongly recommended). This name will appear in signature request emails. Without this, the sender will appear as "API Service User".
+ * @property accessToken - OAuth access token (alternative to apiKey)
+ * @property baseUrl - API base URL (optional, defaults to https://api.turbodocx.com)
+ */
 export interface HttpClientConfig {
   apiKey?: string;
   accessToken?: string;
   baseUrl?: string;
   orgId?: string;
+  senderEmail?: string;
+  senderName?: string;
 }
 
 /**
@@ -61,16 +73,34 @@ export class HttpClient {
   private accessToken?: string;
   private baseUrl: string;
   private orgId?: string;
+  private senderEmail?: string;
+  private senderName?: string;
 
   constructor(config: HttpClientConfig = {}) {
     this.apiKey = config.apiKey || process.env.TURBODOCX_API_KEY;
     this.accessToken = config.accessToken;
     this.baseUrl = config.baseUrl || process.env.TURBODOCX_BASE_URL || 'https://api.turbodocx.com';
     this.orgId = config.orgId || process.env.TURBODOCX_ORG_ID;
+    this.senderEmail = config.senderEmail || process.env.TURBODOCX_SENDER_EMAIL;
+    this.senderName = config.senderName || process.env.TURBODOCX_SENDER_NAME;
 
     if (!this.apiKey && !this.accessToken) {
       throw new AuthenticationError('API key or access token is required');
     }
+
+    if (!this.senderEmail) {
+      throw new ValidationError('senderEmail is required. This email will be used as the reply-to address for signature requests. Without it, emails will default to "API Service User via TurboSign".');
+    }
+  }
+
+  /**
+   * Get sender email and name configuration
+   */
+  getSenderConfig(): { senderEmail?: string; senderName?: string } {
+    return {
+      senderEmail: this.senderEmail,
+      senderName: this.senderName,
+    };
   }
 
   /**

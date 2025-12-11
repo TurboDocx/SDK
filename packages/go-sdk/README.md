@@ -44,29 +44,54 @@ import (
     "context"
     "fmt"
     "log"
+    "os"
 
     turbodocx "github.com/turbodocx/sdk"
 )
 
 func main() {
-    // 1. Create client
-    client := turbodocx.NewClient("your-api-key")
+    // 1. Create client with sender configuration
+    client, err := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
+        APIKey:      os.Getenv("TURBODOCX_API_KEY"),      // REQUIRED
+        OrgID:       os.Getenv("TURBODOCX_ORG_ID"),       // REQUIRED
+        SenderEmail: os.Getenv("TURBODOCX_SENDER_EMAIL"), // REQUIRED
+        SenderName:  os.Getenv("TURBODOCX_SENDER_NAME"),  // OPTIONAL (but strongly recommended)
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
 
-    // 2. Send document for signature
-    result, err := client.TurboSign.PrepareForSigningSingle(context.Background(), &turbodocx.PrepareForSigningRequest{
-        FileLink: "https://example.com/contract.pdf",
+    // 2. Read PDF file
+    pdfFile, err := os.ReadFile("contract.pdf")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // 3. Send document for signature
+    result, err := client.TurboSign.SendSignature(context.Background(), &turbodocx.SendSignatureRequest{
+        File:         pdfFile,
+        FileName:     "contract.pdf",
+        DocumentName: "Partnership Agreement",
         Recipients: []turbodocx.Recipient{
-            {Name: "John Doe", Email: "john@example.com", Order: 1},
+            {Name: "John Doe", Email: "john@example.com", SigningOrder: 1},
         },
         Fields: []turbodocx.Field{
-            {Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 1},
+            {
+                Type:           "signature",
+                RecipientEmail: "john@example.com",
+                Template: &turbodocx.FieldTemplate{
+                    Anchor:    "{signature1}",
+                    Placement: "replace",
+                    Size:      &turbodocx.FieldSize{Width: 100, Height: 30},
+                },
+            },
         },
     })
     if err != nil {
         log.Fatal(err)
     }
 
-    fmt.Printf("Sign URL: %s\n", result.Recipients[0].SignURL)
+    fmt.Printf("Document ID: %s\n", result.DocumentID)
 }
 ```
 
@@ -75,18 +100,43 @@ func main() {
 ## Configuration
 
 ```go
-// Basic client
-client := turbodocx.NewClient("your-api-key")
+// Basic client configuration (REQUIRED)
+client, err := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
+    APIKey:      "your-api-key",      // REQUIRED
+    OrgID:       "your-org-id",       // REQUIRED
+    SenderEmail: "you@company.com",   // REQUIRED - reply-to address for signature requests
+    SenderName:  "Your Company",      // OPTIONAL but strongly recommended
+})
 
-// With options
-client := turbodocx.NewClient("your-api-key",
-    turbodocx.WithBaseURL("https://custom-api.example.com"),
-    turbodocx.WithTimeout(30 * time.Second),
-    turbodocx.WithHTTPClient(customHTTPClient),
-)
+// With environment variables (recommended)
+client, err := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
+    APIKey:      os.Getenv("TURBODOCX_API_KEY"),
+    OrgID:       os.Getenv("TURBODOCX_ORG_ID"),
+    SenderEmail: os.Getenv("TURBODOCX_SENDER_EMAIL"),
+    SenderName:  os.Getenv("TURBODOCX_SENDER_NAME"),
+})
 
-// From environment variable
-client := turbodocx.NewClient(os.Getenv("TURBODOCX_API_KEY"))
+// With custom options
+client, err := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
+    APIKey:      os.Getenv("TURBODOCX_API_KEY"),
+    OrgID:       os.Getenv("TURBODOCX_ORG_ID"),
+    SenderEmail: os.Getenv("TURBODOCX_SENDER_EMAIL"),
+    SenderName:  os.Getenv("TURBODOCX_SENDER_NAME"),
+    BaseURL:     "https://custom-api.example.com",  // Optional
+    Timeout:     30 * time.Second,                   // Optional
+})
+```
+
+**Important:** `SenderEmail` is **REQUIRED**. This email will be used as the reply-to address for signature request emails. Without it, emails will default to "API Service User via TurboSign". The `SenderName` is optional but strongly recommended for a professional appearance.
+
+**Environment Variables:**
+
+```bash
+# .env or shell environment
+export TURBODOCX_API_KEY=your-api-key
+export TURBODOCX_ORG_ID=your-org-id
+export TURBODOCX_SENDER_EMAIL=you@company.com
+export TURBODOCX_SENDER_NAME="Your Company Name"
 ```
 
 ---
@@ -195,6 +245,10 @@ err := client.TurboSign.Resend(ctx, "doc-uuid-here", []string{"recipient-uuid-1"
 ---
 
 ## Examples
+
+For complete, working examples including template anchors, advanced field types, and various workflows, see the [`examples/`](./examples/) directory:
+
+- [`turbosign_send_simple.go`](./examples/turbosign_send_simple.go) - Send document directly with template anchors
 
 ### Sequential Signing
 

@@ -1,28 +1,32 @@
 /**
- * Advanced TurboSign Example - Template Anchors with Advanced Features
+ * Example 3: Review Link - Advanced Field Types
  *
- * This example demonstrates advanced features:
- * - Various field types (signature, date, text, checkbox, company, title)
+ * This example demonstrates advanced field types and features:
+ * - Multiple field types: signature, date, text, checkbox, company, title
  * - Readonly fields with default values
  * - Required fields
  * - Multiline text fields
- * - Management operations (resend, void, audit trail, download)
+ *
+ * Use this when: You need complex forms with varied input types
  */
 
 import { TurboSign } from '@turbodocx/sdk';
 import * as fs from 'fs';
 
-async function advancedTemplateExample() {
+async function advancedFieldsExample() {
   TurboSign.configure({
-    apiKey: process.env.TURBODOCX_API_KEY || 'your-api-key-here'
+    apiKey: process.env.TURBODOCX_API_KEY || 'your-api-key-here',
+    orgId: process.env.TURBODOCX_ORG_ID || 'your-org-id-here',
+    senderEmail: process.env.TURBODOCX_SENDER_EMAIL || 'support@yourcompany.com',
+    senderName: process.env.TURBODOCX_SENDER_NAME || 'Your Company Name'
   });
 
   try {
-    const pdfFile = fs.readFileSync('./contract.pdf');
+    const pdfFile = fs.readFileSync('../../ExampleAssets/advanced-contract.pdf');
 
-    console.log('Sending document with advanced template features...\n');
+    console.log('Creating review link with advanced field types...\n');
 
-    const result = await TurboSign.sendSignature({
+    const result = await TurboSign.createSignatureReviewLink({
       file: pdfFile,
       documentName: 'Advanced Contract',
       documentDescription: 'Contract with advanced signature field features',
@@ -41,7 +45,7 @@ async function advancedTemplateExample() {
           template: {
             anchor: '{signature}',
             placement: 'replace',
-            size: { width: 200, height: 50 }
+            size: { width: 100, height: 30 }
           }
         },
 
@@ -52,18 +56,18 @@ async function advancedTemplateExample() {
           template: {
             anchor: '{date}',
             placement: 'replace',
-            size: { width: 150, height: 30 }
+            size: { width: 75, height: 30 }
           }
         },
 
-        // Text input field
+        // Full name field
         {
-          type: 'text',
+          type: 'full_name',
           recipientEmail: 'john@example.com',
           template: {
             anchor: '{printed_name}',
             placement: 'replace',
-            size: { width: 200, height: 30 }
+            size: { width: 100, height: 20 }
           }
         },
 
@@ -71,12 +75,12 @@ async function advancedTemplateExample() {
         {
           type: 'company',
           recipientEmail: 'john@example.com',
-          defaultValue: 'Acme Corporation',
+          defaultValue: 'TurboDocx',
           isReadonly: true,
           template: {
             anchor: '{company}',
             placement: 'replace',
-            size: { width: 200, height: 30 }
+            size: { width: 100, height: 20 }
           }
         },
 
@@ -100,7 +104,7 @@ async function advancedTemplateExample() {
           template: {
             anchor: '{title}',
             placement: 'replace',
-            size: { width: 150, height: 30 }
+            size: { width: 75, height: 30 }
           }
         },
 
@@ -112,35 +116,27 @@ async function advancedTemplateExample() {
           template: {
             anchor: '{notes}',
             placement: 'replace',
-            size: { width: 400, height: 100 }
+            size: { width: 200, height: 50 }
           }
         }
       ]
     });
 
-    console.log('✅ Document sent!\n');
+    console.log('✅ Review link created!\n');
     console.log('Document ID:', result.documentId);
+    console.log('Status:', result.status);
+    console.log('Preview URL:', result.previewUrl);
 
-    // Get status and show management operations
-    const documentId = result.documentId;
-    const status = await TurboSign.getStatus(documentId);
+    if (result.recipients) {
+      console.log('\nRecipients:');
+      result.recipients.forEach(recipient => {
+        console.log(`  ${recipient.name} (${recipient.email}) - ${recipient.status}`);
+      });
+    }
 
-    console.log('Status:', status.status);
-    console.log('Sign URL:', status.recipients[0].signUrl);
-
-    // Example management operations:
-
-    // 1. Resend email if needed
-    // await TurboSign.resend(documentId, []);
-
-    // 2. Void document if needed
-    // await TurboSign.void(documentId, 'Contract needs revision');
-
-    // 3. Get audit trail when completed
-    // const audit = await TurboSign.getAuditTrail(documentId);
-
-    // 4. Download signed document when completed
-    // const blob = await TurboSign.download(documentId);
+    console.log('\nNext steps:');
+    console.log('1. Review the document at the preview URL');
+    console.log('2. Send to recipients: await TurboSign.send(documentId);');
 
   } catch (error) {
     console.error('Error:', error);
@@ -148,4 +144,4 @@ async function advancedTemplateExample() {
 }
 
 // Run the example
-advancedTemplateExample();
+advancedFieldsExample();

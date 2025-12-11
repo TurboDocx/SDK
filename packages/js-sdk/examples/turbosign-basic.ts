@@ -1,96 +1,118 @@
 /**
- * Basic TurboSign Example - Coordinate-Based Positioning
+ * Example 2: Review Link - Template Anchors
  *
- * This example demonstrates using X/Y coordinates for field placement.
- * Use this when you don't have template anchors in your PDF.
- * For most cases, use template anchors instead (see turbosign-send-simple.ts)
+ * This example creates a review link first, then sends manually.
+ * Uses template anchors like {signature1} and {date1} in your PDF.
+ *
+ * Use this when: You want to review the document before sending
  */
 
 import { TurboSign } from '@turbodocx/sdk';
 import * as fs from 'fs';
 
-async function coordinateBasedExample() {
-  // Configure TurboSign with your API key
+async function reviewLinkExample() {
   TurboSign.configure({
-    apiKey: process.env.TURBODOCX_API_KEY || 'your-api-key-here'
+    apiKey: process.env.TURBODOCX_API_KEY || 'your-api-key-here',
+    orgId: process.env.TURBODOCX_ORG_ID || 'your-org-id-here',
+    senderEmail: process.env.TURBODOCX_SENDER_EMAIL || 'support@yourcompany.com',
+    senderName: process.env.TURBODOCX_SENDER_NAME || 'Your Company Name'
   });
 
   try {
-    // Read the PDF file
-    const pdfFile = fs.readFileSync('./sample-contract.pdf');
+    const pdfFile = fs.readFileSync('../../ExampleAssets/sample-contract.pdf');
 
-    // Send signature request using X/Y coordinates
-    console.log('Sending document with coordinate-based fields...');
-    const result = await TurboSign.sendSignature({
+    console.log('Creating review link with template anchors...\n');
+    const result = await TurboSign.createSignatureReviewLink({
       file: pdfFile,
       documentName: 'Contract Agreement',
       documentDescription: 'This document requires electronic signatures from both parties.',
       recipients: [
         {
-          name: 'John Smith',
-          email: 'john.smith@company.com',
+          name: 'John Doe',
+          email: 'john@example.com',
           signingOrder: 1
         },
         {
-          name: 'Jane Doe',
-          email: 'jane.doe@partner.com',
+          name: 'Jane Smith',
+          email: 'jane@example.com',
           signingOrder: 2
         }
       ],
       fields: [
-        // First recipient - using coordinates
+        // First recipient - using template anchors
+        {
+          type: 'full_name',
+          recipientEmail: 'john@example.com',
+          template: {
+            anchor: '{name1}',
+            placement: 'replace',
+            size: { width: 100, height: 30 }
+          }
+        },
         {
           type: 'signature',
-          recipientEmail: 'john.smith@company.com',
-          page: 1,        // Page number (1-indexed)
-          x: 100,         // X position in pixels from left
-          y: 650,         // Y position in pixels from bottom
-          width: 200,     // Width in pixels
-          height: 50      // Height in pixels
+          recipientEmail: 'john@example.com',
+          template: {
+            anchor: '{signature1}',
+            placement: 'replace',
+            size: { width: 100, height: 30 }
+          }
         },
         {
           type: 'date',
-          recipientEmail: 'john.smith@company.com',
-          page: 1,
-          x: 100,
-          y: 600,
-          width: 150,
-          height: 30
+          recipientEmail: 'john@example.com',
+          template: {
+            anchor: '{date1}',
+            placement: 'replace',
+            size: { width: 75, height: 30 }
+          }
         },
         // Second recipient
         {
+          type: 'full_name',
+          recipientEmail: 'jane@example.com',
+          template: {
+            anchor: '{name2}',
+            placement: 'replace',
+            size: { width: 100, height: 30 }
+          }
+        },
+        {
           type: 'signature',
-          recipientEmail: 'jane.doe@partner.com',
-          page: 1,
-          x: 350,
-          y: 650,
-          width: 200,
-          height: 50
+          recipientEmail: 'jane@example.com',
+          template: {
+            anchor: '{signature2}',
+            placement: 'replace',
+            size: { width: 100, height: 30 }
+          }
         },
         {
           type: 'date',
-          recipientEmail: 'jane.doe@partner.com',
-          page: 1,
-          x: 350,
-          y: 600,
-          width: 150,
-          height: 30
+          recipientEmail: 'jane@example.com',
+          template: {
+            anchor: '{date2}',
+            placement: 'replace',
+            size: { width: 75, height: 30 }
+          }
         }
       ]
     });
 
-    console.log('\n✅ Document sent!');
+    console.log('\n✅ Review link created!');
     console.log('Document ID:', result.documentId);
-    console.log('Message:', result.message);
+    console.log('Status:', result.status);
+    console.log('Preview URL:', result.previewUrl);
 
-    // Get document status to see sign URLs
-    const status = await TurboSign.getStatus(result.documentId);
-    console.log('\nRecipients:');
-    status.recipients.forEach(recipient => {
-      console.log(`  ${recipient.name} (${recipient.email})`);
-      console.log(`    Status: ${recipient.status}`);
-      console.log(`    Sign URL: ${recipient.signUrl}`);
-    });
+    if (result.recipients) {
+      console.log('\nRecipients:');
+      result.recipients.forEach(recipient => {
+        console.log(`  ${recipient.name} (${recipient.email}) - ${recipient.status}`);
+      });
+    }
+
+    console.log('\nYou can now:');
+    console.log('1. Review the document at the preview URL');
+    console.log('2. Send to recipients using: await TurboSign.send(documentId);');
 
   } catch (error) {
     console.error('Error:', error);
@@ -98,4 +120,4 @@ async function coordinateBasedExample() {
 }
 
 // Run the example
-coordinateBasedExample();
+reviewLinkExample();
