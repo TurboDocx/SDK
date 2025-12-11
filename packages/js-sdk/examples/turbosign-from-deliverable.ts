@@ -2,6 +2,7 @@
  * TurboSign From Deliverable Example
  *
  * This example demonstrates creating a signature document from an existing deliverable
+ * (a document previously generated with TurboDocx)
  */
 
 import { TurboSign } from '@turbodocx/sdk';
@@ -17,71 +18,43 @@ async function createFromDeliverableExample() {
   try {
     console.log('Creating signature document from deliverable...');
 
-    // Create signature document from an existing deliverable
-    const upload = await TurboSign.createFromDeliverable(
-      deliverableId,
-      'Contract from Deliverable',
-      'Created from deliverable for signing'
-    );
-
-    console.log('Document created:', upload.documentId);
-    console.log('Status:', upload.status);
-
-    // Now continue with the normal signing workflow
-    console.log('\nAdding recipients...');
-    const result = await TurboSign.saveDocumentDetails(
-      upload.documentId,
-      {
-        name: 'Contract from Deliverable - Updated',
-        description: 'This document was created from an existing deliverable and requires your signature.'
-      },
-      [
+    // Send signature request using a deliverable ID instead of file upload
+    const result = await TurboSign.sendSignature({
+      deliverableId: deliverableId,
+      documentName: 'Contract from Deliverable',
+      documentDescription: 'Created from deliverable for signing',
+      recipients: [
         {
           name: 'John Doe',
           email: 'signer@example.com',
-          signingOrder: 1,
-          metadata: {
-            color: 'hsl(200, 75%, 50%)',
-            lightColor: 'hsl(200, 75%, 93%)'
-          }
+          signingOrder: 1
         }
-      ]
-    );
-
-    console.log('Recipients added:', result.recipients.length);
-
-    // Add signature fields
-    console.log('\nPreparing for signing...');
-    const prepared = await TurboSign.prepareForSigning(upload.documentId, {
+      ],
       fields: [
         {
           type: 'signature',
-          recipientId: result.recipients[0].id,
+          recipientEmail: 'signer@example.com',
           page: 1,
           x: 100,
           y: 650,
           width: 200,
-          height: 50,
-          pageWidth: 612,  // Standard US Letter width in points
-          pageHeight: 792  // Standard US Letter height in points
+          height: 50
         },
         {
           type: 'date',
-          recipientId: result.recipients[0].id,
+          recipientEmail: 'signer@example.com',
           page: 1,
           x: 100,
           y: 600,
           width: 150,
-          height: 30,
-          pageWidth: 612,
-          pageHeight: 792
+          height: 30
         }
-      ],
-      sendEmails: true
+      ]
     });
 
-    console.log('Document ready for signing!');
-    console.log('Sign URL:', prepared.recipients[0].signUrl);
+    console.log('\n✅ Document sent successfully!');
+    console.log('Document ID:', result.documentId);
+    console.log('Message:', result.message);
 
   } catch (error) {
     console.error('Error:', error);

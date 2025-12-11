@@ -1,15 +1,13 @@
 /**
- * TurboSign.send() with recipientEmail Example
+ * TurboSign Multi-Party Example
  *
- * This example shows using recipientEmail instead of recipientIndex
- * for more explicit field assignment. Great when you have many recipients
- * and want to be crystal clear about who signs what.
+ * This example shows sending a document to multiple recipients with various field types
  */
 
 import { TurboSign } from '@turbodocx/sdk';
 import * as fs from 'fs';
 
-async function sendWithEmailsExample() {
+async function multiPartyExample() {
   // Configure TurboSign
   TurboSign.configure({
     apiKey: process.env.TURBODOCX_API_KEY || 'your-api-key-here'
@@ -20,14 +18,14 @@ async function sendWithEmailsExample() {
 
     console.log('Sending multi-party agreement...\n');
 
-    const result = await TurboSign.send({
+    const result = await TurboSign.sendSignature({
       file: pdfFile,
-      fileName: 'Multi-Party Service Agreement',
-      description: 'This agreement requires signatures from all three parties',
+      documentName: 'Multi-Party Service Agreement',
+      documentDescription: 'This agreement requires signatures from all three parties',
       recipients: [
-        { email: 'ceo@company-a.com', name: 'Alice CEO' },
-        { email: 'legal@company-b.com', name: 'Bob Legal' },
-        { email: 'cfo@company-c.com', name: 'Carol CFO' }
+        { email: 'ceo@company-a.com', name: 'Alice CEO', signingOrder: 1 },
+        { email: 'legal@company-b.com', name: 'Bob Legal', signingOrder: 2 },
+        { email: 'cfo@company-c.com', name: 'Carol CFO', signingOrder: 3 }
       ],
       fields: [
         // Page 1: Company A signatures
@@ -36,6 +34,8 @@ async function sendWithEmailsExample() {
           page: 1,
           x: 100,
           y: 650,
+          width: 200,
+          height: 50,
           recipientEmail: 'ceo@company-a.com'
         },
         {
@@ -43,6 +43,8 @@ async function sendWithEmailsExample() {
           page: 1,
           x: 100,
           y: 610,
+          width: 200,
+          height: 30,
           recipientEmail: 'ceo@company-a.com'
         },
         {
@@ -50,6 +52,8 @@ async function sendWithEmailsExample() {
           page: 1,
           x: 100,
           y: 580,
+          width: 200,
+          height: 30,
           recipientEmail: 'ceo@company-a.com',
           defaultValue: 'Chief Executive Officer'
         },
@@ -58,6 +62,8 @@ async function sendWithEmailsExample() {
           page: 1,
           x: 100,
           y: 550,
+          width: 150,
+          height: 30,
           recipientEmail: 'ceo@company-a.com'
         },
 
@@ -67,6 +73,8 @@ async function sendWithEmailsExample() {
           page: 2,
           x: 100,
           y: 650,
+          width: 200,
+          height: 50,
           recipientEmail: 'legal@company-b.com'
         },
         {
@@ -74,6 +82,8 @@ async function sendWithEmailsExample() {
           page: 2,
           x: 100,
           y: 610,
+          width: 200,
+          height: 30,
           recipientEmail: 'legal@company-b.com'
         },
         {
@@ -81,14 +91,18 @@ async function sendWithEmailsExample() {
           page: 2,
           x: 100,
           y: 580,
+          width: 200,
+          height: 30,
           recipientEmail: 'legal@company-b.com',
-          defaultValue: 'Company B Legal Inc.'
+          defaultValue: 'Company B Legal Corp'
         },
         {
           type: 'date',
           page: 2,
           x: 100,
           y: 550,
+          width: 150,
+          height: 30,
           recipientEmail: 'legal@company-b.com'
         },
 
@@ -98,6 +112,8 @@ async function sendWithEmailsExample() {
           page: 3,
           x: 100,
           y: 650,
+          width: 200,
+          height: 50,
           recipientEmail: 'cfo@company-c.com'
         },
         {
@@ -105,30 +121,26 @@ async function sendWithEmailsExample() {
           page: 3,
           x: 100,
           y: 610,
+          width: 200,
+          height: 30,
           recipientEmail: 'cfo@company-c.com'
         },
         {
           type: 'date',
           page: 3,
           x: 100,
-          y: 550,
+          y: 580,
+          width: 150,
+          height: 30,
           recipientEmail: 'cfo@company-c.com'
         }
-      ]
-      // Webhooks are configured at organization level - see webhooks-setup.ts
+      ],
+      ccEmails: ['legal-team@company-a.com', 'compliance@company-b.com']
     });
 
-    console.log('Document sent successfully!\n');
+    console.log('✅ Multi-party agreement sent!\n');
     console.log('Document ID:', result.documentId);
-    console.log('Status:', result.status);
-    console.log('\nRecipients:');
-
-    result.recipients.forEach(recipient => {
-      console.log(`\n  ${recipient.signingOrder}. ${recipient.name}`);
-      console.log(`     Email: ${recipient.email}`);
-      console.log(`     Sign URL: ${recipient.signUrl}`);
-      console.log(`     Color: ${recipient.color}`);
-    });
+    console.log('Message:', result.message);
 
   } catch (error) {
     console.error('Error:', error);
@@ -136,4 +148,4 @@ async function sendWithEmailsExample() {
 }
 
 // Run the example
-sendWithEmailsExample();
+multiPartyExample();

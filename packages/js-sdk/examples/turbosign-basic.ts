@@ -1,13 +1,14 @@
 /**
- * Basic TurboSign Example
+ * Basic TurboSign Example - Review Before Sending
  *
- * This example demonstrates the basic 3-step workflow for getting a document signed
+ * This example demonstrates creating a review link first (no emails sent),
+ * then you can check the document before sending signature requests
  */
 
 import { TurboSign } from '@turbodocx/sdk';
 import * as fs from 'fs';
 
-async function basicSignatureExample() {
+async function basicReviewExample() {
   // Configure TurboSign with your API key
   TurboSign.configure({
     apiKey: process.env.TURBODOCX_API_KEY || 'your-api-key-here'
@@ -17,100 +18,74 @@ async function basicSignatureExample() {
     // Read the PDF file
     const pdfFile = fs.readFileSync('./sample-contract.pdf');
 
-    // Step 1: Upload the document
-    console.log('Uploading document...');
-    const upload = await TurboSign.uploadDocument(pdfFile, 'Contract.pdf');
-    console.log('Document uploaded:', upload.documentId);
-
-    // Step 2: Add recipients and update document details
-    console.log('Adding recipients...');
-    const result = await TurboSign.saveDocumentDetails(
-      upload.documentId,
-      {
-        name: 'Contract Agreement - Updated',
-        description: 'This document requires electronic signatures from both parties. Please review all content carefully before signing.'
-      },
-      [
+    // Create a review link (no emails sent yet)
+    console.log('Creating signature review link...');
+    const reviewResult = await TurboSign.createSignatureReviewLink({
+      file: pdfFile,
+      documentName: 'Contract Agreement',
+      documentDescription: 'This document requires electronic signatures from both parties.',
+      recipients: [
         {
           name: 'John Smith',
           email: 'john.smith@company.com',
-          signingOrder: 1,
-          metadata: {
-            color: 'hsl(200, 75%, 50%)',
-            lightColor: 'hsl(200, 75%, 93%)'
-          }
+          signingOrder: 1
         },
         {
           name: 'Jane Doe',
           email: 'jane.doe@partner.com',
-          signingOrder: 2,
-          metadata: {
-            color: 'hsl(270, 75%, 50%)',
-            lightColor: 'hsl(270, 75%, 93%)'
-          }
+          signingOrder: 2
         }
-      ]
-    );
-    console.log('Recipients added:', result.recipients.length);
-
-    // Step 3: Prepare for signing with signature fields
-    console.log('Preparing document for signing...');
-    const prepared = await TurboSign.prepareForSigning(upload.documentId, {
+      ],
       fields: [
         {
           type: 'signature',
-          recipientId: result.recipients[0].id,
+          recipientEmail: 'john.smith@company.com',
           page: 1,
           x: 100,
           y: 650,
           width: 200,
-          height: 50,
-          pageWidth: 612,   // Standard US Letter width in points
-          pageHeight: 792   // Standard US Letter height in points
+          height: 50
         },
         {
           type: 'date',
-          recipientId: result.recipients[0].id,
+          recipientEmail: 'john.smith@company.com',
           page: 1,
           x: 100,
           y: 600,
           width: 150,
-          height: 30,
-          pageWidth: 612,
-          pageHeight: 792
+          height: 30
         },
         {
           type: 'signature',
-          recipientId: result.recipients[1].id,
+          recipientEmail: 'jane.doe@partner.com',
           page: 1,
           x: 350,
           y: 650,
           width: 200,
-          height: 50,
-          pageWidth: 612,
-          pageHeight: 792
+          height: 50
         },
         {
           type: 'date',
-          recipientId: result.recipients[1].id,
+          recipientEmail: 'jane.doe@partner.com',
           page: 1,
           x: 350,
           y: 600,
           width: 150,
-          height: 30,
-          pageWidth: 612,
-          pageHeight: 792
+          height: 30
         }
-      ],
-      sendEmails: true
-      // Webhooks are configured at org level - see webhooks-setup.ts example
+      ]
     });
 
-    console.log('Document prepared!');
-    console.log('Sign URLs:');
-    prepared.recipients.forEach(recipient => {
-      console.log(`  ${recipient.name}: ${recipient.signUrl}`);
-    });
+    console.log('\n✅ Review link created!');
+    console.log('Document ID:', reviewResult.documentId);
+    console.log('Review URL:', reviewResult.reviewUrl);
+    console.log('\n👀 Review the document and field placement at the URL above');
+    console.log('   Then use TurboSign.sendSignature() to send signature requests\n');
+
+    // Get document status
+    const status = await TurboSign.getStatus(reviewResult.documentId);
+    console.log('Document status:', status.status);
+    console.log('Recipients:', status.recipients.length);
 
   } catch (error) {
     console.error('Error:', error);
@@ -118,4 +93,4 @@ async function basicSignatureExample() {
 }
 
 // Run the example
-basicSignatureExample();
+basicReviewExample();
