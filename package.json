@@ -1,0 +1,27 @@
+{
+  "name": "@turbodocx/sdk-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TurboDocx SDK Monorepo - JavaScript, Python, Go, Ruby, and Java SDKs",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build:js": "npm run build -w packages/js-sdk",
+    "test:js": "npm test -w packages/js-sdk",
+    "lint:js": "npm run lint -w packages/js-sdk",
+    "clean": "find packages -name 'dist' -type d -exec rm -rf {} +",
+    "pack:js": "npm pack --workspace packages/js-sdk --pack-destination ./",
+    "publish:js": "npm publish --workspace packages/js-sdk --access public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TurboDocx/SDK.git"
+  },
+  "author": "TurboDocx",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  }
+}
