@@ -7,7 +7,7 @@
 
 import { TurboSign } from '../src/modules/sign';
 import { HttpClient } from '../src/http';
-import type { N8nRecipient, N8nField } from '../src/types/sign';
+import type { Recipient, Field } from '../src/types/sign';
 
 // Mock the HttpClient
 jest.mock('../src/http');
@@ -15,10 +15,10 @@ jest.mock('../src/http');
 const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
 
 describe('TurboSign Sender Configuration', () => {
-  const mockRecipients: N8nRecipient[] = [
+  const mockRecipients: Recipient[] = [
     { name: 'John Doe', email: 'john@example.com', signingOrder: 1 },
   ];
-  const mockFields: N8nField[] = [
+  const mockFields: Field[] = [
     {
       type: 'signature',
       page: 1,

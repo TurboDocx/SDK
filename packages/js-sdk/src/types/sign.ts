@@ -97,7 +97,7 @@ export interface DocumentStatusResponse {
  * Field configuration for single-step operations
  * Supports both coordinate-based and template anchor-based positioning
  */
-export interface N8nField {
+export interface Field {
   /** Field type */
   type: SignatureFieldType;
   /** Page number (1-indexed) - required for coordinate-based */
@@ -144,7 +144,7 @@ export interface N8nField {
 /**
  * Recipient configuration for single-step operations
  */
-export interface N8nRecipient {
+export interface Recipient {
   /** Recipient's full name */
   name: string;
   /** Recipient's email address */
@@ -168,9 +168,9 @@ export interface CreateSignatureReviewLinkRequest {
   /** TurboDocx template ID */
   templateId?: string;
   /** Recipients who will sign */
-  recipients: N8nRecipient[];
+  recipients: Recipient[];
   /** Signature fields configuration */
-  fields: N8nField[];
+  fields: Field[];
   /** Document name */
   documentName?: string;
   /** Document description */
@@ -221,9 +221,9 @@ export interface SendSignatureRequest {
   /** TurboDocx template ID */
   templateId?: string;
   /** Recipients who will sign */
-  recipients: N8nRecipient[];
+  recipients: Recipient[];
   /** Signature fields configuration */
-  fields: N8nField[];
+  fields: Field[];
   /** Document name */
   documentName?: string;
   /** Document description */

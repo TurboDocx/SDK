@@ -13,7 +13,7 @@
 
 import { TurboSign } from "../src/modules/sign";
 import { HttpClient } from "../src/http";
-import type { N8nRecipient, N8nField } from "../src/types/sign";
+import type { Recipient, Field } from "../src/types/sign";
 
 // Mock the HttpClient
 jest.mock("../src/http");
@@ -82,10 +82,10 @@ describe("TurboSign Module", () => {
 
   describe("createSignatureReviewLink", () => {
     const mockFile = Buffer.from("mock-pdf-content");
-    const mockRecipients: N8nRecipient[] = [
+    const mockRecipients: Recipient[] = [
       { name: "John Doe", email: "john@example.com", signingOrder: 1 },
     ];
-    const mockFields: N8nField[] = [
+    const mockFields: Field[] = [
       {
         type: "signature",
         page: 1,
@@ -255,7 +255,7 @@ describe("TurboSign Module", () => {
         message: "Document prepared for review",
       };
 
-      const fieldsWithAnchor: N8nField[] = [
+      const fieldsWithAnchor: Field[] = [
         {
           type: "signature",
           recipientEmail: "john@example.com",
@@ -283,10 +283,10 @@ describe("TurboSign Module", () => {
   });
 
   describe("sendSignature", () => {
-    const mockRecipients: N8nRecipient[] = [
+    const mockRecipients: Recipient[] = [
       { name: "John Doe", email: "john@example.com", signingOrder: 1 },
     ];
-    const mockFields: N8nField[] = [
+    const mockFields: Field[] = [
       {
         type: "signature",
         page: 1,
@@ -355,7 +355,7 @@ describe("TurboSign Module", () => {
         message: "Document sent for signing",
       };
 
-      const fieldsWithCheckbox: N8nField[] = [
+      const fieldsWithCheckbox: Field[] = [
         {
           type: "signature",
           page: 1,
