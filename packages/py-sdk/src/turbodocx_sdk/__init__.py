@@ -10,25 +10,40 @@ __version__ = "0.1.0"
 from typing import Optional
 
 from .modules.sign import TurboSign
-from .http import HttpClient, TurboDocxError, AuthenticationError, NetworkError
+from .http import (
+    HttpClient,
+    TurboDocxError,
+    AuthenticationError,
+    ValidationError,
+    NotFoundError,
+    RateLimitError,
+    NetworkError
+)
 
 
 class TurboDocxClient:
     """Main client for interacting with TurboDocx API"""
 
-    def __init__(self, api_key: str, base_url: str = "https://api.turbodocx.com"):
+    def __init__(
+        self,
+        api_key: str,
+        org_id: str,
+        base_url: str = "https://api.turbodocx.com"
+    ):
         """
         Initialize TurboDocx client
 
         Args:
             api_key: Your TurboDocx API key
+            org_id: Your Organization ID (required for authentication)
             base_url: Base URL for the API (default: https://api.turbodocx.com)
         """
         self.api_key = api_key
+        self.org_id = org_id
         self.base_url = base_url
 
         # Configure TurboSign module
-        TurboSign.configure(api_key=api_key, base_url=base_url)
+        TurboSign.configure(api_key=api_key, org_id=org_id, base_url=base_url)
 
     @property
     def sign(self) -> type:
@@ -42,6 +57,9 @@ __all__ = [
     "HttpClient",
     "TurboDocxError",
     "AuthenticationError",
+    "ValidationError",
+    "NotFoundError",
+    "RateLimitError",
     "NetworkError",
     "__version__",
 ]

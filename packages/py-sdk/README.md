@@ -322,6 +322,50 @@ def send_contract(request):
 
 ---
 
+## Local Testing
+
+The SDK includes a comprehensive manual test script to verify all functionality locally.
+
+### Running Manual Tests
+
+```bash
+# Install dependencies
+pip install -e .
+
+# Run the manual test script
+python manual_test.py
+```
+
+### What It Tests
+
+The `manual_test.py` file tests all SDK methods:
+- ✅ `prepare_for_review()` - Document upload for review
+- ✅ `prepare_for_signing_single()` - Send for signature
+- ✅ `get_status()` - Check document status
+- ✅ `download()` - Download signed document
+- ✅ `void()` - Cancel signature request
+- ✅ `resend()` - Resend signature emails
+
+### Configuration
+
+Before running, update the hardcoded values in `manual_test.py`:
+- `API_KEY` - Your TurboDocx API key
+- `BASE_URL` - API endpoint (default: `http://localhost:3000`)
+- `ORG_ID` - Your organization UUID
+- `TEST_FILE_PATH` - Path to a test PDF/DOCX file
+- `TEST_EMAIL` - Email address for testing
+
+### Expected Output
+
+The script will:
+1. Upload a test document
+2. Send it for signature
+3. Check the status
+4. Test void and resend operations
+5. Print results for each operation
+
+---
+
 ## Error Handling
 
 ```python

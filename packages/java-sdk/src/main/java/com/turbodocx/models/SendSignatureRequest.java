@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Request for preparing a document for signing
  */
-public class PrepareForSigningRequest {
+public class SendSignatureRequest {
     private final byte[] file;
     private final String fileName;
     private final String fileLink;
@@ -19,7 +19,7 @@ public class PrepareForSigningRequest {
     private final String senderEmail;
     private final List<String> ccEmails;
 
-    private PrepareForSigningRequest(Builder builder) {
+    private SendSignatureRequest(Builder builder) {
         this.file = builder.file;
         this.fileName = builder.fileName;
         this.fileLink = builder.fileLink;
@@ -160,8 +160,8 @@ public class PrepareForSigningRequest {
             return this;
         }
 
-        public PrepareForSigningRequest build() {
-            return new PrepareForSigningRequest(this);
+        public SendSignatureRequest build() {
+            return new SendSignatureRequest(this);
         }
     }
 }

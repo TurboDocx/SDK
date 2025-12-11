@@ -6,6 +6,13 @@ import com.google.gson.annotations.SerializedName;
  * Response from resending email
  */
 public class ResendEmailResponse {
+    @SerializedName("success")
+    private Boolean success;
+
+    @SerializedName("recipientCount")
+    private Integer recipientCount;
+
+    // Legacy fields (for backwards compatibility if backend changes)
     @SerializedName("documentId")
     private String documentId;
 
@@ -14,6 +21,14 @@ public class ResendEmailResponse {
 
     @SerializedName("resentAt")
     private String resentAt;
+
+    public Boolean getSuccess() {
+        return success;
+    }
+
+    public Integer getRecipientCount() {
+        return recipientCount;
+    }
 
     public String getDocumentId() {
         return documentId;

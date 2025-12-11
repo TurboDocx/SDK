@@ -8,6 +8,9 @@ dist/
 build/
 *.egg-info/
 
+# TypeScript
+*.tsbuildinfo
+
 # Python
 __pycache__/
 *.py[cod]
@@ -16,6 +19,9 @@ __pycache__/
 .mypy_cache/
 .venv/
 venv/
+*.whl
+*.tar.gz
+.hypothesis/
 
 # IDE
 .idea/
@@ -43,6 +49,14 @@ npm-debug.log*
 
 # Go
 go.sum
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+go.work
+go.work.sum
 
 # .NET
 bin/
@@ -56,6 +70,14 @@ TestResults/
 target/
 *.class
 *.jar
+*.war
+*.ear
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
 
 # Ruby
 *.gem

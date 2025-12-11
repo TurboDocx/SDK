@@ -322,6 +322,51 @@ public class ContractController {
 
 ---
 
+## Local Testing
+
+The SDK includes a comprehensive manual test class to verify all functionality locally.
+
+### Running Manual Tests
+
+```bash
+# Using Maven
+mvn exec:java -Dexec.mainClass="com.turbodocx.ManualTest"
+
+# Or compile and run directly
+mvn clean compile
+java -cp target/classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/stdout -q) com.turbodocx.ManualTest
+```
+
+### What It Tests
+
+The `ManualTest.java` class tests all SDK methods:
+- ✅ `prepareForReview()` - Document upload for review
+- ✅ `prepareForSigningSingle()` - Send for signature
+- ✅ `getStatus()` - Check document status
+- ✅ `download()` - Download signed document
+- ✅ `voidDocument()` - Cancel signature request
+- ✅ `resend()` - Resend signature emails
+
+### Configuration
+
+Before running, update the hardcoded values in `src/main/java/com/turbodocx/ManualTest.java`:
+- `API_KEY` - Your TurboDocx API key
+- `BASE_URL` - API endpoint (default: `http://localhost:3000`)
+- `ORG_ID` - Your organization UUID
+- `TEST_FILE_PATH` - Path to a test PDF/DOCX file
+- `TEST_EMAIL` - Email address for testing
+
+### Expected Output
+
+The test class will:
+1. Upload a test document
+2. Send it for signature
+3. Check the status
+4. Test void and resend operations
+5. Print results for each operation
+
+---
+
 ## Error Handling
 
 ```java

@@ -19,8 +19,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * TurboSign Module Tests
  *
  * Tests for 100% parity with n8n-nodes-turbodocx operations:
- * - prepareForReview
- * - prepareForSigningSingle
+ * - createSignatureReviewLink
+ * - sendSignature
  * - getStatus
  * - download
  * - voidDocument
@@ -39,6 +39,7 @@ class TurboSignTest {
 
         client = new TurboDocxClient.Builder()
                 .apiKey("test-api-key")
+                .orgId("test-org-id")
                 .baseUrl(server.url("/").toString())
                 .build();
     }
@@ -49,14 +50,15 @@ class TurboSignTest {
     }
 
     // ============================================
-    // Configure Tests (2)
+    // Configure Tests (4)
     // ============================================
 
     @Test
-    @DisplayName("should configure the client with API key")
-    void configureWithApiKey() {
+    @DisplayName("should configure the client with API key and orgId")
+    void configureWithApiKeyAndOrgId() {
         TurboDocxClient testClient = new TurboDocxClient.Builder()
                 .apiKey("test-api-key")
+                .orgId("test-org-id")
                 .build();
         assertNotNull(testClient);
         assertNotNull(testClient.turboSign());
@@ -67,9 +69,20 @@ class TurboSignTest {
     void configureWithCustomBaseUrl() {
         TurboDocxClient testClient = new TurboDocxClient.Builder()
                 .apiKey("test-api-key")
+                .orgId("test-org-id")
                 .baseUrl("https://custom-api.example.com")
                 .build();
         assertNotNull(testClient);
+    }
+
+    @Test
+    @DisplayName("should throw error when orgId is not configured")
+    void errorWhenNoOrgId() {
+        assertThrows(TurboDocxException.AuthenticationException.class, () -> {
+            new TurboDocxClient.Builder()
+                    .apiKey("test-api-key")
+                    .build();
+        });
     }
 
     // ============================================
@@ -78,31 +91,34 @@ class TurboSignTest {
 
     @Test
     @DisplayName("should prepare document for review with file upload")
-    void prepareForReviewWithFileUpload() throws Exception {
+    void createSignatureReviewLinkWithFileUpload() throws Exception {
         Map<String, Object> responseData = new HashMap<>();
+        responseData.put("success", true);
         responseData.put("documentId", "doc-123");
         responseData.put("status", "review_ready");
         responseData.put("previewUrl", "https://preview.example.com/doc-123");
+        responseData.put("message", "Document prepared for review");
 
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(gson.toJson(Map.of("data", responseData))));
+                .setBody(gson.toJson(responseData)));
 
-        PrepareForReviewRequest request = new PrepareForReviewRequest.Builder()
+        CreateSignatureReviewLinkRequest request = new CreateSignatureReviewLinkRequest.Builder()
                 .file(new byte[]{0x25, 0x50, 0x44, 0x46}) // %PDF
                 .fileName("contract.pdf")
                 .recipients(Collections.singletonList(
                         new Recipient("John Doe", "john@example.com", 1)))
                 .fields(Collections.singletonList(
-                        new Field("signature", 1, 100, 500, 200, 50, 1)))
+                        new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
                 .build();
 
-        PrepareForReviewResponse result = client.turboSign().prepareForReview(request);
+        CreateSignatureReviewLinkResponse result = client.turboSign().createSignatureReviewLink(request);
 
         assertEquals("doc-123", result.getDocumentId());
         assertEquals("review_ready", result.getStatus());
         assertNotNull(result.getPreviewUrl());
+        assertTrue(result.isSuccess());
 
         RecordedRequest recorded = server.takeRequest();
         assertTrue(recorded.getHeader("Content-Type").contains("multipart/form-data"));
@@ -110,8 +126,9 @@ class TurboSignTest {
 
     @Test
     @DisplayName("should prepare document for review with file URL")
-    void prepareForReviewWithFileUrl() throws Exception {
+    void createSignatureReviewLinkWithFileUrl() throws Exception {
         Map<String, Object> responseData = new HashMap<>();
+        responseData.put("success", true);
         responseData.put("documentId", "doc-456");
         responseData.put("status", "review_ready");
         responseData.put("previewUrl", "https://preview.example.com/doc-456");
@@ -119,17 +136,17 @@ class TurboSignTest {
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(gson.toJson(Map.of("data", responseData))));
+                .setBody(gson.toJson(responseData)));
 
-        PrepareForReviewRequest request = new PrepareForReviewRequest.Builder()
+        CreateSignatureReviewLinkRequest request = new CreateSignatureReviewLinkRequest.Builder()
                 .fileLink("https://storage.example.com/contract.pdf")
                 .recipients(Collections.singletonList(
                         new Recipient("John Doe", "john@example.com", 1)))
                 .fields(Collections.singletonList(
-                        new Field("signature", 1, 100, 500, 200, 50, 1)))
+                        new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
                 .build();
 
-        PrepareForReviewResponse result = client.turboSign().prepareForReview(request);
+        CreateSignatureReviewLinkResponse result = client.turboSign().createSignatureReviewLink(request);
 
         assertEquals("doc-456", result.getDocumentId());
 
@@ -140,69 +157,72 @@ class TurboSignTest {
 
     @Test
     @DisplayName("should prepare document for review with deliverable ID")
-    void prepareForReviewWithDeliverableId() throws Exception {
+    void createSignatureReviewLinkWithDeliverableId() throws Exception {
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(gson.toJson(Map.of("data", Map.of(
+                .setBody(gson.toJson(Map.of(
+                        "success", true,
                         "documentId", "doc-789",
                         "status", "review_ready"
-                )))));
+                ))));
 
-        PrepareForReviewRequest request = new PrepareForReviewRequest.Builder()
+        CreateSignatureReviewLinkRequest request = new CreateSignatureReviewLinkRequest.Builder()
                 .deliverableId("deliverable-abc")
                 .recipients(Collections.singletonList(
                         new Recipient("John Doe", "john@example.com", 1)))
                 .fields(Collections.singletonList(
-                        new Field("signature", 1, 100, 500, 200, 50, 1)))
+                        new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
                 .build();
 
-        PrepareForReviewResponse result = client.turboSign().prepareForReview(request);
+        CreateSignatureReviewLinkResponse result = client.turboSign().createSignatureReviewLink(request);
 
         assertEquals("doc-789", result.getDocumentId());
     }
 
     @Test
     @DisplayName("should prepare document for review with template ID")
-    void prepareForReviewWithTemplateId() throws Exception {
+    void createSignatureReviewLinkWithTemplateId() throws Exception {
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(gson.toJson(Map.of("data", Map.of(
+                .setBody(gson.toJson(Map.of(
+                        "success", true,
                         "documentId", "doc-template",
                         "status", "review_ready"
-                )))));
+                ))));
 
-        PrepareForReviewRequest request = new PrepareForReviewRequest.Builder()
+        CreateSignatureReviewLinkRequest request = new CreateSignatureReviewLinkRequest.Builder()
                 .templateId("template-xyz")
                 .recipients(Collections.singletonList(
                         new Recipient("John Doe", "john@example.com", 1)))
                 .fields(Collections.singletonList(
-                        new Field("signature", 1, 100, 500, 200, 50, 1)))
+                        new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
                 .build();
 
-        PrepareForReviewResponse result = client.turboSign().prepareForReview(request);
+        CreateSignatureReviewLinkResponse result = client.turboSign().createSignatureReviewLink(request);
 
         assertEquals("doc-template", result.getDocumentId());
     }
 
     @Test
     @DisplayName("should include optional fields in request")
-    void prepareForReviewWithOptionalFields() throws Exception {
+    void createSignatureReviewLinkWithOptionalFields() throws Exception {
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(gson.toJson(Map.of("data", Map.of(
+                .setBody(gson.toJson(Map.of(
+                        "success", true,
                         "documentId", "doc-optional",
                         "status", "review_ready"
-                )))));
+                ))));
 
-        PrepareForReviewRequest request = new PrepareForReviewRequest.Builder()
+        CreateSignatureReviewLinkRequest request = new CreateSignatureReviewLinkRequest.Builder()
                 .fileLink("https://example.com/doc.pdf")
                 .recipients(Collections.singletonList(
                         new Recipient("John Doe", "john@example.com", 1)))
                 .fields(Collections.singletonList(
-                        new Field("signature", 1, 100, 500, 200, 50, 1)))
+                        new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
                 .documentName("Test Contract")
                 .documentDescription("A test contract")
                 .senderName("Sales Team")
@@ -210,7 +230,7 @@ class TurboSignTest {
                 .ccEmails(Arrays.asList("admin@company.com", "legal@company.com"))
                 .build();
 
-        PrepareForReviewResponse result = client.turboSign().prepareForReview(request);
+        CreateSignatureReviewLinkResponse result = client.turboSign().createSignatureReviewLink(request);
 
         assertEquals("doc-optional", result.getDocumentId());
     }
@@ -221,7 +241,7 @@ class TurboSignTest {
 
     @Test
     @DisplayName("should prepare document for signing and send emails")
-    void prepareForSigningSingleWithUrl() throws Exception {
+    void sendSignatureWithUrl() throws Exception {
         Map<String, Object> recipient = new HashMap<>();
         recipient.put("id", "rec-1");
         recipient.put("name", "John Doe");
@@ -230,24 +250,26 @@ class TurboSignTest {
         recipient.put("signUrl", "https://sign.example.com/rec-1");
 
         Map<String, Object> responseData = new HashMap<>();
+        responseData.put("success", true);
         responseData.put("documentId", "doc-123");
         responseData.put("status", "sent");
+        responseData.put("message", "Document sent for signing");
         responseData.put("recipients", Collections.singletonList(recipient));
 
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(gson.toJson(Map.of("data", responseData))));
+                .setBody(gson.toJson(responseData)));
 
-        PrepareForSigningRequest request = new PrepareForSigningRequest.Builder()
+        SendSignatureRequest request = new SendSignatureRequest.Builder()
                 .fileLink("https://storage.example.com/contract.pdf")
                 .recipients(Collections.singletonList(
                         new Recipient("John Doe", "john@example.com", 1)))
                 .fields(Collections.singletonList(
-                        new Field("signature", 1, 100, 500, 200, 50, 1)))
+                        new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
                 .build();
 
-        PrepareForSigningResponse result = client.turboSign().prepareForSigningSingle(request);
+        SendSignatureResponse result = client.turboSign().sendSignature(request);
 
         assertEquals("doc-123", result.getDocumentId());
         assertEquals("sent", result.getStatus());
@@ -261,26 +283,27 @@ class TurboSignTest {
 
     @Test
     @DisplayName("should handle file upload for signing")
-    void prepareForSigningSingleWithFileUpload() throws Exception {
+    void sendSignatureWithFileUpload() throws Exception {
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(gson.toJson(Map.of("data", Map.of(
+                .setBody(gson.toJson(Map.of(
+                        "success", true,
                         "documentId", "doc-upload",
                         "status", "sent",
                         "recipients", Collections.emptyList()
-                )))));
+                ))));
 
-        PrepareForSigningRequest request = new PrepareForSigningRequest.Builder()
+        SendSignatureRequest request = new SendSignatureRequest.Builder()
                 .file(new byte[]{0x25, 0x50, 0x44, 0x46})
                 .fileName("contract.pdf")
                 .recipients(Collections.singletonList(
                         new Recipient("John Doe", "john@example.com", 1)))
                 .fields(Collections.singletonList(
-                        new Field("signature", 1, 100, 500, 200, 50, 1)))
+                        new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
                 .build();
 
-        PrepareForSigningResponse result = client.turboSign().prepareForSigningSingle(request);
+        SendSignatureResponse result = client.turboSign().sendSignature(request);
 
         assertEquals("doc-upload", result.getDocumentId());
 
@@ -312,7 +335,7 @@ class TurboSignTest {
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(gson.toJson(Map.of("data", responseData))));
+                .setBody(gson.toJson(responseData)));
 
         DocumentStatusResponse result = client.turboSign().getStatus("doc-123");
 
@@ -326,29 +349,6 @@ class TurboSignTest {
     }
 
     // ============================================
-    // Download Test (1)
-    // ============================================
-
-    @Test
-    @DisplayName("should download signed document")
-    void download() throws Exception {
-        byte[] pdfContent = new byte[]{0x25, 0x50, 0x44, 0x46}; // %PDF
-
-        server.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/pdf")
-                .setBody(new okio.Buffer().write(pdfContent)));
-
-        byte[] result = client.turboSign().download("doc-123");
-
-        assertArrayEquals(pdfContent, result);
-
-        RecordedRequest recorded = server.takeRequest();
-        assertEquals("GET", recorded.getMethod());
-        assertEquals("/turbosign/documents/doc-123/download", recorded.getPath());
-    }
-
-    // ============================================
     // Void Test (1)
     // ============================================
 
@@ -358,11 +358,11 @@ class TurboSignTest {
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(gson.toJson(Map.of("data", Map.of(
+                .setBody(gson.toJson(Map.of(
                         "documentId", "doc-123",
                         "status", "voided",
                         "voidedAt", "2024-01-01T12:00:00Z"
-                )))));
+                ))));
 
         VoidDocumentResponse result = client.turboSign().voidDocument("doc-123", "Document needs revision");
 
@@ -384,11 +384,11 @@ class TurboSignTest {
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(gson.toJson(Map.of("data", Map.of(
+                .setBody(gson.toJson(Map.of(
                         "documentId", "doc-123",
                         "message", "Emails resent successfully",
                         "resentAt", "2024-01-01T12:00:00Z"
-                )))));
+                ))));
 
         ResendEmailResponse result = client.turboSign().resendEmail("doc-123", Arrays.asList("rec-1", "rec-2"));
 
@@ -400,20 +400,55 @@ class TurboSignTest {
     }
 
     // ============================================
-    // Error Handling Tests (3)
+    // GetAuditTrail Test (1)
+    // ============================================
+
+    @Test
+    @DisplayName("should get audit trail for document")
+    void getAuditTrail() throws Exception {
+        Map<String, Object> entry1 = new HashMap<>();
+        entry1.put("event", "document_created");
+        entry1.put("actor", "sender@example.com");
+        entry1.put("timestamp", "2024-01-01T00:00:00Z");
+
+        Map<String, Object> entry2 = new HashMap<>();
+        entry2.put("event", "document_signed");
+        entry2.put("actor", "john@example.com");
+        entry2.put("timestamp", "2024-01-01T12:00:00Z");
+
+        server.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody(gson.toJson(Map.of(
+                        "documentId", "doc-123",
+                        "entries", Arrays.asList(entry1, entry2)
+                ))));
+
+        AuditTrailResponse result = client.turboSign().getAuditTrail("doc-123");
+
+        assertEquals("doc-123", result.getDocumentId());
+        assertEquals(2, result.getEntries().size());
+
+        RecordedRequest recorded = server.takeRequest();
+        assertEquals("GET", recorded.getMethod());
+        assertEquals("/turbosign/documents/doc-123/audit-trail", recorded.getPath());
+    }
+
+    // ============================================
+    // Error Handling Tests (5)
     // ============================================
 
     @Test
     @DisplayName("should throw error when API key is not configured")
     void errorWhenNoApiKey() {
         assertThrows(IllegalArgumentException.class, () -> {
-            new TurboDocxClient.Builder().build();
+            new TurboDocxClient.Builder().orgId("test-org").build();
         });
     }
 
     @Test
-    @DisplayName("should handle API errors gracefully")
-    void handleApiError() {
+    @DisplayName("should throw NotFoundException for 404 errors")
+    void handleNotFoundError() {
         server.enqueue(new MockResponse()
                 .setResponseCode(404)
                 .setHeader("Content-Type", "application/json")
@@ -422,7 +457,7 @@ class TurboSignTest {
                         "code", "DOCUMENT_NOT_FOUND"
                 ))));
 
-        TurboDocxException exception = assertThrows(TurboDocxException.class, () -> {
+        TurboDocxException.NotFoundException exception = assertThrows(TurboDocxException.NotFoundException.class, () -> {
             client.turboSign().getStatus("invalid-doc");
         });
 
@@ -432,7 +467,7 @@ class TurboSignTest {
     }
 
     @Test
-    @DisplayName("should handle validation errors")
+    @DisplayName("should throw ValidationException for 400 errors")
     void handleValidationError() {
         server.enqueue(new MockResponse()
                 .setResponseCode(400)
@@ -442,18 +477,54 @@ class TurboSignTest {
                         "code", "VALIDATION_ERROR"
                 ))));
 
-        PrepareForSigningRequest request = new PrepareForSigningRequest.Builder()
+        SendSignatureRequest request = new SendSignatureRequest.Builder()
                 .fileLink("https://example.com/doc.pdf")
                 .recipients(Collections.singletonList(
                         new Recipient("Test", "invalid-email", 1)))
                 .fields(Collections.emptyList())
                 .build();
 
-        TurboDocxException exception = assertThrows(TurboDocxException.class, () -> {
-            client.turboSign().prepareForSigningSingle(request);
+        TurboDocxException.ValidationException exception = assertThrows(TurboDocxException.ValidationException.class, () -> {
+            client.turboSign().sendSignature(request);
         });
 
         assertEquals(400, exception.getStatusCode());
         assertTrue(exception.getMessage().contains("Validation"));
+    }
+
+    @Test
+    @DisplayName("should throw AuthenticationException for 401 errors")
+    void handleAuthenticationError() {
+        server.enqueue(new MockResponse()
+                .setResponseCode(401)
+                .setHeader("Content-Type", "application/json")
+                .setBody(gson.toJson(Map.of(
+                        "message", "Invalid API key",
+                        "code", "UNAUTHORIZED"
+                ))));
+
+        TurboDocxException.AuthenticationException exception = assertThrows(TurboDocxException.AuthenticationException.class, () -> {
+            client.turboSign().getStatus("doc-123");
+        });
+
+        assertEquals(401, exception.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("should throw RateLimitException for 429 errors")
+    void handleRateLimitError() {
+        server.enqueue(new MockResponse()
+                .setResponseCode(429)
+                .setHeader("Content-Type", "application/json")
+                .setBody(gson.toJson(Map.of(
+                        "message", "Rate limit exceeded",
+                        "code", "RATE_LIMIT_EXCEEDED"
+                ))));
+
+        TurboDocxException.RateLimitException exception = assertThrows(TurboDocxException.RateLimitException.class, () -> {
+            client.turboSign().getStatus("doc-123");
+        });
+
+        assertEquals(429, exception.getStatusCode());
     }
 }

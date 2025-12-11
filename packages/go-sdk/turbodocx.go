@@ -4,19 +4,24 @@
 //
 // Example usage:
 //
-//	client := turbodocx.NewClient("your-api-key")
+//	client, err := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
+//		APIKey: "your-api-key",
+//		OrgID:  "your-org-id",
+//	})
 //
 //	// Prepare document for signing
-//	result, err := client.TurboSign.PrepareForSigningSingle(ctx, &turbodocx.PrepareForSigningRequest{
+//	result, err := client.TurboSign.SendSignature(ctx, &turbodocx.SendSignatureRequest{
 //		FileLink: "https://example.com/contract.pdf",
 //		Recipients: []turbodocx.Recipient{
-//			{Name: "John Doe", Email: "john@example.com", Order: 1},
+//			{Name: "John Doe", Email: "john@example.com", SigningOrder: 1},
 //		},
 //		Fields: []turbodocx.Field{
-//			{Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 1},
+//			{Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientEmail: "john@example.com"},
 //		},
 //	})
 package turbodocx
+
+import "errors"
 
 // Version is the current SDK version
 const Version = "0.1.0"
@@ -34,6 +39,9 @@ type ClientConfig struct {
 	// APIKey is your TurboDocx API key
 	APIKey string
 
+	// OrgID is your Organization ID (required for authentication)
+	OrgID string
+
 	// AccessToken is an OAuth2 access token (alternative to APIKey)
 	AccessToken string
 
@@ -41,15 +49,31 @@ type ClientConfig struct {
 	BaseURL string
 }
 
-// NewClient creates a new TurboDocx client with the given API key
-func NewClient(apiKey string) *Client {
-	return NewClientWithConfig(ClientConfig{APIKey: apiKey})
+// NewClient creates a new TurboDocx client with the given API key and org ID
+func NewClient(apiKey, orgID string) (*Client, error) {
+	return NewClientWithConfig(ClientConfig{
+		APIKey: apiKey,
+		OrgID:  orgID,
+	})
 }
 
 // NewClientWithConfig creates a new TurboDocx client with custom configuration
-func NewClientWithConfig(config ClientConfig) *Client {
+func NewClientWithConfig(config ClientConfig) (*Client, error) {
 	if config.BaseURL == "" {
 		config.BaseURL = "https://api.turbodocx.com"
+	}
+
+	if config.APIKey == "" && config.AccessToken == "" {
+		return nil, errors.New("API key or access token is required")
+	}
+
+	if config.OrgID == "" {
+		return nil, &AuthenticationError{
+			TurboDocxError: TurboDocxError{
+				Message:    "Organization ID (OrgID) is required for authentication",
+				StatusCode: 401,
+			},
+		}
 	}
 
 	httpClient := NewHTTPClient(config)
@@ -57,5 +81,5 @@ func NewClientWithConfig(config ClientConfig) *Client {
 	return &Client{
 		TurboSign:  NewTurboSignClient(httpClient),
 		httpClient: httpClient,
-	}
+	}, nil
 }

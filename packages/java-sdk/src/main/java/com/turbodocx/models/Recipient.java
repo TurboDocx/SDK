@@ -12,13 +12,13 @@ public class Recipient {
     @SerializedName("email")
     private final String email;
 
-    @SerializedName("order")
-    private final int order;
+    @SerializedName("signingOrder")
+    private final int signingOrder;
 
-    public Recipient(String name, String email, int order) {
+    public Recipient(String name, String email, int signingOrder) {
         this.name = name;
         this.email = email;
-        this.order = order;
+        this.signingOrder = signingOrder;
     }
 
     public String getName() {
@@ -29,7 +29,7 @@ public class Recipient {
         return email;
     }
 
-    public int getOrder() {
-        return order;
+    public int getSigningOrder() {
+        return signingOrder;
     }
 }
