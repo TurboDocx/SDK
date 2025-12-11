@@ -29,53 +29,71 @@ async function sendDirectlyExample() {
       documentDescription: 'Q1 2025 Partnership Agreement - Please review and sign',
       recipients: [
         {
-          name: 'Nicolas',
-          email: 'nicolas@turbodocx.com',
+          name: 'John Doe',
+          email: 'john@example.com',
           signingOrder: 1
         },
         {
-          name: 'Nicolas Signer',
-          email: 'nicolas+signer@turbodocx.com',
+          name: 'Jane Smith',
+          email: 'jane@example.com',
           signingOrder: 2
         }
       ],
       fields: [
         // First recipient's fields - using template anchors
         {
+          type: 'full_name',
+          recipientEmail: 'john@example.com',
+          template: {
+            anchor: '{name1}',
+            placement: 'replace',
+            size: { width: 100, height: 30 }
+          }
+        },
+        {
           type: 'signature',
-          recipientEmail: 'nicolas@turbodocx.com',
+          recipientEmail: 'john@example.com',
           template: {
             anchor: '{signature1}',       // Text in your PDF to replace
             placement: 'replace',          // Replace the anchor text
-            size: { width: 200, height: 50 }
+            size: { width: 100, height: 30 }
           }
         },
         {
           type: 'date',
-          recipientEmail: 'nicolas@turbodocx.com',
+          recipientEmail: 'john@example.com',
           template: {
             anchor: '{date1}',
             placement: 'replace',
-            size: { width: 150, height: 30 }
+            size: { width: 75, height: 30 }
           }
         },
         // Second recipient's fields
         {
+          type: 'full_name',
+          recipientEmail: 'jane@example.com',
+          template: {
+            anchor: '{name2}',
+            placement: 'replace',
+            size: { width: 100, height: 30 }
+          }
+        },
+        {
           type: 'signature',
-          recipientEmail: 'nicolas+signer@turbodocx.com',
+          recipientEmail: 'jane@example.com',
           template: {
             anchor: '{signature2}',
             placement: 'replace',
-            size: { width: 200, height: 50 }
+            size: { width: 100, height: 30 }
           }
         },
         {
           type: 'date',
-          recipientEmail: 'nicolas+signer@turbodocx.com',
+          recipientEmail: 'jane@example.com',
           template: {
             anchor: '{date2}',
             placement: 'replace',
-            size: { width: 150, height: 30 }
+            size: { width: 75, height: 30 }
           }
         }
       ]

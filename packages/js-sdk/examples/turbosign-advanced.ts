@@ -32,8 +32,8 @@ async function advancedFieldsExample() {
       documentDescription: 'Contract with advanced signature field features',
       recipients: [
         {
-          name: 'Nicolas',
-          email: 'nicolas@turbodocx.com',
+          name: 'John Doe',
+          email: 'john@example.com',
           signingOrder: 1
         }
       ],
@@ -41,11 +41,11 @@ async function advancedFieldsExample() {
         // Signature field
         {
           type: 'signature',
-          recipientEmail: 'nicolas@turbodocx.com',
+          recipientEmail: 'john@example.com',
           template: {
             anchor: '{signature}',
             placement: 'replace',
-            size: { width: 200, height: 50 }
+            size: { width: 100, height: 30 }
           }
         },
 
@@ -56,18 +56,18 @@ async function advancedFieldsExample() {
           template: {
             anchor: '{date}',
             placement: 'replace',
-            size: { width: 150, height: 30 }
+            size: { width: 75, height: 30 }
           }
         },
 
-        // Text input field
+        // Full name field
         {
-          type: 'text',
+          type: 'full_name',
           recipientEmail: 'john@example.com',
           template: {
             anchor: '{printed_name}',
             placement: 'replace',
-            size: { width: 200, height: 30 }
+            size: { width: 100, height: 20 }
           }
         },
 
@@ -75,12 +75,12 @@ async function advancedFieldsExample() {
         {
           type: 'company',
           recipientEmail: 'john@example.com',
-          defaultValue: 'Acme Corporation',
+          defaultValue: 'TurboDocx',
           isReadonly: true,
           template: {
             anchor: '{company}',
             placement: 'replace',
-            size: { width: 200, height: 30 }
+            size: { width: 100, height: 20 }
           }
         },
 
@@ -104,7 +104,7 @@ async function advancedFieldsExample() {
           template: {
             anchor: '{title}',
             placement: 'replace',
-            size: { width: 150, height: 30 }
+            size: { width: 75, height: 30 }
           }
         },
 
@@ -116,7 +116,7 @@ async function advancedFieldsExample() {
           template: {
             anchor: '{notes}',
             placement: 'replace',
-            size: { width: 400, height: 100 }
+            size: { width: 200, height: 50 }
           }
         }
       ]
