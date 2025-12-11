@@ -29,21 +29,39 @@ describe("TurboSign Module", () => {
     jest.clearAllMocks();
     // Reset static client
     (TurboSign as any).client = undefined;
+
+    // Mock getSenderConfig to return default values
+    MockedHttpClient.prototype.getSenderConfig = jest.fn().mockReturnValue({
+      senderEmail: "test@company.com",
+      senderName: "Test Company"
+    });
   });
 
   describe("configure", () => {
     it("should configure the client with API key", () => {
-      TurboSign.configure({ apiKey: "test-api-key" });
-      expect(MockedHttpClient).toHaveBeenCalledWith({ apiKey: "test-api-key" });
+      TurboSign.configure({
+        apiKey: "test-api-key",
+        orgId: "test-org-id",
+        senderEmail: "test@company.com"
+      });
+      expect(MockedHttpClient).toHaveBeenCalledWith({
+        apiKey: "test-api-key",
+        orgId: "test-org-id",
+        senderEmail: "test@company.com"
+      });
     });
 
     it("should configure with custom base URL", () => {
       TurboSign.configure({
         apiKey: "test-api-key",
+        orgId: "test-org-id",
+        senderEmail: "test@company.com",
         baseUrl: "https://custom-api.example.com",
       });
       expect(MockedHttpClient).toHaveBeenCalledWith({
         apiKey: "test-api-key",
+        orgId: "test-org-id",
+        senderEmail: "test@company.com",
         baseUrl: "https://custom-api.example.com",
       });
     });
@@ -52,10 +70,12 @@ describe("TurboSign Module", () => {
       TurboSign.configure({
         apiKey: "test-api-key",
         orgId: "org-123",
+        senderEmail: "test@company.com"
       });
       expect(MockedHttpClient).toHaveBeenCalledWith({
         apiKey: "test-api-key",
         orgId: "org-123",
+        senderEmail: "test@company.com"
       });
     });
   });
