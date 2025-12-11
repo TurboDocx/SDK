@@ -1,11 +1,13 @@
 /**
- * Complete TurboSign Workflow Example
+ * Complete TurboSign Workflow Example - Template Anchors
  *
- * This example demonstrates a complete workflow:
- * 1. Send signature request
+ * This example demonstrates a complete workflow using template anchors:
+ * 1. Send signature request with template anchors
  * 2. Check status
  * 3. Download signed document
  * 4. Get audit trail
+ *
+ * Add anchors like {signature1}, {date1}, {signature2} in your PDF.
  */
 
 import { TurboSign } from '@turbodocx/sdk';
@@ -42,29 +44,29 @@ async function completeWorkflowExample() {
         {
           type: 'signature',
           recipientEmail: 'john.doe@example.com',
-          page: 1,
-          x: 100,
-          y: 650,
-          width: 200,
-          height: 50
+          template: {
+            anchor: '{signature1}',
+            placement: 'replace',
+            size: { width: 200, height: 50 }
+          }
         },
         {
           type: 'date',
           recipientEmail: 'john.doe@example.com',
-          page: 1,
-          x: 100,
-          y: 600,
-          width: 150,
-          height: 30
+          template: {
+            anchor: '{date1}',
+            placement: 'replace',
+            size: { width: 150, height: 30 }
+          }
         },
         {
           type: 'signature',
           recipientEmail: 'jane.smith@example.com',
-          page: 1,
-          x: 350,
-          y: 650,
-          width: 200,
-          height: 50
+          template: {
+            anchor: '{signature2}',
+            placement: 'replace',
+            size: { width: 200, height: 50 }
+          }
         }
       ]
     });

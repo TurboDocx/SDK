@@ -1,8 +1,10 @@
 /**
- * TurboSign From Deliverable Example
+ * TurboSign From Deliverable Example - Template Anchors
  *
  * This example demonstrates creating a signature document from an existing deliverable
- * (a document previously generated with TurboDocx)
+ * (a document previously generated with TurboDocx).
+ *
+ * Add anchors like {signature} and {date} in your TurboDocx template.
  */
 
 import { TurboSign } from '@turbodocx/sdk';
@@ -34,20 +36,20 @@ async function createFromDeliverableExample() {
         {
           type: 'signature',
           recipientEmail: 'signer@example.com',
-          page: 1,
-          x: 100,
-          y: 650,
-          width: 200,
-          height: 50
+          template: {
+            anchor: '{signature}',
+            placement: 'replace',
+            size: { width: 200, height: 50 }
+          }
         },
         {
           type: 'date',
           recipientEmail: 'signer@example.com',
-          page: 1,
-          x: 100,
-          y: 600,
-          width: 150,
-          height: 30
+          template: {
+            anchor: '{date}',
+            placement: 'replace',
+            size: { width: 150, height: 30 }
+          }
         }
       ]
     });

@@ -1,7 +1,8 @@
 /**
- * TurboSign Multi-Party Example
+ * TurboSign Multi-Party Example - Template Anchors
  *
- * This example shows sending a document to multiple recipients with various field types
+ * This example shows sending a document to multiple recipients with template anchors.
+ * Add anchors like {signature_ceo}, {name_ceo}, {title_ceo}, {date_ceo} in your PDF.
  */
 
 import { TurboSign } from '@turbodocx/sdk';
@@ -28,111 +29,111 @@ async function multiPartyExample() {
         { email: 'cfo@company-c.com', name: 'Carol CFO', signingOrder: 3 }
       ],
       fields: [
-        // Page 1: Company A signatures
+        // Company A fields - use {signature_ceo}, {name_ceo}, {title_ceo}, {date_ceo} in PDF
         {
           type: 'signature',
-          page: 1,
-          x: 100,
-          y: 650,
-          width: 200,
-          height: 50,
-          recipientEmail: 'ceo@company-a.com'
+          recipientEmail: 'ceo@company-a.com',
+          template: {
+            anchor: '{signature_ceo}',
+            placement: 'replace',
+            size: { width: 200, height: 50 }
+          }
         },
         {
           type: 'full_name',
-          page: 1,
-          x: 100,
-          y: 610,
-          width: 200,
-          height: 30,
-          recipientEmail: 'ceo@company-a.com'
+          recipientEmail: 'ceo@company-a.com',
+          template: {
+            anchor: '{name_ceo}',
+            placement: 'replace',
+            size: { width: 200, height: 30 }
+          }
         },
         {
           type: 'title',
-          page: 1,
-          x: 100,
-          y: 580,
-          width: 200,
-          height: 30,
           recipientEmail: 'ceo@company-a.com',
-          defaultValue: 'Chief Executive Officer'
+          defaultValue: 'Chief Executive Officer',
+          template: {
+            anchor: '{title_ceo}',
+            placement: 'replace',
+            size: { width: 200, height: 30 }
+          }
         },
         {
           type: 'date',
-          page: 1,
-          x: 100,
-          y: 550,
-          width: 150,
-          height: 30,
-          recipientEmail: 'ceo@company-a.com'
+          recipientEmail: 'ceo@company-a.com',
+          template: {
+            anchor: '{date_ceo}',
+            placement: 'replace',
+            size: { width: 150, height: 30 }
+          }
         },
 
-        // Page 2: Company B signatures
+        // Company B fields - use {signature_legal}, {name_legal}, {company_legal}, {date_legal} in PDF
         {
           type: 'signature',
-          page: 2,
-          x: 100,
-          y: 650,
-          width: 200,
-          height: 50,
-          recipientEmail: 'legal@company-b.com'
+          recipientEmail: 'legal@company-b.com',
+          template: {
+            anchor: '{signature_legal}',
+            placement: 'replace',
+            size: { width: 200, height: 50 }
+          }
         },
         {
           type: 'full_name',
-          page: 2,
-          x: 100,
-          y: 610,
-          width: 200,
-          height: 30,
-          recipientEmail: 'legal@company-b.com'
+          recipientEmail: 'legal@company-b.com',
+          template: {
+            anchor: '{name_legal}',
+            placement: 'replace',
+            size: { width: 200, height: 30 }
+          }
         },
         {
           type: 'company',
-          page: 2,
-          x: 100,
-          y: 580,
-          width: 200,
-          height: 30,
           recipientEmail: 'legal@company-b.com',
-          defaultValue: 'Company B Legal Corp'
+          defaultValue: 'Company B Legal Corp',
+          template: {
+            anchor: '{company_legal}',
+            placement: 'replace',
+            size: { width: 200, height: 30 }
+          }
         },
         {
           type: 'date',
-          page: 2,
-          x: 100,
-          y: 550,
-          width: 150,
-          height: 30,
-          recipientEmail: 'legal@company-b.com'
+          recipientEmail: 'legal@company-b.com',
+          template: {
+            anchor: '{date_legal}',
+            placement: 'replace',
+            size: { width: 150, height: 30 }
+          }
         },
 
-        // Page 3: Company C signatures
+        // Company C fields - use {signature_cfo}, {name_cfo}, {date_cfo} in PDF
         {
           type: 'signature',
-          page: 3,
-          x: 100,
-          y: 650,
-          width: 200,
-          height: 50,
-          recipientEmail: 'cfo@company-c.com'
+          recipientEmail: 'cfo@company-c.com',
+          template: {
+            anchor: '{signature_cfo}',
+            placement: 'replace',
+            size: { width: 200, height: 50 }
+          }
         },
         {
           type: 'full_name',
-          page: 3,
-          x: 100,
-          y: 610,
-          width: 200,
-          height: 30,
-          recipientEmail: 'cfo@company-c.com'
+          recipientEmail: 'cfo@company-c.com',
+          template: {
+            anchor: '{name_cfo}',
+            placement: 'replace',
+            size: { width: 200, height: 30 }
+          }
         },
         {
           type: 'date',
-          page: 3,
-          x: 100,
-          y: 580,
-          width: 150,
-          height: 30,
-          recipientEmail: 'cfo@company-c.com'
+          recipientEmail: 'cfo@company-c.com',
+          template: {
+            anchor: '{date_cfo}',
+            placement: 'replace',
+            size: { width: 150, height: 30 }
+          }
         }
       ],
       ccEmails: ['legal-team@company-a.com', 'compliance@company-b.com']
