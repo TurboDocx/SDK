@@ -57,23 +57,31 @@ bun add @turbodocx/sdk
 ```typescript
 import { TurboSign } from '@turbodocx/sdk';
 
-// 1. Configure with your API key
+// 1. Configure with your API key and sender information
 TurboSign.configure({
-  apiKey: process.env.TURBODOCX_API_KEY
+  apiKey: process.env.TURBODOCX_API_KEY,
+  orgId: process.env.TURBODOCX_ORG_ID,
+  senderEmail: process.env.TURBODOCX_SENDER_EMAIL,  // REQUIRED
+  senderName: process.env.TURBODOCX_SENDER_NAME     // OPTIONAL (but strongly recommended)
 });
 
 // 2. Send a document for signature
 const result = await TurboSign.sendSignature({
-  fileLink: 'https://example.com/contract.pdf',
+  file: pdfBuffer,
+  documentName: 'Partnership Agreement',
   recipients: [
-    { name: 'John Doe', email: 'john@example.com', order: 1 }
+    { name: 'John Doe', email: 'john@example.com', signingOrder: 1 }
   ],
   fields: [
-    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }
+    {
+      type: 'signature',
+      recipientEmail: 'john@example.com',
+      template: { anchor: '{signature1}', placement: 'replace', size: { width: 100, height: 30 } }
+    }
   ]
 });
 
-console.log('Sign URL:', result.recipients[0].signUrl);
+console.log('Document ID:', result.documentId);
 ```
 
 ---
@@ -83,31 +91,45 @@ console.log('Sign URL:', result.recipients[0].signUrl);
 ```typescript
 import { TurboSign } from '@turbodocx/sdk';
 
-// Basic configuration
+// Basic configuration (REQUIRED)
 TurboSign.configure({
-  apiKey: 'your-api-key'
+  apiKey: 'your-api-key',           // REQUIRED
+  orgId: 'your-org-id',             // REQUIRED
+  senderEmail: 'you@company.com',   // REQUIRED - reply-to address for signature requests
+  senderName: 'Your Company'        // OPTIONAL but strongly recommended
 });
 
 // With custom options
 TurboSign.configure({
   apiKey: 'your-api-key',
+  orgId: 'your-org-id',
+  senderEmail: 'you@company.com',
+  senderName: 'Your Company',
   baseUrl: 'https://custom-api.example.com',  // Optional: custom API endpoint
   timeout: 30000,                              // Optional: request timeout (ms)
 });
 ```
 
+**Important:** `senderEmail` is **REQUIRED**. This email will be used as the reply-to address for signature request emails. Without it, emails will default to "API Service User via TurboSign". The `senderName` is optional but strongly recommended for a professional appearance.
+
 ### Environment Variables
 
-We recommend using environment variables for your API key:
+We recommend using environment variables for your configuration:
 
 ```bash
 # .env
 TURBODOCX_API_KEY=your-api-key
+TURBODOCX_ORG_ID=your-org-id
+TURBODOCX_SENDER_EMAIL=you@company.com
+TURBODOCX_SENDER_NAME=Your Company Name
 ```
 
 ```typescript
 TurboSign.configure({
-  apiKey: process.env.TURBODOCX_API_KEY
+  apiKey: process.env.TURBODOCX_API_KEY,
+  orgId: process.env.TURBODOCX_ORG_ID,
+  senderEmail: process.env.TURBODOCX_SENDER_EMAIL,
+  senderName: process.env.TURBODOCX_SENDER_NAME
 });
 ```
 
@@ -243,6 +265,12 @@ await TurboSign.resend('doc-uuid-here', ['recipient-uuid-1', 'recipient-uuid-2']
 ---
 
 ## Examples
+
+For complete, working examples including template anchors, advanced field types, and various workflows, see the [`examples/`](./examples/) directory:
+
+- [`turbosign-send-simple.ts`](./examples/turbosign-send-simple.ts) - Send document directly with template anchors
+- [`turbosign-basic.ts`](./examples/turbosign-basic.ts) - Create review link first, then send manually
+- [`turbosign-advanced.ts`](./examples/turbosign-advanced.ts) - Advanced field types (checkbox, readonly, multiline text, etc.)
 
 ### Sequential Signing (Multiple Recipients)
 
