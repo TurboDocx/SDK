@@ -150,13 +150,12 @@ If you'd like to add support for a new language:
 
 1. Create a new directory: `packages/<language>-sdk/`
 2. Implement the TurboSign client with these operations:
-   - `prepareForReview`
-   - `prepareForSigningSingle`
-   - `getStatus`
-   - `download`
-   - `voidDocument`
-   - `resendEmail`
-3. Write 16 tests matching the test parity of existing SDKs
+   - **TypeScript/JavaScript**: `createSignatureReviewLink`, `sendSignature`, `getStatus`, `download`, `void`, `resend`
+   - **Python**: `create_signature_review_link`, `send_signature`, `get_status`, `download`, `void_document`, `resend_email`
+   - **Java**: `createSignatureReviewLink`, `sendSignature`, `getStatus`, `download`, `voidDocument`, `resendEmail`
+   - **Go**: `CreateSignatureReviewLink`, `SendSignature`, `GetStatus`, `Download`, `VoidDocument`, `ResendEmail`
+   - Follow language-specific naming conventions (camelCase, snake_case, PascalCase, etc.)
+3. Write comprehensive tests matching the test parity of existing SDKs
 4. Add CI workflow in `.github/workflows/`
 5. Add publish workflow for the language's package manager
 6. Create a README with installation and usage instructions

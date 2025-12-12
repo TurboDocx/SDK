@@ -100,9 +100,9 @@ from turbodocx_sdk import TurboSignSync
 
 TurboSignSync.configure(api_key="your-api-key")
 
-result = TurboSignSync.prepare_for_signing_single(
+result = TurboSignSync.send_signature(
     file_link="https://example.com/contract.pdf",
-    recipients=[{"name": "John Doe", "email": "john@example.com", "order": 1}],
+    recipients=[{"name": "John Doe", "email": "john@example.com", "signingOrder": 1}],
     fields=[{"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientOrder": 1}]
 )
 ```
@@ -173,18 +173,18 @@ TurboSign.configure(
 
 ### TurboSign
 
-#### `prepare_for_review()`
+#### `create_signature_review_link()`
 
 Upload a document for review without sending signature emails.
 
 ```python
-result = await TurboSign.prepare_for_review(
+result = await TurboSign.create_signature_review_link(
     file_link="https://example.com/contract.pdf",
     recipients=[
-        {"name": "John Doe", "email": "john@example.com", "order": 1}
+        {"name": "John Doe", "email": "john@example.com", "signingOrder": 1}
     ],
     fields=[
-        {"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientOrder": 1}
+        {"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientEmail": "john@example.com"}
     ],
     document_name="Service Agreement",        # Optional
     document_description="Q4 Contract",       # Optional
@@ -197,20 +197,20 @@ print(f"Preview URL: {result['previewUrl']}")
 print(f"Document ID: {result['documentId']}")
 ```
 
-#### `prepare_for_signing_single()`
+#### `send_signature()`
 
 Upload a document and immediately send signature request emails.
 
 ```python
-result = await TurboSign.prepare_for_signing_single(
+result = await TurboSign.send_signature(
     file_link="https://example.com/contract.pdf",
     recipients=[
-        {"name": "Alice", "email": "alice@example.com", "order": 1},
-        {"name": "Bob", "email": "bob@example.com", "order": 2}
+        {"name": "Alice", "email": "alice@example.com", "signingOrder": 1},
+        {"name": "Bob", "email": "bob@example.com", "signingOrder": 2}
     ],
     fields=[
-        {"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientOrder": 1},
-        {"type": "signature", "page": 1, "x": 100, "y": 600, "width": 200, "height": 50, "recipientOrder": 2}
+        {"type": "signature", "recipientEmail": "alice@example.com", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50},
+        {"type": "signature", "recipientEmail": "bob@example.com", "page": 1, "x": 100, "y": 600, "width": 200, "height": 50}
     ]
 )
 
@@ -243,20 +243,20 @@ with open("signed-contract.pdf", "wb") as f:
     f.write(pdf_bytes)
 ```
 
-#### `void()`
+#### `void_document()`
 
 Cancel a signature request.
 
 ```python
-await TurboSign.void("doc-uuid-here", reason="Contract terms changed")
+await TurboSign.void_document("doc-uuid-here", reason="Contract terms changed")
 ```
 
-#### `resend()`
+#### `resend_email()`
 
 Resend signature request emails.
 
 ```python
-await TurboSign.resend("doc-uuid-here", recipient_ids=["recipient-uuid-1"])
+await TurboSign.resend_email("doc-uuid-here", recipient_ids=["recipient-uuid-1"])
 ```
 
 ---
@@ -284,21 +284,21 @@ For complete, working examples including template anchors, advanced field types,
 ### Sequential Signing
 
 ```python
-result = await TurboSign.prepare_for_signing_single(
+result = await TurboSign.send_signature(
     file_link="https://example.com/contract.pdf",
     recipients=[
-        {"name": "Employee", "email": "employee@company.com", "order": 1},
-        {"name": "Manager", "email": "manager@company.com", "order": 2},
-        {"name": "HR", "email": "hr@company.com", "order": 3}
+        {"name": "Employee", "email": "employee@company.com", "signingOrder": 1},
+        {"name": "Manager", "email": "manager@company.com", "signingOrder": 2},
+        {"name": "HR", "email": "hr@company.com", "signingOrder": 3}
     ],
     fields=[
         # Employee signs first
-        {"type": "signature", "page": 1, "x": 100, "y": 400, "width": 200, "height": 50, "recipientOrder": 1},
-        {"type": "date", "page": 1, "x": 320, "y": 400, "width": 100, "height": 30, "recipientOrder": 1},
+        {"type": "signature", "recipientEmail": "employee@company.com", "page": 1, "x": 100, "y": 400, "width": 200, "height": 50},
+        {"type": "date", "recipientEmail": "employee@company.com", "page": 1, "x": 320, "y": 400, "width": 100, "height": 30},
         # Manager signs second
-        {"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientOrder": 2},
+        {"type": "signature", "recipientEmail": "manager@company.com", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50},
         # HR signs last
-        {"type": "signature", "page": 1, "x": 100, "y": 600, "width": 200, "height": 50, "recipientOrder": 3}
+        {"type": "signature", "recipientEmail": "hr@company.com", "page": 1, "x": 100, "y": 600, "width": 200, "height": 50}
     ]
 )
 ```
@@ -336,7 +336,7 @@ TurboSign.configure(api_key=os.environ["TURBODOCX_API_KEY"])
 @app.post("/api/send-contract")
 async def send_contract(pdf_url: str, recipients: list, fields: list):
     try:
-        result = await TurboSign.prepare_for_signing_single(
+        result = await TurboSign.send_signature(
             file_link=pdf_url,
             recipients=recipients,
             fields=fields
@@ -356,7 +356,7 @@ import os
 TurboSignSync.configure(api_key=os.environ["TURBODOCX_API_KEY"])
 
 def send_contract(request):
-    result = TurboSignSync.prepare_for_signing_single(
+    result = TurboSignSync.send_signature(
         file_link=request.POST["pdf_url"],
         recipients=request.POST["recipients"],
         fields=request.POST["fields"]
@@ -383,12 +383,12 @@ python manual_test.py
 ### What It Tests
 
 The `manual_test.py` file tests all SDK methods:
-- ✅ `prepare_for_review()` - Document upload for review
-- ✅ `prepare_for_signing_single()` - Send for signature
+- ✅ `create_signature_review_link()` - Document upload for review
+- ✅ `send_signature()` - Send for signature
 - ✅ `get_status()` - Check document status
 - ✅ `download()` - Download signed document
-- ✅ `void()` - Cancel signature request
-- ✅ `resend()` - Resend signature emails
+- ✅ `void_document()` - Cancel signature request
+- ✅ `resend_email()` - Resend signature emails
 
 ### Configuration
 

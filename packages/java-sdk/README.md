@@ -169,13 +169,13 @@ export TURBODOCX_SENDER_NAME="Your Company Name"
 
 ### TurboSign
 
-#### `prepareForReview()`
+#### `createSignatureReviewLink()`
 
 Upload a document for review without sending signature emails.
 
 ```java
-PrepareForReviewResponse result = client.turboSign().prepareForReview(
-    new PrepareForReviewRequest.Builder()
+CreateSignatureReviewLinkResponse result = client.turboSign().createSignatureReviewLink(
+    new CreateSignatureReviewLinkRequest.Builder()
         .fileLink("https://example.com/contract.pdf")
         .recipients(Arrays.asList(
             new Recipient("John Doe", "john@example.com", 1)
@@ -185,7 +185,7 @@ PrepareForReviewResponse result = client.turboSign().prepareForReview(
                 .type("signature")
                 .page(1).x(100).y(500)
                 .width(200).height(50)
-                .recipientOrder(1)
+                .recipientEmail("john@example.com")
                 .build()
         ))
         .documentName("Service Agreement")       // Optional
@@ -198,21 +198,21 @@ System.out.println("Preview URL: " + result.getPreviewUrl());
 System.out.println("Document ID: " + result.getDocumentId());
 ```
 
-#### `prepareForSigningSingle()`
+#### `sendSignature()`
 
 Upload a document and immediately send signature request emails.
 
 ```java
-PrepareForSigningResponse result = client.turboSign().prepareForSigningSingle(
-    new PrepareForSigningRequest.Builder()
+SendSignatureResponse result = client.turboSign().sendSignature(
+    new SendSignatureRequest.Builder()
         .fileLink("https://example.com/contract.pdf")
         .recipients(Arrays.asList(
             new Recipient("Alice", "alice@example.com", 1),
             new Recipient("Bob", "bob@example.com", 2)
         ))
         .fields(Arrays.asList(
-            new Field.Builder().type("signature").page(1).x(100).y(500).width(200).height(50).recipientOrder(1).build(),
-            new Field.Builder().type("signature").page(1).x(100).y(600).width(200).height(50).recipientOrder(2).build()
+            new Field.Builder().type("signature").recipientEmail("alice@example.com").page(1).x(100).y(500).width(200).height(50).build(),
+            new Field.Builder().type("signature").recipientEmail("bob@example.com").page(1).x(100).y(600).width(200).height(50).build()
         ))
         .build()
 );
@@ -255,12 +255,12 @@ Cancel a signature request.
 client.turboSign().voidDocument("doc-uuid-here", "Contract terms changed");
 ```
 
-#### `resend()`
+#### `resendEmail()`
 
 Resend signature request emails.
 
 ```java
-client.turboSign().resend("doc-uuid-here", Arrays.asList("recipient-uuid-1"));
+client.turboSign().resendEmail("doc-uuid-here", Arrays.asList("recipient-uuid-1"));
 ```
 
 ---
@@ -284,8 +284,8 @@ For complete, working examples including template anchors, advanced field types,
 ### Sequential Signing
 
 ```java
-PrepareForSigningResponse result = client.turboSign().prepareForSigningSingle(
-    new PrepareForSigningRequest.Builder()
+SendSignatureResponse result = client.turboSign().sendSignature(
+    new SendSignatureRequest.Builder()
         .fileLink("https://example.com/contract.pdf")
         .recipients(Arrays.asList(
             new Recipient("Employee", "employee@company.com", 1),
@@ -294,12 +294,12 @@ PrepareForSigningResponse result = client.turboSign().prepareForSigningSingle(
         ))
         .fields(Arrays.asList(
             // Employee signs first
-            new Field.Builder().type("signature").page(1).x(100).y(400).width(200).height(50).recipientOrder(1).build(),
-            new Field.Builder().type("date").page(1).x(320).y(400).width(100).height(30).recipientOrder(1).build(),
+            new Field.Builder().type("signature").recipientEmail("employee@company.com").page(1).x(100).y(400).width(200).height(50).build(),
+            new Field.Builder().type("date").recipientEmail("employee@company.com").page(1).x(320).y(400).width(100).height(30).build(),
             // Manager signs second
-            new Field.Builder().type("signature").page(1).x(100).y(500).width(200).height(50).recipientOrder(2).build(),
+            new Field.Builder().type("signature").recipientEmail("manager@company.com").page(1).x(100).y(500).width(200).height(50).build(),
             // HR signs last
-            new Field.Builder().type("signature").page(1).x(100).y(600).width(200).height(50).recipientOrder(3).build()
+            new Field.Builder().type("signature").recipientEmail("hr@company.com").page(1).x(100).y(600).width(200).height(50).build()
         ))
         .build()
 );
@@ -350,8 +350,8 @@ public class ContractController {
 
     @PostMapping("/send")
     public ResponseEntity<Map<String, String>> sendContract(@RequestBody SendContractRequest request) {
-        PrepareForSigningResponse result = client.turboSign().prepareForSigningSingle(
-            new PrepareForSigningRequest.Builder()
+        SendSignatureResponse result = client.turboSign().sendSignature(
+            new SendSignatureRequest.Builder()
                 .fileLink(request.getPdfUrl())
                 .recipients(request.getRecipients())
                 .fields(request.getFields())
@@ -383,12 +383,12 @@ java -cp target/classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/
 ### What It Tests
 
 The `ManualTest.java` class tests all SDK methods:
-- ✅ `prepareForReview()` - Document upload for review
-- ✅ `prepareForSigningSingle()` - Send for signature
+- ✅ `createSignatureReviewLink()` - Document upload for review
+- ✅ `sendSignature()` - Send for signature
 - ✅ `getStatus()` - Check document status
 - ✅ `download()` - Download signed document
 - ✅ `voidDocument()` - Cancel signature request
-- ✅ `resend()` - Resend signature emails
+- ✅ `resendEmail()` - Resend signature emails
 
 ### Configuration
 
