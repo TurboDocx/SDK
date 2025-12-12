@@ -322,28 +322,22 @@ We're looking for community maintainers for each SDK. Interested? [Open an issue
 
 <table>
 <tr>
-<td align="center" width="25%">
+<td align="center" width="33%">
 <a href="https://docs.turbodocx.com">
 <img src="https://cdn-icons-png.flaticon.com/512/2991/2991112.png" width="40"/><br/>
 <strong>Documentation</strong>
 </a>
 </td>
-<td align="center" width="25%">
+<td align="center" width="33%">
 <a href="https://discord.gg/NYKwz4BcpX">
 <img src="https://cdn-icons-png.flaticon.com/512/5968/5968756.png" width="40"/><br/>
 <strong>Discord</strong>
 </a>
 </td>
-<td align="center" width="25%">
+<td align="center" width="33%">
 <a href="https://github.com/TurboDocx/SDK/issues">
 <img src="https://cdn-icons-png.flaticon.com/512/733/733553.png" width="40"/><br/>
 <strong>GitHub Issues</strong>
-</a>
-</td>
-<td align="center" width="25%">
-<a href="mailto:support@turbodocx.com">
-<img src="https://cdn-icons-png.flaticon.com/512/732/732200.png" width="40"/><br/>
-<strong>Email</strong>
 </a>
 </td>
 </tr>
