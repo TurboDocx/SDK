@@ -60,6 +60,7 @@ class TurboSignTest {
         TurboDocxClient testClient = new TurboDocxClient.Builder()
                 .apiKey("test-api-key")
                 .orgId("test-org-id")
+                .senderEmail("test@example.com")
                 .build();
         assertNotNull(testClient);
         assertNotNull(testClient.turboSign());
@@ -71,6 +72,7 @@ class TurboSignTest {
         TurboDocxClient testClient = new TurboDocxClient.Builder()
                 .apiKey("test-api-key")
                 .orgId("test-org-id")
+                .senderEmail("test@example.com")
                 .baseUrl("https://custom-api.example.com")
                 .build();
         assertNotNull(testClient);
