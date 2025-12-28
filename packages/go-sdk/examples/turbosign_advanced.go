@@ -41,7 +41,6 @@ func main() {
 	fmt.Println("Creating review link with advanced field types...\n")
 
 	ctx := context.Background()
-	trueVal := true
 	result, err := client.TurboSign.CreateSignatureReviewLink(ctx, &turbodocx.CreateSignatureReviewLinkRequest{
 		File:                pdfFile,
 		FileName:            "advanced-contract.pdf",
@@ -55,75 +54,75 @@ func main() {
 			{
 				Type:           "signature",
 				RecipientEmail: "john@example.com",
-				Template: &turbodocx.FieldTemplate{
+				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{signature}",
 					Placement: "replace",
-					Size:      &turbodocx.FieldSize{Width: 100, Height: 30},
+					Size:      &turbodocx.Size{Width: 100, Height: 30},
 				},
 			},
 			// Date field
 			{
 				Type:           "date",
 				RecipientEmail: "john@example.com",
-				Template: &turbodocx.FieldTemplate{
+				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{date}",
 					Placement: "replace",
-					Size:      &turbodocx.FieldSize{Width: 75, Height: 30},
+					Size:      &turbodocx.Size{Width: 75, Height: 30},
 				},
 			},
 			// Full name field
 			{
 				Type:           "full_name",
 				RecipientEmail: "john@example.com",
-				Template: &turbodocx.FieldTemplate{
+				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{printed_name}",
 					Placement: "replace",
-					Size:      &turbodocx.FieldSize{Width: 100, Height: 20},
+					Size:      &turbodocx.Size{Width: 100, Height: 20},
 				},
 			},
 			// Readonly field with default value (pre-filled)
 			{
 				Type:           "company",
 				RecipientEmail: "john@example.com",
-				DefaultValue:   strPtr("TurboDocx"),
-				IsReadonly:     &trueVal,
-				Template: &turbodocx.FieldTemplate{
+				DefaultValue:   "TurboDocx",
+				IsReadonly:     true,
+				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{company}",
 					Placement: "replace",
-					Size:      &turbodocx.FieldSize{Width: 100, Height: 20},
+					Size:      &turbodocx.Size{Width: 100, Height: 20},
 				},
 			},
 			// Required checkbox with default checked
 			{
 				Type:           "checkbox",
 				RecipientEmail: "john@example.com",
-				DefaultValue:   strPtr("true"),
-				Required:       &trueVal,
-				Template: &turbodocx.FieldTemplate{
+				DefaultValue:   "true",
+				Required:       true,
+				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{terms_checkbox}",
 					Placement: "replace",
-					Size:      &turbodocx.FieldSize{Width: 20, Height: 20},
+					Size:      &turbodocx.Size{Width: 20, Height: 20},
 				},
 			},
 			// Title field
 			{
 				Type:           "title",
 				RecipientEmail: "john@example.com",
-				Template: &turbodocx.FieldTemplate{
+				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{title}",
 					Placement: "replace",
-					Size:      &turbodocx.FieldSize{Width: 75, Height: 30},
+					Size:      &turbodocx.Size{Width: 75, Height: 30},
 				},
 			},
 			// Multiline text field
 			{
 				Type:           "text",
 				RecipientEmail: "john@example.com",
-				IsMultiline:    &trueVal,
-				Template: &turbodocx.FieldTemplate{
+				IsMultiline:    true,
+				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{notes}",
 					Placement: "replace",
-					Size:      &turbodocx.FieldSize{Width: 200, Height: 50},
+					Size:      &turbodocx.Size{Width: 200, Height: 50},
 				},
 			},
 		},
@@ -156,8 +155,4 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
-}
-
-func strPtr(s string) *string {
-	return &s
 }

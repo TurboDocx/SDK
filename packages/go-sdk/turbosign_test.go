@@ -13,7 +13,11 @@ import (
 
 func TestClient_Configure(t *testing.T) {
 	t.Run("with API key and org ID", func(t *testing.T) {
-		client, err := NewClient("test-api-key", "test-org-id")
+		client, err := NewClientWithConfig(ClientConfig{
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			SenderEmail: "test@example.com",
+		})
 		require.NoError(t, err)
 		assert.NotNil(t, client)
 		assert.NotNil(t, client.TurboSign)
@@ -21,9 +25,10 @@ func TestClient_Configure(t *testing.T) {
 
 	t.Run("with custom base URL", func(t *testing.T) {
 		client, err := NewClientWithConfig(ClientConfig{
-			APIKey:  "test-api-key",
-			OrgID:   "test-org-id",
-			BaseURL: "https://custom-api.example.com",
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			BaseURL:     "https://custom-api.example.com",
+			SenderEmail: "test@example.com",
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, client)
@@ -66,9 +71,10 @@ func TestTurboSignClient_CreateSignatureReviewLink(t *testing.T) {
 		defer server.Close()
 
 		client, _ := NewClientWithConfig(ClientConfig{
-			APIKey:  "test-api-key",
-			OrgID:   "test-org-id",
-			BaseURL: server.URL,
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
+			SenderEmail: "test@example.com",
 		})
 
 		result, err := client.TurboSign.CreateSignatureReviewLink(context.Background(), &CreateSignatureReviewLinkRequest{
@@ -101,9 +107,10 @@ func TestTurboSignClient_CreateSignatureReviewLink(t *testing.T) {
 		defer server.Close()
 
 		client, _ := NewClientWithConfig(ClientConfig{
-			APIKey:  "test-api-key",
-			OrgID:   "test-org-id",
-			BaseURL: server.URL,
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
+			SenderEmail: "test@example.com",
 		})
 
 		result, err := client.TurboSign.CreateSignatureReviewLink(context.Background(), &CreateSignatureReviewLinkRequest{
@@ -133,9 +140,10 @@ func TestTurboSignClient_CreateSignatureReviewLink(t *testing.T) {
 		defer server.Close()
 
 		client, _ := NewClientWithConfig(ClientConfig{
-			APIKey:  "test-api-key",
-			OrgID:   "test-org-id",
-			BaseURL: server.URL,
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
+			SenderEmail: "test@example.com",
 		})
 
 		result, err := client.TurboSign.CreateSignatureReviewLink(context.Background(), &CreateSignatureReviewLinkRequest{
@@ -166,9 +174,10 @@ func TestTurboSignClient_CreateSignatureReviewLink(t *testing.T) {
 		defer server.Close()
 
 		client, _ := NewClientWithConfig(ClientConfig{
-			APIKey:  "test-api-key",
-			OrgID:   "test-org-id",
-			BaseURL: server.URL,
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
+			SenderEmail: "test@example.com",
 		})
 
 		result, err := client.TurboSign.CreateSignatureReviewLink(context.Background(), &CreateSignatureReviewLinkRequest{
@@ -202,9 +211,10 @@ func TestTurboSignClient_SendSignature(t *testing.T) {
 		defer server.Close()
 
 		client, _ := NewClientWithConfig(ClientConfig{
-			APIKey:  "test-api-key",
-			OrgID:   "test-org-id",
-			BaseURL: server.URL,
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
+			SenderEmail: "test@example.com",
 		})
 
 		result, err := client.TurboSign.SendSignature(context.Background(), &SendSignatureRequest{
@@ -235,9 +245,10 @@ func TestTurboSignClient_SendSignature(t *testing.T) {
 		defer server.Close()
 
 		client, _ := NewClientWithConfig(ClientConfig{
-			APIKey:  "test-api-key",
-			OrgID:   "test-org-id",
-			BaseURL: server.URL,
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
+			SenderEmail: "test@example.com",
 		})
 
 		result, err := client.TurboSign.SendSignature(context.Background(), &SendSignatureRequest{
@@ -281,9 +292,10 @@ func TestTurboSignClient_GetStatus(t *testing.T) {
 	defer server.Close()
 
 	client, _ := NewClientWithConfig(ClientConfig{
-		APIKey:  "test-api-key",
-		OrgID:   "test-org-id",
-		BaseURL: server.URL,
+		APIKey:      "test-api-key",
+		OrgID:       "test-org-id",
+		BaseURL:     server.URL,
+		SenderEmail: "test@example.com",
 	})
 
 	result, err := client.TurboSign.GetStatus(context.Background(), "doc-123")
@@ -318,9 +330,10 @@ func TestTurboSignClient_Download(t *testing.T) {
 	defer server.Close()
 
 	client, _ := NewClientWithConfig(ClientConfig{
-		APIKey:  "test-api-key",
-		OrgID:   "test-org-id",
-		BaseURL: server.URL,
+		APIKey:      "test-api-key",
+		OrgID:       "test-org-id",
+		BaseURL:     server.URL,
+		SenderEmail: "test@example.com",
 	})
 
 	result, err := client.TurboSign.Download(context.Background(), "doc-123")
@@ -344,9 +357,10 @@ func TestTurboSignClient_VoidDocument(t *testing.T) {
 	defer server.Close()
 
 	client, _ := NewClientWithConfig(ClientConfig{
-		APIKey:  "test-api-key",
-		OrgID:   "test-org-id",
-		BaseURL: server.URL,
+		APIKey:      "test-api-key",
+		OrgID:       "test-org-id",
+		BaseURL:     server.URL,
+		SenderEmail: "test@example.com",
 	})
 
 	result, err := client.TurboSign.VoidDocument(context.Background(), "doc-123", "Document needs revision")
@@ -370,9 +384,10 @@ func TestTurboSignClient_ResendEmail(t *testing.T) {
 	defer server.Close()
 
 	client, _ := NewClientWithConfig(ClientConfig{
-		APIKey:  "test-api-key",
-		OrgID:   "test-org-id",
-		BaseURL: server.URL,
+		APIKey:      "test-api-key",
+		OrgID:       "test-org-id",
+		BaseURL:     server.URL,
+		SenderEmail: "test@example.com",
 	})
 
 	result, err := client.TurboSign.ResendEmail(context.Background(), "doc-123", []string{"rec-1", "rec-2"})
@@ -410,9 +425,10 @@ func TestTurboSignClient_GetAuditTrail(t *testing.T) {
 	defer server.Close()
 
 	client, _ := NewClientWithConfig(ClientConfig{
-		APIKey:  "test-api-key",
-		OrgID:   "test-org-id",
-		BaseURL: server.URL,
+		APIKey:      "test-api-key",
+		OrgID:       "test-org-id",
+		BaseURL:     server.URL,
+		SenderEmail: "test@example.com",
 	})
 
 	result, err := client.TurboSign.GetAuditTrail(context.Background(), "doc-123")
@@ -436,9 +452,10 @@ func TestClient_ErrorHandling(t *testing.T) {
 		defer server.Close()
 
 		client, _ := NewClientWithConfig(ClientConfig{
-			APIKey:  "test-api-key",
-			OrgID:   "test-org-id",
-			BaseURL: server.URL,
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
+			SenderEmail: "test@example.com",
 		})
 
 		_, err := client.TurboSign.GetStatus(context.Background(), "invalid-doc")
@@ -485,9 +502,10 @@ func TestClient_ErrorHandling(t *testing.T) {
 		defer server.Close()
 
 		client, _ := NewClientWithConfig(ClientConfig{
-			APIKey:  "test-api-key",
-			OrgID:   "test-org-id",
-			BaseURL: server.URL,
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
+			SenderEmail: "test@example.com",
 		})
 
 		_, err := client.TurboSign.SendSignature(context.Background(), &SendSignatureRequest{
@@ -517,9 +535,10 @@ func TestClient_ErrorHandling(t *testing.T) {
 		defer server.Close()
 
 		client, _ := NewClientWithConfig(ClientConfig{
-			APIKey:  "test-api-key",
-			OrgID:   "test-org-id",
-			BaseURL: server.URL,
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
+			SenderEmail: "test@example.com",
 		})
 
 		_, err := client.TurboSign.GetStatus(context.Background(), "doc-123")

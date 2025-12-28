@@ -41,6 +41,7 @@ class TurboSignTest {
                 .apiKey("test-api-key")
                 .orgId("test-org-id")
                 .baseUrl(server.url("/").toString())
+                .senderEmail("test@example.com")
                 .build();
     }
 

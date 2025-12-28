@@ -21,7 +21,7 @@ class TestTurboSignConfigure:
 
     def test_configure_with_api_key_and_org_id(self):
         """Should configure the client with API key and org ID"""
-        TurboSign.configure(api_key="test-api-key", org_id="test-org-id")
+        TurboSign.configure(api_key="test-api-key", org_id="test-org-id", sender_email="test@example.com")
         assert TurboSign._client is not None
         assert TurboSign._client.api_key == "test-api-key"
         assert TurboSign._client.org_id == "test-org-id"
@@ -31,7 +31,8 @@ class TestTurboSignConfigure:
         TurboSign.configure(
             api_key="test-api-key",
             org_id="test-org-id",
-            base_url="https://custom-api.example.com"
+            base_url="https://custom-api.example.com",
+            sender_email="test@example.com"
         )
         assert TurboSign._client.base_url == "https://custom-api.example.com"
 

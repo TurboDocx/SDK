@@ -52,56 +52,56 @@ func main() {
 			{
 				Type:           "full_name",
 				RecipientEmail: "john@example.com",
-				Template: &turbodocx.FieldTemplate{
+				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{name1}",
 					Placement: "replace",
-					Size:      &turbodocx.FieldSize{Width: 100, Height: 30},
+					Size:      &turbodocx.Size{Width: 100, Height: 30},
 				},
 			},
 			{
 				Type:           "signature",
 				RecipientEmail: "john@example.com",
-				Template: &turbodocx.FieldTemplate{
+				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{signature1}", // Text in your PDF to replace
 					Placement: "replace",       // Replace the anchor text
-					Size:      &turbodocx.FieldSize{Width: 100, Height: 30},
+					Size:      &turbodocx.Size{Width: 100, Height: 30},
 				},
 			},
 			{
 				Type:           "date",
 				RecipientEmail: "john@example.com",
-				Template: &turbodocx.FieldTemplate{
+				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{date1}",
 					Placement: "replace",
-					Size:      &turbodocx.FieldSize{Width: 75, Height: 30},
+					Size:      &turbodocx.Size{Width: 75, Height: 30},
 				},
 			},
 			// Second recipient's fields
 			{
 				Type:           "full_name",
 				RecipientEmail: "jane@example.com",
-				Template: &turbodocx.FieldTemplate{
+				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{name2}",
 					Placement: "replace",
-					Size:      &turbodocx.FieldSize{Width: 100, Height: 30},
+					Size:      &turbodocx.Size{Width: 100, Height: 30},
 				},
 			},
 			{
 				Type:           "signature",
 				RecipientEmail: "jane@example.com",
-				Template: &turbodocx.FieldTemplate{
+				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{signature2}",
 					Placement: "replace",
-					Size:      &turbodocx.FieldSize{Width: 100, Height: 30},
+					Size:      &turbodocx.Size{Width: 100, Height: 30},
 				},
 			},
 			{
 				Type:           "date",
 				RecipientEmail: "jane@example.com",
-				Template: &turbodocx.FieldTemplate{
+				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{date2}",
 					Placement: "replace",
-					Size:      &turbodocx.FieldSize{Width: 75, Height: 30},
+					Size:      &turbodocx.Size{Width: 75, Height: 30},
 				},
 			},
 		},
