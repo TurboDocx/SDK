@@ -279,7 +279,11 @@ client.turboSign().resendEmail("doc-uuid-here", Arrays.asList("recipient-uuid-1"
 
 ## Examples
 
-For complete, working examples including template anchors, advanced field types, and various workflows, see the [`examples/`](./examples/) directory.
+For complete, working examples including template anchors, advanced field types, and various workflows, see the [`examples/`](./examples/) directory:
+
+- [`TurboSignSendSimple.java`](./examples/TurboSignSendSimple.java) - Send document directly with template anchors
+- [`TurboSignBasic.java`](./examples/TurboSignBasic.java) - Create review link first, then send manually
+- [`TurboSignAdvanced.java`](./examples/TurboSignAdvanced.java) - Advanced field types (checkbox, readonly, multiline text, etc.)
 
 ### Sequential Signing
 

@@ -249,6 +249,8 @@ err := client.TurboSign.Resend(ctx, "doc-uuid-here", []string{"recipient-uuid-1"
 For complete, working examples including template anchors, advanced field types, and various workflows, see the [`examples/`](./examples/) directory:
 
 - [`turbosign_send_simple.go`](./examples/turbosign_send_simple.go) - Send document directly with template anchors
+- [`turbosign_basic.go`](./examples/turbosign_basic.go) - Create review link first, then send manually
+- [`turbosign_advanced.go`](./examples/turbosign_advanced.go) - Advanced field types (checkbox, readonly, multiline text, etc.)
 
 ### Sequential Signing
 
