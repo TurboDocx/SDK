@@ -1,3 +1,6 @@
+//go:build ignore
+// +build ignore
+
 // Example 2: Review Link - Template Anchors
 //
 // This example creates a review link first, then sends manually.

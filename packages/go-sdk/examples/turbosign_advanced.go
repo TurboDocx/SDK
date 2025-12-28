@@ -1,3 +1,6 @@
+//go:build ignore
+// +build ignore
+
 // Example 3: Review Link - Advanced Field Types
 //
 // This example demonstrates advanced field types and features:

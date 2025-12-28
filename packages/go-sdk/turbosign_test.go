@@ -476,13 +476,15 @@ func TestClient_ErrorHandling(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client, _ := NewClientWithConfig(ClientConfig{
-			APIKey:  "invalid-key",
-			OrgID:   "test-org-id",
-			BaseURL: server.URL,
+		client, err := NewClientWithConfig(ClientConfig{
+			APIKey:      "invalid-key",
+			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
+			SenderEmail: "test@example.com",
 		})
+		require.NoError(t, err, "client creation should not fail")
 
-		_, err := client.TurboSign.GetStatus(context.Background(), "doc-123")
+		_, err = client.TurboSign.GetStatus(context.Background(), "doc-123")
 
 		require.Error(t, err)
 		authErr, ok := err.(*AuthenticationError)

@@ -1,3 +1,6 @@
+//go:build ignore
+// +build ignore
+
 // Example 1: Send Signature Directly - Template Anchors
 //
 // This example sends a document directly to recipients for signature.

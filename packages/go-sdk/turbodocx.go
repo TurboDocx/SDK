@@ -21,7 +21,10 @@
 //	})
 package turbodocx
 
-import "errors"
+import (
+	"errors"
+	"os"
+)
 
 // Version is the current SDK version
 const Version = "0.1.0"
@@ -69,6 +72,22 @@ func NewClient(apiKey, orgID string) (*Client, error) {
 
 // NewClientWithConfig creates a new TurboDocx client with custom configuration
 func NewClientWithConfig(config ClientConfig) (*Client, error) {
+	// Read from environment variables if not provided in config
+	if config.APIKey == "" {
+		config.APIKey = os.Getenv("TURBODOCX_API_KEY")
+	}
+	if config.AccessToken == "" {
+		config.AccessToken = os.Getenv("TURBODOCX_ACCESS_TOKEN")
+	}
+	if config.OrgID == "" {
+		config.OrgID = os.Getenv("TURBODOCX_ORG_ID")
+	}
+	if config.SenderEmail == "" {
+		config.SenderEmail = os.Getenv("TURBODOCX_SENDER_EMAIL")
+	}
+	if config.SenderName == "" {
+		config.SenderName = os.Getenv("TURBODOCX_SENDER_NAME")
+	}
 	if config.BaseURL == "" {
 		config.BaseURL = "https://api.turbodocx.com"
 	}
