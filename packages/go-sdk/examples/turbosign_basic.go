@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/turbodocx/turbodocx-go"
+	turbodocx "github.com/TurboDocx/SDK/packages/go-sdk"
 )
 
 func main() {
