@@ -45,121 +45,86 @@ public class TurboSignAdvanced {
                     ))
                     .fields(Arrays.asList(
                         // Signature field
-                        new Field(
-                            "signature",
-                            null, null, null, null, null,
-                            "john@example.com",
-                            null, null, null, null, null,
-                            new Field.TemplateAnchor(
-                                "{signature}",
-                                null,
-                                "replace",
-                                new Field.Size(100, 30),
-                                null, null, null
-                            )
-                        ),
+                        new Field.Builder()
+                            .type("signature")
+                            .recipientEmail("john@example.com")
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{signature}")
+                                .placement("replace")
+                                .size(new Field.Size(100, 30))
+                                .build())
+                            .build(),
 
                         // Date field
-                        new Field(
-                            "date",
-                            null, null, null, null, null,
-                            "john@example.com",
-                            null, null, null, null, null,
-                            new Field.TemplateAnchor(
-                                "{date}",
-                                null,
-                                "replace",
-                                new Field.Size(75, 30),
-                                null, null, null
-                            )
-                        ),
+                        new Field.Builder()
+                            .type("date")
+                            .recipientEmail("john@example.com")
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{date}")
+                                .placement("replace")
+                                .size(new Field.Size(75, 30))
+                                .build())
+                            .build(),
 
                         // Full name field
-                        new Field(
-                            "full_name",
-                            null, null, null, null, null,
-                            "john@example.com",
-                            null, null, null, null, null,
-                            new Field.TemplateAnchor(
-                                "{printed_name}",
-                                null,
-                                "replace",
-                                new Field.Size(100, 20),
-                                null, null, null
-                            )
-                        ),
+                        new Field.Builder()
+                            .type("full_name")
+                            .recipientEmail("john@example.com")
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{printed_name}")
+                                .placement("replace")
+                                .size(new Field.Size(100, 20))
+                                .build())
+                            .build(),
 
                         // Readonly field with default value (pre-filled)
-                        new Field(
-                            "company",
-                            null, null, null, null, null,
-                            "john@example.com",
-                            "TurboDocx",
-                            null,
-                            true,  // isReadonly
-                            null,
-                            null,
-                            new Field.TemplateAnchor(
-                                "{company}",
-                                null,
-                                "replace",
-                                new Field.Size(100, 20),
-                                null, null, null
-                            )
-                        ),
+                        new Field.Builder()
+                            .type("company")
+                            .recipientEmail("john@example.com")
+                            .defaultValue("TurboDocx")
+                            .isReadonly(true)
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{company}")
+                                .placement("replace")
+                                .size(new Field.Size(100, 20))
+                                .build())
+                            .build(),
 
                         // Required checkbox with default checked
-                        new Field(
-                            "checkbox",
-                            null, null, null, null, null,
-                            "john@example.com",
-                            "true",
-                            null,
-                            null,
-                            true,  // required
-                            null,
-                            new Field.TemplateAnchor(
-                                "{terms_checkbox}",
-                                null,
-                                "replace",
-                                new Field.Size(20, 20),
-                                null, null, null
-                            )
-                        ),
+                        new Field.Builder()
+                            .type("checkbox")
+                            .recipientEmail("john@example.com")
+                            .defaultValue("true")
+                            .required(true)
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{terms_checkbox}")
+                                .placement("replace")
+                                .size(new Field.Size(20, 20))
+                                .build())
+                            .build(),
 
                         // Title field
-                        new Field(
-                            "title",
-                            null, null, null, null, null,
-                            "john@example.com",
-                            null, null, null, null, null,
-                            new Field.TemplateAnchor(
-                                "{title}",
-                                null,
-                                "replace",
-                                new Field.Size(75, 30),
-                                null, null, null
-                            )
-                        ),
+                        new Field.Builder()
+                            .type("title")
+                            .recipientEmail("john@example.com")
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{title}")
+                                .placement("replace")
+                                .size(new Field.Size(75, 30))
+                                .build())
+                            .build(),
 
                         // Multiline text field
-                        new Field(
-                            "text",
-                            null, null, null, null, null,
-                            "john@example.com",
-                            null,
-                            true,  // isMultiline
-                            null,
-                            null,
-                            null,
-                            new Field.TemplateAnchor(
-                                "{notes}",
-                                null,
-                                "replace",
-                                new Field.Size(200, 50),
-                                null, null, null
-                            )
-                        )
+                        new Field.Builder()
+                            .type("text")
+                            .recipientEmail("john@example.com")
+                            .isMultiline(true)
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{notes}")
+                                .placement("replace")
+                                .size(new Field.Size(200, 50))
+                                .build())
+                            .build()
                     ))
                     .build()
             );

@@ -43,85 +43,61 @@ public class TurboSignBasic {
                     ))
                     .fields(Arrays.asList(
                         // First recipient - using template anchors
-                        new Field(
-                            "full_name",
-                            null, null, null, null, null,
-                            "john@example.com",
-                            null, null, null, null, null,
-                            new Field.TemplateAnchor(
-                                "{name1}",
-                                null,
-                                "replace",
-                                new Field.Size(100, 30),
-                                null, null, null
-                            )
-                        ),
-                        new Field(
-                            "signature",
-                            null, null, null, null, null,
-                            "john@example.com",
-                            null, null, null, null, null,
-                            new Field.TemplateAnchor(
-                                "{signature1}",
-                                null,
-                                "replace",
-                                new Field.Size(100, 30),
-                                null, null, null
-                            )
-                        ),
-                        new Field(
-                            "date",
-                            null, null, null, null, null,
-                            "john@example.com",
-                            null, null, null, null, null,
-                            new Field.TemplateAnchor(
-                                "{date1}",
-                                null,
-                                "replace",
-                                new Field.Size(75, 30),
-                                null, null, null
-                            )
-                        ),
+                        new Field.Builder()
+                            .type("full_name")
+                            .recipientEmail("john@example.com")
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{name1}")
+                                .placement("replace")
+                                .size(new Field.Size(100, 30))
+                                .build())
+                            .build(),
+                        new Field.Builder()
+                            .type("signature")
+                            .recipientEmail("john@example.com")
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{signature1}")
+                                .placement("replace")
+                                .size(new Field.Size(100, 30))
+                                .build())
+                            .build(),
+                        new Field.Builder()
+                            .type("date")
+                            .recipientEmail("john@example.com")
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{date1}")
+                                .placement("replace")
+                                .size(new Field.Size(75, 30))
+                                .build())
+                            .build(),
                         // Second recipient
-                        new Field(
-                            "full_name",
-                            null, null, null, null, null,
-                            "jane@example.com",
-                            null, null, null, null, null,
-                            new Field.TemplateAnchor(
-                                "{name2}",
-                                null,
-                                "replace",
-                                new Field.Size(100, 30),
-                                null, null, null
-                            )
-                        ),
-                        new Field(
-                            "signature",
-                            null, null, null, null, null,
-                            "jane@example.com",
-                            null, null, null, null, null,
-                            new Field.TemplateAnchor(
-                                "{signature2}",
-                                null,
-                                "replace",
-                                new Field.Size(100, 30),
-                                null, null, null
-                            )
-                        ),
-                        new Field(
-                            "date",
-                            null, null, null, null, null,
-                            "jane@example.com",
-                            null, null, null, null, null,
-                            new Field.TemplateAnchor(
-                                "{date2}",
-                                null,
-                                "replace",
-                                new Field.Size(75, 30),
-                                null, null, null
-                            )
-                        )
+                        new Field.Builder()
+                            .type("full_name")
+                            .recipientEmail("jane@example.com")
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{name2}")
+                                .placement("replace")
+                                .size(new Field.Size(100, 30))
+                                .build())
+                            .build(),
+                        new Field.Builder()
+                            .type("signature")
+                            .recipientEmail("jane@example.com")
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{signature2}")
+                                .placement("replace")
+                                .size(new Field.Size(100, 30))
+                                .build())
+                            .build(),
+                        new Field.Builder()
+                            .type("date")
+                            .recipientEmail("jane@example.com")
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{date2}")
+                                .placement("replace")
+                                .size(new Field.Size(75, 30))
+                                .build())
+                            .build()
                     ))
                     .build()
             );
