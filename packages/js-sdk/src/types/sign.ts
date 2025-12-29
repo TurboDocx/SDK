@@ -26,8 +26,6 @@ export interface RecipientResponse {
   email: string;
   /** Recipient's full name */
   name: string;
-  /** Current status of the recipient */
-  status: 'pending' | 'completed' | 'declined';
   /** URL for the recipient to sign the document */
   signUrl?: string;
   /** Date when the recipient signed (if completed) */
@@ -35,58 +33,70 @@ export interface RecipientResponse {
 }
 
 export interface VoidDocumentResponse {
-  /** Document ID */
-  documentId: string;
-  /** New status after voiding */
-  status: 'voided';
-  /** When the document was voided */
-  voidedAt: string;
+  /** Whether the void was successful */
+  success: boolean;
+  /** Response message */
+  message: string;
 }
 
 export interface ResendEmailResponse {
-  /** Document ID */
-  documentId: string;
-  /** Status message */
-  message: string;
-  /** When the email was resent */
-  resentAt: string;
+  /** Whether the resend was successful */
+  success: boolean;
+  /** Number of recipients who received email */
+  recipientCount: number;
+}
+
+export interface AuditTrailUser {
+  /** User name */
+  name: string;
+  /** User email */
+  email: string;
 }
 
 export interface AuditTrailEntry {
-  /** Event type */
-  event: string;
-  /** Actor who performed the action */
-  actor: string;
+  /** Entry ID */
+  id: string;
+  /** Document ID */
+  documentId: string;
+  /** Action type */
+  actionType: string;
   /** Timestamp of the event */
   timestamp: string;
-  /** IP address of the actor */
-  ipAddress?: string;
+  /** Previous hash */
+  previousHash?: string;
+  /** Current hash */
+  currentHash?: string;
+  /** Created on timestamp */
+  createdOn?: string;
   /** Additional details */
   details?: Record<string, any>;
+  /** User who performed the action */
+  user?: AuditTrailUser;
+  /** User ID */
+  userId?: string;
+  /** Recipient info */
+  recipient?: AuditTrailUser;
+  /** Recipient ID */
+  recipientId?: string;
+}
+
+export interface AuditTrailDocument {
+  /** Document ID */
+  id: string;
+  /** Document name */
+  name: string;
 }
 
 export interface AuditTrailResponse {
-  /** Document ID */
-  documentId: string;
+  /** Document info */
+  document: AuditTrailDocument;
   /** List of audit trail entries */
-  entries: AuditTrailEntry[];
+  auditTrail: AuditTrailEntry[];
 }
 
 export interface DocumentStatusResponse {
-  /** Document ID */
-  documentId: string;
   /** Current document status */
-  status: 'draft' | 'setup_complete' | 'review_ready' | 'under_review' | 'completed' | 'voided';
-  /** Document name */
-  name: string;
-  /** List of recipients and their status */
-  recipients: RecipientResponse[];
-  /** When the document was created */
-  createdAt: string;
-  /** When the document was last updated */
-  updatedAt: string;
-  /** When the document was completed (if applicable) */
-  completedAt?: string;
+  status: string;
 }
 
 // ============================================

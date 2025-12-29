@@ -296,17 +296,7 @@ class TestGetStatus:
     async def test_get_document_status(self):
         """Should get document status"""
         mock_response = {
-            "documentId": "doc-123",
-            "status": "pending",
-            "name": "Test Document",
-            "recipients": [{
-                "id": "rec-1",
-                "name": "John Doe",
-                "email": "john@example.com",
-                "status": "pending"
-            }],
-            "createdAt": "2024-01-01T00:00:00Z",
-            "updatedAt": "2024-01-01T00:00:00Z"
+            "status": "pending"
         }
 
         with patch.object(TurboSign, '_get_client') as mock_get_client:
@@ -317,7 +307,6 @@ class TestGetStatus:
             TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.get_status("doc-123")
 
-            assert result["documentId"] == "doc-123"
             assert result["status"] == "pending"
             mock_client.get.assert_called_once_with("/turbosign/documents/doc-123/status")
 
@@ -369,11 +358,8 @@ class TestVoid:
     @pytest.mark.asyncio
     async def test_void_document_with_reason(self):
         """Should void a document with reason"""
-        mock_response = {
-            "documentId": "doc-123",
-            "status": "voided",
-            "voidedAt": "2024-01-01T12:00:00Z"
-        }
+        # Backend returns empty response, SDK sets success/message manually
+        mock_response = {}
 
         with patch.object(TurboSign, '_get_client') as mock_get_client:
             mock_client = MagicMock()
@@ -383,8 +369,8 @@ class TestVoid:
             TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.void_document("doc-123", "Document needs revision")
 
-            assert result["documentId"] == "doc-123"
-            assert result["status"] == "voided"
+            assert result["success"] is True
+            assert result["message"] == "Document has been voided successfully"
             mock_client.post.assert_called_once_with(
                 "/turbosign/documents/doc-123/void",
                 data={"reason": "Document needs revision"}
@@ -402,9 +388,8 @@ class TestResend:
     async def test_resend_email_to_specific_recipients(self):
         """Should resend email to specific recipients"""
         mock_response = {
-            "documentId": "doc-123",
-            "message": "Emails resent successfully",
-            "resentAt": "2024-01-01T12:00:00Z"
+            "success": True,
+            "recipientCount": 2
         }
 
         with patch.object(TurboSign, '_get_client') as mock_get_client:
@@ -415,7 +400,8 @@ class TestResend:
             TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.resend_email("doc-123", ["rec-1", "rec-2"])
 
-            assert "resent" in result["message"]
+            assert result["success"] is True
+            assert result["recipientCount"] == 2
             mock_client.post.assert_called_once_with(
                 "/turbosign/documents/doc-123/resend-email",
                 data={"recipientIds": ["rec-1", "rec-2"]}
@@ -433,19 +419,22 @@ class TestGetAuditTrail:
     async def test_get_audit_trail(self):
         """Should get audit trail for document"""
         mock_response = {
-            "documentId": "doc-123",
-            "entries": [
+            "document": {
+                "id": "doc-123",
+                "name": "Test Document"
+            },
+            "auditTrail": [
                 {
-                    "event": "document_created",
-                    "actor": "user@example.com",
-                    "timestamp": "2024-01-01T00:00:00Z",
-                    "ipAddress": "192.168.1.1"
+                    "id": "audit-1",
+                    "documentId": "doc-123",
+                    "actionType": "document_created",
+                    "timestamp": "2024-01-01T00:00:00Z"
                 },
                 {
-                    "event": "email_sent",
-                    "actor": "system",
-                    "timestamp": "2024-01-01T00:01:00Z",
-                    "details": {"recipientEmail": "signer@example.com"}
+                    "id": "audit-2",
+                    "documentId": "doc-123",
+                    "actionType": "email_sent",
+                    "timestamp": "2024-01-01T00:01:00Z"
                 }
             ]
         }
@@ -458,9 +447,10 @@ class TestGetAuditTrail:
             TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.get_audit_trail("doc-123")
 
-            assert result["documentId"] == "doc-123"
-            assert len(result["entries"]) == 2
-            assert result["entries"][0]["event"] == "document_created"
+            assert result["document"]["id"] == "doc-123"
+            assert result["document"]["name"] == "Test Document"
+            assert len(result["auditTrail"]) == 2
+            assert result["auditTrail"][0]["actionType"] == "document_created"
             mock_client.get.assert_called_once_with("/turbosign/documents/doc-123/audit-trail")
 
 

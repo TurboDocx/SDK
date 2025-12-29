@@ -1,18 +1,33 @@
-/// <reference types="node" />
+/**
+ * TurboSign JS SDK - Manual Test Suite
+ *
+ * Run: npx ts-node manual-test.ts
+ *
+ * Make sure to configure the values below before running.
+ */
+
 import { TurboSign } from "./src";
 import * as fs from "fs";
 
 // =============================================
 // CONFIGURE THESE VALUES BEFORE RUNNING
 // =============================================
-TurboSign.configure({
-  apiKey: "TDX-your-api-key-here", // Replace with your actual TurboDocx API key
-  baseUrl: "http://localhost:3000", // Replace with your API URL
-  orgId: "your-organization-uuid-here", // Replace with your organization UUID
-});
+const API_KEY = "your-api-key-here"; // Replace with your actual TurboDocx API key
+const BASE_URL = "https://api.turbodocx.com"; // Replace with your API URL
+const ORG_ID = "your-org-id-here"; // Replace with your organization UUID
 
-const TEST_PDF_PATH = "/path/to/your/test-document.pdf"; // Replace with path to your test PDF/DOCX
-const TEST_EMAIL = "test-recipient@example.com"; // Replace with a real email to receive notifications
+const TEST_PDF_PATH = "./test-document.pdf"; // Replace with path to your test PDF/DOCX
+const TEST_EMAIL = "recipient@example.com"; // Replace with a real email to receive notifications
+const FILE_URL = "https://example.com/your-document.pdf"; // Replace with publicly accessible PDF URL
+
+// Initialize client
+TurboSign.configure({
+  apiKey: API_KEY,
+  baseUrl: BASE_URL,
+  orgId: ORG_ID,
+  senderEmail: "sender@example.com",     // Reply-to email for signature requests
+  senderName: "Your Company Name",       // Sender name shown in emails
+});
 
 // =============================================
 // TEST FUNCTIONS
@@ -92,8 +107,6 @@ async function testSendSignature() {
     documentName: "Signing Test Document",
     documentDescription:
       "Sample contract for testing single-step signature endpoint",
-    senderName: "Test Sender",
-    senderEmail: "sender@example.com",
     ccEmails: ["cc@example.com"]
   });
 

@@ -236,20 +236,28 @@ export class TurboSign {
    *
    * @param documentId - ID of the document to void
    * @param reason - Reason for voiding the document
-   * @returns Void confirmation
+   * @returns Void confirmation with success and message
    *
    * @example
    * ```typescript
-   * await TurboSign.void(documentId, 'Document needs to be revised');
+   * const result = await TurboSign.void(documentId, 'Document needs to be revised');
+   * console.log(result.message); // "Document has been voided successfully"
    * ```
    */
   static async void(documentId: string, reason: string): Promise<VoidDocumentResponse> {
     const client = this.getClient();
-    const response = await client.post<{ data: VoidDocumentResponse }>(
+    // Backend returns empty data on success, so we just make the call
+    // and return a success response if no exception is thrown
+    await client.post(
       `/turbosign/documents/${documentId}/void`,
       { reason }
     );
-    return response.data;
+
+    // If we get here without exception, the void was successful
+    return {
+      success: true,
+      message: 'Document has been voided successfully'
+    };
   }
 
   /**
@@ -257,15 +265,13 @@ export class TurboSign {
    *
    * @param documentId - ID of the document
    * @param recipientIds - Array of recipient IDs to resend emails to
-   * @returns Resend confirmation
+   * @returns Resend confirmation with success and recipientCount
    *
    * @example
    * ```typescript
    * // Resend to specific recipients
-   * await TurboSign.resend(documentId, [recipientId1, recipientId2]);
-   *
-   * // Resend to all recipients
-   * await TurboSign.resend(documentId, []);
+   * const result = await TurboSign.resend(documentId, [recipientId1, recipientId2]);
+   * console.log(result.recipientCount); // 2
    * ```
    */
   static async resend(
@@ -273,29 +279,32 @@ export class TurboSign {
     recipientIds: string[]
   ): Promise<ResendEmailResponse> {
     const client = this.getClient();
-    const response = await client.post<{ data: ResendEmailResponse }>(
+    // HTTP client auto-unwraps {data: ...} responses
+    return client.post<ResendEmailResponse>(
       `/turbosign/documents/${documentId}/resend-email`,
       { recipientIds }
     );
-    return response.data;
   }
 
   /**
    * Get the audit trail for a document
    *
    * @param documentId - ID of the document
-   * @returns Audit trail entries
+   * @returns Audit trail with document info and entries
    *
    * @example
    * ```typescript
-   * const auditTrail = await TurboSign.getAuditTrail(documentId);
-   * console.log(auditTrail.entries);
+   * const audit = await TurboSign.getAuditTrail(documentId);
+   * console.log(audit.document.name);
+   * for (const entry of audit.auditTrail) {
+   *   console.log(`${entry.actionType} - ${entry.timestamp}`);
+   * }
    * ```
    */
   static async getAuditTrail(documentId: string): Promise<AuditTrailResponse> {
     const client = this.getClient();
-    const response = await client.get<{ data: AuditTrailResponse }>(`/turbosign/documents/${documentId}/audit-trail`);
-    return response.data;
+    // HTTP client auto-unwraps {data: ...} responses
+    return client.get<AuditTrailResponse>(`/turbosign/documents/${documentId}/audit-trail`);
   }
 
   /**
@@ -332,17 +341,17 @@ export class TurboSign {
    * Get the status of a document
    *
    * @param documentId - ID of the document
-   * @returns Document status and recipient information
+   * @returns Document status
    *
    * @example
    * ```typescript
    * const status = await TurboSign.getStatus(documentId);
-   * console.log(status.status); // 'completed', 'pending', etc.
+   * console.log(status.status); // 'under_review', 'completed', 'voided', etc.
    * ```
    */
   static async getStatus(documentId: string): Promise<DocumentStatusResponse> {
     const client = this.getClient();
-    const response = await client.get<{ data: DocumentStatusResponse }>(`/turbosign/documents/${documentId}/status`);
-    return response.data;
+    // HTTP client auto-unwraps {data: ...} responses
+    return client.get<DocumentStatusResponse>(`/turbosign/documents/${documentId}/status`);
   }
 }

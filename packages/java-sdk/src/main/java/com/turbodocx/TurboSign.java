@@ -158,11 +158,16 @@ public class TurboSign {
         Map<String, String> body = new HashMap<>();
         body.put("reason", reason);
 
-        return httpClient.post(
+        // Backend returns empty data on success, so we just make the call
+        // and return a success response if no exception is thrown
+        httpClient.post(
                 "/turbosign/documents/" + documentId + "/void",
                 body,
                 VoidDocumentResponse.class
         );
+
+        // If we get here without exception, the void was successful
+        return new VoidDocumentResponse(true, "Document has been voided successfully");
     }
 
     /**
