@@ -21,7 +21,7 @@ class TestTurboSignConfigure:
 
     def test_configure_with_api_key_and_org_id(self):
         """Should configure the client with API key and org ID"""
-        TurboSign.configure(api_key="test-api-key", org_id="test-org-id")
+        TurboSign.configure(api_key="test-api-key", org_id="test-org-id", sender_email="test@example.com")
         assert TurboSign._client is not None
         assert TurboSign._client.api_key == "test-api-key"
         assert TurboSign._client.org_id == "test-org-id"
@@ -31,14 +31,15 @@ class TestTurboSignConfigure:
         TurboSign.configure(
             api_key="test-api-key",
             org_id="test-org-id",
-            base_url="https://custom-api.example.com"
+            base_url="https://custom-api.example.com",
+            sender_email="test@example.com"
         )
         assert TurboSign._client.base_url == "https://custom-api.example.com"
 
     def test_configure_requires_org_id(self):
         """Should raise error when org_id is not provided"""
         with pytest.raises(AuthenticationError, match="Organization ID"):
-            TurboSign.configure(api_key="test-api-key")
+            TurboSign.configure(api_key="test-api-key", sender_email="test@example.com")
 
 
 class TestCreateSignatureReviewLink:
@@ -85,7 +86,7 @@ class TestCreateSignatureReviewLink:
             mock_client.upload_file = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboSign.configure(api_key="test-key", org_id="test-org")
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.create_signature_review_link(
                 file=b"mock-pdf-content",
                 recipients=self.mock_recipients(),
@@ -113,7 +114,7 @@ class TestCreateSignatureReviewLink:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboSign.configure(api_key="test-key", org_id="test-org")
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.create_signature_review_link(
                 file_link="https://storage.example.com/contract.pdf",
                 recipients=self.mock_recipients(),
@@ -140,7 +141,7 @@ class TestCreateSignatureReviewLink:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboSign.configure(api_key="test-key", org_id="test-org")
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.create_signature_review_link(
                 deliverable_id="deliverable-abc",
                 recipients=self.mock_recipients(),
@@ -166,7 +167,7 @@ class TestCreateSignatureReviewLink:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboSign.configure(api_key="test-key", org_id="test-org")
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.create_signature_review_link(
                 template_id="template-xyz",
                 recipients=self.mock_recipients(),
@@ -190,7 +191,7 @@ class TestCreateSignatureReviewLink:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboSign.configure(api_key="test-key", org_id="test-org")
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             await TurboSign.create_signature_review_link(
                 file_link="https://example.com/doc.pdf",
                 recipients=self.mock_recipients(),
@@ -246,7 +247,7 @@ class TestSendSignature:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboSign.configure(api_key="test-key", org_id="test-org")
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.send_signature(
                 file_link="https://storage.example.com/contract.pdf",
                 recipients=self.mock_recipients(),
@@ -273,7 +274,7 @@ class TestSendSignature:
             mock_client.upload_file = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboSign.configure(api_key="test-key", org_id="test-org")
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.send_signature(
                 file=b"mock-pdf-content",
                 file_name="contract.pdf",
@@ -295,17 +296,7 @@ class TestGetStatus:
     async def test_get_document_status(self):
         """Should get document status"""
         mock_response = {
-            "documentId": "doc-123",
-            "status": "pending",
-            "name": "Test Document",
-            "recipients": [{
-                "id": "rec-1",
-                "name": "John Doe",
-                "email": "john@example.com",
-                "status": "pending"
-            }],
-            "createdAt": "2024-01-01T00:00:00Z",
-            "updatedAt": "2024-01-01T00:00:00Z"
+            "status": "pending"
         }
 
         with patch.object(TurboSign, '_get_client') as mock_get_client:
@@ -313,10 +304,9 @@ class TestGetStatus:
             mock_client.get = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboSign.configure(api_key="test-key", org_id="test-org")
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.get_status("doc-123")
 
-            assert result["documentId"] == "doc-123"
             assert result["status"] == "pending"
             mock_client.get.assert_called_once_with("/turbosign/documents/doc-123/status")
 
@@ -350,7 +340,7 @@ class TestDownload:
                 mock_http_client.get = AsyncMock(return_value=mock_response)
                 mock_httpx.return_value.__aenter__.return_value = mock_http_client
 
-                TurboSign.configure(api_key="test-key", org_id="test-org")
+                TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
                 result = await TurboSign.download("doc-123")
 
                 assert result == mock_pdf_content
@@ -368,22 +358,19 @@ class TestVoid:
     @pytest.mark.asyncio
     async def test_void_document_with_reason(self):
         """Should void a document with reason"""
-        mock_response = {
-            "documentId": "doc-123",
-            "status": "voided",
-            "voidedAt": "2024-01-01T12:00:00Z"
-        }
+        # Backend returns empty response, SDK sets success/message manually
+        mock_response = {}
 
         with patch.object(TurboSign, '_get_client') as mock_get_client:
             mock_client = MagicMock()
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboSign.configure(api_key="test-key", org_id="test-org")
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.void_document("doc-123", "Document needs revision")
 
-            assert result["documentId"] == "doc-123"
-            assert result["status"] == "voided"
+            assert result["success"] is True
+            assert result["message"] == "Document has been voided successfully"
             mock_client.post.assert_called_once_with(
                 "/turbosign/documents/doc-123/void",
                 data={"reason": "Document needs revision"}
@@ -401,9 +388,8 @@ class TestResend:
     async def test_resend_email_to_specific_recipients(self):
         """Should resend email to specific recipients"""
         mock_response = {
-            "documentId": "doc-123",
-            "message": "Emails resent successfully",
-            "resentAt": "2024-01-01T12:00:00Z"
+            "success": True,
+            "recipientCount": 2
         }
 
         with patch.object(TurboSign, '_get_client') as mock_get_client:
@@ -411,10 +397,11 @@ class TestResend:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboSign.configure(api_key="test-key", org_id="test-org")
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.resend_email("doc-123", ["rec-1", "rec-2"])
 
-            assert "resent" in result["message"]
+            assert result["success"] is True
+            assert result["recipientCount"] == 2
             mock_client.post.assert_called_once_with(
                 "/turbosign/documents/doc-123/resend-email",
                 data={"recipientIds": ["rec-1", "rec-2"]}
@@ -432,19 +419,22 @@ class TestGetAuditTrail:
     async def test_get_audit_trail(self):
         """Should get audit trail for document"""
         mock_response = {
-            "documentId": "doc-123",
-            "entries": [
+            "document": {
+                "id": "doc-123",
+                "name": "Test Document"
+            },
+            "auditTrail": [
                 {
-                    "event": "document_created",
-                    "actor": "user@example.com",
-                    "timestamp": "2024-01-01T00:00:00Z",
-                    "ipAddress": "192.168.1.1"
+                    "id": "audit-1",
+                    "documentId": "doc-123",
+                    "actionType": "document_created",
+                    "timestamp": "2024-01-01T00:00:00Z"
                 },
                 {
-                    "event": "email_sent",
-                    "actor": "system",
-                    "timestamp": "2024-01-01T00:01:00Z",
-                    "details": {"recipientEmail": "signer@example.com"}
+                    "id": "audit-2",
+                    "documentId": "doc-123",
+                    "actionType": "email_sent",
+                    "timestamp": "2024-01-01T00:01:00Z"
                 }
             ]
         }
@@ -454,12 +444,13 @@ class TestGetAuditTrail:
             mock_client.get = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboSign.configure(api_key="test-key", org_id="test-org")
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.get_audit_trail("doc-123")
 
-            assert result["documentId"] == "doc-123"
-            assert len(result["entries"]) == 2
-            assert result["entries"][0]["event"] == "document_created"
+            assert result["document"]["id"] == "doc-123"
+            assert result["document"]["name"] == "Test Document"
+            assert len(result["auditTrail"]) == 2
+            assert result["auditTrail"][0]["actionType"] == "document_created"
             mock_client.get.assert_called_once_with("/turbosign/documents/doc-123/audit-trail")
 
 
@@ -484,7 +475,7 @@ class TestErrorHandling:
             mock_client.get = AsyncMock(side_effect=NotFoundError("Document not found"))
             mock_get_client.return_value = mock_client
 
-            TurboSign.configure(api_key="test-key", org_id="test-org")
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             with pytest.raises(NotFoundError, match="Document not found"):
                 await TurboSign.get_status("invalid-doc")
 
@@ -496,7 +487,7 @@ class TestErrorHandling:
             mock_client.post = AsyncMock(side_effect=ValidationError("Invalid email format"))
             mock_get_client.return_value = mock_client
 
-            TurboSign.configure(api_key="test-key", org_id="test-org")
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             with pytest.raises(ValidationError, match="Invalid email"):
                 await TurboSign.send_signature(
                     file_link="https://example.com/doc.pdf",

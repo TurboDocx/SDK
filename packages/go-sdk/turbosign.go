@@ -132,39 +132,30 @@ type SendSignatureResponse struct {
 	Message    string `json:"message"`
 }
 
-// RecipientResponse represents a recipient's status
+// RecipientResponse represents a recipient in the response
 type RecipientResponse struct {
 	ID       string `json:"id"`
 	Email    string `json:"email"`
 	Name     string `json:"name"`
-	Status   string `json:"status"`
 	SignURL  string `json:"signUrl,omitempty"`
 	SignedAt string `json:"signedAt,omitempty"`
 }
 
 // DocumentStatusResponse is the response from GetStatus
 type DocumentStatusResponse struct {
-	DocumentID  string              `json:"documentId"`
-	Status      string              `json:"status"`
-	Name        string              `json:"name"`
-	Recipients  []RecipientResponse `json:"recipients"`
-	CreatedAt   string              `json:"createdAt"`
-	UpdatedAt   string              `json:"updatedAt"`
-	CompletedAt string              `json:"completedAt,omitempty"`
+	Status string `json:"status"`
 }
 
 // VoidDocumentResponse is the response from VoidDocument
 type VoidDocumentResponse struct {
-	DocumentID string `json:"documentId"`
-	Status     string `json:"status"`
-	VoidedAt   string `json:"voidedAt"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
 }
 
 // ResendEmailResponse is the response from ResendEmail
 type ResendEmailResponse struct {
-	DocumentID string `json:"documentId"`
-	Message    string `json:"message"`
-	ResentAt   string `json:"resentAt"`
+	Success        bool `json:"success"`
+	RecipientCount int  `json:"recipientCount"`
 }
 
 // DownloadResponse is the API response for download request
@@ -173,19 +164,39 @@ type DownloadResponse struct {
 	FileName    string `json:"fileName"`
 }
 
+// AuditTrailUser represents user info in audit trail
+type AuditTrailUser struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
 // AuditTrailEntry represents a single audit trail entry
 type AuditTrailEntry struct {
-	Event     string                 `json:"event"`
-	Actor     string                 `json:"actor"`
-	Timestamp string                 `json:"timestamp"`
-	IPAddress string                 `json:"ipAddress,omitempty"`
-	Details   map[string]interface{} `json:"details,omitempty"`
+	ID           string                 `json:"id"`
+	DocumentID   string                 `json:"documentId"`
+	ActionType   string                 `json:"actionType"`
+	Timestamp    string                 `json:"timestamp"`
+	PreviousHash string                 `json:"previousHash,omitempty"`
+	CurrentHash  string                 `json:"currentHash,omitempty"`
+	CreatedOn    string                 `json:"createdOn,omitempty"`
+	Details      map[string]interface{} `json:"details,omitempty"`
+	User         *AuditTrailUser        `json:"user,omitempty"`
+	UserID       string                 `json:"userId,omitempty"`
+	Recipient    *AuditTrailUser        `json:"recipient,omitempty"`
+	RecipientID  string                 `json:"recipientId,omitempty"`
+}
+
+// AuditTrailDocument represents document info in audit trail response
+type AuditTrailDocument struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // AuditTrailResponse is the response from GetAuditTrail
+// Note: HTTP client auto-unwraps "data" wrapper, so this matches the inner structure
 type AuditTrailResponse struct {
-	DocumentID string            `json:"documentId"`
-	Entries    []AuditTrailEntry `json:"entries"`
+	Document   AuditTrailDocument `json:"document"`
+	AuditTrail []AuditTrailEntry  `json:"auditTrail"`
 }
 
 // ============================================
@@ -376,14 +387,15 @@ func (c *TurboSignClient) Download(ctx context.Context, documentID string) ([]by
 
 // VoidDocument voids a document (cancels signature request)
 func (c *TurboSignClient) VoidDocument(ctx context.Context, documentID string, reason string) (*VoidDocumentResponse, error) {
-	var response VoidDocumentResponse
-
-	err := c.http.Post(ctx, "/turbosign/documents/"+documentID+"/void", map[string]string{"reason": reason}, &response)
+	err := c.http.Post(ctx, "/turbosign/documents/"+documentID+"/void", map[string]string{"reason": reason}, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return &response, nil
+	return &VoidDocumentResponse{
+		Success: true,
+		Message: "Document has been voided successfully",
+	}, nil
 }
 
 // ResendEmail resends signature request email to recipients

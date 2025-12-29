@@ -36,9 +36,11 @@ var client *turbodocx.Client
 func init() {
 	var err error
 	client, err = turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
-		APIKey:  apiKey,
-		BaseURL: baseURL,
-		OrgID:   orgID,
+		APIKey:      apiKey,
+		BaseURL:     baseURL,
+		OrgID:       orgID,
+		SenderEmail: "sender@example.com",     // Reply-to email for signature requests
+		SenderName:  "Your Company Name",      // Sender name shown in emails
 	})
 	if err != nil {
 		fmt.Printf("Failed to create client: %v\n", err)
@@ -136,8 +138,6 @@ func testSendSignature(ctx context.Context, pdfBytes []byte) (string, error) {
 		},
 		DocumentName:        "Signing Test Document (Template Fields)",
 		DocumentDescription: "Testing template-based field positioning",
-		SenderName:          "Test Sender",
-		SenderEmail:         "sender@example.com",
 		CCEmails:            []string{"cc@example.com"},
 	})
 

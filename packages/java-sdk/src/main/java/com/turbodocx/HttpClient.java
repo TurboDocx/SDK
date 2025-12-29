@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * File type detection result
@@ -87,7 +88,11 @@ public class HttpClient {
     private final Gson gson;
 
     public HttpClient(String baseUrl, String apiKey, String accessToken, String orgId, String senderEmail, String senderName) {
-        this.client = new OkHttpClient();
+        this.client = new OkHttpClient.Builder()
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .build();
         this.baseUrl = baseUrl != null ? baseUrl.replaceAll("/$", "") : DEFAULT_BASE_URL;
         this.apiKey = apiKey;
         this.accessToken = accessToken;

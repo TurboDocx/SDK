@@ -1,12 +1,12 @@
 //go:build ignore
 // +build ignore
 
-// Example 1: Send Signature Directly - Template Anchors
+// Example 2: Review Link - Template Anchors
 //
-// This example sends a document directly to recipients for signature.
+// This example creates a review link first, then sends manually.
 // Uses template anchors like {signature1} and {date1} in your PDF.
 //
-// Use this when: You want to send immediately without review
+// Use this when: You want to review the document before sending
 
 package main
 
@@ -38,20 +38,20 @@ func main() {
 		return
 	}
 
-	fmt.Println("Sending document directly to recipients...\n")
+	fmt.Println("Creating review link with template anchors...\n")
 
 	ctx := context.Background()
-	result, err := client.TurboSign.SendSignature(ctx, &turbodocx.SendSignatureRequest{
+	result, err := client.TurboSign.CreateSignatureReviewLink(ctx, &turbodocx.CreateSignatureReviewLinkRequest{
 		File:                pdfFile,
 		FileName:            "sample-contract.pdf",
-		DocumentName:        "Partnership Agreement",
-		DocumentDescription: "Q1 2025 Partnership Agreement - Please review and sign",
+		DocumentName:        "Contract Agreement",
+		DocumentDescription: "This document requires electronic signatures from both parties.",
 		Recipients: []turbodocx.Recipient{
 			{Name: "John Doe", Email: "john@example.com", SigningOrder: 1},
 			{Name: "Jane Smith", Email: "jane@example.com", SigningOrder: 2},
 		},
 		Fields: []turbodocx.Field{
-			// First recipient's fields - using template anchors
+			// First recipient - using template anchors
 			{
 				Type:           "full_name",
 				RecipientEmail: "john@example.com",
@@ -65,8 +65,8 @@ func main() {
 				Type:           "signature",
 				RecipientEmail: "john@example.com",
 				Template: &turbodocx.TemplateAnchor{
-					Anchor:    "{signature1}", // Text in your PDF to replace
-					Placement: "replace",       // Replace the anchor text
+					Anchor:    "{signature1}",
+					Placement: "replace",
 					Size:      &turbodocx.Size{Width: 100, Height: 30},
 				},
 			},
@@ -79,7 +79,7 @@ func main() {
 					Size:      &turbodocx.Size{Width: 75, Height: 30},
 				},
 			},
-			// Second recipient's fields
+			// Second recipient
 			{
 				Type:           "full_name",
 				RecipientEmail: "jane@example.com",
@@ -115,20 +115,21 @@ func main() {
 		return
 	}
 
-	fmt.Println("✅ Document sent successfully!\n")
+	fmt.Println("\n✅ Review link created!")
 	fmt.Printf("Document ID: %s\n", result.DocumentID)
-	fmt.Printf("Message: %s\n", result.Message)
+	fmt.Printf("Status: %s\n", result.Status)
+	fmt.Printf("Preview URL: %s\n", result.PreviewURL)
 
-	// To get sign URLs and recipient details, use GetStatus
-	status, err := client.TurboSign.GetStatus(ctx, result.DocumentID)
-	if err == nil && status.Recipients != nil {
-		fmt.Println("\nSign URLs:")
-		for _, recipient := range status.Recipients {
-			fmt.Printf("  %s: %s\n", recipient.Name, recipient.SignURL)
+	if result.Recipients != nil {
+		fmt.Println("\nRecipients:")
+		for _, recipient := range result.Recipients {
+			fmt.Printf("  %s (%s) - %s\n", recipient.Name, recipient.Email, recipient.Status)
 		}
-	} else {
-		fmt.Println("\nNote: Could not fetch recipient sign URLs")
 	}
+
+	fmt.Println("\nYou can now:")
+	fmt.Println("1. Review the document at the preview URL")
+	fmt.Println("2. Send to recipients using: client.TurboSign.Send(ctx, documentId)")
 }
 
 func getEnv(key, fallback string) string {

@@ -41,6 +41,7 @@ class TurboSignTest {
                 .apiKey("test-api-key")
                 .orgId("test-org-id")
                 .baseUrl(server.url("/").toString())
+                .senderEmail("test@example.com")
                 .build();
     }
 
@@ -59,6 +60,7 @@ class TurboSignTest {
         TurboDocxClient testClient = new TurboDocxClient.Builder()
                 .apiKey("test-api-key")
                 .orgId("test-org-id")
+                .senderEmail("test@example.com")
                 .build();
         assertNotNull(testClient);
         assertNotNull(testClient.turboSign());
@@ -70,6 +72,7 @@ class TurboSignTest {
         TurboDocxClient testClient = new TurboDocxClient.Builder()
                 .apiKey("test-api-key")
                 .orgId("test-org-id")
+                .senderEmail("test@example.com")
                 .baseUrl("https://custom-api.example.com")
                 .build();
         assertNotNull(testClient);
@@ -318,19 +321,8 @@ class TurboSignTest {
     @Test
     @DisplayName("should get document status")
     void getStatus() throws Exception {
-        Map<String, Object> recipient = new HashMap<>();
-        recipient.put("id", "rec-1");
-        recipient.put("name", "John Doe");
-        recipient.put("email", "john@example.com");
-        recipient.put("status", "pending");
-
         Map<String, Object> responseData = new HashMap<>();
-        responseData.put("documentId", "doc-123");
         responseData.put("status", "pending");
-        responseData.put("name", "Test Document");
-        responseData.put("recipients", Collections.singletonList(recipient));
-        responseData.put("createdAt", "2024-01-01T00:00:00Z");
-        responseData.put("updatedAt", "2024-01-01T00:00:00Z");
 
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
@@ -339,9 +331,7 @@ class TurboSignTest {
 
         DocumentStatusResponse result = client.turboSign().getStatus("doc-123");
 
-        assertEquals("doc-123", result.getDocumentId());
         assertEquals("pending", result.getStatus());
-        assertEquals("Test Document", result.getName());
 
         RecordedRequest recorded = server.takeRequest();
         assertEquals("GET", recorded.getMethod());
@@ -355,19 +345,16 @@ class TurboSignTest {
     @Test
     @DisplayName("should void a document with reason")
     void voidDocument() throws Exception {
+        // Backend returns empty response, SDK sets success/message manually
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(gson.toJson(Map.of(
-                        "documentId", "doc-123",
-                        "status", "voided",
-                        "voidedAt", "2024-01-01T12:00:00Z"
-                ))));
+                .setBody(gson.toJson(Map.of())));
 
         VoidDocumentResponse result = client.turboSign().voidDocument("doc-123", "Document needs revision");
 
-        assertEquals("doc-123", result.getDocumentId());
-        assertEquals("voided", result.getStatus());
+        assertTrue(result.getSuccess());
+        assertEquals("Document has been voided successfully", result.getMessage());
 
         RecordedRequest recorded = server.takeRequest();
         assertEquals("POST", recorded.getMethod());
@@ -385,14 +372,14 @@ class TurboSignTest {
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
                 .setBody(gson.toJson(Map.of(
-                        "documentId", "doc-123",
-                        "message", "Emails resent successfully",
-                        "resentAt", "2024-01-01T12:00:00Z"
+                        "success", true,
+                        "recipientCount", 2
                 ))));
 
         ResendEmailResponse result = client.turboSign().resendEmail("doc-123", Arrays.asList("rec-1", "rec-2"));
 
-        assertTrue(result.getMessage().contains("resent"));
+        assertTrue(result.getSuccess());
+        assertEquals(2, result.getRecipientCount());
 
         RecordedRequest recorded = server.takeRequest();
         assertEquals("POST", recorded.getMethod());
@@ -407,27 +394,35 @@ class TurboSignTest {
     @DisplayName("should get audit trail for document")
     void getAuditTrail() throws Exception {
         Map<String, Object> entry1 = new HashMap<>();
-        entry1.put("event", "document_created");
-        entry1.put("actor", "sender@example.com");
+        entry1.put("id", "audit-1");
+        entry1.put("documentId", "doc-123");
+        entry1.put("actionType", "document_created");
         entry1.put("timestamp", "2024-01-01T00:00:00Z");
 
         Map<String, Object> entry2 = new HashMap<>();
-        entry2.put("event", "document_signed");
-        entry2.put("actor", "john@example.com");
+        entry2.put("id", "audit-2");
+        entry2.put("documentId", "doc-123");
+        entry2.put("actionType", "document_signed");
         entry2.put("timestamp", "2024-01-01T12:00:00Z");
+
+        Map<String, Object> document = new HashMap<>();
+        document.put("id", "doc-123");
+        document.put("name", "Test Document");
 
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
                 .setBody(gson.toJson(Map.of(
-                        "documentId", "doc-123",
-                        "entries", Arrays.asList(entry1, entry2)
+                        "document", document,
+                        "auditTrail", Arrays.asList(entry1, entry2)
                 ))));
 
         AuditTrailResponse result = client.turboSign().getAuditTrail("doc-123");
 
-        assertEquals("doc-123", result.getDocumentId());
-        assertEquals(2, result.getEntries().size());
+        assertEquals("doc-123", result.getDocument().getId());
+        assertEquals("Test Document", result.getDocument().getName());
+        assertEquals(2, result.getAuditTrail().size());
+        assertEquals("document_created", result.getAuditTrail().get(0).getActionType());
 
         RecordedRequest recorded = server.takeRequest();
         assertEquals("GET", recorded.getMethod());

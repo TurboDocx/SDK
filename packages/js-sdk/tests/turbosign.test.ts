@@ -394,22 +394,9 @@ describe("TurboSign Module", () => {
 
   describe("getStatus", () => {
     it("should get document status", async () => {
+      // HTTP client auto-unwraps {data: ...} responses
       const mockResponse = {
-        data: {
-          documentId: "doc-123",
-          status: "under_review",
-          name: "Test Document",
-          recipients: [
-            {
-              id: "rec-1",
-              name: "John Doe",
-              email: "john@example.com",
-              status: "pending",
-            },
-          ],
-          createdAt: "2024-01-01T00:00:00Z",
-          updatedAt: "2024-01-01T00:00:00Z",
-        },
+        status: "under_review",
       };
 
       MockedHttpClient.prototype.get = jest
@@ -419,7 +406,6 @@ describe("TurboSign Module", () => {
 
       const result = await TurboSign.getStatus("doc-123");
 
-      expect(result.documentId).toBe("doc-123");
       expect(result.status).toBe("under_review");
       expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
         "/turbosign/documents/doc-123/status"
@@ -482,13 +468,9 @@ describe("TurboSign Module", () => {
 
   describe("void", () => {
     it("should void a document with reason", async () => {
-      const mockResponse = {
-        data: {
-          documentId: "doc-123",
-          status: "voided",
-          voidedAt: "2024-01-01T12:00:00Z",
-        },
-      };
+      // Backend returns empty response, SDK sets success/message manually
+      // HTTP client auto-unwraps {data: ...} responses
+      const mockResponse = {};
 
       MockedHttpClient.prototype.post = jest
         .fn()
@@ -497,8 +479,8 @@ describe("TurboSign Module", () => {
 
       const result = await TurboSign.void("doc-123", "Document needs revision");
 
-      expect(result.documentId).toBe("doc-123");
-      expect(result.status).toBe("voided");
+      expect(result.success).toBe(true);
+      expect(result.message).toBe("Document has been voided successfully");
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
         "/turbosign/documents/doc-123/void",
         { reason: "Document needs revision" }
@@ -508,12 +490,10 @@ describe("TurboSign Module", () => {
 
   describe("resend", () => {
     it("should resend email to specific recipients", async () => {
+      // HTTP client auto-unwraps {data: ...} responses
       const mockResponse = {
-        data: {
-          documentId: "doc-123",
-          message: "Emails resent successfully",
-          resentAt: "2024-01-01T12:00:00Z",
-        },
+        success: true,
+        recipientCount: 2,
       };
 
       MockedHttpClient.prototype.post = jest
@@ -523,7 +503,8 @@ describe("TurboSign Module", () => {
 
       const result = await TurboSign.resend("doc-123", ["rec-1", "rec-2"]);
 
-      expect(result.message).toContain("resent");
+      expect(result.success).toBe(true);
+      expect(result.recipientCount).toBe(2);
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
         "/turbosign/documents/doc-123/resend-email",
         { recipientIds: ["rec-1", "rec-2"] }
@@ -531,12 +512,10 @@ describe("TurboSign Module", () => {
     });
 
     it("should resend email to all recipients when empty array", async () => {
+      // HTTP client auto-unwraps {data: ...} responses
       const mockResponse = {
-        data: {
-          documentId: "doc-123",
-          message: "Emails resent to all recipients",
-          resentAt: "2024-01-01T12:00:00Z",
-        },
+        success: true,
+        recipientCount: 3,
       };
 
       MockedHttpClient.prototype.post = jest
@@ -546,7 +525,8 @@ describe("TurboSign Module", () => {
 
       const result = await TurboSign.resend("doc-123", []);
 
-      expect(result.message).toContain("resent");
+      expect(result.success).toBe(true);
+      expect(result.recipientCount).toBe(3);
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
         "/turbosign/documents/doc-123/resend-email",
         { recipientIds: [] }
@@ -556,36 +536,38 @@ describe("TurboSign Module", () => {
 
   describe("getAuditTrail", () => {
     it("should get audit trail for a document", async () => {
+      // HTTP client auto-unwraps {data: ...} responses
       const mockResponse = {
-        data: {
-          documentId: "doc-123",
-          entries: [
-            {
-              event: "document_created",
-              actor: "sender@example.com",
-              timestamp: "2024-01-01T10:00:00Z",
-              ipAddress: "192.168.1.1",
-            },
-            {
-              event: "email_sent",
-              actor: "system",
-              timestamp: "2024-01-01T10:01:00Z",
-              details: { recipientEmail: "john@example.com" },
-            },
-            {
-              event: "document_viewed",
-              actor: "john@example.com",
-              timestamp: "2024-01-01T11:00:00Z",
-              ipAddress: "10.0.0.1",
-            },
-            {
-              event: "document_signed",
-              actor: "john@example.com",
-              timestamp: "2024-01-01T11:05:00Z",
-              ipAddress: "10.0.0.1",
-            },
-          ],
+        document: {
+          id: "doc-123",
+          name: "Test Document",
         },
+        auditTrail: [
+          {
+            id: "audit-1",
+            documentId: "doc-123",
+            actionType: "document_created",
+            timestamp: "2024-01-01T10:00:00Z",
+          },
+          {
+            id: "audit-2",
+            documentId: "doc-123",
+            actionType: "email_sent",
+            timestamp: "2024-01-01T10:01:00Z",
+          },
+          {
+            id: "audit-3",
+            documentId: "doc-123",
+            actionType: "document_viewed",
+            timestamp: "2024-01-01T11:00:00Z",
+          },
+          {
+            id: "audit-4",
+            documentId: "doc-123",
+            actionType: "document_signed",
+            timestamp: "2024-01-01T11:05:00Z",
+          },
+        ],
       };
 
       MockedHttpClient.prototype.get = jest
@@ -595,21 +577,24 @@ describe("TurboSign Module", () => {
 
       const result = await TurboSign.getAuditTrail("doc-123");
 
-      expect(result.documentId).toBe("doc-123");
-      expect(result.entries).toHaveLength(4);
-      expect(result.entries[0].event).toBe("document_created");
-      expect(result.entries[3].event).toBe("document_signed");
+      expect(result.document.id).toBe("doc-123");
+      expect(result.document.name).toBe("Test Document");
+      expect(result.auditTrail).toHaveLength(4);
+      expect(result.auditTrail[0].actionType).toBe("document_created");
+      expect(result.auditTrail[3].actionType).toBe("document_signed");
       expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
         "/turbosign/documents/doc-123/audit-trail"
       );
     });
 
     it("should return empty entries for new document", async () => {
+      // HTTP client auto-unwraps {data: ...} responses
       const mockResponse = {
-        data: {
-          documentId: "doc-new",
-          entries: [],
+        document: {
+          id: "doc-new",
+          name: "New Document",
         },
+        auditTrail: [],
       };
 
       MockedHttpClient.prototype.get = jest
@@ -619,8 +604,8 @@ describe("TurboSign Module", () => {
 
       const result = await TurboSign.getAuditTrail("doc-new");
 
-      expect(result.documentId).toBe("doc-new");
-      expect(result.entries).toHaveLength(0);
+      expect(result.document.id).toBe("doc-new");
+      expect(result.auditTrail).toHaveLength(0);
     });
   });
 

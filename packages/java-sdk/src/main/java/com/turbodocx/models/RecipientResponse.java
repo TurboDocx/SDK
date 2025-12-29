@@ -15,9 +15,6 @@ public class RecipientResponse {
     @SerializedName("email")
     private String email;
 
-    @SerializedName("status")
-    private String status;
-
     @SerializedName("signUrl")
     private String signUrl;
 
@@ -34,10 +31,6 @@ public class RecipientResponse {
 
     public String getEmail() {
         return email;
-    }
-
-    public String getStatus() {
-        return status;
     }
 
     public String getSignUrl() {

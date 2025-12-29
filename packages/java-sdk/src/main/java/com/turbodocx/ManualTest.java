@@ -53,6 +53,8 @@ public class ManualTest {
                 .apiKey(API_KEY)
                 .baseUrl(BASE_URL)
                 .orgId(ORG_ID)
+                .senderEmail("sender@example.com")   // Reply-to email for signature requests
+                .senderName("Your Company Name")    // Sender name shown in emails
                 .build();
 
         try {
@@ -186,8 +188,6 @@ public class ManualTest {
                 .fields(Arrays.asList(templateField, coordinateField))
                 .documentName("Signing Test Document (Template Fields)")
                 .documentDescription("Testing template-based field positioning")
-                .senderName("Test Sender")
-                .senderEmail("sender@example.com")
                 .ccEmails(Arrays.asList("cc@example.com"))
                 .build();
 

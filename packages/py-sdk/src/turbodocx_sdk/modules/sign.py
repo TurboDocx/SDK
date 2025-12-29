@@ -320,11 +320,12 @@ class TurboSign:
             document_id: ID of the document
 
         Returns:
-            Document status with recipients information
+            Dict with status field:
+                - status: Document status (e.g., 'under_review', 'completed', 'voided')
 
         Example:
             >>> status = await TurboSign.get_status("doc-123")
-            >>> print(status["status"])  # 'pending', 'completed', etc.
+            >>> print(status["status"])  # 'under_review', 'completed', etc.
         """
         client = cls._get_client()
         return await client.get(f"/turbosign/documents/{document_id}/status")
@@ -378,16 +379,27 @@ class TurboSign:
             reason: Reason for voiding the document
 
         Returns:
-            Void confirmation with documentId, status, and voidedAt
+            Dict with:
+                - success: Whether the void was successful (bool)
+                - message: Success message (str)
 
         Example:
             >>> result = await TurboSign.void_document("doc-123", "Document needs revision")
+            >>> print(result["message"])  # "Document has been voided successfully"
         """
         client = cls._get_client()
-        return await client.post(
+        # Backend returns empty data on success, so we just make the call
+        # and return a success response if no exception is thrown
+        await client.post(
             f"/turbosign/documents/{document_id}/void",
             data={"reason": reason}
         )
+
+        # If we get here without exception, the void was successful
+        return {
+            "success": True,
+            "message": "Document has been voided successfully"
+        }
 
     @classmethod
     async def resend_email(
@@ -403,10 +415,13 @@ class TurboSign:
             recipient_ids: List of recipient IDs to resend emails to
 
         Returns:
-            Resend confirmation with documentId, message, and resentAt
+            Dict with:
+                - success: Whether the resend was successful (bool)
+                - recipientCount: Number of recipients who received email (int)
 
         Example:
             >>> result = await TurboSign.resend_email("doc-123", ["rec-1", "rec-2"])
+            >>> print(result["recipientCount"])  # 2
         """
         client = cls._get_client()
         return await client.post(
@@ -423,12 +438,18 @@ class TurboSign:
             document_id: ID of the document
 
         Returns:
-            Audit trail with documentId and entries array
+            Dict with:
+                - document: Dict with id and name
+                - auditTrail: List of audit entries, each with:
+                    - id, documentId, actionType, timestamp
+                    - previousHash, currentHash, createdOn
+                    - details (optional), user (optional), recipient (optional)
 
         Example:
             >>> audit = await TurboSign.get_audit_trail("doc-123")
-            >>> for entry in audit["entries"]:
-            ...     print(f"{entry['event']} - {entry['actor']} - {entry['timestamp']}")
+            >>> print(audit["document"]["name"])
+            >>> for entry in audit["auditTrail"]:
+            ...     print(f"{entry['actionType']} - {entry['timestamp']}")
         """
         client = cls._get_client()
         return await client.get(f"/turbosign/documents/{document_id}/audit-trail")

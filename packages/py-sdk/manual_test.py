@@ -25,7 +25,13 @@ TEST_PDF_PATH = "/path/to/your/test-document.pdf"  # Replace with path to your t
 TEST_EMAIL = "test-recipient@example.com"  # Replace with a real email to receive notifications
 
 # Configure TurboSign
-TurboSign.configure(api_key=API_KEY, base_url=BASE_URL, org_id=ORG_ID)
+TurboSign.configure(
+    api_key=API_KEY,
+    base_url=BASE_URL,
+    org_id=ORG_ID,
+    sender_email="sender@example.com",     # Reply-to email for signature requests
+    sender_name="Your Company Name"        # Sender name shown in emails
+)
 
 
 # =============================================
@@ -36,12 +42,9 @@ async def test_create_signature_review_link():
     """Test 1: Prepare document for review (no emails sent) - using fileLink"""
     print("\n--- Test 1: create_signature_review_link (using fileLink) ---")
 
-    # Using fileLink instead of file upload or templateId
-    # Replace with a publicly accessible PDF/DOCX URL
-    file_url = "https://example.com/sample-document.pdf"  # Replace with actual publicly accessible PDF URL
-
+    # Using fileLink instead of file upload
     result = await TurboSign.create_signature_review_link(
-        file_link=file_url,
+        file_link=FILE_URL,
         recipients=[
             {"name": "Signer One", "email": TEST_EMAIL, "signingOrder": 1}
         ],
@@ -115,8 +118,6 @@ async def test_send_signature():
         ],
         document_name="Signing Test Document",
         document_description="Sample contract for testing single-step signature endpoint",
-        sender_name="Test Sender",
-        sender_email="sender@example.com",
         cc_emails=["cc@example.com"],
     )
 

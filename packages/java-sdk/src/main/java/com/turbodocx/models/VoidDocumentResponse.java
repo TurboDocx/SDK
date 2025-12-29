@@ -6,24 +6,26 @@ import com.google.gson.annotations.SerializedName;
  * Response from voiding a document
  */
 public class VoidDocumentResponse {
-    @SerializedName("documentId")
-    private String documentId;
+    @SerializedName("success")
+    private Boolean success;
 
-    @SerializedName("status")
-    private String status;
+    @SerializedName("message")
+    private String message;
 
-    @SerializedName("voidedAt")
-    private String voidedAt;
+    // Default constructor for Gson
+    public VoidDocumentResponse() {}
 
-    public String getDocumentId() {
-        return documentId;
+    // Constructor for manual creation (backend returns empty data)
+    public VoidDocumentResponse(Boolean success, String message) {
+        this.success = success;
+        this.message = message;
     }
 
-    public String getStatus() {
-        return status;
+    public Boolean getSuccess() {
+        return success;
     }
 
-    public String getVoidedAt() {
-        return voidedAt;
+    public String getMessage() {
+        return message;
     }
 }
