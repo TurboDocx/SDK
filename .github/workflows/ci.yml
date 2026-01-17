@@ -69,6 +69,37 @@ jobs:
       - name: Run tests
         run: go test -v ./...
 
+  test-php:
+    name: Test PHP SDK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/php-sdk
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP 8.1
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: json, fileinfo, dom, xml, mbstring, curl
+          coverage: none
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run tests
+        run: composer test
+
+      - name: Run PHPStan
+        run: composer phpstan
+
+      - name: Check code style
+        run: composer cs-fix -- --dry-run --diff
+
   test-java:
     name: Test Java SDK
     runs-on: ubuntu-latest
