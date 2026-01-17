@@ -10,12 +10,12 @@ namespace TurboDocx\Types\Responses;
 final class AuditTrailResponse
 {
     /**
-     * @param string $documentId
-     * @param array<AuditTrailEntry> $entries
+     * @param AuditTrailDocument $document
+     * @param array<AuditTrailEntry> $auditTrail
      */
     public function __construct(
-        public string $documentId,
-        public array $entries,
+        public AuditTrailDocument $document,
+        public array $auditTrail,
     ) {}
 
     /**
@@ -26,14 +26,16 @@ final class AuditTrailResponse
      */
     public static function fromArray(array $data): self
     {
-        $entries = array_map(
+        $document = AuditTrailDocument::fromArray($data['document'] ?? []);
+
+        $auditTrail = array_map(
             fn(array $e) => AuditTrailEntry::fromArray($e),
-            $data['entries'] ?? []
+            $data['auditTrail'] ?? []
         );
 
         return new self(
-            documentId: $data['documentId'] ?? '',
-            entries: $entries,
+            document: $document,
+            auditTrail: $auditTrail,
         );
     }
 }

@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace TurboDocx\Types\Responses;
 
 /**
- * Response from resend
+ * Document information in audit trail response
  */
-final class ResendEmailResponse
+final class AuditTrailDocument
 {
     public function __construct(
-        public bool $success,
-        public int $recipientCount,
+        public string $id,
+        public string $name,
     ) {}
 
     /**
@@ -23,8 +23,8 @@ final class ResendEmailResponse
     public static function fromArray(array $data): self
     {
         return new self(
-            success: $data['success'] ?? true,
-            recipientCount: $data['recipientCount'] ?? 0,
+            id: $data['id'] ?? '',
+            name: $data['name'] ?? '',
         );
     }
 }
