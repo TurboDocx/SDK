@@ -7,7 +7,7 @@ namespace TurboDocx\Types\Responses;
 /**
  * Response from resend
  */
-final readonly class ResendEmailResponse
+final class ResendEmailResponse
 {
     public function __construct(
         public string $documentId,

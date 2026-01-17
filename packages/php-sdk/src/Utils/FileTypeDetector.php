@@ -21,7 +21,7 @@ final class FileTypeDetector
         if (str_starts_with($content, '%PDF')) {
             return [
                 'mimetype' => 'application/pdf',
-                'extension' => 'pdf'
+                'extension' => 'pdf',
             ];
         }
 
@@ -34,7 +34,7 @@ final class FileTypeDetector
             if (str_contains($first2000, 'ppt/')) {
                 return [
                     'mimetype' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-                    'extension' => 'pptx'
+                    'extension' => 'pptx',
                 ];
             }
 
@@ -42,21 +42,21 @@ final class FileTypeDetector
             if (str_contains($first2000, 'word/')) {
                 return [
                     'mimetype' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'extension' => 'docx'
+                    'extension' => 'docx',
                 ];
             }
 
             // Default to DOCX if it's a ZIP but can't determine type
             return [
                 'mimetype' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'extension' => 'docx'
+                'extension' => 'docx',
             ];
         }
 
         // Unknown file type
         return [
             'mimetype' => 'application/octet-stream',
-            'extension' => 'bin'
+            'extension' => 'bin',
         ];
     }
 }

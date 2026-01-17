@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace TurboDocx\Types\Requests;
 
+use TurboDocx\Types\Recipient;
+use TurboDocx\Types\Field;
+
 /**
  * Request for createSignatureReviewLink - prepare document without sending emails
  */
-final readonly class CreateSignatureReviewLinkRequest
+final class CreateSignatureReviewLinkRequest
 {
     /**
      * @param array<Recipient> $recipients Recipients who will sign

@@ -9,7 +9,7 @@ use TurboDocx\Types\RecipientStatus;
 /**
  * Recipient information in document status response
  */
-final readonly class RecipientResponse
+final class RecipientResponse
 {
     public function __construct(
         public string $id,

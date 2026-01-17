@@ -7,7 +7,7 @@ namespace TurboDocx\Types\Responses;
 /**
  * Response from createSignatureReviewLink
  */
-final readonly class CreateSignatureReviewLinkResponse
+final class CreateSignatureReviewLinkResponse
 {
     /**
      * @param bool $success

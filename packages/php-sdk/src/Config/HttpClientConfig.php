@@ -10,7 +10,7 @@ use TurboDocx\Exceptions\ValidationException;
 /**
  * Configuration for the TurboDocx HTTP client
  */
-final readonly class HttpClientConfig
+final class HttpClientConfig
 {
     /**
      * @param string|null $apiKey TurboDocx API key
@@ -35,8 +35,8 @@ final readonly class HttpClientConfig
 
         if (empty($this->senderEmail)) {
             throw new ValidationException(
-                'senderEmail is required. This email will be used as the reply-to address for signature requests. ' .
-                'Without it, emails will default to "API Service User via TurboSign".'
+                'senderEmail is required. This email will be used as the reply-to address for signature requests. '
+                . 'Without it, emails will default to "API Service User via TurboSign".'
             );
         }
     }

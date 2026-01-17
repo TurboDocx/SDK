@@ -40,7 +40,7 @@ function sendDirectlyExample(): void
             new SendSignatureRequest(
                 recipients: [
                     new Recipient('John Doe', 'john@example.com', 1),
-                    new Recipient('Jane Smith', 'jane@example.com', 2)
+                    new Recipient('Jane Smith', 'jane@example.com', 2),
                 ],
                 fields: [
                     // First recipient's fields - using template anchors
@@ -98,7 +98,7 @@ function sendDirectlyExample(): void
                             placement: FieldPlacement::REPLACE,
                             size: ['width' => 75, 'height' => 30]
                         )
-                    )
+                    ),
                 ],
                 file: $pdfFile,
                 documentName: 'Partnership Agreement',

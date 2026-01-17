@@ -7,7 +7,7 @@ namespace TurboDocx\Types\Responses;
 /**
  * Response from void
  */
-final readonly class VoidDocumentResponse
+final class VoidDocumentResponse
 {
     public function __construct(
         public string $documentId,

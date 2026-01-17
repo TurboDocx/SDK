@@ -11,6 +11,6 @@ class RateLimitException extends TurboDocxException
 {
     public function __construct(string $message = 'Rate limit exceeded')
     {
-        parent::__construct($message, 429, 'RATE_LIMIT_EXCEEDED');
+        parent::__construct($message, statusCode: 429, errorCode: 'RATE_LIMIT_EXCEEDED');
     }
 }

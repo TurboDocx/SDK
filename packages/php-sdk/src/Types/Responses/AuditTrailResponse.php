@@ -7,7 +7,7 @@ namespace TurboDocx\Types\Responses;
 /**
  * Response from getAuditTrail
  */
-final readonly class AuditTrailResponse
+final class AuditTrailResponse
 {
     /**
      * @param string $documentId

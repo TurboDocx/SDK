@@ -6,6 +6,7 @@ namespace TurboDocx;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Exception\RequestException;
 use Psr\Http\Message\ResponseInterface;
 use TurboDocx\Config\HttpClientConfig;
 use TurboDocx\Exceptions\AuthenticationException;
@@ -22,13 +23,11 @@ use TurboDocx\Utils\FileTypeDetector;
 final class HttpClient
 {
     private Client $client;
-    private ?string $orgId;
     private ?string $senderEmail;
     private ?string $senderName;
 
     public function __construct(HttpClientConfig $config)
     {
-        $this->orgId = $config->orgId;
         $this->senderEmail = $config->senderEmail;
         $this->senderName = $config->senderName;
 
@@ -71,16 +70,15 @@ final class HttpClient
     /**
      * Generic GET request
      *
-     * @template T
      * @param string $path
      * @param array<string, mixed> $params
-     * @return T
+     * @return array<string, mixed>
      */
     public function get(string $path, array $params = []): mixed
     {
         try {
             $response = $this->client->get($path, [
-                'query' => $params
+                'query' => $params,
             ]);
 
             return $this->smartUnwrap($this->parseResponse($response));
@@ -92,16 +90,15 @@ final class HttpClient
     /**
      * Generic POST request
      *
-     * @template T
      * @param string $path
      * @param array<string, mixed>|null $data
-     * @return T
+     * @return array<string, mixed>
      */
     public function post(string $path, ?array $data = null): mixed
     {
         try {
             $response = $this->client->post($path, [
-                'json' => $data
+                'json' => $data,
             ]);
 
             return $this->smartUnwrap($this->parseResponse($response));
@@ -113,12 +110,11 @@ final class HttpClient
     /**
      * Upload file with multipart form data
      *
-     * @template T
      * @param string $path
      * @param string $file File content (bytes)
      * @param string $fieldName Form field name
      * @param array<string, mixed> $additionalData Extra form fields
-     * @return T
+     * @return array<string, mixed>
      */
     public function uploadFile(
         string $path,
@@ -138,22 +134,22 @@ final class HttpClient
                 'contents' => $file,
                 'filename' => $fileName,
                 'headers' => [
-                    'Content-Type' => $fileType['mimetype']
-                ]
-            ]
+                    'Content-Type' => $fileType['mimetype'],
+                ],
+            ],
         ];
 
         // Add additional fields
         foreach ($additionalData as $key => $value) {
             $multipart[] = [
                 'name' => $key,
-                'contents' => is_array($value) ? json_encode($value) : (string)$value
+                'contents' => is_array($value) ? json_encode($value) : (string) $value,
             ];
         }
 
         try {
             $response = $this->client->post($path, [
-                'multipart' => $multipart
+                'multipart' => $multipart,
             ]);
 
             return $this->smartUnwrap($this->parseResponse($response));
@@ -170,19 +166,21 @@ final class HttpClient
      */
     private function handleException(GuzzleException $e): never
     {
-        if ($e->hasResponse()) {
+        if ($e instanceof RequestException && $e->hasResponse()) {
             $response = $e->getResponse();
-            $statusCode = $response->getStatusCode();
-            $body = json_decode($response->getBody()->getContents(), true);
-            $message = $body['message'] ?? $body['error'] ?? $e->getMessage();
+            if ($response !== null) {
+                $statusCode = $response->getStatusCode();
+                $body = json_decode($response->getBody()->getContents(), true);
+                $message = $body['message'] ?? $body['error'] ?? $e->getMessage();
 
-            throw match ($statusCode) {
-                400 => new ValidationException($message),
-                401 => new AuthenticationException($message),
-                404 => new NotFoundException($message),
-                429 => new RateLimitException($message),
-                default => new TurboDocxException($message, $statusCode),
-            };
+                throw match ($statusCode) {
+                    400 => new ValidationException($message),
+                    401 => new AuthenticationException($message),
+                    404 => new NotFoundException($message),
+                    429 => new RateLimitException($message),
+                    default => new TurboDocxException($message, $statusCode),
+                };
+            }
         }
 
         throw new NetworkException("Network request failed: {$e->getMessage()}");

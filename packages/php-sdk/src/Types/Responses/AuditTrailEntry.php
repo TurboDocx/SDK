@@ -7,7 +7,7 @@ namespace TurboDocx\Types\Responses;
 /**
  * Single audit trail entry
  */
-final readonly class AuditTrailEntry
+final class AuditTrailEntry
 {
     /**
      * @param string $event

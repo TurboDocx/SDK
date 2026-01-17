@@ -40,7 +40,7 @@ function reviewLinkExample(): void
             new CreateSignatureReviewLinkRequest(
                 recipients: [
                     new Recipient('John Doe', 'john@example.com', 1),
-                    new Recipient('Jane Smith', 'jane@example.com', 2)
+                    new Recipient('Jane Smith', 'jane@example.com', 2),
                 ],
                 fields: [
                     // First recipient - using template anchors
@@ -98,7 +98,7 @@ function reviewLinkExample(): void
                             placement: FieldPlacement::REPLACE,
                             size: ['width' => 75, 'height' => 30]
                         )
-                    )
+                    ),
                 ],
                 file: $pdfFile,
                 documentName: 'Contract Agreement',

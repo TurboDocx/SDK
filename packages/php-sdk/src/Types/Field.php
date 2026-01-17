@@ -7,7 +7,7 @@ namespace TurboDocx\Types;
 /**
  * Field configuration supporting both coordinate-based and template anchor-based positioning
  */
-final readonly class Field
+final class Field
 {
     /**
      * @param SignatureFieldType $type Field type

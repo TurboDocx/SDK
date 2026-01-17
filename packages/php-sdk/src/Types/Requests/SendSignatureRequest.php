@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace TurboDocx\Types\Requests;
 
+use TurboDocx\Types\Recipient;
+use TurboDocx\Types\Field;
+
 /**
  * Request for sendSignature - prepare and send in single call
  */
-final readonly class SendSignatureRequest
+final class SendSignatureRequest
 {
     /**
      * @param array<Recipient> $recipients Recipients who will sign

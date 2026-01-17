@@ -7,7 +7,7 @@ namespace TurboDocx\Types;
 /**
  * Template anchor configuration for dynamic field positioning
  */
-final readonly class TemplateConfig
+final class TemplateConfig
 {
     /**
      * @param string|null $anchor Text anchor pattern like {TagName}

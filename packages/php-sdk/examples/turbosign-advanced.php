@@ -40,7 +40,7 @@ function advancedExample(): void
             new SendSignatureRequest(
                 recipients: [
                     new Recipient('John Doe', 'john@example.com', 1),
-                    new Recipient('Jane Smith', 'jane@example.com', 2)
+                    new Recipient('Jane Smith', 'jane@example.com', 2),
                 ],
                 fields: [
                     // First recipient - coordinate-based positioning
@@ -117,7 +117,7 @@ function advancedExample(): void
                         height: 100,
                         isMultiline: true,
                         required: true
-                    )
+                    ),
                 ],
                 file: $pdfFile,
                 documentName: 'Advanced Contract',

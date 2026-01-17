@@ -7,7 +7,7 @@ namespace TurboDocx\Types\Responses;
 /**
  * Response from sendSignature
  */
-final readonly class SendSignatureResponse
+final class SendSignatureResponse
 {
     public function __construct(
         public bool $success,

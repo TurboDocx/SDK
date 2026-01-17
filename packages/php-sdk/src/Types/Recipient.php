@@ -9,7 +9,7 @@ use TurboDocx\Exceptions\ValidationException;
 /**
  * Recipient configuration for signature requests
  */
-final readonly class Recipient
+final class Recipient
 {
     /**
      * @param string $name Recipient's full name

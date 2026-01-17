@@ -11,6 +11,6 @@ class AuthenticationException extends TurboDocxException
 {
     public function __construct(string $message = 'Authentication failed')
     {
-        parent::__construct($message, 401, 'AUTHENTICATION_ERROR');
+        parent::__construct($message, statusCode: 401, errorCode: 'AUTHENTICATION_ERROR');
     }
 }

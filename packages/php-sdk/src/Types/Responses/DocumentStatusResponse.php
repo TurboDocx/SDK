@@ -9,7 +9,7 @@ use TurboDocx\Types\DocumentStatus;
 /**
  * Response from getStatus
  */
-final readonly class DocumentStatusResponse
+final class DocumentStatusResponse
 {
     /**
      * @param string $documentId
