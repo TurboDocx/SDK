@@ -19,6 +19,10 @@ use ReflectionMethod;
  */
 final class TurboSignSenderNameTest extends TestCase
 {
+    /**
+     * @param array<string, string|null> $senderConfig
+     * @return array<string, mixed>
+     */
     private function buildFormDataForReviewLink(CreateSignatureReviewLinkRequest $request, array $senderConfig): array
     {
         // This mirrors the logic in TurboSign::createSignatureReviewLink()
