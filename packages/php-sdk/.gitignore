@@ -1,0 +1,26 @@
+# Composer
+/vendor/
+composer.lock
+
+# PHPUnit
+/coverage/
+.phpunit.result.cache
+
+# PHPStan
+/phpstan.result
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build
+/build/
+/dist/
+
+# Environment
+.env
+.env.local
