@@ -109,7 +109,7 @@ final class TurboSign
         // Use request senderEmail/senderName if provided, otherwise fall back to configured values
         $formData['senderEmail'] = $request->senderEmail ?? $senderConfig['sender_email'];
         if ($request->senderName !== null || $senderConfig['sender_name'] !== null) {
-            $formData['senderName'] = $request->senderEmail ?? $senderConfig['sender_name'];
+            $formData['senderName'] = $request->senderName ?? $senderConfig['sender_name'];
         }
 
         if ($request->ccEmails !== null) {

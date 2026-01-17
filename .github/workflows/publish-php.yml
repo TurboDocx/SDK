@@ -7,7 +7,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    if: startsWith(github.ref_name, 'php-sdk-v')
+    if: startsWith(github.event.release.tag_name, 'php-sdk-v')
     defaults:
       run:
         working-directory: packages/php-sdk
@@ -25,7 +25,7 @@ jobs:
         run: composer validate --strict
 
       - name: Install dependencies
-        run: composer install --prefer-dist --no-progress --no-dev
+        run: composer install --prefer-dist --no-progress
 
       - name: Run tests
         run: composer test
@@ -39,7 +39,7 @@ jobs:
   notify-packagist:
     needs: validate
     runs-on: ubuntu-latest
-    if: startsWith(github.ref_name, 'php-sdk-v')
+    if: startsWith(github.event.release.tag_name, 'php-sdk-v')
     steps:
       - name: Notify Packagist
         run: |
