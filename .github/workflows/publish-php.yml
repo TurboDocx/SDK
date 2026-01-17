@@ -1,0 +1,48 @@
+name: Publish PHP SDK
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref_name, 'php-sdk-v')
+    defaults:
+      run:
+        working-directory: packages/php-sdk
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP 8.1
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: json, fileinfo, dom, xml, mbstring, curl
+          coverage: none
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-dev
+
+      - name: Run tests
+        run: composer test
+
+      - name: Run PHPStan
+        run: composer phpstan
+
+      - name: Check code style
+        run: composer cs-fix -- --dry-run --diff
+
+  notify-packagist:
+    needs: validate
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref_name, 'php-sdk-v')
+    steps:
+      - name: Notify Packagist
+        run: |
+          echo "✅ PHP SDK validated and ready"
+          echo "📦 Packagist will automatically detect the new tag and publish the package"
+          echo "🔗 Check status at: https://packagist.org/packages/turbodocx/sdk"
