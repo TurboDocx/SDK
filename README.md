@@ -57,6 +57,7 @@ Comprehensive SDKs, detailed documentation, and responsive support. Ship faster 
 |:---------|:--------|:--------|:-----|
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="20"/> **JavaScript/TypeScript** | [@turbodocx/sdk](./packages/js-sdk) | `npm install @turbodocx/sdk` | [View →](./packages/js-sdk#readme) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" width="20"/> **Python** | [turbodocx-sdk](./packages/py-sdk) | `pip install turbodocx-sdk` | [View →](./packages/py-sdk#readme) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg" width="20"/> **PHP** | [turbodocx/sdk](./packages/php-sdk) | `composer require turbodocx/sdk` | [View →](./packages/php-sdk#readme) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg" width="20"/> **Go** | [turbodocx-sdk](./packages/go-sdk) | `go get github.com/turbodocx/sdk` | [View →](./packages/go-sdk#readme) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="20"/> **Java** | [com.turbodocx:sdk](./packages/java-sdk) | [Maven Central](https://search.maven.org/artifact/com.turbodocx/sdk) | [View →](./packages/java-sdk#readme) |
 
@@ -115,6 +116,14 @@ poetry add turbodocx-sdk
 
 ```bash
 go get github.com/turbodocx/sdk
+```
+</details>
+
+<details>
+<summary><strong>PHP</strong></summary>
+
+```bash
+composer require turbodocx/sdk
 ```
 </details>
 
@@ -295,6 +304,7 @@ await TurboSign.resend(documentId, ['recipient-uuid']);
 |:----|:----------------|
 | JavaScript/TypeScript | Node.js 16+ |
 | Python | Python 3.9+ |
+| PHP | PHP 8.1+ |
 | Go | Go 1.21+ |
 | Java | Java 11+ |
 
