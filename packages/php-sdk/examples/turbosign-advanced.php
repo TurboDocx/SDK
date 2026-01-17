@@ -1,14 +1,15 @@
 <?php
 
 /**
- * Example 3: Advanced - Coordinate-based Positioning
+ * Example 3: Review Link - Advanced Field Types
  *
- * This example demonstrates:
- * - Coordinate-based field positioning
- * - Various field types (checkbox, readonly fields)
- * - Sequential signing workflow
+ * This example demonstrates advanced field types and features:
+ * - Multiple field types: signature, date, text, checkbox, company, title
+ * - Readonly fields with default values
+ * - Required fields
+ * - Multiline text fields
  *
- * Use this when: You need precise control over field positions
+ * Use this when: You need complex forms with varied input types
  */
 
 declare(strict_types=1);
@@ -20,9 +21,11 @@ use TurboDocx\Config\HttpClientConfig;
 use TurboDocx\Types\Recipient;
 use TurboDocx\Types\Field;
 use TurboDocx\Types\SignatureFieldType;
-use TurboDocx\Types\Requests\SendSignatureRequest;
+use TurboDocx\Types\TemplateConfig;
+use TurboDocx\Types\FieldPlacement;
+use TurboDocx\Types\Requests\CreateSignatureReviewLinkRequest;
 
-function advancedExample(): void
+function advancedFieldsExample(): void
 {
     TurboSign::configure(new HttpClientConfig(
         apiKey: getenv('TURBODOCX_API_KEY') ?: 'your-api-key-here',
@@ -34,126 +37,117 @@ function advancedExample(): void
     try {
         $pdfFile = file_get_contents(__DIR__ . '/../../ExampleAssets/advanced-contract.pdf');
 
-        echo "Sending document with advanced field types...\n\n";
+        echo "Creating review link with advanced field types...\n\n";
 
-        $result = TurboSign::sendSignature(
-            new SendSignatureRequest(
+        $result = TurboSign::createSignatureReviewLink(
+            new CreateSignatureReviewLinkRequest(
                 recipients: [
                     new Recipient('John Doe', 'john@example.com', 1),
-                    new Recipient('Jane Smith', 'jane@example.com', 2),
                 ],
                 fields: [
-                    // First recipient - coordinate-based positioning
+                    // Signature field
                     new Field(
                         type: SignatureFieldType::SIGNATURE,
                         recipientEmail: 'john@example.com',
-                        page: 1,
-                        x: 100,
-                        y: 500,
-                        width: 200,
-                        height: 50
+                        template: new TemplateConfig(
+                            anchor: '{signature}',
+                            placement: FieldPlacement::REPLACE,
+                            size: ['width' => 100, 'height' => 30]
+                        )
                     ),
+
+                    // Date field
                     new Field(
                         type: SignatureFieldType::DATE,
                         recipientEmail: 'john@example.com',
-                        page: 1,
-                        x: 100,
-                        y: 560,
-                        width: 150,
-                        height: 30
+                        template: new TemplateConfig(
+                            anchor: '{date}',
+                            placement: FieldPlacement::REPLACE,
+                            size: ['width' => 75, 'height' => 30]
+                        )
                     ),
-                    // Checkbox field (pre-checked)
+
+                    // Full name field
+                    new Field(
+                        type: SignatureFieldType::FULL_NAME,
+                        recipientEmail: 'john@example.com',
+                        template: new TemplateConfig(
+                            anchor: '{printed_name}',
+                            placement: FieldPlacement::REPLACE,
+                            size: ['width' => 100, 'height' => 20]
+                        )
+                    ),
+
+                    // Readonly field with default value (pre-filled)
+                    new Field(
+                        type: SignatureFieldType::COMPANY,
+                        recipientEmail: 'john@example.com',
+                        defaultValue: 'TurboDocx',
+                        isReadonly: true,
+                        template: new TemplateConfig(
+                            anchor: '{company}',
+                            placement: FieldPlacement::REPLACE,
+                            size: ['width' => 100, 'height' => 20]
+                        )
+                    ),
+
+                    // Required checkbox with default checked
                     new Field(
                         type: SignatureFieldType::CHECKBOX,
                         recipientEmail: 'john@example.com',
-                        page: 1,
-                        x: 100,
-                        y: 600,
-                        width: 20,
-                        height: 20,
-                        defaultValue: 'true',  // Pre-checked
-                        isReadonly: false      // Allow user to uncheck
+                        defaultValue: 'true',
+                        required: true,
+                        template: new TemplateConfig(
+                            anchor: '{terms_checkbox}',
+                            placement: FieldPlacement::REPLACE,
+                            size: ['width' => 20, 'height' => 20]
+                        )
                     ),
-                    // Readonly text field (pre-filled, non-editable)
+
+                    // Title field
                     new Field(
-                        type: SignatureFieldType::TEXT,
+                        type: SignatureFieldType::TITLE,
                         recipientEmail: 'john@example.com',
-                        page: 1,
-                        x: 130,
-                        y: 600,
-                        width: 300,
-                        height: 30,
-                        defaultValue: 'I agree to the terms and conditions',
-                        isReadonly: true,
-                        backgroundColor: '#f0f0f0'
+                        template: new TemplateConfig(
+                            anchor: '{title}',
+                            placement: FieldPlacement::REPLACE,
+                            size: ['width' => 75, 'height' => 30]
+                        )
                     ),
-                    // Second recipient - sequential signing
-                    new Field(
-                        type: SignatureFieldType::SIGNATURE,
-                        recipientEmail: 'jane@example.com',
-                        page: 1,
-                        x: 100,
-                        y: 700,
-                        width: 200,
-                        height: 50
-                    ),
-                    new Field(
-                        type: SignatureFieldType::DATE,
-                        recipientEmail: 'jane@example.com',
-                        page: 1,
-                        x: 100,
-                        y: 760,
-                        width: 150,
-                        height: 30
-                    ),
+
                     // Multiline text field
                     new Field(
                         type: SignatureFieldType::TEXT,
-                        recipientEmail: 'jane@example.com',
-                        page: 2,
-                        x: 100,
-                        y: 100,
-                        width: 400,
-                        height: 100,
+                        recipientEmail: 'john@example.com',
                         isMultiline: true,
-                        required: true
+                        template: new TemplateConfig(
+                            anchor: '{notes}',
+                            placement: FieldPlacement::REPLACE,
+                            size: ['width' => 200, 'height' => 50]
+                        )
                     ),
                 ],
                 file: $pdfFile,
                 documentName: 'Advanced Contract',
-                documentDescription: 'Contract with various field types and sequential signing'
+                documentDescription: 'Contract with advanced signature field features'
             )
         );
 
-        echo "✅ Document sent successfully!\n\n";
+        echo "✅ Review link created!\n\n";
         echo "Document ID: {$result->documentId}\n";
-        echo "Message: {$result->message}\n";
+        echo "Status: {$result->status}\n";
+        echo "Preview URL: {$result->previewUrl}\n";
 
-        // Poll for status until completed
-        echo "\nPolling for completion...\n";
-        $maxAttempts = 10;
-        $attempt = 0;
-
-        while ($attempt < $maxAttempts) {
-            sleep(2); // Wait 2 seconds
-            $status = TurboSign::getStatus($result->documentId);
-
-            echo "Status: {$status->status->value}\n";
-
-            if ($status->status->value === 'completed') {
-                echo "\n✅ Document completed!\n";
-                echo "Signed at: {$status->completedAt}\n";
-
-                // Download the signed document
-                $signedPdf = TurboSign::download($result->documentId);
-                file_put_contents('signed-document.pdf', $signedPdf);
-                echo "Downloaded signed document to: signed-document.pdf\n";
-
-                break;
+        if ($result->recipients !== null) {
+            echo "\nRecipients:\n";
+            foreach ($result->recipients as $recipient) {
+                echo "  {$recipient['name']} ({$recipient['email']}) - {$recipient['status']}\n";
             }
-
-            $attempt++;
         }
+
+        echo "\nNext steps:\n";
+        echo "1. Review the document at the preview URL\n";
+        echo "2. Send to recipients: TurboSign::send(documentId);\n";
 
     } catch (Exception $error) {
         echo "Error: {$error->getMessage()}\n";
@@ -161,4 +155,4 @@ function advancedExample(): void
 }
 
 // Run the example
-advancedExample();
+advancedFieldsExample();
