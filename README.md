@@ -57,6 +57,7 @@ Comprehensive SDKs, detailed documentation, and responsive support. Ship faster 
 |:---------|:--------|:--------|:-----|
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="20"/> **JavaScript/TypeScript** | [@turbodocx/sdk](./packages/js-sdk) | `npm install @turbodocx/sdk` | [View →](./packages/js-sdk#readme) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" width="20"/> **Python** | [turbodocx-sdk](./packages/py-sdk) | `pip install turbodocx-sdk` | [View →](./packages/py-sdk#readme) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg" width="20"/> **PHP** | [turbodocx/sdk](./packages/php-sdk) | `composer require turbodocx/sdk` | [View →](./packages/php-sdk#readme) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg" width="20"/> **Go** | [turbodocx-sdk](./packages/go-sdk) | `go get github.com/turbodocx/sdk` | [View →](./packages/go-sdk#readme) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="20"/> **Java** | [com.turbodocx:sdk](./packages/java-sdk) | [Maven Central](https://search.maven.org/artifact/com.turbodocx/sdk) | [View →](./packages/java-sdk#readme) |
 
@@ -68,9 +69,13 @@ Comprehensive SDKs, detailed documentation, and responsive support. Ship faster 
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/ruby/ruby-original.svg" width="20"/> **Ruby** | 🚧 In Progress |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/powershell/powershell-original.svg" width="20"/> **PowerShell** | 🚧 In Progress |
 
-> 🔌 **Low-code?** Check out our [n8n community node](https://www.npmjs.com/package/@turbodocx/n8n-nodes-turbodocx) for no-code/low-code workflows!
->
-> 📝 **Microsoft Word?** Get [TurboDocx Writer](https://appsource.microsoft.com/en-us/product/office/WA200007397) from the Microsoft AppSource marketplace!
+## 🌐 Explore the TurboDocx Ecosystem
+
+| Package | Links | Description |
+|---------|-------|-------------|
+| @turbodocx/html-to-docx | [![npm](https://img.shields.io/npm/v/@turbodocx/html-to-docx?logo=npm&logoColor=white&label=npm)](https://www.npmjs.com/package/@turbodocx/html-to-docx) [![GitHub](https://img.shields.io/github/stars/turbodocx/html-to-docx?style=social)](https://github.com/turbodocx/html-to-docx) | Convert HTML to DOCX with the fastest JavaScript library |
+| n8n-nodes-turbodocx | [![npm](https://img.shields.io/npm/v/@turbodocx/n8n-nodes-turbodocx?logo=npm&logoColor=white&label=npm)](https://www.npmjs.com/package/@turbodocx/n8n-nodes-turbodocx) [![GitHub](https://img.shields.io/github/stars/turbodocx/n8n-nodes-turbodocx?style=social)](https://github.com/turbodocx/n8n-nodes-turbodocx) | n8n community node for TurboDocx API & TurboSign |
+| TurboDocx Writer | [![AppSource](https://img.shields.io/badge/Microsoft-AppSource-blue?logo=microsoft)](https://appsource.microsoft.com/en-us/product/office/WA200007397) | Official Microsoft Word add-in for document automation |
 
 ---
 
@@ -111,6 +116,14 @@ poetry add turbodocx-sdk
 
 ```bash
 go get github.com/turbodocx/sdk
+```
+</details>
+
+<details>
+<summary><strong>PHP</strong></summary>
+
+```bash
+composer require turbodocx/sdk
 ```
 </details>
 
@@ -291,6 +304,7 @@ await TurboSign.resend(documentId, ['recipient-uuid']);
 |:----|:----------------|
 | JavaScript/TypeScript | Node.js 16+ |
 | Python | Python 3.9+ |
+| PHP | PHP 8.1+ |
 | Go | Go 1.21+ |
 | Java | Java 11+ |
 
@@ -322,28 +336,22 @@ We're looking for community maintainers for each SDK. Interested? [Open an issue
 
 <table>
 <tr>
-<td align="center" width="25%">
+<td align="center" width="33%">
 <a href="https://docs.turbodocx.com">
 <img src="https://cdn-icons-png.flaticon.com/512/2991/2991112.png" width="40"/><br/>
 <strong>Documentation</strong>
 </a>
 </td>
-<td align="center" width="25%">
+<td align="center" width="33%">
 <a href="https://discord.gg/NYKwz4BcpX">
 <img src="https://cdn-icons-png.flaticon.com/512/5968/5968756.png" width="40"/><br/>
 <strong>Discord</strong>
 </a>
 </td>
-<td align="center" width="25%">
+<td align="center" width="33%">
 <a href="https://github.com/TurboDocx/SDK/issues">
 <img src="https://cdn-icons-png.flaticon.com/512/733/733553.png" width="40"/><br/>
 <strong>GitHub Issues</strong>
-</a>
-</td>
-<td align="center" width="25%">
-<a href="mailto:support@turbodocx.com">
-<img src="https://cdn-icons-png.flaticon.com/512/732/732200.png" width="40"/><br/>
-<strong>Email</strong>
 </a>
 </td>
 </tr>
