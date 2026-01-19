@@ -5,17 +5,13 @@ declare(strict_types=1);
 namespace TurboDocx\Types\Responses;
 
 /**
- * Response from getStatus
- *
- * Note: Simplified to match JS/Python/Go/Java SDKs which only return status string
+ * User information in audit trail entries
  */
-final class DocumentStatusResponse
+final class AuditTrailUser
 {
-    /**
-     * @param string $status Document status (e.g., 'draft', 'under_review', 'completed', 'voided')
-     */
     public function __construct(
-        public string $status,
+        public string $name,
+        public string $email,
     ) {}
 
     /**
@@ -27,7 +23,8 @@ final class DocumentStatusResponse
     public static function fromArray(array $data): self
     {
         return new self(
-            status: $data['status'] ?? '',
+            name: $data['name'] ?? '',
+            email: $data['email'] ?? '',
         );
     }
 }

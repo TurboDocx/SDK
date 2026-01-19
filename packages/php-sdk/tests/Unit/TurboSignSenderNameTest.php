@@ -59,17 +59,23 @@ final class TurboSignSenderNameTest extends TestCase
 
         $senderConfig = [
             'sender_email' => 'default@example.com',
-            'sender_name' => 'Default Name'
+            'sender_name' => 'Default Name',
         ];
 
         // Act: Build form data (simulating what TurboSign does)
         $formData = $this->buildFormDataForReviewLink($request, $senderConfig);
 
         // Assert: senderName should be 'John Doe', NOT 'sender@example.com'
-        $this->assertEquals('John Doe', $formData['senderName'],
-            'senderName should use request->senderName, not request->senderEmail');
-        $this->assertEquals('sender@example.com', $formData['senderEmail'],
-            'senderEmail should use request->senderEmail');
+        $this->assertEquals(
+            'John Doe',
+            $formData['senderName'],
+            'senderName should use request->senderName, not request->senderEmail'
+        );
+        $this->assertEquals(
+            'sender@example.com',
+            $formData['senderEmail'],
+            'senderEmail should use request->senderEmail'
+        );
     }
 
     public function testSenderNameFallsBackToConfigWhenNotProvided(): void
@@ -85,14 +91,17 @@ final class TurboSignSenderNameTest extends TestCase
 
         $senderConfig = [
             'sender_email' => 'default@example.com',
-            'sender_name' => 'Default Name'
+            'sender_name' => 'Default Name',
         ];
 
         // Act
         $formData = $this->buildFormDataForReviewLink($request, $senderConfig);
 
         // Assert: Should fall back to config sender name
-        $this->assertEquals('Default Name', $formData['senderName'],
-            'senderName should fall back to config sender_name when request->senderName is null');
+        $this->assertEquals(
+            'Default Name',
+            $formData['senderName'],
+            'senderName should fall back to config sender_name when request->senderName is null'
+        );
     }
 }

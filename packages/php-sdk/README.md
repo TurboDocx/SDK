@@ -500,7 +500,7 @@ while (true) {
     sleep(2);
     $status = TurboSign::getStatus($result->documentId);
 
-    if ($status->status === DocumentStatus::COMPLETED) {
+    if ($status->status === 'completed') {
         echo "Document completed!\n";
 
         // Download signed document
@@ -509,7 +509,7 @@ while (true) {
         break;
     }
 
-    echo "Status: {$status->status->value}\n";
+    echo "Status: {$status->status}\n";
 }
 ```
 

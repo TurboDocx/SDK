@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace TurboDocx\Types\Responses;
 
-use TurboDocx\Types\RecipientStatus;
-
 /**
- * Recipient information in document status response
+ * Recipient information in API responses
+ *
+ * Note: Matches JS/Python/Go/Java SDKs - no status field
  */
 final class RecipientResponse
 {
@@ -15,7 +15,6 @@ final class RecipientResponse
         public string $id,
         public string $email,
         public string $name,
-        public RecipientStatus $status,
         public ?string $signUrl,
         public ?string $signedAt,
     ) {}
@@ -32,7 +31,6 @@ final class RecipientResponse
             id: $data['id'] ?? '',
             email: $data['email'] ?? '',
             name: $data['name'] ?? '',
-            status: RecipientStatus::from($data['status'] ?? 'pending'),
             signUrl: $data['signUrl'] ?? null,
             signedAt: $data['signedAt'] ?? null,
         );
