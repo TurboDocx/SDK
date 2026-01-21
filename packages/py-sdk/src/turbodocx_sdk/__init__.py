@@ -10,6 +10,7 @@ __version__ = "0.1.0"
 from typing import Optional
 
 from .modules.sign import TurboSign
+from .modules.template import TurboTemplate
 from .http import (
     HttpClient,
     TurboDocxError,
@@ -54,6 +55,7 @@ class TurboDocxClient:
 __all__ = [
     "TurboDocxClient",
     "TurboSign",
+    "TurboTemplate",
     "HttpClient",
     "TurboDocxError",
     "AuthenticationError",
