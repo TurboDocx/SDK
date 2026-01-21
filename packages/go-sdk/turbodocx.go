@@ -34,6 +34,9 @@ type Client struct {
 	// TurboSign provides digital signature operations
 	TurboSign *TurboSignClient
 
+	// TurboTemplate provides document templating operations
+	TurboTemplate *TurboTemplateClient
+
 	httpClient *HTTPClient
 }
 
@@ -117,7 +120,8 @@ func NewClientWithConfig(config ClientConfig) (*Client, error) {
 	httpClient := NewHTTPClient(config)
 
 	return &Client{
-		TurboSign:  NewTurboSignClient(httpClient),
-		httpClient: httpClient,
+		TurboSign:     NewTurboSignClient(httpClient),
+		TurboTemplate: &TurboTemplateClient{httpClient: httpClient},
+		httpClient:    httpClient,
 	}, nil
 }
