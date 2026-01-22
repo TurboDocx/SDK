@@ -239,11 +239,11 @@ func NewSimpleVariable(name string, value interface{}, placeholder ...string) Te
 	}
 }
 
-// NewNestedVariable creates a nested object variable
+// NewAdvancedEngineVariable creates an advanced engine variable (for nested objects, complex data)
 // name: variable name
 // value: nested object/map value
 // placeholder: optional custom placeholder (pass empty string to use default {name})
-func NewNestedVariable(name string, value map[string]interface{}, placeholder ...string) TemplateVariable {
+func NewAdvancedEngineVariable(name string, value map[string]interface{}, placeholder ...string) TemplateVariable {
 	p := ""
 	if len(placeholder) > 0 && placeholder[0] != "" {
 		p = placeholder[0]

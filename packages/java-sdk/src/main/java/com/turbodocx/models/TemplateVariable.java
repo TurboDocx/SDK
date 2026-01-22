@@ -249,12 +249,12 @@ public class TemplateVariable {
     }
 
     /**
-     * Creates a variable for nested objects (dot notation access)
+     * Creates an advanced engine variable (for nested objects, complex data)
      * @param name The variable name
      * @param value The nested object value
      * @param placeholder Optional placeholder override (defaults to {name})
      */
-    public static TemplateVariable nested(String name, Map<String, Object> value, String... placeholder) {
+    public static TemplateVariable advancedEngine(String name, Map<String, Object> value, String... placeholder) {
         String p = getPlaceholder(name, placeholder);
         return builder()
                 .placeholder(p)

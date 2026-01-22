@@ -271,11 +271,11 @@ class TurboTemplate:
         return {"placeholder": p, "name": name, "value": value, "mimeType": VariableMimeType.TEXT}
 
     @staticmethod
-    def create_nested_variable(
+    def create_advanced_engine_variable(
         name: str, value: Dict[str, Any], placeholder: Optional[str] = None
     ) -> TemplateVariable:
         """
-        Helper: Create a nested object variable
+        Helper: Create an advanced engine variable (for nested objects, complex data)
 
         Args:
             name: Variable name
@@ -283,7 +283,7 @@ class TurboTemplate:
             placeholder: Optional custom placeholder (defaults to {name})
 
         Returns:
-            TemplateVariable configured for nested object access
+            TemplateVariable configured for advanced templating engine
         """
         p = placeholder if placeholder else (name if name.startswith("{") else f"{{{name}}}")
         return {

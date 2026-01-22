@@ -246,12 +246,12 @@ export class TurboTemplate {
   }
 
   /**
-   * Helper: Create a nested object variable
+   * Helper: Create an advanced engine variable (for nested objects, complex data)
    * @param name - Variable name
    * @param value - Object value
    * @param placeholder - Optional custom placeholder (defaults to {name})
    */
-  static createNestedVariable(name: string, value: Record<string, any>, placeholder?: string): NestedVariable {
+  static createAdvancedEngineVariable(name: string, value: Record<string, any>, placeholder?: string): NestedVariable {
     const p = placeholder ?? (name.startsWith('{') ? name : `{${name}}`);
     return {
       placeholder: p,
