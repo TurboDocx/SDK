@@ -261,6 +261,111 @@ await TurboSign.resend_email("doc-uuid-here", recipient_ids=["recipient-uuid-1"]
 
 ---
 
+### TurboTemplate
+
+Generate documents from templates with advanced variable substitution.
+
+#### `TurboTemplate.configure()`
+
+Configure the TurboTemplate module (same configuration as TurboSign).
+
+```python
+from turbodocx_sdk import TurboTemplate
+import os
+
+TurboTemplate.configure(
+    api_key=os.environ["TURBODOCX_API_KEY"],
+    org_id=os.environ["TURBODOCX_ORG_ID"],
+)
+```
+
+#### `TurboTemplate.generate()`
+
+Generate a document from a template with variables.
+
+```python
+result = await TurboTemplate.generate({
+    "templateId": "your-template-uuid",
+    "name": "Generated Contract",
+    "description": "Contract for Q4 2024",
+    "variables": [
+        {"placeholder": "{customer_name}", "name": "customer_name", "value": "Acme Corp"},
+        {"placeholder": "{contract_date}", "name": "contract_date", "value": "2024-01-15"},
+        {"placeholder": "{total_amount}", "name": "total_amount", "value": 50000},
+    ],
+})
+
+print(f"Document ID: {result['deliverableId']}")
+```
+
+#### Helper Functions
+
+Use helper functions for cleaner variable creation:
+
+```python
+from turbodocx_sdk import TurboTemplate
+
+result = await TurboTemplate.generate({
+    "templateId": "invoice-template-uuid",
+    "name": "Invoice #1234",
+    "description": "Monthly invoice",
+    "variables": [
+        # Simple text/number variables
+        TurboTemplate.create_simple_variable("invoice_number", "INV-2024-001"),
+        TurboTemplate.create_simple_variable("total", 1500),
+
+        # Nested objects (access with dot notation: {customer.name}, {customer.address.city})
+        TurboTemplate.create_nested_variable("customer", {
+            "name": "Acme Corp",
+            "email": "billing@acme.com",
+            "address": {
+                "street": "123 Main St",
+                "city": "New York",
+                "state": "NY",
+            },
+        }),
+
+        # Arrays for loops ({#items}...{/items})
+        TurboTemplate.create_loop_variable("items", [
+            {"name": "Widget A", "quantity": 5, "price": 100},
+            {"name": "Widget B", "quantity": 3, "price": 200},
+        ]),
+
+        # Conditionals ({#is_premium}...{/is_premium})
+        TurboTemplate.create_conditional_variable("is_premium", True),
+
+        # Images
+        TurboTemplate.create_image_variable("logo", "https://example.com/logo.png"),
+    ],
+})
+```
+
+#### Advanced Templating Features
+
+TurboTemplate supports Angular-like expressions:
+
+| Feature | Template Syntax | Example |
+|:--------|:----------------|:--------|
+| Simple substitution | `{variable}` | `{customer_name}` |
+| Nested objects | `{object.property}` | `{user.address.city}` |
+| Loops | `{#array}...{/array}` | `{#items}{name}: ${price}{/items}` |
+| Conditionals | `{#condition}...{/condition}` | `{#is_premium}Premium Member{/is_premium}` |
+| Expressions | `{expression}` | `{price * quantity}` |
+
+#### Variable Configuration
+
+| Property | Type | Required | Description |
+|:---------|:-----|:---------|:------------|
+| `placeholder` | str | Yes | The placeholder in template (e.g., `{name}`) |
+| `name` | str | Yes | Variable name for the templating engine |
+| `value` | any | Yes* | The value to substitute |
+| `mimeType` | str | Yes | `text`, `json`, `html`, `image`, `markdown` |
+| `usesAdvancedTemplatingEngine` | bool | No | Enable for loops, conditionals, expressions |
+
+*Either `value` or `text` must be provided.
+
+---
+
 ## Field Types
 
 | Type | Description | Required | Auto-filled |

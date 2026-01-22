@@ -265,6 +265,99 @@ client.turboSign().resendEmail("doc-uuid-here", Arrays.asList("recipient-uuid-1"
 
 ---
 
+### TurboTemplate
+
+Generate documents from templates with advanced variable substitution.
+
+#### `turboTemplate().generate()`
+
+Generate a document from a template with variables.
+
+```java
+GenerateTemplateResponse result = client.turboTemplate().generate(
+    GenerateTemplateRequest.builder()
+        .templateId("your-template-uuid")
+        .name("Generated Contract")
+        .description("Contract for Q4 2024")
+        .variables(Arrays.asList(
+            TemplateVariable.simple("customer_name", "Acme Corp"),
+            TemplateVariable.simple("contract_date", "2024-01-15"),
+            TemplateVariable.simple("total_amount", 50000)
+        ))
+        .build()
+);
+
+System.out.println("Document ID: " + result.getDeliverableId());
+```
+
+#### Helper Functions
+
+Use helper functions for cleaner variable creation:
+
+```java
+GenerateTemplateResponse result = client.turboTemplate().generate(
+    GenerateTemplateRequest.builder()
+        .templateId("invoice-template-uuid")
+        .name("Invoice #1234")
+        .description("Monthly invoice")
+        .variables(Arrays.asList(
+            // Simple text/number variables
+            TemplateVariable.simple("invoice_number", "INV-2024-001"),
+            TemplateVariable.simple("total", 1500),
+
+            // Nested objects (access with dot notation: {customer.name}, {customer.address.city})
+            TemplateVariable.nested("customer", Map.of(
+                "name", "Acme Corp",
+                "email", "billing@acme.com",
+                "address", Map.of(
+                    "street", "123 Main St",
+                    "city", "New York",
+                    "state", "NY"
+                )
+            )),
+
+            // Arrays for loops ({#items}...{/items})
+            TemplateVariable.loop("items", Arrays.asList(
+                Map.of("name", "Widget A", "quantity", 5, "price", 100),
+                Map.of("name", "Widget B", "quantity", 3, "price", 200)
+            )),
+
+            // Conditionals ({#is_premium}...{/is_premium})
+            TemplateVariable.conditional("is_premium", true),
+
+            // Images
+            TemplateVariable.image("logo", "https://example.com/logo.png")
+        ))
+        .build()
+);
+```
+
+#### Advanced Templating Features
+
+TurboTemplate supports Angular-like expressions:
+
+| Feature | Template Syntax | Example |
+|:--------|:----------------|:--------|
+| Simple substitution | `{variable}` | `{customer_name}` |
+| Nested objects | `{object.property}` | `{user.address.city}` |
+| Loops | `{#array}...{/array}` | `{#items}{name}: ${price}{/items}` |
+| Conditionals | `{#condition}...{/condition}` | `{#is_premium}Premium Member{/is_premium}` |
+| Expressions | `{expression}` | `{price * quantity}` |
+
+#### Variable Configuration
+
+| Property | Type | Required | Description |
+|:---------|:-----|:---------|:------------|
+| `placeholder` | String | Yes | The placeholder in template (e.g., `{name}`) |
+| `name` | String | Yes | Variable name for the templating engine |
+| `value` | Object | Yes* | The value to substitute |
+| `mimeType` | VariableMimeType | Yes | `TEXT`, `JSON`, `HTML`, `IMAGE`, `MARKDOWN` |
+| `usesAdvancedTemplatingEngine` | Boolean | No | Enable for loops, conditionals, expressions |
+
+*Either `value` or `text` must be provided.
+
+---
+
 ## Field Types
 
 | Type | Description | Required | Auto-filled |

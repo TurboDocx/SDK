@@ -232,6 +232,95 @@ err := client.TurboSign.Resend(ctx, "doc-uuid-here", []string{"recipient-uuid-1"
 
 ---
 
+### TurboTemplate
+
+Generate documents from templates with advanced variable substitution.
+
+#### `TurboTemplate.Generate`
+
+Generate a document from a template with variables.
+
+```go
+result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
+    TemplateID: "your-template-uuid",
+    Name:       stringPtr("Generated Contract"),
+    Description: stringPtr("Contract for Q4 2024"),
+    Variables: []turbodocx.TemplateVariable{
+        {Placeholder: "{customer_name}", Name: "customer_name", Value: "Acme Corp"},
+        {Placeholder: "{contract_date}", Name: "contract_date", Value: "2024-01-15"},
+        {Placeholder: "{total_amount}", Name: "total_amount", Value: 50000},
+    },
+})
+
+fmt.Printf("Document ID: %s\n", *result.DeliverableID)
+```
+
+#### Helper Functions
+
+Use helper functions for cleaner variable creation:
+
+```go
+result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
+    TemplateID: "invoice-template-uuid",
+    Name:       stringPtr("Invoice #1234"),
+    Description: stringPtr("Monthly invoice"),
+    Variables: []turbodocx.TemplateVariable{
+        // Simple text/number variables
+        turbodocx.NewSimpleVariable("invoice_number", "INV-2024-001"),
+        turbodocx.NewSimpleVariable("total", 1500),
+
+        // Nested objects (access with dot notation: {customer.name}, {customer.address.city})
+        turbodocx.NewNestedVariable("customer", map[string]interface{}{
+            "name":  "Acme Corp",
+            "email": "billing@acme.com",
+            "address": map[string]interface{}{
+                "street": "123 Main St",
+                "city":   "New York",
+                "state":  "NY",
+            },
+        }),
+
+        // Arrays for loops ({#items}...{/items})
+        turbodocx.NewLoopVariable("items", []interface{}{
+            map[string]interface{}{"name": "Widget A", "quantity": 5, "price": 100},
+            map[string]interface{}{"name": "Widget B", "quantity": 3, "price": 200},
+        }),
+
+        // Conditionals ({#is_premium}...{/is_premium})
+        turbodocx.NewConditionalVariable("is_premium", true),
+
+        // Images
+        turbodocx.NewImageVariable("logo", "https://example.com/logo.png"),
+    },
+})
+```
+
+#### Advanced Templating Features
+
+TurboTemplate supports Angular-like expressions:
+
+| Feature | Template Syntax | Example |
+|:--------|:----------------|:--------|
+| Simple substitution | `{variable}` | `{customer_name}` |
+| Nested objects | `{object.property}` | `{user.address.city}` |
+| Loops | `{#array}...{/array}` | `{#items}{name}: ${price}{/items}` |
+| Conditionals | `{#condition}...{/condition}` | `{#is_premium}Premium Member{/is_premium}` |
+| Expressions | `{expression}` | `{price * quantity}` |
+
+#### Variable Configuration
+
+| Field | Type | Required | Description |
+|:------|:-----|:---------|:------------|
+| `Placeholder` | string | Yes | The placeholder in template (e.g., `{name}`) |
+| `Name` | string | Yes | Variable name for the templating engine |
+| `Value` | interface{} | Yes* | The value to substitute |
+| `MimeType` | VariableMimeType | Yes | `MimeTypeText`, `MimeTypeJSON`, `MimeTypeHTML`, `MimeTypeImage`, `MimeTypeMarkdown` |
+| `UsesAdvancedTemplatingEngine` | *bool | No | Enable for loops, conditionals, expressions |
+
+*Either `Value` or `Text` must be provided.
+
+---
+
 ## Field Types
 
 | Type | Description | Required | Auto-filled |
