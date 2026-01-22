@@ -59,9 +59,6 @@ export interface TemplateVariable {
   /** Whether this is a default value */
   defaultValue?: boolean;
 
-  /** Nested variables for complex object structures */
-  nestedVariables?: TemplateVariable[];
-
   /** Sub-variables (legacy structure) */
   subvariables?: TemplateVariable[];
 }

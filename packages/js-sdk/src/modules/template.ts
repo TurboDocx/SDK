@@ -158,7 +158,6 @@ export class TurboTemplate {
         // Add optional fields
         if (v.description) variable.description = v.description;
         if (v.defaultValue !== undefined) variable.defaultValue = v.defaultValue;
-        if (v.nestedVariables) variable.nestedVariables = v.nestedVariables;
         if (v.subvariables) variable.subvariables = v.subvariables;
 
         return variable;

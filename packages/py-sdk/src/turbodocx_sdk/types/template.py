@@ -41,7 +41,6 @@ class TemplateVariable(_TemplateVariableRequired, total=False):
         allowRichTextInjection: Allow rich text injection (HTML formatting)
         description: Variable description
         defaultValue: Whether this is a default value
-        nestedVariables: Nested variables for complex structures
         subvariables: Sub-variables (legacy structure)
     """
 
@@ -52,7 +51,6 @@ class TemplateVariable(_TemplateVariableRequired, total=False):
     allowRichTextInjection: Optional[bool]
     description: Optional[str]
     defaultValue: Optional[bool]
-    nestedVariables: Optional[List["TemplateVariable"]]
     subvariables: Optional[List["TemplateVariable"]]
 
 

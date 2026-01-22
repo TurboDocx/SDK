@@ -55,9 +55,6 @@ type TemplateVariable struct {
 	// DefaultValue indicates whether this is a default value
 	DefaultValue *bool `json:"defaultValue,omitempty"`
 
-	// NestedVariables are nested variables for complex structures
-	NestedVariables []TemplateVariable `json:"nestedVariables,omitempty"`
-
 	// Subvariables are sub-variables (legacy structure)
 	Subvariables []TemplateVariable `json:"subvariables,omitempty"`
 }

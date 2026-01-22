@@ -40,9 +40,6 @@ public class TemplateVariable {
     @JsonProperty("defaultValue")
     private Boolean defaultValue;
 
-    @JsonProperty("nestedVariables")
-    private List<TemplateVariable> nestedVariables;
-
     @JsonProperty("subvariables")
     private List<TemplateVariable> subvariables;
 
@@ -140,14 +137,6 @@ public class TemplateVariable {
         this.defaultValue = defaultValue;
     }
 
-    public List<TemplateVariable> getNestedVariables() {
-        return nestedVariables;
-    }
-
-    public void setNestedVariables(List<TemplateVariable> nestedVariables) {
-        this.nestedVariables = nestedVariables;
-    }
-
     public List<TemplateVariable> getSubvariables() {
         return subvariables;
     }
@@ -212,11 +201,6 @@ public class TemplateVariable {
 
         public Builder defaultValue(Boolean defaultValue) {
             variable.defaultValue = defaultValue;
-            return this;
-        }
-
-        public Builder nestedVariables(List<TemplateVariable> nestedVariables) {
-            variable.nestedVariables = nestedVariables;
             return this;
         }
 

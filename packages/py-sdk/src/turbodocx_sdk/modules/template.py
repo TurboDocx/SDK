@@ -179,8 +179,6 @@ class TurboTemplate:
                 variable["description"] = v["description"]
             if "defaultValue" in v:
                 variable["defaultValue"] = v["defaultValue"]
-            if "nestedVariables" in v:
-                variable["nestedVariables"] = v["nestedVariables"]
             if "subvariables" in v:
                 variable["subvariables"] = v["subvariables"]
 
