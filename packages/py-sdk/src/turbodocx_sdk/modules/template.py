@@ -149,8 +149,12 @@ class TurboTemplate:
                 "name": v.get("name"),
             }
 
-            # Add mimeType (default to 'text' if not provided)
-            variable["mimeType"] = v.get("mimeType", "text")
+            # mimeType is required
+            if "mimeType" not in v or not v["mimeType"]:
+                raise ValueError(
+                    f'Variable "{variable["placeholder"]}" must have a "mimeType" property'
+                )
+            variable["mimeType"] = v["mimeType"]
 
             # Handle value - keep objects/arrays as-is for JSON serialization
             if "value" in v and v["value"] is not None:
@@ -266,7 +270,7 @@ class TurboTemplate:
             TemplateVariable configured for simple substitution
         """
         p = placeholder if placeholder else (name if name.startswith("{") else f"{{{name}}}")
-        return {"placeholder": p, "name": name, "value": value}
+        return {"placeholder": p, "name": name, "value": value, "mimeType": VariableMimeType.TEXT}
 
     @staticmethod
     def create_nested_variable(
@@ -336,6 +340,7 @@ class TurboTemplate:
             "placeholder": p,
             "name": name,
             "value": value,
+            "mimeType": VariableMimeType.JSON,
             "usesAdvancedTemplatingEngine": True,
         }
 

@@ -129,8 +129,11 @@ export class TurboTemplate {
           name: v.name,
         };
 
-        // Add mimeType if specified (default to 'text' if not provided)
-        variable.mimeType = v.mimeType || 'text';
+        // mimeType is required
+        if (!v.mimeType) {
+          throw new Error(`Variable "${variable.placeholder}" must have a 'mimeType' property`);
+        }
+        variable.mimeType = v.mimeType;
 
         // Handle value - keep objects/arrays as-is for JSON serialization
         if (v.value !== undefined && v.value !== null) {
@@ -239,6 +242,7 @@ export class TurboTemplate {
       placeholder: p,
       name,
       value,
+      mimeType: 'text',
     };
   }
 
@@ -288,6 +292,7 @@ export class TurboTemplate {
       placeholder: p,
       name,
       value,
+      mimeType: 'json',
       usesAdvancedTemplatingEngine: true,
     };
   }

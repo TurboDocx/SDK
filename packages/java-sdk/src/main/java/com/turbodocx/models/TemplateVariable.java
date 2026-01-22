@@ -232,6 +232,9 @@ public class TemplateVariable {
             if (variable.name == null || variable.name.isEmpty()) {
                 throw new IllegalStateException("name must be set");
             }
+            if (variable.mimeType == null || variable.mimeType.isEmpty()) {
+                throw new IllegalStateException("mimeType must be set");
+            }
             if (variable.value == null && variable.text == null) {
                 throw new IllegalStateException("Either value or text must be set");
             }
@@ -253,9 +256,12 @@ public class TemplateVariable {
      */
     public static TemplateVariable simple(String name, Object value, String... placeholder) {
         String p = getPlaceholder(name, placeholder);
-        TemplateVariable var = new TemplateVariable(p, value);
-        var.setName(name);
-        return var;
+        return builder()
+                .placeholder(p)
+                .name(name)
+                .value(value)
+                .mimeType(VariableMimeType.TEXT)
+                .build();
     }
 
     /**
@@ -304,6 +310,7 @@ public class TemplateVariable {
                 .placeholder(p)
                 .name(name)
                 .value(value)
+                .mimeType(VariableMimeType.JSON)
                 .usesAdvancedTemplatingEngine(true)
                 .build();
     }

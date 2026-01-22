@@ -37,8 +37,8 @@ type TemplateVariable struct {
 	// Text is the text value (legacy, prefer using Value)
 	Text *string `json:"text,omitempty"`
 
-	// MimeType is the MIME type of the variable
-	MimeType *VariableMimeType `json:"mimeType,omitempty"`
+	// MimeType is the MIME type of the variable (required)
+	MimeType VariableMimeType `json:"mimeType"`
 
 	// UsesAdvancedTemplatingEngine enables advanced templating for this variable
 	UsesAdvancedTemplatingEngine *bool `json:"usesAdvancedTemplatingEngine,omitempty"`
@@ -189,6 +189,9 @@ func (c *TurboTemplateClient) Generate(ctx context.Context, req *GenerateTemplat
 		if v.Name == "" {
 			return nil, fmt.Errorf("variable %d must have Name", i)
 		}
+		if v.MimeType == "" {
+			return nil, fmt.Errorf("variable %d (%s) must have MimeType", i, v.Placeholder)
+		}
 		if v.Value == nil && (v.Text == nil || *v.Text == "") {
 			return nil, fmt.Errorf("variable %d (%s) must have either Value or Text", i, v.Placeholder)
 		}
@@ -235,6 +238,7 @@ func NewSimpleVariable(name string, value interface{}, placeholder ...string) Te
 		Placeholder: p,
 		Name:        name,
 		Value:       value,
+		MimeType:    MimeTypeText,
 	}
 }
 
@@ -251,13 +255,12 @@ func NewNestedVariable(name string, value map[string]interface{}, placeholder ..
 	} else {
 		p = "{" + name + "}"
 	}
-	mimeType := MimeTypeJSON
 	usesAdvanced := true
 	return TemplateVariable{
 		Placeholder:                  p,
 		Name:                         name,
 		Value:                        value,
-		MimeType:                     &mimeType,
+		MimeType:                     MimeTypeJSON,
 		UsesAdvancedTemplatingEngine: &usesAdvanced,
 	}
 }
@@ -275,13 +278,12 @@ func NewLoopVariable(name string, value []interface{}, placeholder ...string) Te
 	} else {
 		p = "{" + name + "}"
 	}
-	mimeType := MimeTypeJSON
 	usesAdvanced := true
 	return TemplateVariable{
 		Placeholder:                  p,
 		Name:                         name,
 		Value:                        value,
-		MimeType:                     &mimeType,
+		MimeType:                     MimeTypeJSON,
 		UsesAdvancedTemplatingEngine: &usesAdvanced,
 	}
 }
@@ -304,6 +306,7 @@ func NewConditionalVariable(name string, value interface{}, placeholder ...strin
 		Placeholder:                  p,
 		Name:                         name,
 		Value:                        value,
+		MimeType:                     MimeTypeJSON,
 		UsesAdvancedTemplatingEngine: &usesAdvanced,
 	}
 }
@@ -321,11 +324,10 @@ func NewImageVariable(name string, imageURL string, placeholder ...string) Templ
 	} else {
 		p = "{" + name + "}"
 	}
-	mimeType := MimeTypeImage
 	return TemplateVariable{
 		Placeholder: p,
 		Name:        name,
 		Value:       imageURL,
-		MimeType:    &mimeType,
+		MimeType:    MimeTypeImage,
 	}
 }

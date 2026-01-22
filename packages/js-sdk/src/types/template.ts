@@ -35,8 +35,8 @@ export interface TemplateVariable {
    */
   text?: string | number | boolean | object | any[] | null;
 
-  /** MIME type of the variable */
-  mimeType?: VariableMimeType;
+  /** MIME type of the variable (required) */
+  mimeType: VariableMimeType;
 
   /**
    * Enable advanced templating engine for this variable
@@ -127,6 +127,7 @@ export interface SimpleVariable {
   placeholder: string;
   name: string;
   value: string | number | boolean;
+  mimeType: 'text';
 }
 
 /** Variable with nested structure (e.g., user.name, user.email) */
@@ -152,6 +153,7 @@ export interface ConditionalVariable {
   placeholder: string;
   name: string;
   value: any;
+  mimeType: 'json';
   usesAdvancedTemplatingEngine: true;
 }
 

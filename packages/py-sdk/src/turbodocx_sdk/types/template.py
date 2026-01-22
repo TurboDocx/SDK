@@ -21,6 +21,7 @@ class _TemplateVariableRequired(TypedDict):
 
     placeholder: str
     name: str
+    mimeType: str  # Required: 'text', 'json', 'html', 'image', 'markdown'
 
 
 class TemplateVariable(_TemplateVariableRequired, total=False):
@@ -46,7 +47,6 @@ class TemplateVariable(_TemplateVariableRequired, total=False):
 
     value: Union[str, int, float, bool, Dict[str, Any], List[Any], None]
     text: Optional[str]
-    mimeType: Optional[VariableMimeType]
     usesAdvancedTemplatingEngine: Optional[bool]
     nestedInAdvancedTemplatingEngine: Optional[bool]
     allowRichTextInjection: Optional[bool]
