@@ -2,7 +2,7 @@
  * TurboTemplate Module Tests
  *
  * Tests for advanced templating features:
- * - Helper functions (createSimpleVariable, createNestedVariable, etc.)
+ * - Helper functions (createSimpleVariable, createAdvancedEngineVariable, etc.)
  * - Variable validation
  * - Generate template functionality
  * - Placeholder and name handling
@@ -61,60 +61,66 @@ describe('TurboTemplate Module', () => {
 
   describe('Helper Functions', () => {
     describe('createSimpleVariable', () => {
-      it('should create a simple variable with name and value', () => {
-        const variable = TurboTemplate.createSimpleVariable('customer_name', 'Person A');
+      it('should create a simple variable with placeholder, name, value and mimeType', () => {
+        const variable = TurboTemplate.createSimpleVariable('{customer_name}', 'customer_name', 'Person A', 'text');
 
         expect(variable).toEqual({
           placeholder: '{customer_name}',
           name: 'customer_name',
           value: 'Person A',
+          mimeType: 'text',
         });
       });
 
       it('should create a simple variable with number value', () => {
-        const variable = TurboTemplate.createSimpleVariable('order_total', 1500);
+        const variable = TurboTemplate.createSimpleVariable('{order_total}', 'order_total', 1500, 'text');
 
         expect(variable).toEqual({
           placeholder: '{order_total}',
           name: 'order_total',
           value: 1500,
+          mimeType: 'text',
         });
       });
 
       it('should create a simple variable with boolean value', () => {
-        const variable = TurboTemplate.createSimpleVariable('is_active', true);
+        const variable = TurboTemplate.createSimpleVariable('{is_active}', 'is_active', true, 'text');
 
         expect(variable).toEqual({
           placeholder: '{is_active}',
           name: 'is_active',
           value: true,
+          mimeType: 'text',
         });
       });
 
-      it('should use custom placeholder when provided', () => {
-        const variable = TurboTemplate.createSimpleVariable('customer_name', 'Person A', '{custom_placeholder}');
+      it('should create a simple variable with html mimeType', () => {
+        const variable = TurboTemplate.createSimpleVariable('{content}', 'content', '<b>Bold</b>', 'html');
 
         expect(variable).toEqual({
-          placeholder: '{custom_placeholder}',
-          name: 'customer_name',
-          value: 'Person A',
+          placeholder: '{content}',
+          name: 'content',
+          value: '<b>Bold</b>',
+          mimeType: 'html',
         });
       });
 
-      it('should handle name that already has curly braces', () => {
-        const variable = TurboTemplate.createSimpleVariable('{customer_name}', 'Person A');
+      it('should throw error when placeholder is missing', () => {
+        expect(() => TurboTemplate.createSimpleVariable('', 'name', 'value', 'text')).toThrow('placeholder is required');
+      });
 
-        expect(variable).toEqual({
-          placeholder: '{customer_name}',
-          name: '{customer_name}',
-          value: 'Person A',
-        });
+      it('should throw error when name is missing', () => {
+        expect(() => TurboTemplate.createSimpleVariable('{test}', '', 'value', 'text')).toThrow('name is required');
+      });
+
+      it('should throw error when mimeType is missing', () => {
+        expect(() => TurboTemplate.createSimpleVariable('{test}', 'test', 'value', '' as any)).toThrow('mimeType is required');
       });
     });
 
-    describe('createNestedVariable', () => {
+    describe('createAdvancedEngineVariable', () => {
       it('should create a nested variable with object value', () => {
-        const variable = TurboTemplate.createNestedVariable('user', {
+        const variable = TurboTemplate.createAdvancedEngineVariable('{user}', 'user', {
           firstName: 'Foo',
           lastName: 'Bar',
           email: 'foo@example.com',
@@ -134,7 +140,7 @@ describe('TurboTemplate Module', () => {
       });
 
       it('should create a nested variable with deeply nested object', () => {
-        const variable = TurboTemplate.createNestedVariable('company', {
+        const variable = TurboTemplate.createAdvancedEngineVariable('{company}', 'company', {
           name: 'Company ABC',
           address: {
             street: '123 Test Street',
@@ -155,17 +161,18 @@ describe('TurboTemplate Module', () => {
         expect(variable.usesAdvancedTemplatingEngine).toBe(true);
       });
 
-      it('should use custom placeholder when provided', () => {
-        const variable = TurboTemplate.createNestedVariable('user', { name: 'Test' }, '{custom_user}');
+      it('should throw error when placeholder is missing', () => {
+        expect(() => TurboTemplate.createAdvancedEngineVariable('', 'user', { name: 'Test' })).toThrow('placeholder is required');
+      });
 
-        expect(variable.placeholder).toBe('{custom_user}');
-        expect(variable.name).toBe('user');
+      it('should throw error when name is missing', () => {
+        expect(() => TurboTemplate.createAdvancedEngineVariable('{user}', '', { name: 'Test' })).toThrow('name is required');
       });
     });
 
     describe('createLoopVariable', () => {
       it('should create a loop variable with array value', () => {
-        const variable = TurboTemplate.createLoopVariable('items', [
+        const variable = TurboTemplate.createLoopVariable('{items}', 'items', [
           { name: 'Item A', price: 100 },
           { name: 'Item B', price: 200 },
         ]);
@@ -183,62 +190,67 @@ describe('TurboTemplate Module', () => {
       });
 
       it('should create a loop variable with empty array', () => {
-        const variable = TurboTemplate.createLoopVariable('products', []);
+        const variable = TurboTemplate.createLoopVariable('{products}', 'products', []);
 
         expect(variable.value).toEqual([]);
         expect(variable.mimeType).toBe('json');
       });
 
       it('should create a loop variable with primitive array', () => {
-        const variable = TurboTemplate.createLoopVariable('tags', ['tag1', 'tag2', 'tag3']);
+        const variable = TurboTemplate.createLoopVariable('{tags}', 'tags', ['tag1', 'tag2', 'tag3']);
 
         expect(variable.value).toEqual(['tag1', 'tag2', 'tag3']);
       });
 
-      it('should use custom placeholder when provided', () => {
-        const variable = TurboTemplate.createLoopVariable('items', [], '{line_items}');
+      it('should throw error when placeholder is missing', () => {
+        expect(() => TurboTemplate.createLoopVariable('', 'items', [])).toThrow('placeholder is required');
+      });
 
-        expect(variable.placeholder).toBe('{line_items}');
-        expect(variable.name).toBe('items');
+      it('should throw error when name is missing', () => {
+        expect(() => TurboTemplate.createLoopVariable('{items}', '', [])).toThrow('name is required');
       });
     });
 
     describe('createConditionalVariable', () => {
       it('should create a conditional variable with boolean true', () => {
-        const variable = TurboTemplate.createConditionalVariable('is_premium', true);
+        const variable = TurboTemplate.createConditionalVariable('{is_premium}', 'is_premium', true);
 
         expect(variable).toEqual({
           placeholder: '{is_premium}',
           name: 'is_premium',
           value: true,
+          mimeType: 'json',
           usesAdvancedTemplatingEngine: true,
         });
       });
 
       it('should create a conditional variable with boolean false', () => {
-        const variable = TurboTemplate.createConditionalVariable('show_discount', false);
+        const variable = TurboTemplate.createConditionalVariable('{show_discount}', 'show_discount', false);
 
         expect(variable.value).toBe(false);
+        expect(variable.mimeType).toBe('json');
         expect(variable.usesAdvancedTemplatingEngine).toBe(true);
       });
 
       it('should create a conditional variable with truthy value', () => {
-        const variable = TurboTemplate.createConditionalVariable('count', 5);
+        const variable = TurboTemplate.createConditionalVariable('{count}', 'count', 5);
 
         expect(variable.value).toBe(5);
+        expect(variable.mimeType).toBe('json');
       });
 
-      it('should use custom placeholder when provided', () => {
-        const variable = TurboTemplate.createConditionalVariable('is_active', true, '{active_flag}');
+      it('should throw error when placeholder is missing', () => {
+        expect(() => TurboTemplate.createConditionalVariable('', 'is_active', true)).toThrow('placeholder is required');
+      });
 
-        expect(variable.placeholder).toBe('{active_flag}');
-        expect(variable.name).toBe('is_active');
+      it('should throw error when name is missing', () => {
+        expect(() => TurboTemplate.createConditionalVariable('{is_active}', '', true)).toThrow('name is required');
       });
     });
 
     describe('createImageVariable', () => {
       it('should create an image variable with URL', () => {
-        const variable = TurboTemplate.createImageVariable('logo', 'https://example.com/logo.png');
+        const variable = TurboTemplate.createImageVariable('{logo}', 'logo', 'https://example.com/logo.png');
 
         expect(variable).toEqual({
           placeholder: '{logo}',
@@ -250,17 +262,22 @@ describe('TurboTemplate Module', () => {
 
       it('should create an image variable with base64', () => {
         const base64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...';
-        const variable = TurboTemplate.createImageVariable('signature', base64Image);
+        const variable = TurboTemplate.createImageVariable('{signature}', 'signature', base64Image);
 
         expect(variable.value).toBe(base64Image);
         expect(variable.mimeType).toBe('image');
       });
 
-      it('should use custom placeholder when provided', () => {
-        const variable = TurboTemplate.createImageVariable('logo', 'https://example.com/logo.png', '{company_logo}');
+      it('should throw error when placeholder is missing', () => {
+        expect(() => TurboTemplate.createImageVariable('', 'logo', 'https://example.com/logo.png')).toThrow('placeholder is required');
+      });
 
-        expect(variable.placeholder).toBe('{company_logo}');
-        expect(variable.name).toBe('logo');
+      it('should throw error when name is missing', () => {
+        expect(() => TurboTemplate.createImageVariable('{logo}', '', 'https://example.com/logo.png')).toThrow('name is required');
+      });
+
+      it('should throw error when imageUrl is missing', () => {
+        expect(() => TurboTemplate.createImageVariable('{logo}', 'logo', '')).toThrow('imageUrl is required');
       });
     });
   });
@@ -271,6 +288,7 @@ describe('TurboTemplate Module', () => {
         placeholder: '{name}',
         name: 'name',
         value: 'Test',
+        mimeType: 'text',
       });
 
       expect(result.isValid).toBe(true);
@@ -301,7 +319,8 @@ describe('TurboTemplate Module', () => {
         placeholder: '{items}',
         name: 'items',
         value: [1, 2, 3],
-      });
+        mimeType: 'text',
+      } as any);
 
       expect(result.isValid).toBe(true);
       expect(result.warnings).toContain('Array values should use mimeType: "json"');
@@ -347,7 +366,8 @@ describe('TurboTemplate Module', () => {
         placeholder: '{user}',
         name: 'user',
         value: { name: 'Test' },
-      });
+        mimeType: 'text',
+      } as any);
 
       expect(result.isValid).toBe(true);
       expect(result.warnings).toContain('Complex objects should explicitly set mimeType to "json"');
@@ -370,8 +390,8 @@ describe('TurboTemplate Module', () => {
         name: 'Test Document',
         description: 'Test description',
         variables: [
-          { placeholder: '{customer_name}', name: 'customer_name', value: 'Person A' },
-          { placeholder: '{order_total}', name: 'order_total', value: 1500 },
+          { placeholder: '{customer_name}', name: 'customer_name', value: 'Person A', mimeType: 'text' },
+          { placeholder: '{order_total}', name: 'order_total', value: 1500, mimeType: 'text' },
         ],
       });
 
@@ -510,11 +530,11 @@ describe('TurboTemplate Module', () => {
         name: 'Helper Document',
         description: 'Document using helper functions',
         variables: [
-          TurboTemplate.createSimpleVariable('title', 'Quarterly Report'),
-          TurboTemplate.createNestedVariable('company', { name: 'Company XYZ', employees: 500 }),
-          TurboTemplate.createLoopVariable('departments', [{ name: 'Dept A' }, { name: 'Dept B' }]),
-          TurboTemplate.createConditionalVariable('show_financials', true),
-          TurboTemplate.createImageVariable('logo', 'https://example.com/logo.png'),
+          TurboTemplate.createSimpleVariable('{title}', 'title', 'Quarterly Report', 'text'),
+          TurboTemplate.createAdvancedEngineVariable('{company}', 'company', { name: 'Company XYZ', employees: 500 }),
+          TurboTemplate.createLoopVariable('{departments}', 'departments', [{ name: 'Dept A' }, { name: 'Dept B' }]),
+          TurboTemplate.createConditionalVariable('{show_financials}', 'show_financials', true),
+          TurboTemplate.createImageVariable('{logo}', 'logo', 'https://example.com/logo.png'),
         ],
       });
 
@@ -535,7 +555,7 @@ describe('TurboTemplate Module', () => {
         templateId: 'template-123',
         name: 'Options Document',
         description: 'Document with all options',
-        variables: [{ placeholder: '{test}', name: 'test', value: 'value' }],
+        variables: [{ placeholder: '{test}', name: 'test', value: 'value', mimeType: 'text' }],
         replaceFonts: true,
         defaultFont: 'Arial',
         outputFormat: 'pdf',
@@ -580,7 +600,7 @@ describe('TurboTemplate Module', () => {
         templateId: 'template-123',
         name: 'Text Document',
         description: 'Document using text property',
-        variables: [{ placeholder: '{legacy}', name: 'legacy', text: 'Legacy value' }],
+        variables: [{ placeholder: '{legacy}', name: 'legacy', text: 'Legacy value', mimeType: 'text' }],
       });
 
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
@@ -613,7 +633,7 @@ describe('TurboTemplate Module', () => {
         name: 'Both Fields Document',
         description: 'Document with both placeholder and name',
         variables: [
-          { placeholder: '{customer}', name: 'customer', value: 'Person A' },
+          { placeholder: '{customer}', name: 'customer', value: 'Person A', mimeType: 'text' },
         ],
       });
 
@@ -636,7 +656,7 @@ describe('TurboTemplate Module', () => {
         name: 'Distinct Fields Document',
         description: 'Document with distinct placeholder and name',
         variables: [
-          { placeholder: '{cust_name}', name: 'customerFullName', value: 'Person A' },
+          { placeholder: '{cust_name}', name: 'customerFullName', value: 'Person A', mimeType: 'text' },
         ],
       });
 
@@ -662,7 +682,7 @@ describe('TurboTemplate Module', () => {
           templateId: 'invalid-template',
           name: 'Error Document',
           description: 'Document that should fail',
-          variables: [{ placeholder: '{test}', name: 'test', value: 'value' }],
+          variables: [{ placeholder: '{test}', name: 'test', value: 'value', mimeType: 'text' }],
         })
       ).rejects.toEqual(apiError);
     });
@@ -682,7 +702,7 @@ describe('TurboTemplate Module', () => {
           templateId: 'template-123',
           name: 'Validation Error Document',
           description: 'Document that should fail validation',
-          variables: [{ placeholder: '{test}', name: 'test', value: '' }],
+          variables: [{ placeholder: '{test}', name: 'test', value: '', mimeType: 'text' }],
         })
       ).rejects.toEqual(validationError);
     });
@@ -702,7 +722,7 @@ describe('TurboTemplate Module', () => {
           templateId: 'template-123',
           name: 'Rate Limit Document',
           description: 'Document that should hit rate limit',
-          variables: [{ placeholder: '{test}', name: 'test', value: 'value' }],
+          variables: [{ placeholder: '{test}', name: 'test', value: 'value', mimeType: 'text' }],
         })
       ).rejects.toEqual(rateLimitError);
     });

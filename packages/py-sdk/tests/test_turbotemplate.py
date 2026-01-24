@@ -2,7 +2,7 @@
 TurboTemplate Module Tests
 
 Tests for advanced templating features:
-- Helper functions (create_simple_variable, create_nested_variable, etc.)
+- Helper functions (create_simple_variable, create_advanced_engine_variable, etc.)
 - Variable validation
 - Generate template functionality
 - Placeholder and name handling
@@ -46,62 +46,83 @@ class TestHelperFunctions:
 
         def test_create_simple_variable_with_string_value(self):
             """Should create a simple variable with string value"""
-            variable = TurboTemplate.create_simple_variable("customer_name", "Person A")
+            variable = TurboTemplate.create_simple_variable(
+                "{customer_name}", "customer_name", "Person A", "text"
+            )
 
             assert variable == {
                 "placeholder": "{customer_name}",
                 "name": "customer_name",
                 "value": "Person A",
+                "mimeType": "text",
             }
 
         def test_create_simple_variable_with_number_value(self):
             """Should create a simple variable with number value"""
-            variable = TurboTemplate.create_simple_variable("order_total", 1500)
+            variable = TurboTemplate.create_simple_variable(
+                "{order_total}", "order_total", 1500, "text"
+            )
 
             assert variable == {
                 "placeholder": "{order_total}",
                 "name": "order_total",
                 "value": 1500,
+                "mimeType": "text",
             }
 
         def test_create_simple_variable_with_boolean_value(self):
             """Should create a simple variable with boolean value"""
-            variable = TurboTemplate.create_simple_variable("is_active", True)
+            variable = TurboTemplate.create_simple_variable(
+                "{is_active}", "is_active", True, "text"
+            )
 
             assert variable == {
                 "placeholder": "{is_active}",
                 "name": "is_active",
                 "value": True,
+                "mimeType": "text",
             }
 
-        def test_create_simple_variable_with_custom_placeholder(self):
-            """Should use custom placeholder when provided"""
+        def test_create_simple_variable_with_html_mimetype(self):
+            """Should create a simple variable with html mimeType"""
             variable = TurboTemplate.create_simple_variable(
-                "customer_name", "Person A", "{custom_placeholder}"
+                "{content}", "content", "<b>Bold</b>", "html"
             )
 
             assert variable == {
-                "placeholder": "{custom_placeholder}",
-                "name": "customer_name",
-                "value": "Person A",
+                "placeholder": "{content}",
+                "name": "content",
+                "value": "<b>Bold</b>",
+                "mimeType": "html",
             }
 
-        def test_create_simple_variable_with_curly_braces_in_name(self):
-            """Should handle name that already has curly braces"""
-            variable = TurboTemplate.create_simple_variable("{customer_name}", "Person A")
+        def test_create_simple_variable_throws_when_placeholder_missing(self):
+            """Should throw error when placeholder is missing"""
+            with pytest.raises(ValueError, match="placeholder is required"):
+                TurboTemplate.create_simple_variable("", "name", "value", "text")
 
-            assert variable == {
-                "placeholder": "{customer_name}",
-                "name": "{customer_name}",
-                "value": "Person A",
-            }
+        def test_create_simple_variable_throws_when_name_missing(self):
+            """Should throw error when name is missing"""
+            with pytest.raises(ValueError, match="name is required"):
+                TurboTemplate.create_simple_variable("{test}", "", "value", "text")
 
-    class TestCreateNestedVariable:
-        """Test create_nested_variable helper"""
+        def test_create_simple_variable_throws_when_mimetype_missing(self):
+            """Should throw error when mimeType is missing"""
+            with pytest.raises(ValueError, match="mime_type is required"):
+                TurboTemplate.create_simple_variable("{test}", "test", "value", "")
 
-        def test_create_nested_variable_with_object_value(self):
+        def test_create_simple_variable_throws_when_mimetype_invalid(self):
+            """Should throw error when mimeType is invalid"""
+            with pytest.raises(ValueError, match="mime_type must be 'text' or 'html'"):
+                TurboTemplate.create_simple_variable("{test}", "test", "value", "json")
+
+    class TestCreateAdvancedEngineVariable:
+        """Test create_advanced_engine_variable helper"""
+
+        def test_create_advanced_engine_variable_with_object_value(self):
             """Should create a nested variable with object value"""
-            variable = TurboTemplate.create_nested_variable(
+            variable = TurboTemplate.create_advanced_engine_variable(
+                "{user}",
                 "user",
                 {
                     "firstName": "Foo",
@@ -120,9 +141,10 @@ class TestHelperFunctions:
             assert variable["mimeType"] == "json"
             assert variable["usesAdvancedTemplatingEngine"] is True
 
-        def test_create_nested_variable_with_deeply_nested_object(self):
+        def test_create_advanced_engine_variable_with_deeply_nested_object(self):
             """Should create a nested variable with deeply nested object"""
-            variable = TurboTemplate.create_nested_variable(
+            variable = TurboTemplate.create_advanced_engine_variable(
+                "{company}",
                 "company",
                 {
                     "name": "Company ABC",
@@ -145,14 +167,15 @@ class TestHelperFunctions:
             assert variable["mimeType"] == "json"
             assert variable["usesAdvancedTemplatingEngine"] is True
 
-        def test_create_nested_variable_with_custom_placeholder(self):
-            """Should use custom placeholder when provided"""
-            variable = TurboTemplate.create_nested_variable(
-                "user", {"name": "Test"}, "{custom_user}"
-            )
+        def test_create_advanced_engine_variable_throws_when_placeholder_missing(self):
+            """Should throw error when placeholder is missing"""
+            with pytest.raises(ValueError, match="placeholder is required"):
+                TurboTemplate.create_advanced_engine_variable("", "user", {"name": "Test"})
 
-            assert variable["placeholder"] == "{custom_user}"
-            assert variable["name"] == "user"
+        def test_create_advanced_engine_variable_throws_when_name_missing(self):
+            """Should throw error when name is missing"""
+            with pytest.raises(ValueError, match="name is required"):
+                TurboTemplate.create_advanced_engine_variable("{user}", "", {"name": "Test"})
 
     class TestCreateLoopVariable:
         """Test create_loop_variable helper"""
@@ -160,6 +183,7 @@ class TestHelperFunctions:
         def test_create_loop_variable_with_array_value(self):
             """Should create a loop variable with array value"""
             variable = TurboTemplate.create_loop_variable(
+                "{items}",
                 "items",
                 [
                     {"name": "Item A", "price": 100},
@@ -178,59 +202,66 @@ class TestHelperFunctions:
 
         def test_create_loop_variable_with_empty_array(self):
             """Should create a loop variable with empty array"""
-            variable = TurboTemplate.create_loop_variable("products", [])
+            variable = TurboTemplate.create_loop_variable("{products}", "products", [])
 
             assert variable["value"] == []
             assert variable["mimeType"] == "json"
 
         def test_create_loop_variable_with_primitive_array(self):
             """Should create a loop variable with primitive array"""
-            variable = TurboTemplate.create_loop_variable("tags", ["tag1", "tag2", "tag3"])
+            variable = TurboTemplate.create_loop_variable("{tags}", "tags", ["tag1", "tag2", "tag3"])
 
             assert variable["value"] == ["tag1", "tag2", "tag3"]
 
-        def test_create_loop_variable_with_custom_placeholder(self):
-            """Should use custom placeholder when provided"""
-            variable = TurboTemplate.create_loop_variable("items", [], "{line_items}")
+        def test_create_loop_variable_throws_when_placeholder_missing(self):
+            """Should throw error when placeholder is missing"""
+            with pytest.raises(ValueError, match="placeholder is required"):
+                TurboTemplate.create_loop_variable("", "items", [])
 
-            assert variable["placeholder"] == "{line_items}"
-            assert variable["name"] == "items"
+        def test_create_loop_variable_throws_when_name_missing(self):
+            """Should throw error when name is missing"""
+            with pytest.raises(ValueError, match="name is required"):
+                TurboTemplate.create_loop_variable("{items}", "", [])
 
     class TestCreateConditionalVariable:
         """Test create_conditional_variable helper"""
 
         def test_create_conditional_variable_with_boolean_true(self):
             """Should create a conditional variable with boolean true"""
-            variable = TurboTemplate.create_conditional_variable("is_premium", True)
+            variable = TurboTemplate.create_conditional_variable("{is_premium}", "is_premium", True)
 
             assert variable == {
                 "placeholder": "{is_premium}",
                 "name": "is_premium",
                 "value": True,
+                "mimeType": "json",
                 "usesAdvancedTemplatingEngine": True,
             }
 
         def test_create_conditional_variable_with_boolean_false(self):
             """Should create a conditional variable with boolean false"""
-            variable = TurboTemplate.create_conditional_variable("show_discount", False)
+            variable = TurboTemplate.create_conditional_variable("{show_discount}", "show_discount", False)
 
             assert variable["value"] is False
+            assert variable["mimeType"] == "json"
             assert variable["usesAdvancedTemplatingEngine"] is True
 
         def test_create_conditional_variable_with_truthy_value(self):
             """Should create a conditional variable with truthy value"""
-            variable = TurboTemplate.create_conditional_variable("count", 5)
+            variable = TurboTemplate.create_conditional_variable("{count}", "count", 5)
 
             assert variable["value"] == 5
+            assert variable["mimeType"] == "json"
 
-        def test_create_conditional_variable_with_custom_placeholder(self):
-            """Should use custom placeholder when provided"""
-            variable = TurboTemplate.create_conditional_variable(
-                "is_active", True, "{active_flag}"
-            )
+        def test_create_conditional_variable_throws_when_placeholder_missing(self):
+            """Should throw error when placeholder is missing"""
+            with pytest.raises(ValueError, match="placeholder is required"):
+                TurboTemplate.create_conditional_variable("", "is_active", True)
 
-            assert variable["placeholder"] == "{active_flag}"
-            assert variable["name"] == "is_active"
+        def test_create_conditional_variable_throws_when_name_missing(self):
+            """Should throw error when name is missing"""
+            with pytest.raises(ValueError, match="name is required"):
+                TurboTemplate.create_conditional_variable("{is_active}", "", True)
 
     class TestCreateImageVariable:
         """Test create_image_variable helper"""
@@ -238,7 +269,7 @@ class TestHelperFunctions:
         def test_create_image_variable_with_url(self):
             """Should create an image variable with URL"""
             variable = TurboTemplate.create_image_variable(
-                "logo", "https://example.com/logo.png"
+                "{logo}", "logo", "https://example.com/logo.png"
             )
 
             assert variable == {
@@ -251,19 +282,25 @@ class TestHelperFunctions:
         def test_create_image_variable_with_base64(self):
             """Should create an image variable with base64"""
             base64_image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg..."
-            variable = TurboTemplate.create_image_variable("signature", base64_image)
+            variable = TurboTemplate.create_image_variable("{signature}", "signature", base64_image)
 
             assert variable["value"] == base64_image
             assert variable["mimeType"] == "image"
 
-        def test_create_image_variable_with_custom_placeholder(self):
-            """Should use custom placeholder when provided"""
-            variable = TurboTemplate.create_image_variable(
-                "logo", "https://example.com/logo.png", "{company_logo}"
-            )
+        def test_create_image_variable_throws_when_placeholder_missing(self):
+            """Should throw error when placeholder is missing"""
+            with pytest.raises(ValueError, match="placeholder is required"):
+                TurboTemplate.create_image_variable("", "logo", "https://example.com/logo.png")
 
-            assert variable["placeholder"] == "{company_logo}"
-            assert variable["name"] == "logo"
+        def test_create_image_variable_throws_when_name_missing(self):
+            """Should throw error when name is missing"""
+            with pytest.raises(ValueError, match="name is required"):
+                TurboTemplate.create_image_variable("{logo}", "", "https://example.com/logo.png")
+
+        def test_create_image_variable_throws_when_imageurl_missing(self):
+            """Should throw error when imageUrl is missing"""
+            with pytest.raises(ValueError, match="image_url is required"):
+                TurboTemplate.create_image_variable("{logo}", "logo", "")
 
 
 class TestValidateVariable:
@@ -371,8 +408,8 @@ class TestGenerate:
                     "name": "Test Document",
                     "description": "Test description",
                     "variables": [
-                        {"placeholder": "{customer_name}", "name": "customer_name", "value": "Person A"},
-                        {"placeholder": "{order_total}", "name": "order_total", "value": 1500},
+                        {"placeholder": "{customer_name}", "name": "customer_name", "value": "Person A", "mimeType": "text"},
+                        {"placeholder": "{order_total}", "name": "order_total", "value": 1500, "mimeType": "text"},
                     ],
                 }
             )
@@ -483,15 +520,15 @@ class TestGenerate:
                     "name": "Helper Document",
                     "description": "Document using helper functions",
                     "variables": [
-                        TurboTemplate.create_simple_variable("title", "Quarterly Report"),
-                        TurboTemplate.create_nested_variable(
-                            "company", {"name": "Company XYZ", "employees": 500}
+                        TurboTemplate.create_simple_variable("{title}", "title", "Quarterly Report", "text"),
+                        TurboTemplate.create_advanced_engine_variable(
+                            "{company}", "company", {"name": "Company XYZ", "employees": 500}
                         ),
                         TurboTemplate.create_loop_variable(
-                            "departments", [{"name": "Dept A"}, {"name": "Dept B"}]
+                            "{departments}", "departments", [{"name": "Dept A"}, {"name": "Dept B"}]
                         ),
-                        TurboTemplate.create_conditional_variable("show_financials", True),
-                        TurboTemplate.create_image_variable("logo", "https://example.com/logo.png"),
+                        TurboTemplate.create_conditional_variable("{show_financials}", "show_financials", True),
+                        TurboTemplate.create_image_variable("{logo}", "logo", "https://example.com/logo.png"),
                     ],
                 }
             )
@@ -515,7 +552,7 @@ class TestGenerate:
                     "templateId": "template-123",
                     "name": "Options Document",
                     "description": "Document with all options",
-                    "variables": [{"placeholder": "{test}", "name": "test", "value": "value"}],
+                    "variables": [{"placeholder": "{test}", "name": "test", "value": "value", "mimeType": "text"}],
                     "replaceFonts": True,
                     "defaultFont": "Arial",
                     "outputFormat": "pdf",
@@ -564,7 +601,7 @@ class TestGenerate:
                     "templateId": "template-123",
                     "name": "Text Document",
                     "description": "Document using text property",
-                    "variables": [{"placeholder": "{legacy}", "name": "legacy", "text": "Legacy value"}],
+                    "variables": [{"placeholder": "{legacy}", "name": "legacy", "text": "Legacy value", "mimeType": "text"}],
                 }
             )
 
@@ -598,7 +635,7 @@ class TestPlaceholderAndNameHandling:
                     "name": "Both Fields Document",
                     "description": "Document with both placeholder and name",
                     "variables": [
-                        {"placeholder": "{customer}", "name": "customer", "value": "Person A"}
+                        {"placeholder": "{customer}", "name": "customer", "value": "Person A", "mimeType": "text"}
                     ],
                 }
             )
@@ -625,7 +662,7 @@ class TestPlaceholderAndNameHandling:
                     "name": "Distinct Fields Document",
                     "description": "Document with distinct placeholder and name",
                     "variables": [
-                        {"placeholder": "{cust_name}", "name": "customerFullName", "value": "Person A"}
+                        {"placeholder": "{cust_name}", "name": "customerFullName", "value": "Person A", "mimeType": "text"}
                     ],
                 }
             )
@@ -653,7 +690,7 @@ class TestErrorHandling:
                     "templateId": "template-123",
                     "name": "Test",
                     "description": "Test",
-                    "variables": [{"placeholder": "{test}", "name": "test", "value": "value"}],
+                    "variables": [{"placeholder": "{test}", "name": "test", "value": "value", "mimeType": "text"}],
                 }
             )
 
@@ -674,6 +711,6 @@ class TestErrorHandling:
                         "templateId": "invalid-template",
                         "name": "Error Document",
                         "description": "Document that should fail",
-                        "variables": [{"placeholder": "{test}", "name": "test", "value": "value"}],
+                        "variables": [{"placeholder": "{test}", "name": "test", "value": "value", "mimeType": "text"}],
                     }
                 )
