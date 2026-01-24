@@ -295,13 +295,13 @@ describe('TurboTemplate Module', () => {
       expect(result.errors).toBeUndefined();
     });
 
-    it('should return error when placeholder and name are both missing', () => {
+    it('should return error when placeholder or name is missing', () => {
       const result = TurboTemplate.validateVariable({
         value: 'Test',
       } as any);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('Variable must have either "placeholder" or "name" property');
+      expect(result.errors).toContain('Variable must have both "placeholder" and "name" properties');
     });
 
     it('should return error when value and text are both missing', () => {

@@ -315,12 +315,12 @@ class TestValidateVariable:
         assert result["isValid"] is True
         assert result["errors"] is None
 
-    def test_error_when_placeholder_and_name_missing(self):
-        """Should return error when placeholder and name are both missing"""
+    def test_error_when_placeholder_or_name_missing(self):
+        """Should return error when placeholder or name is missing"""
         result = TurboTemplate.validate_variable({"value": "Test"})
 
         assert result["isValid"] is False
-        assert 'Variable must have either "placeholder" or "name" property' in result["errors"]
+        assert 'Variable must have both "placeholder" and "name" properties' in result["errors"]
 
     def test_error_when_value_and_text_missing(self):
         """Should return error when value and text are both missing"""
