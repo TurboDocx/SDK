@@ -218,8 +218,8 @@ class TurboTemplate:
         warnings: List[str] = []
 
         # Check placeholder/name
-        if not variable.get("placeholder") and not variable.get("name"):
-            errors.append('Variable must have either "placeholder" or "name" property')
+        if not variable.get("placeholder") or not variable.get("name"):
+            errors.append('Variable must have both "placeholder" and "name" properties')
 
         # Check value/text
         has_value = "value" in variable and variable["value"] is not None
@@ -254,40 +254,62 @@ class TurboTemplate:
 
     @staticmethod
     def create_simple_variable(
-        name: str, value: Union[str, int, float, bool], placeholder: Optional[str] = None
+        placeholder: str,
+        name: str,
+        value: Union[str, int, float, bool],
+        mime_type: str,
     ) -> TemplateVariable:
         """
         Helper: Create a simple text variable
 
         Args:
+            placeholder: Variable placeholder (e.g., '{customer_name}')
             name: Variable name
             value: Variable value
-            placeholder: Optional custom placeholder (defaults to {name})
+            mime_type: Variable mime type ('text' or 'html')
 
         Returns:
             TemplateVariable configured for simple substitution
+
+        Raises:
+            ValueError: If any required parameter is missing or invalid
         """
-        p = placeholder if placeholder else (name if name.startswith("{") else f"{{{name}}}")
-        return {"placeholder": p, "name": name, "value": value, "mimeType": VariableMimeType.TEXT}
+        if not placeholder:
+            raise ValueError("placeholder is required")
+        if not name:
+            raise ValueError("name is required")
+        if not mime_type:
+            raise ValueError("mime_type is required")
+        if mime_type not in (VariableMimeType.TEXT, VariableMimeType.HTML):
+            raise ValueError("mime_type must be 'text' or 'html'")
+        return {"placeholder": placeholder, "name": name, "value": value, "mimeType": mime_type}
 
     @staticmethod
     def create_advanced_engine_variable(
-        name: str, value: Dict[str, Any], placeholder: Optional[str] = None
+        placeholder: str,
+        name: str,
+        value: Dict[str, Any],
     ) -> TemplateVariable:
         """
         Helper: Create an advanced engine variable (for nested objects, complex data)
 
         Args:
+            placeholder: Variable placeholder (e.g., '{user}')
             name: Variable name
             value: Nested object/dict value
-            placeholder: Optional custom placeholder (defaults to {name})
 
         Returns:
             TemplateVariable configured for advanced templating engine
+
+        Raises:
+            ValueError: If any required parameter is missing
         """
-        p = placeholder if placeholder else (name if name.startswith("{") else f"{{{name}}}")
+        if not placeholder:
+            raise ValueError("placeholder is required")
+        if not name:
+            raise ValueError("name is required")
         return {
-            "placeholder": p,
+            "placeholder": placeholder,
             "name": name,
             "value": value,
             "usesAdvancedTemplatingEngine": True,
@@ -296,22 +318,30 @@ class TurboTemplate:
 
     @staticmethod
     def create_loop_variable(
-        name: str, value: List[Any], placeholder: Optional[str] = None
+        placeholder: str,
+        name: str,
+        value: List[Any],
     ) -> TemplateVariable:
         """
         Helper: Create a loop/array variable
 
         Args:
+            placeholder: Variable placeholder (e.g., '{products}')
             name: Variable name
             value: Array/list value for iteration
-            placeholder: Optional custom placeholder (defaults to {name})
 
         Returns:
             TemplateVariable configured for loop iteration
+
+        Raises:
+            ValueError: If any required parameter is missing
         """
-        p = placeholder if placeholder else (name if name.startswith("{") else f"{{{name}}}")
+        if not placeholder:
+            raise ValueError("placeholder is required")
+        if not name:
+            raise ValueError("name is required")
         return {
-            "placeholder": p,
+            "placeholder": placeholder,
             "name": name,
             "value": value,
             "usesAdvancedTemplatingEngine": True,
@@ -320,22 +350,30 @@ class TurboTemplate:
 
     @staticmethod
     def create_conditional_variable(
-        name: str, value: Any, placeholder: Optional[str] = None
+        placeholder: str,
+        name: str,
+        value: Any,
     ) -> TemplateVariable:
         """
         Helper: Create a conditional variable
 
         Args:
+            placeholder: Variable placeholder (e.g., '{showDetails}')
             name: Variable name
             value: Variable value (typically boolean)
-            placeholder: Optional custom placeholder (defaults to {name})
 
         Returns:
             TemplateVariable configured for conditionals
+
+        Raises:
+            ValueError: If any required parameter is missing
         """
-        p = placeholder if placeholder else (name if name.startswith("{") else f"{{{name}}}")
+        if not placeholder:
+            raise ValueError("placeholder is required")
+        if not name:
+            raise ValueError("name is required")
         return {
-            "placeholder": p,
+            "placeholder": placeholder,
             "name": name,
             "value": value,
             "mimeType": VariableMimeType.JSON,
@@ -344,22 +382,32 @@ class TurboTemplate:
 
     @staticmethod
     def create_image_variable(
-        name: str, image_url: str, placeholder: Optional[str] = None
+        placeholder: str,
+        name: str,
+        image_url: str,
     ) -> TemplateVariable:
         """
         Helper: Create an image variable
 
         Args:
+            placeholder: Variable placeholder (e.g., '{logo}')
             name: Variable name
             image_url: Image URL or base64 data
-            placeholder: Optional custom placeholder (defaults to {name})
 
         Returns:
             TemplateVariable configured for image insertion
+
+        Raises:
+            ValueError: If any required parameter is missing
         """
-        p = placeholder if placeholder else (name if name.startswith("{") else f"{{{name}}}")
+        if not placeholder:
+            raise ValueError("placeholder is required")
+        if not name:
+            raise ValueError("name is required")
+        if not image_url:
+            raise ValueError("image_url is required")
         return {
-            "placeholder": p,
+            "placeholder": placeholder,
             "name": name,
             "value": image_url,
             "mimeType": VariableMimeType.IMAGE,

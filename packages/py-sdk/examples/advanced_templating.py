@@ -267,9 +267,10 @@ async def using_helpers():
         "description": "Using helper functions example",
         "variables": [
             # Simple variable - helper adds {} and sets mimeType
-            TurboTemplate.create_simple_variable("title", "Quarterly Report"),
-            # Nested object - helper sets mimeType: 'json' and usesAdvancedTemplatingEngine: True
-            TurboTemplate.create_nested_variable(
+            TurboTemplate.create_simple_variable("{title}", "title", "Quarterly Report", "text"),
+            # Advanced engine variable - helper sets mimeType: 'json' and usesAdvancedTemplatingEngine: True
+            TurboTemplate.create_advanced_engine_variable(
+                "{company}",
                 "company",
                 {
                     "name": "Company XYZ",
@@ -279,6 +280,7 @@ async def using_helpers():
             ),
             # Loop variable - helper sets mimeType: 'json' and usesAdvancedTemplatingEngine: True
             TurboTemplate.create_loop_variable(
+                "{departments}",
                 "departments",
                 [
                     {"name": "Dept A", "headcount": 200},
@@ -287,10 +289,10 @@ async def using_helpers():
                 ],
             ),
             # Conditional - helper sets usesAdvancedTemplatingEngine: True
-            TurboTemplate.create_conditional_variable("show_financials", True),
+            TurboTemplate.create_conditional_variable("{show_financials}", "show_financials", True),
             # Image - helper sets mimeType: 'image'
             TurboTemplate.create_image_variable(
-                "company_logo", "https://example.com/logo.png"
+                "{company_logo}", "company_logo", "https://example.com/logo.png"
             ),
         ],
     })
