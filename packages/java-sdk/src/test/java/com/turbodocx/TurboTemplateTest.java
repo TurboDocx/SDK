@@ -50,19 +50,20 @@ class TurboTemplateTest {
     // ============================================
 
     @Test
-    @DisplayName("simple() should create variable with name and value")
-    void simpleVariableWithNameAndValue() {
-        TemplateVariable variable = TemplateVariable.simple("customer_name", "Person A");
+    @DisplayName("simple() should create variable with placeholder, name, value and mimeType")
+    void simpleVariableWithAllRequiredParams() {
+        TemplateVariable variable = TemplateVariable.simple("{customer_name}", "customer_name", "Person A", VariableMimeType.TEXT);
 
         assertEquals("{customer_name}", variable.getPlaceholder());
         assertEquals("customer_name", variable.getName());
         assertEquals("Person A", variable.getValue());
+        assertEquals(VariableMimeType.TEXT.getValue(), variable.getMimeType());
     }
 
     @Test
     @DisplayName("simple() should create variable with number value")
     void simpleVariableWithNumberValue() {
-        TemplateVariable variable = TemplateVariable.simple("order_total", 1500);
+        TemplateVariable variable = TemplateVariable.simple("{order_total}", "order_total", 1500, VariableMimeType.TEXT);
 
         assertEquals("{order_total}", variable.getPlaceholder());
         assertEquals("order_total", variable.getName());
@@ -70,46 +71,61 @@ class TurboTemplateTest {
     }
 
     @Test
-    @DisplayName("simple() should create variable with boolean value")
-    void simpleVariableWithBooleanValue() {
-        TemplateVariable variable = TemplateVariable.simple("is_active", true);
+    @DisplayName("simple() should create variable with HTML mimeType")
+    void simpleVariableWithHtmlMimeType() {
+        TemplateVariable variable = TemplateVariable.simple("{content}", "content", "<b>Bold</b>", VariableMimeType.HTML);
 
-        assertEquals("{is_active}", variable.getPlaceholder());
-        assertEquals("is_active", variable.getName());
-        assertEquals(true, variable.getValue());
+        assertEquals("{content}", variable.getPlaceholder());
+        assertEquals("content", variable.getName());
+        assertEquals("<b>Bold</b>", variable.getValue());
+        assertEquals(VariableMimeType.HTML.getValue(), variable.getMimeType());
     }
 
     @Test
-    @DisplayName("simple() should use custom placeholder when provided")
-    void simpleVariableWithCustomPlaceholder() {
-        TemplateVariable variable = TemplateVariable.simple("customer_name", "Person A", "{custom_placeholder}");
-
-        assertEquals("{custom_placeholder}", variable.getPlaceholder());
-        assertEquals("customer_name", variable.getName());
+    @DisplayName("simple() should throw error when placeholder is missing")
+    void simpleVariableThrowsWhenPlaceholderMissing() {
+        assertThrows(IllegalArgumentException.class, () ->
+            TemplateVariable.simple("", "name", "value", VariableMimeType.TEXT)
+        );
     }
 
     @Test
-    @DisplayName("simple() should handle name with curly braces")
-    void simpleVariableWithCurlyBracesInName() {
-        TemplateVariable variable = TemplateVariable.simple("{customer_name}", "Person A");
+    @DisplayName("simple() should throw error when name is missing")
+    void simpleVariableThrowsWhenNameMissing() {
+        assertThrows(IllegalArgumentException.class, () ->
+            TemplateVariable.simple("{test}", "", "value", VariableMimeType.TEXT)
+        );
+    }
 
-        assertEquals("{customer_name}", variable.getPlaceholder());
-        assertEquals("{customer_name}", variable.getName());
+    @Test
+    @DisplayName("simple() should throw error when mimeType is missing")
+    void simpleVariableThrowsWhenMimeTypeMissing() {
+        assertThrows(IllegalArgumentException.class, () ->
+            TemplateVariable.simple("{test}", "test", "value", null)
+        );
+    }
+
+    @Test
+    @DisplayName("simple() should throw error when mimeType is invalid")
+    void simpleVariableThrowsWhenMimeTypeInvalid() {
+        assertThrows(IllegalArgumentException.class, () ->
+            TemplateVariable.simple("{test}", "test", "value", VariableMimeType.JSON)
+        );
     }
 
     // ============================================
-    // Helper Function Tests - nested()
+    // Helper Function Tests - advancedEngine()
     // ============================================
 
     @Test
-    @DisplayName("nested() should create variable with object value")
-    void nestedVariableWithObjectValue() {
+    @DisplayName("advancedEngine() should create variable with object value")
+    void advancedEngineVariableWithObjectValue() {
         Map<String, Object> user = new HashMap<>();
         user.put("firstName", "Foo");
         user.put("lastName", "Bar");
         user.put("email", "foo@example.com");
 
-        TemplateVariable variable = TemplateVariable.nested("user", user);
+        TemplateVariable variable = TemplateVariable.advancedEngine("{user}", "user", user);
 
         assertEquals("{user}", variable.getPlaceholder());
         assertEquals("user", variable.getName());
@@ -119,8 +135,8 @@ class TurboTemplateTest {
     }
 
     @Test
-    @DisplayName("nested() should create variable with deeply nested object")
-    void nestedVariableWithDeeplyNestedObject() {
+    @DisplayName("advancedEngine() should create variable with deeply nested object")
+    void advancedEngineVariableWithDeeplyNestedObject() {
         Map<String, Object> address = new HashMap<>();
         address.put("street", "123 Test Street");
         address.put("city", "Test City");
@@ -130,7 +146,7 @@ class TurboTemplateTest {
         company.put("name", "Company ABC");
         company.put("address", address);
 
-        TemplateVariable variable = TemplateVariable.nested("company", company);
+        TemplateVariable variable = TemplateVariable.advancedEngine("{company}", "company", company);
 
         assertEquals("{company}", variable.getPlaceholder());
         assertEquals("json", variable.getMimeType());
@@ -138,15 +154,25 @@ class TurboTemplateTest {
     }
 
     @Test
-    @DisplayName("nested() should use custom placeholder when provided")
-    void nestedVariableWithCustomPlaceholder() {
+    @DisplayName("advancedEngine() should throw error when placeholder is missing")
+    void advancedEngineVariableThrowsWhenPlaceholderMissing() {
         Map<String, Object> user = new HashMap<>();
         user.put("name", "Test");
 
-        TemplateVariable variable = TemplateVariable.nested("user", user, "{custom_user}");
+        assertThrows(IllegalArgumentException.class, () ->
+            TemplateVariable.advancedEngine("", "user", user)
+        );
+    }
 
-        assertEquals("{custom_user}", variable.getPlaceholder());
-        assertEquals("user", variable.getName());
+    @Test
+    @DisplayName("advancedEngine() should throw error when name is missing")
+    void advancedEngineVariableThrowsWhenNameMissing() {
+        Map<String, Object> user = new HashMap<>();
+        user.put("name", "Test");
+
+        assertThrows(IllegalArgumentException.class, () ->
+            TemplateVariable.advancedEngine("{user}", "", user)
+        );
     }
 
     // ============================================
@@ -161,7 +187,7 @@ class TurboTemplateTest {
                 Map.of("name", "Item B", "price", 200)
         );
 
-        TemplateVariable variable = TemplateVariable.loop("items", items);
+        TemplateVariable variable = TemplateVariable.loop("{items}", "items", items);
 
         assertEquals("{items}", variable.getPlaceholder());
         assertEquals("items", variable.getName());
@@ -175,7 +201,7 @@ class TurboTemplateTest {
     void loopVariableWithEmptyArray() {
         List<Map<String, Object>> products = Collections.emptyList();
 
-        TemplateVariable variable = TemplateVariable.loop("products", products);
+        TemplateVariable variable = TemplateVariable.loop("{products}", "products", products);
 
         assertEquals("{products}", variable.getPlaceholder());
         assertEquals(products, variable.getValue());
@@ -187,20 +213,29 @@ class TurboTemplateTest {
     void loopVariableWithPrimitiveArray() {
         List<String> tags = Arrays.asList("tag1", "tag2", "tag3");
 
-        TemplateVariable variable = TemplateVariable.loop("tags", tags);
+        TemplateVariable variable = TemplateVariable.loop("{tags}", "tags", tags);
 
         assertEquals(tags, variable.getValue());
     }
 
     @Test
-    @DisplayName("loop() should use custom placeholder when provided")
-    void loopVariableWithCustomPlaceholder() {
+    @DisplayName("loop() should throw error when placeholder is missing")
+    void loopVariableThrowsWhenPlaceholderMissing() {
         List<Map<String, Object>> items = Collections.emptyList();
 
-        TemplateVariable variable = TemplateVariable.loop("items", items, "{line_items}");
+        assertThrows(IllegalArgumentException.class, () ->
+            TemplateVariable.loop("", "items", items)
+        );
+    }
 
-        assertEquals("{line_items}", variable.getPlaceholder());
-        assertEquals("items", variable.getName());
+    @Test
+    @DisplayName("loop() should throw error when name is missing")
+    void loopVariableThrowsWhenNameMissing() {
+        List<Map<String, Object>> items = Collections.emptyList();
+
+        assertThrows(IllegalArgumentException.class, () ->
+            TemplateVariable.loop("{items}", "", items)
+        );
     }
 
     // ============================================
@@ -210,7 +245,7 @@ class TurboTemplateTest {
     @Test
     @DisplayName("conditional() should create variable with boolean true")
     void conditionalVariableWithBooleanTrue() {
-        TemplateVariable variable = TemplateVariable.conditional("is_premium", true);
+        TemplateVariable variable = TemplateVariable.conditional("{is_premium}", "is_premium", true);
 
         assertEquals("{is_premium}", variable.getPlaceholder());
         assertEquals("is_premium", variable.getName());
@@ -221,7 +256,7 @@ class TurboTemplateTest {
     @Test
     @DisplayName("conditional() should create variable with boolean false")
     void conditionalVariableWithBooleanFalse() {
-        TemplateVariable variable = TemplateVariable.conditional("show_discount", false);
+        TemplateVariable variable = TemplateVariable.conditional("{show_discount}", "show_discount", false);
 
         assertEquals(false, variable.getValue());
         assertTrue(variable.getUsesAdvancedTemplatingEngine());
@@ -230,18 +265,25 @@ class TurboTemplateTest {
     @Test
     @DisplayName("conditional() should create variable with truthy value")
     void conditionalVariableWithTruthyValue() {
-        TemplateVariable variable = TemplateVariable.conditional("count", 5);
+        TemplateVariable variable = TemplateVariable.conditional("{count}", "count", 5);
 
         assertEquals(5, variable.getValue());
     }
 
     @Test
-    @DisplayName("conditional() should use custom placeholder when provided")
-    void conditionalVariableWithCustomPlaceholder() {
-        TemplateVariable variable = TemplateVariable.conditional("is_active", true, "{active_flag}");
+    @DisplayName("conditional() should throw error when placeholder is missing")
+    void conditionalVariableThrowsWhenPlaceholderMissing() {
+        assertThrows(IllegalArgumentException.class, () ->
+            TemplateVariable.conditional("", "is_active", true)
+        );
+    }
 
-        assertEquals("{active_flag}", variable.getPlaceholder());
-        assertEquals("is_active", variable.getName());
+    @Test
+    @DisplayName("conditional() should throw error when name is missing")
+    void conditionalVariableThrowsWhenNameMissing() {
+        assertThrows(IllegalArgumentException.class, () ->
+            TemplateVariable.conditional("{is_active}", "", true)
+        );
     }
 
     // ============================================
@@ -251,7 +293,7 @@ class TurboTemplateTest {
     @Test
     @DisplayName("image() should create variable with URL")
     void imageVariableWithUrl() {
-        TemplateVariable variable = TemplateVariable.image("logo", "https://example.com/logo.png");
+        TemplateVariable variable = TemplateVariable.image("{logo}", "logo", "https://example.com/logo.png");
 
         assertEquals("{logo}", variable.getPlaceholder());
         assertEquals("logo", variable.getName());
@@ -263,10 +305,34 @@ class TurboTemplateTest {
     @DisplayName("image() should create variable with base64")
     void imageVariableWithBase64() {
         String base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...";
-        TemplateVariable variable = TemplateVariable.image("signature", base64Image);
+        TemplateVariable variable = TemplateVariable.image("{signature}", "signature", base64Image);
 
         assertEquals(base64Image, variable.getValue());
         assertEquals("image", variable.getMimeType());
+    }
+
+    @Test
+    @DisplayName("image() should throw error when placeholder is missing")
+    void imageVariableThrowsWhenPlaceholderMissing() {
+        assertThrows(IllegalArgumentException.class, () ->
+            TemplateVariable.image("", "logo", "https://example.com/logo.png")
+        );
+    }
+
+    @Test
+    @DisplayName("image() should throw error when name is missing")
+    void imageVariableThrowsWhenNameMissing() {
+        assertThrows(IllegalArgumentException.class, () ->
+            TemplateVariable.image("{logo}", "", "https://example.com/logo.png")
+        );
+    }
+
+    @Test
+    @DisplayName("image() should throw error when imageUrl is missing")
+    void imageVariableThrowsWhenImageUrlMissing() {
+        assertThrows(IllegalArgumentException.class, () ->
+            TemplateVariable.image("{logo}", "logo", "")
+        );
     }
 
     @Test
@@ -387,7 +453,7 @@ class TurboTemplateTest {
                 .name("Nested Document")
                 .description("Document with nested objects")
                 .variables(Collections.singletonList(
-                        TemplateVariable.nested("user", user)
+                        TemplateVariable.advancedEngine("user", user)
                 ))
                 .build();
 
@@ -443,7 +509,7 @@ class TurboTemplateTest {
                 .description("Document using helper functions")
                 .variables(Arrays.asList(
                         TemplateVariable.simple("title", "Quarterly Report"),
-                        TemplateVariable.nested("company", Map.of("name", "Company XYZ", "employees", 500)),
+                        TemplateVariable.advancedEngine("company", Map.of("name", "Company XYZ", "employees", 500)),
                         TemplateVariable.loop("departments", Arrays.asList(Map.of("name", "Dept A"), Map.of("name", "Dept B"))),
                         TemplateVariable.conditional("show_financials", true),
                         TemplateVariable.image("logo", "https://example.com/logo.png")

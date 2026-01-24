@@ -38,7 +38,7 @@ import com.turbodocx.models.GenerateTemplateResponse;
  *     GenerateTemplateRequest.builder()
  *         .templateId("template-uuid")
  *         .variables(Arrays.asList(
- *             TemplateVariable.nested("user", user)
+ *             TemplateVariable.advancedEngine("user", user)
  *         ))
  *         .build()
  * );

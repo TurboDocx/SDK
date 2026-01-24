@@ -219,9 +219,6 @@ public class TemplateVariable {
             if (variable.mimeType == null || variable.mimeType.isEmpty()) {
                 throw new IllegalStateException("mimeType must be set");
             }
-            if (variable.value == null && variable.text == null) {
-                throw new IllegalStateException("Either value or text must be set");
-            }
             return variable;
         }
     }
@@ -234,30 +231,49 @@ public class TemplateVariable {
 
     /**
      * Creates a simple text variable
-     * @param name The variable name (used as placeholder if not provided)
+     * @param placeholder The variable placeholder (e.g., "{customer_name}")
+     * @param name The variable name
      * @param value The value to substitute
-     * @param placeholder Optional placeholder override (defaults to {name})
+     * @param mimeType The mime type (TEXT or HTML)
+     * @throws IllegalArgumentException if any required parameter is missing or invalid
      */
-    public static TemplateVariable simple(String name, Object value, String... placeholder) {
-        String p = getPlaceholder(name, placeholder);
+    public static TemplateVariable simple(String placeholder, String name, Object value, VariableMimeType mimeType) {
+        if (placeholder == null || placeholder.isEmpty()) {
+            throw new IllegalArgumentException("placeholder is required");
+        }
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("name is required");
+        }
+        if (mimeType == null) {
+            throw new IllegalArgumentException("mimeType is required");
+        }
+        if (mimeType != VariableMimeType.TEXT && mimeType != VariableMimeType.HTML) {
+            throw new IllegalArgumentException("mimeType must be TEXT or HTML");
+        }
         return builder()
-                .placeholder(p)
+                .placeholder(placeholder)
                 .name(name)
                 .value(value)
-                .mimeType(VariableMimeType.TEXT)
+                .mimeType(mimeType)
                 .build();
     }
 
     /**
      * Creates an advanced engine variable (for nested objects, complex data)
+     * @param placeholder The variable placeholder (e.g., "{user}")
      * @param name The variable name
      * @param value The nested object value
-     * @param placeholder Optional placeholder override (defaults to {name})
+     * @throws IllegalArgumentException if any required parameter is missing
      */
-    public static TemplateVariable advancedEngine(String name, Map<String, Object> value, String... placeholder) {
-        String p = getPlaceholder(name, placeholder);
+    public static TemplateVariable advancedEngine(String placeholder, String name, Map<String, Object> value) {
+        if (placeholder == null || placeholder.isEmpty()) {
+            throw new IllegalArgumentException("placeholder is required");
+        }
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("name is required");
+        }
         return builder()
-                .placeholder(p)
+                .placeholder(placeholder)
                 .name(name)
                 .value(value)
                 .mimeType(VariableMimeType.JSON)
@@ -267,14 +283,20 @@ public class TemplateVariable {
 
     /**
      * Creates a variable for array loops
+     * @param placeholder The variable placeholder (e.g., "{products}")
      * @param name The variable name
      * @param value The array/list value
-     * @param placeholder Optional placeholder override (defaults to {name})
+     * @throws IllegalArgumentException if any required parameter is missing
      */
-    public static TemplateVariable loop(String name, List<?> value, String... placeholder) {
-        String p = getPlaceholder(name, placeholder);
+    public static TemplateVariable loop(String placeholder, String name, List<?> value) {
+        if (placeholder == null || placeholder.isEmpty()) {
+            throw new IllegalArgumentException("placeholder is required");
+        }
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("name is required");
+        }
         return builder()
-                .placeholder(p)
+                .placeholder(placeholder)
                 .name(name)
                 .value(value)
                 .mimeType(VariableMimeType.JSON)
@@ -284,14 +306,20 @@ public class TemplateVariable {
 
     /**
      * Creates a variable for conditionals
+     * @param placeholder The variable placeholder (e.g., "{showDetails}")
      * @param name The variable name
      * @param value The boolean or truthy value
-     * @param placeholder Optional placeholder override (defaults to {name})
+     * @throws IllegalArgumentException if any required parameter is missing
      */
-    public static TemplateVariable conditional(String name, Object value, String... placeholder) {
-        String p = getPlaceholder(name, placeholder);
+    public static TemplateVariable conditional(String placeholder, String name, Object value) {
+        if (placeholder == null || placeholder.isEmpty()) {
+            throw new IllegalArgumentException("placeholder is required");
+        }
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("name is required");
+        }
         return builder()
-                .placeholder(p)
+                .placeholder(placeholder)
                 .name(name)
                 .value(value)
                 .mimeType(VariableMimeType.JSON)
@@ -301,30 +329,26 @@ public class TemplateVariable {
 
     /**
      * Creates a variable for images
+     * @param placeholder The variable placeholder (e.g., "{logo}")
      * @param name The variable name
      * @param imageUrl The image URL
-     * @param placeholder Optional placeholder override (defaults to {name})
+     * @throws IllegalArgumentException if any required parameter is missing
      */
-    public static TemplateVariable image(String name, String imageUrl, String... placeholder) {
-        String p = getPlaceholder(name, placeholder);
+    public static TemplateVariable image(String placeholder, String name, String imageUrl) {
+        if (placeholder == null || placeholder.isEmpty()) {
+            throw new IllegalArgumentException("placeholder is required");
+        }
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("name is required");
+        }
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            throw new IllegalArgumentException("imageUrl is required");
+        }
         return builder()
-                .placeholder(p)
+                .placeholder(placeholder)
                 .name(name)
                 .value(imageUrl)
                 .mimeType(VariableMimeType.IMAGE)
                 .build();
-    }
-
-    /**
-     * Helper to determine placeholder from name and optional override
-     */
-    private static String getPlaceholder(String name, String... placeholder) {
-        if (placeholder.length > 0 && placeholder[0] != null && !placeholder[0].isEmpty()) {
-            return placeholder[0];
-        }
-        if (name.startsWith("{")) {
-            return name;
-        }
-        return "{" + name + "}";
     }
 }

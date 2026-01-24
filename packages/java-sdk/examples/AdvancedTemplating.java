@@ -47,9 +47,9 @@ public class AdvancedTemplating {
                     GenerateTemplateRequest.builder()
                             .templateId("your-template-id")
                             .variables(Arrays.asList(
-                                    TemplateVariable.simple("customer_name", "Person A"),
-                                    TemplateVariable.simple("order_total", 1500),
-                                    TemplateVariable.simple("order_date", "2024-01-15")
+                                    TemplateVariable.simple("{customer_name}", "customer_name", "Person A", VariableMimeType.TEXT),
+                                    TemplateVariable.simple("{order_total}", "order_total", 1500, VariableMimeType.TEXT),
+                                    TemplateVariable.simple("{order_date}", "order_date", "2024-01-15", VariableMimeType.TEXT)
                             ))
                             .build()
             );
@@ -81,7 +81,7 @@ public class AdvancedTemplating {
                     GenerateTemplateRequest.builder()
                             .templateId("your-template-id")
                             .variables(Collections.singletonList(
-                                    TemplateVariable.nested("user", user)
+                                    TemplateVariable.advancedEngine("{user}", "user", user)
                             ))
                             .build()
             );
@@ -112,7 +112,7 @@ public class AdvancedTemplating {
                     GenerateTemplateRequest.builder()
                             .templateId("your-template-id")
                             .variables(Collections.singletonList(
-                                    TemplateVariable.loop("items", items)
+                                    TemplateVariable.loop("{items}", "items", items)
                             ))
                             .build()
             );
@@ -241,11 +241,11 @@ public class AdvancedTemplating {
                             .name("Invoice - Company XYZ")
                             .description("Monthly invoice for Company XYZ")
                             .variables(Arrays.asList(
-                                    TemplateVariable.nested("customer", customer),
-                                    TemplateVariable.simple("invoice_number", "INV-2024-001"),
-                                    TemplateVariable.simple("invoice_date", "2024-01-15"),
-                                    TemplateVariable.simple("due_date", "2024-02-14"),
-                                    TemplateVariable.loop("items", items),
+                                    TemplateVariable.advancedEngine("{customer}", "customer", customer),
+                                    TemplateVariable.simple("{invoice_number}", "invoice_number", "INV-2024-001", VariableMimeType.TEXT),
+                                    TemplateVariable.simple("{invoice_date}", "invoice_date", "2024-01-15", VariableMimeType.TEXT),
+                                    TemplateVariable.simple("{due_date}", "due_date", "2024-02-14", VariableMimeType.TEXT),
+                                    TemplateVariable.loop("{items}", "items", items),
                                     TemplateVariable.builder()
                                             .placeholder("{tax_rate}")
                                             .name("tax_rate")
@@ -266,8 +266,8 @@ public class AdvancedTemplating {
                                             .value("0.05")
                                             .usesAdvancedTemplatingEngine(true)
                                             .build(),
-                                    TemplateVariable.simple("payment_terms", "Net 30"),
-                                    TemplateVariable.simple("notes", "Thank you for your business!")
+                                    TemplateVariable.simple("{payment_terms}", "payment_terms", "Net 30", VariableMimeType.TEXT),
+                                    TemplateVariable.simple("{notes}", "notes", "Thank you for your business!", VariableMimeType.TEXT)
                             ))
                             .build()
             );
@@ -299,11 +299,11 @@ public class AdvancedTemplating {
                     GenerateTemplateRequest.builder()
                             .templateId("your-template-id")
                             .variables(Arrays.asList(
-                                    TemplateVariable.simple("title", "Quarterly Report"),
-                                    TemplateVariable.nested("company", company),
-                                    TemplateVariable.loop("departments", departments),
-                                    TemplateVariable.conditional("show_financials", true),
-                                    TemplateVariable.image("company_logo", "https://example.com/logo.png")
+                                    TemplateVariable.simple("{title}", "title", "Quarterly Report", VariableMimeType.TEXT),
+                                    TemplateVariable.advancedEngine("{company}", "company", company),
+                                    TemplateVariable.loop("{departments}", "departments", departments),
+                                    TemplateVariable.conditional("{show_financials}", "show_financials", true),
+                                    TemplateVariable.image("{company_logo}", "company_logo", "https://example.com/logo.png")
                             ))
                             .build()
             );
