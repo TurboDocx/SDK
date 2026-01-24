@@ -6,7 +6,7 @@
 [![PHP Version](https://img.shields.io/packagist/php-v/turbodocx/sdk)](https://packagist.org/packages/turbodocx/sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-[Documentation](https://www.turbodocx.com/docs) • [API Reference](https://www.turbodocx.com/docs/api) • [Examples](#examples) • [Discord](https://discord.gg/NYKwz4BcpX)
+[Website](https://www.turbodocx.com) • [Documentation](https://docs.turbodocx.com/docs) • [API Reference](https://docs.turbodocx.com/docs/api) • [Examples](#examples) • [Discord](https://discord.gg/NYKwz4BcpX)
 
 ---
 
@@ -555,33 +555,6 @@ All exceptions extend `TurboDocxException` and include:
 
 ---
 
-## Testing
-
-The SDK includes comprehensive tests and static analysis:
-
-```bash
-# Run unit tests
-composer test
-
-# Run with coverage
-composer test:coverage
-
-# Run static analysis (PHPStan level 8)
-composer phpstan
-
-# Fix code style (PSR-12)
-composer cs-fix
-```
-
-### Quality Metrics
-
-- ✅ **31 unit tests** with 82 assertions (100% passing)
-- ✅ **PHPStan level 8** - Zero errors
-- ✅ **PSR-12 compliant** - Enforced via PHP-CS-Fixer
-- ✅ **PHP 8.1+ compatible** - Modern PHP features with backward compatibility
-
----
-
 ## TypeScript → PHP Equivalents
 
 | TypeScript | PHP 8.1+ Equivalent |
@@ -602,10 +575,10 @@ MIT
 
 ## Support
 
-- 📚 [Documentation](https://www.turbodocx.com/docs)
+- 🌐 [TurboDocx Website](https://www.turbodocx.com)
+- 📚 [Documentation](https://docs.turbodocx.com/docs)
 - 💬 [Discord Community](https://discord.gg/NYKwz4BcpX)
 - 🐛 [GitHub Issues](https://github.com/TurboDocx/SDK/issues)
-- 📧 Email: support@turbodocx.com
 
 ---
 
