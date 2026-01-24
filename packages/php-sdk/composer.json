@@ -1,19 +1,23 @@
 {
   "name": "turbodocx/sdk",
-  "description": "TurboDocx PHP SDK - Digital signatures, document generation, and AI-powered workflows",
+  "description": "Official PHP SDK for TurboDocx - E-signature API, document generation, PDF signing, and workflow automation",
   "type": "library",
   "license": "MIT",
   "keywords": [
     "turbodocx",
-    "document",
-    "generation",
-    "api",
-    "sdk",
-    "signature",
-    "turbosign",
     "esignature",
+    "e-signature",
     "digital-signature",
-    "document-automation"
+    "pdf-signing",
+    "document-generation",
+    "document-automation",
+    "docusign-alternative",
+    "signature-api",
+    "contract-signing",
+    "pdf",
+    "docx",
+    "sdk",
+    "api"
   ],
   "authors": [
     {
