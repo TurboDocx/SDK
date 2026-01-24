@@ -189,8 +189,8 @@ export class TurboTemplate {
     const warnings: string[] = [];
 
     // Check placeholder/name
-    if (!variable.placeholder && !variable.name) {
-      errors.push('Variable must have either "placeholder" or "name" property');
+    if (!variable.placeholder || !variable.name) {
+      errors.push('Variable must have both "placeholder" and "name" properties');
     }
 
     // Check value/text
@@ -231,30 +231,53 @@ export class TurboTemplate {
 
   /**
    * Helper: Create a simple text variable
+   * @param placeholder - Variable placeholder (e.g., '{customer_name}')
    * @param name - Variable name
    * @param value - Variable value
-   * @param placeholder - Optional custom placeholder (defaults to {name})
+   * @param mimeType - Variable mime type ('text' or 'html')
    */
-  static createSimpleVariable(name: string, value: string | number | boolean, placeholder?: string): SimpleVariable {
-    const p = placeholder ?? (name.startsWith('{') ? name : `{${name}}`);
+  static createSimpleVariable(
+    placeholder: string,
+    name: string,
+    value: string | number | boolean,
+    mimeType: 'text' | 'html'
+  ): SimpleVariable {
+    if (!placeholder) {
+      throw new Error('placeholder is required');
+    }
+    if (!name) {
+      throw new Error('name is required');
+    }
+    if (!mimeType) {
+      throw new Error('mimeType is required');
+    }
     return {
-      placeholder: p,
+      placeholder,
       name,
       value,
-      mimeType: 'text',
+      mimeType,
     };
   }
 
   /**
    * Helper: Create an advanced engine variable (for nested objects, complex data)
+   * @param placeholder - Variable placeholder (e.g., '{user}')
    * @param name - Variable name
    * @param value - Object value
-   * @param placeholder - Optional custom placeholder (defaults to {name})
    */
-  static createAdvancedEngineVariable(name: string, value: Record<string, any>, placeholder?: string): NestedVariable {
-    const p = placeholder ?? (name.startsWith('{') ? name : `{${name}}`);
+  static createAdvancedEngineVariable(
+    placeholder: string,
+    name: string,
+    value: Record<string, any>
+  ): NestedVariable {
+    if (!placeholder) {
+      throw new Error('placeholder is required');
+    }
+    if (!name) {
+      throw new Error('name is required');
+    }
     return {
-      placeholder: p,
+      placeholder,
       name,
       value,
       usesAdvancedTemplatingEngine: true,
@@ -264,14 +287,19 @@ export class TurboTemplate {
 
   /**
    * Helper: Create a loop/array variable
+   * @param placeholder - Variable placeholder (e.g., '{products}')
    * @param name - Variable name
    * @param value - Array value
-   * @param placeholder - Optional custom placeholder (defaults to {name})
    */
-  static createLoopVariable(name: string, value: any[], placeholder?: string): LoopVariable {
-    const p = placeholder ?? (name.startsWith('{') ? name : `{${name}}`);
+  static createLoopVariable(placeholder: string, name: string, value: any[]): LoopVariable {
+    if (!placeholder) {
+      throw new Error('placeholder is required');
+    }
+    if (!name) {
+      throw new Error('name is required');
+    }
     return {
-      placeholder: p,
+      placeholder,
       name,
       value,
       usesAdvancedTemplatingEngine: true,
@@ -281,14 +309,19 @@ export class TurboTemplate {
 
   /**
    * Helper: Create a conditional variable
+   * @param placeholder - Variable placeholder (e.g., '{showDetails}')
    * @param name - Variable name
    * @param value - Conditional value
-   * @param placeholder - Optional custom placeholder (defaults to {name})
    */
-  static createConditionalVariable(name: string, value: any, placeholder?: string): ConditionalVariable {
-    const p = placeholder ?? (name.startsWith('{') ? name : `{${name}}`);
+  static createConditionalVariable(placeholder: string, name: string, value: any): ConditionalVariable {
+    if (!placeholder) {
+      throw new Error('placeholder is required');
+    }
+    if (!name) {
+      throw new Error('name is required');
+    }
     return {
-      placeholder: p,
+      placeholder,
       name,
       value,
       mimeType: 'json',
@@ -298,14 +331,22 @@ export class TurboTemplate {
 
   /**
    * Helper: Create an image variable
+   * @param placeholder - Variable placeholder (e.g., '{logo}')
    * @param name - Variable name
    * @param imageUrl - Image URL or base64 string
-   * @param placeholder - Optional custom placeholder (defaults to {name})
    */
-  static createImageVariable(name: string, imageUrl: string, placeholder?: string): ImageVariable {
-    const p = placeholder ?? (name.startsWith('{') ? name : `{${name}}`);
+  static createImageVariable(placeholder: string, name: string, imageUrl: string): ImageVariable {
+    if (!placeholder) {
+      throw new Error('placeholder is required');
+    }
+    if (!name) {
+      throw new Error('name is required');
+    }
+    if (!imageUrl) {
+      throw new Error('imageUrl is required');
+    }
     return {
-      placeholder: p,
+      placeholder,
       name,
       value: imageUrl,
       mimeType: 'image',

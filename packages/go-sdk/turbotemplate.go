@@ -219,112 +219,117 @@ func (c *TurboTemplateClient) Generate(ctx context.Context, req *GenerateTemplat
 // Helper functions for creating common variable types
 
 // NewSimpleVariable creates a simple text variable
+// placeholder: variable placeholder (e.g., "{customer_name}")
 // name: variable name
 // value: variable value
-// placeholder: optional custom placeholder (pass empty string to use default {name})
-func NewSimpleVariable(name string, value interface{}, placeholder ...string) TemplateVariable {
-	p := ""
-	if len(placeholder) > 0 && placeholder[0] != "" {
-		p = placeholder[0]
-	} else if len(name) > 0 && name[0] == '{' {
-		p = name
-	} else {
-		p = "{" + name + "}"
+// mimeType: variable mime type (MimeTypeText or MimeTypeHTML)
+// Returns error if any required parameter is missing or invalid
+func NewSimpleVariable(placeholder string, name string, value interface{}, mimeType VariableMimeType) (TemplateVariable, error) {
+	if placeholder == "" {
+		return TemplateVariable{}, fmt.Errorf("placeholder is required")
+	}
+	if name == "" {
+		return TemplateVariable{}, fmt.Errorf("name is required")
+	}
+	if mimeType == "" {
+		return TemplateVariable{}, fmt.Errorf("mimeType is required")
+	}
+	if mimeType != MimeTypeText && mimeType != MimeTypeHTML {
+		return TemplateVariable{}, fmt.Errorf("mimeType must be 'text' or 'html'")
 	}
 	return TemplateVariable{
-		Placeholder: p,
+		Placeholder: placeholder,
 		Name:        name,
 		Value:       value,
-		MimeType:    MimeTypeText,
-	}
+		MimeType:    mimeType,
+	}, nil
 }
 
 // NewAdvancedEngineVariable creates an advanced engine variable (for nested objects, complex data)
+// placeholder: variable placeholder (e.g., "{user}")
 // name: variable name
 // value: nested object/map value
-// placeholder: optional custom placeholder (pass empty string to use default {name})
-func NewAdvancedEngineVariable(name string, value map[string]interface{}, placeholder ...string) TemplateVariable {
-	p := ""
-	if len(placeholder) > 0 && placeholder[0] != "" {
-		p = placeholder[0]
-	} else if len(name) > 0 && name[0] == '{' {
-		p = name
-	} else {
-		p = "{" + name + "}"
+// Returns error if any required parameter is missing
+func NewAdvancedEngineVariable(placeholder string, name string, value map[string]interface{}) (TemplateVariable, error) {
+	if placeholder == "" {
+		return TemplateVariable{}, fmt.Errorf("placeholder is required")
+	}
+	if name == "" {
+		return TemplateVariable{}, fmt.Errorf("name is required")
 	}
 	usesAdvanced := true
 	return TemplateVariable{
-		Placeholder:                  p,
+		Placeholder:                  placeholder,
 		Name:                         name,
 		Value:                        value,
 		MimeType:                     MimeTypeJSON,
 		UsesAdvancedTemplatingEngine: &usesAdvanced,
-	}
+	}, nil
 }
 
 // NewLoopVariable creates a loop/array variable
+// placeholder: variable placeholder (e.g., "{products}")
 // name: variable name
 // value: array/slice value for iteration
-// placeholder: optional custom placeholder (pass empty string to use default {name})
-func NewLoopVariable(name string, value []interface{}, placeholder ...string) TemplateVariable {
-	p := ""
-	if len(placeholder) > 0 && placeholder[0] != "" {
-		p = placeholder[0]
-	} else if len(name) > 0 && name[0] == '{' {
-		p = name
-	} else {
-		p = "{" + name + "}"
+// Returns error if any required parameter is missing
+func NewLoopVariable(placeholder string, name string, value []interface{}) (TemplateVariable, error) {
+	if placeholder == "" {
+		return TemplateVariable{}, fmt.Errorf("placeholder is required")
+	}
+	if name == "" {
+		return TemplateVariable{}, fmt.Errorf("name is required")
 	}
 	usesAdvanced := true
 	return TemplateVariable{
-		Placeholder:                  p,
+		Placeholder:                  placeholder,
 		Name:                         name,
 		Value:                        value,
 		MimeType:                     MimeTypeJSON,
 		UsesAdvancedTemplatingEngine: &usesAdvanced,
-	}
+	}, nil
 }
 
 // NewConditionalVariable creates a conditional variable
+// placeholder: variable placeholder (e.g., "{showDetails}")
 // name: variable name
 // value: conditional value (typically boolean)
-// placeholder: optional custom placeholder (pass empty string to use default {name})
-func NewConditionalVariable(name string, value interface{}, placeholder ...string) TemplateVariable {
-	p := ""
-	if len(placeholder) > 0 && placeholder[0] != "" {
-		p = placeholder[0]
-	} else if len(name) > 0 && name[0] == '{' {
-		p = name
-	} else {
-		p = "{" + name + "}"
+// Returns error if any required parameter is missing
+func NewConditionalVariable(placeholder string, name string, value interface{}) (TemplateVariable, error) {
+	if placeholder == "" {
+		return TemplateVariable{}, fmt.Errorf("placeholder is required")
+	}
+	if name == "" {
+		return TemplateVariable{}, fmt.Errorf("name is required")
 	}
 	usesAdvanced := true
 	return TemplateVariable{
-		Placeholder:                  p,
+		Placeholder:                  placeholder,
 		Name:                         name,
 		Value:                        value,
 		MimeType:                     MimeTypeJSON,
 		UsesAdvancedTemplatingEngine: &usesAdvanced,
-	}
+	}, nil
 }
 
 // NewImageVariable creates an image variable
+// placeholder: variable placeholder (e.g., "{logo}")
 // name: variable name
 // imageURL: image URL or base64 data
-// placeholder: optional custom placeholder (pass empty string to use default {name})
-func NewImageVariable(name string, imageURL string, placeholder ...string) TemplateVariable {
-	p := ""
-	if len(placeholder) > 0 && placeholder[0] != "" {
-		p = placeholder[0]
-	} else if len(name) > 0 && name[0] == '{' {
-		p = name
-	} else {
-		p = "{" + name + "}"
+// Returns error if any required parameter is missing
+func NewImageVariable(placeholder string, name string, imageURL string) (TemplateVariable, error) {
+	if placeholder == "" {
+		return TemplateVariable{}, fmt.Errorf("placeholder is required")
+	}
+	if name == "" {
+		return TemplateVariable{}, fmt.Errorf("name is required")
+	}
+	if imageURL == "" {
+		return TemplateVariable{}, fmt.Errorf("imageURL is required")
 	}
 	return TemplateVariable{
-		Placeholder: p,
+		Placeholder: placeholder,
 		Name:        name,
 		Value:       imageURL,
 		MimeType:    MimeTypeImage,
-	}
+	}, nil
 }

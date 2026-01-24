@@ -12,53 +12,74 @@ import (
 )
 
 func TestNewSimpleVariable(t *testing.T) {
-	t.Run("creates simple variable with name and value", func(t *testing.T) {
-		variable := NewSimpleVariable("customer_name", "Person A")
+	t.Run("creates simple variable with placeholder, name, value and mimeType", func(t *testing.T) {
+		variable, err := NewSimpleVariable("{customer_name}", "customer_name", "Person A", MimeTypeText)
 
+		require.NoError(t, err)
 		assert.Equal(t, "{customer_name}", variable.Placeholder)
 		assert.Equal(t, "customer_name", variable.Name)
 		assert.Equal(t, "Person A", variable.Value)
+		assert.Equal(t, MimeTypeText, variable.MimeType)
 	})
 
 	t.Run("creates simple variable with number value", func(t *testing.T) {
-		variable := NewSimpleVariable("order_total", 1500)
+		variable, err := NewSimpleVariable("{order_total}", "order_total", 1500, MimeTypeText)
 
+		require.NoError(t, err)
 		assert.Equal(t, "{order_total}", variable.Placeholder)
 		assert.Equal(t, "order_total", variable.Name)
 		assert.Equal(t, 1500, variable.Value)
+		assert.Equal(t, MimeTypeText, variable.MimeType)
 	})
 
-	t.Run("creates simple variable with boolean value", func(t *testing.T) {
-		variable := NewSimpleVariable("is_active", true)
+	t.Run("creates simple variable with html mimeType", func(t *testing.T) {
+		variable, err := NewSimpleVariable("{content}", "content", "<b>Bold</b>", MimeTypeHTML)
 
-		assert.Equal(t, "{is_active}", variable.Placeholder)
-		assert.Equal(t, "is_active", variable.Name)
-		assert.Equal(t, true, variable.Value)
+		require.NoError(t, err)
+		assert.Equal(t, "{content}", variable.Placeholder)
+		assert.Equal(t, "content", variable.Name)
+		assert.Equal(t, "<b>Bold</b>", variable.Value)
+		assert.Equal(t, MimeTypeHTML, variable.MimeType)
 	})
 
-	t.Run("uses custom placeholder when provided", func(t *testing.T) {
-		variable := NewSimpleVariable("customer_name", "Person A", "{custom_placeholder}")
+	t.Run("returns error when placeholder is missing", func(t *testing.T) {
+		_, err := NewSimpleVariable("", "name", "value", MimeTypeText)
 
-		assert.Equal(t, "{custom_placeholder}", variable.Placeholder)
-		assert.Equal(t, "customer_name", variable.Name)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "placeholder is required")
 	})
 
-	t.Run("handles name with curly braces", func(t *testing.T) {
-		variable := NewSimpleVariable("{customer_name}", "Person A")
+	t.Run("returns error when name is missing", func(t *testing.T) {
+		_, err := NewSimpleVariable("{test}", "", "value", MimeTypeText)
 
-		assert.Equal(t, "{customer_name}", variable.Placeholder)
-		assert.Equal(t, "{customer_name}", variable.Name)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "name is required")
+	})
+
+	t.Run("returns error when mimeType is missing", func(t *testing.T) {
+		_, err := NewSimpleVariable("{test}", "test", "value", "")
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "mimeType is required")
+	})
+
+	t.Run("returns error when mimeType is invalid", func(t *testing.T) {
+		_, err := NewSimpleVariable("{test}", "test", "value", MimeTypeJSON)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "mimeType must be 'text' or 'html'")
 	})
 }
 
-func TestNewNestedVariable(t *testing.T) {
-	t.Run("creates nested variable with object value", func(t *testing.T) {
-		variable := NewNestedVariable("user", map[string]interface{}{
+func TestNewAdvancedEngineVariable(t *testing.T) {
+	t.Run("creates advanced engine variable with object value", func(t *testing.T) {
+		variable, err := NewAdvancedEngineVariable("{user}", "user", map[string]interface{}{
 			"firstName": "Foo",
 			"lastName":  "Bar",
 			"email":     "foo@example.com",
 		})
 
+		require.NoError(t, err)
 		assert.Equal(t, "{user}", variable.Placeholder)
 		assert.Equal(t, "user", variable.Name)
 		assert.Equal(t, map[string]interface{}{
@@ -66,14 +87,13 @@ func TestNewNestedVariable(t *testing.T) {
 			"lastName":  "Bar",
 			"email":     "foo@example.com",
 		}, variable.Value)
-		assert.NotNil(t, variable.MimeType)
-		assert.Equal(t, MimeTypeJSON, *variable.MimeType)
+		assert.Equal(t, MimeTypeJSON, variable.MimeType)
 		assert.NotNil(t, variable.UsesAdvancedTemplatingEngine)
 		assert.True(t, *variable.UsesAdvancedTemplatingEngine)
 	})
 
-	t.Run("creates nested variable with deeply nested object", func(t *testing.T) {
-		variable := NewNestedVariable("company", map[string]interface{}{
+	t.Run("creates advanced engine variable with deeply nested object", func(t *testing.T) {
+		variable, err := NewAdvancedEngineVariable("{company}", "company", map[string]interface{}{
 			"name": "Company ABC",
 			"address": map[string]interface{}{
 				"street": "123 Test Street",
@@ -82,111 +102,156 @@ func TestNewNestedVariable(t *testing.T) {
 			},
 		})
 
+		require.NoError(t, err)
 		assert.Equal(t, "{company}", variable.Placeholder)
-		assert.NotNil(t, variable.MimeType)
-		assert.Equal(t, MimeTypeJSON, *variable.MimeType)
+		assert.Equal(t, MimeTypeJSON, variable.MimeType)
 		assert.True(t, *variable.UsesAdvancedTemplatingEngine)
 	})
 
-	t.Run("uses custom placeholder when provided", func(t *testing.T) {
-		variable := NewNestedVariable("user", map[string]interface{}{"name": "Test"}, "{custom_user}")
+	t.Run("returns error when placeholder is missing", func(t *testing.T) {
+		_, err := NewAdvancedEngineVariable("", "user", map[string]interface{}{"name": "Test"})
 
-		assert.Equal(t, "{custom_user}", variable.Placeholder)
-		assert.Equal(t, "user", variable.Name)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "placeholder is required")
+	})
+
+	t.Run("returns error when name is missing", func(t *testing.T) {
+		_, err := NewAdvancedEngineVariable("{user}", "", map[string]interface{}{"name": "Test"})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "name is required")
 	})
 }
 
 func TestNewLoopVariable(t *testing.T) {
 	t.Run("creates loop variable with array value", func(t *testing.T) {
-		variable := NewLoopVariable("items", []interface{}{
+		variable, err := NewLoopVariable("{items}", "items", []interface{}{
 			map[string]interface{}{"name": "Item A", "price": 100},
 			map[string]interface{}{"name": "Item B", "price": 200},
 		})
 
+		require.NoError(t, err)
 		assert.Equal(t, "{items}", variable.Placeholder)
 		assert.Equal(t, "items", variable.Name)
-		assert.NotNil(t, variable.MimeType)
-		assert.Equal(t, MimeTypeJSON, *variable.MimeType)
+		assert.Equal(t, MimeTypeJSON, variable.MimeType)
 		assert.True(t, *variable.UsesAdvancedTemplatingEngine)
 	})
 
 	t.Run("creates loop variable with empty array", func(t *testing.T) {
-		variable := NewLoopVariable("products", []interface{}{})
+		variable, err := NewLoopVariable("{products}", "products", []interface{}{})
 
+		require.NoError(t, err)
 		assert.Equal(t, "{products}", variable.Placeholder)
 		assert.Equal(t, []interface{}{}, variable.Value)
-		assert.Equal(t, MimeTypeJSON, *variable.MimeType)
+		assert.Equal(t, MimeTypeJSON, variable.MimeType)
 	})
 
 	t.Run("creates loop variable with primitive array", func(t *testing.T) {
-		variable := NewLoopVariable("tags", []interface{}{"tag1", "tag2", "tag3"})
+		variable, err := NewLoopVariable("{tags}", "tags", []interface{}{"tag1", "tag2", "tag3"})
 
+		require.NoError(t, err)
 		assert.Equal(t, []interface{}{"tag1", "tag2", "tag3"}, variable.Value)
+		assert.Equal(t, MimeTypeJSON, variable.MimeType)
 	})
 
-	t.Run("uses custom placeholder when provided", func(t *testing.T) {
-		variable := NewLoopVariable("items", []interface{}{}, "{line_items}")
+	t.Run("returns error when placeholder is missing", func(t *testing.T) {
+		_, err := NewLoopVariable("", "items", []interface{}{})
 
-		assert.Equal(t, "{line_items}", variable.Placeholder)
-		assert.Equal(t, "items", variable.Name)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "placeholder is required")
+	})
+
+	t.Run("returns error when name is missing", func(t *testing.T) {
+		_, err := NewLoopVariable("{items}", "", []interface{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "name is required")
 	})
 }
 
 func TestNewConditionalVariable(t *testing.T) {
 	t.Run("creates conditional variable with boolean true", func(t *testing.T) {
-		variable := NewConditionalVariable("is_premium", true)
+		variable, err := NewConditionalVariable("{is_premium}", "is_premium", true)
 
+		require.NoError(t, err)
 		assert.Equal(t, "{is_premium}", variable.Placeholder)
 		assert.Equal(t, "is_premium", variable.Name)
 		assert.Equal(t, true, variable.Value)
+		assert.Equal(t, MimeTypeJSON, variable.MimeType)
 		assert.True(t, *variable.UsesAdvancedTemplatingEngine)
 	})
 
 	t.Run("creates conditional variable with boolean false", func(t *testing.T) {
-		variable := NewConditionalVariable("show_discount", false)
+		variable, err := NewConditionalVariable("{show_discount}", "show_discount", false)
 
+		require.NoError(t, err)
 		assert.Equal(t, false, variable.Value)
+		assert.Equal(t, MimeTypeJSON, variable.MimeType)
 		assert.True(t, *variable.UsesAdvancedTemplatingEngine)
 	})
 
 	t.Run("creates conditional variable with truthy value", func(t *testing.T) {
-		variable := NewConditionalVariable("count", 5)
+		variable, err := NewConditionalVariable("{count}", "count", 5)
 
+		require.NoError(t, err)
 		assert.Equal(t, 5, variable.Value)
+		assert.Equal(t, MimeTypeJSON, variable.MimeType)
 	})
 
-	t.Run("uses custom placeholder when provided", func(t *testing.T) {
-		variable := NewConditionalVariable("is_active", true, "{active_flag}")
+	t.Run("returns error when placeholder is missing", func(t *testing.T) {
+		_, err := NewConditionalVariable("", "is_active", true)
 
-		assert.Equal(t, "{active_flag}", variable.Placeholder)
-		assert.Equal(t, "is_active", variable.Name)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "placeholder is required")
+	})
+
+	t.Run("returns error when name is missing", func(t *testing.T) {
+		_, err := NewConditionalVariable("{is_active}", "", true)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "name is required")
 	})
 }
 
 func TestNewImageVariable(t *testing.T) {
 	t.Run("creates image variable with URL", func(t *testing.T) {
-		variable := NewImageVariable("logo", "https://example.com/logo.png")
+		variable, err := NewImageVariable("{logo}", "logo", "https://example.com/logo.png")
 
+		require.NoError(t, err)
 		assert.Equal(t, "{logo}", variable.Placeholder)
 		assert.Equal(t, "logo", variable.Name)
 		assert.Equal(t, "https://example.com/logo.png", variable.Value)
-		assert.NotNil(t, variable.MimeType)
-		assert.Equal(t, MimeTypeImage, *variable.MimeType)
+		assert.Equal(t, MimeTypeImage, variable.MimeType)
 	})
 
 	t.Run("creates image variable with base64", func(t *testing.T) {
 		base64Image := "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg..."
-		variable := NewImageVariable("signature", base64Image)
+		variable, err := NewImageVariable("{signature}", "signature", base64Image)
 
+		require.NoError(t, err)
 		assert.Equal(t, base64Image, variable.Value)
-		assert.Equal(t, MimeTypeImage, *variable.MimeType)
+		assert.Equal(t, MimeTypeImage, variable.MimeType)
 	})
 
-	t.Run("uses custom placeholder when provided", func(t *testing.T) {
-		variable := NewImageVariable("logo", "https://example.com/logo.png", "{company_logo}")
+	t.Run("returns error when placeholder is missing", func(t *testing.T) {
+		_, err := NewImageVariable("", "logo", "https://example.com/logo.png")
 
-		assert.Equal(t, "{company_logo}", variable.Placeholder)
-		assert.Equal(t, "logo", variable.Name)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "placeholder is required")
+	})
+
+	t.Run("returns error when name is missing", func(t *testing.T) {
+		_, err := NewImageVariable("{logo}", "", "https://example.com/logo.png")
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "name is required")
+	})
+
+	t.Run("returns error when imageURL is missing", func(t *testing.T) {
+		_, err := NewImageVariable("{logo}", "logo", "")
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "imageURL is required")
 	})
 }
 
@@ -358,7 +423,7 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 			Description: &desc,
 			Variables: []TemplateVariable{
 				NewSimpleVariable("title", "Quarterly Report"),
-				NewNestedVariable("company", map[string]interface{}{"name": "Company XYZ", "employees": 500}),
+				NewAdvancedEngineVariable("company", map[string]interface{}{"name": "Company XYZ", "employees": 500}),
 				NewLoopVariable("departments", []interface{}{map[string]interface{}{"name": "Dept A"}, map[string]interface{}{"name": "Dept B"}}),
 				NewConditionalVariable("show_financials", true),
 				NewImageVariable("logo", "https://example.com/logo.png"),

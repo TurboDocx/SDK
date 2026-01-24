@@ -295,27 +295,27 @@ func usingHelpers(ctx context.Context, client *turbodocx.Client) {
 		Description: &description,
 		Variables: []turbodocx.TemplateVariable{
 			// Simple variable
-			turbodocx.NewSimpleVariable("title", "Quarterly Report"),
+			must(turbodocx.NewSimpleVariable("{title}", "title", "Quarterly Report", turbodocx.MimeTypeText)),
 
-			// Nested object
-			turbodocx.NewNestedVariable("company", map[string]interface{}{
+			// Advanced engine variable
+			must(turbodocx.NewAdvancedEngineVariable("{company}", "company", map[string]interface{}{
 				"name":         "Company XYZ",
 				"headquarters": "Test Location",
 				"employees":    500,
-			}),
+			})),
 
 			// Loop variable
-			turbodocx.NewLoopVariable("departments", []interface{}{
+			must(turbodocx.NewLoopVariable("{departments}", "departments", []interface{}{
 				map[string]interface{}{"name": "Dept A", "headcount": 200},
 				map[string]interface{}{"name": "Dept B", "headcount": 150},
 				map[string]interface{}{"name": "Dept C", "headcount": 100},
-			}),
+			})),
 
 			// Conditional
-			turbodocx.NewConditionalVariable("show_financials", true),
+			must(turbodocx.NewConditionalVariable("{show_financials}", "show_financials", true)),
 
 			// Image
-			turbodocx.NewImageVariable("company_logo", "https://example.com/logo.png"),
+			must(turbodocx.NewImageVariable("{company_logo}", "company_logo", "https://example.com/logo.png")),
 		},
 	})
 	if err != nil {
@@ -323,4 +323,12 @@ func usingHelpers(ctx context.Context, client *turbodocx.Client) {
 	}
 
 	fmt.Println("Document with helpers generated:", *result.DeliverableID)
+}
+
+// must is a helper function to handle errors in variable creation
+func must(v turbodocx.TemplateVariable, err error) turbodocx.TemplateVariable {
+	if err != nil {
+		log.Fatal("Error creating variable:", err)
+	}
+	return v
 }

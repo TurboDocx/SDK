@@ -420,27 +420,27 @@ async function usingHelpers() {
     description: 'Using helper functions example',
     variables: [
       // Simple variable - helper adds {} and sets mimeType
-      TurboTemplate.createSimpleVariable('title', 'Quarterly Report'),
+      TurboTemplate.createSimpleVariable('{title}', 'title', 'Quarterly Report', 'text'),
 
-      // Nested object - helper sets mimeType: 'json' and usesAdvancedTemplatingEngine: true
-      TurboTemplate.createNestedVariable('company', {
+      // Advanced engine variable - helper sets mimeType: 'json' and usesAdvancedTemplatingEngine: true
+      TurboTemplate.createAdvancedEngineVariable('{company}', 'company', {
         name: 'Company XYZ',
         headquarters: 'Test Location',
         employees: 500,
       }),
 
       // Loop variable - helper sets mimeType: 'json' and usesAdvancedTemplatingEngine: true
-      TurboTemplate.createLoopVariable('departments', [
+      TurboTemplate.createLoopVariable('{departments}', 'departments', [
         { name: 'Dept A', headcount: 200 },
         { name: 'Dept B', headcount: 150 },
         { name: 'Dept C', headcount: 100 },
       ]),
 
       // Conditional - helper sets usesAdvancedTemplatingEngine: true
-      TurboTemplate.createConditionalVariable('show_financials', true),
+      TurboTemplate.createConditionalVariable('{show_financials}', 'show_financials', true),
 
       // Image - helper sets mimeType: 'image'
-      TurboTemplate.createImageVariable('company_logo', 'https://example.com/logo.png'),
+      TurboTemplate.createImageVariable('{company_logo}', 'company_logo', 'https://example.com/logo.png'),
     ],
   });
 
@@ -475,6 +475,7 @@ function variableValidation() {
   const warningVariable = {
     placeholder: '{items}',
     name: 'items',
+    mimeType: 'text' as const,
     value: [1, 2, 3],
   };
 

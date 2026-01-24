@@ -124,7 +124,7 @@ export interface SimpleVariable {
   placeholder: string;
   name: string;
   value: string | number | boolean;
-  mimeType: 'text';
+  mimeType: 'text' | 'html';
 }
 
 /** Variable with nested structure (e.g., user.name, user.email) */
