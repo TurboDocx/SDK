@@ -305,8 +305,8 @@ GenerateTemplateResponse result = client.turboTemplate().generate(
             TemplateVariable.simple("invoice_number", "INV-2024-001"),
             TemplateVariable.simple("total", 1500),
 
-            // Nested objects (access with dot notation: {customer.name}, {customer.address.city})
-            TemplateVariable.nested("customer", Map.of(
+            // Advanced engine variable (access with dot notation: {customer.name}, {customer.address.city})
+            TemplateVariable.advancedEngine("customer", Map.of(
                 "name", "Acme Corp",
                 "email", "billing@acme.com",
                 "address", Map.of(

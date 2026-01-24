@@ -314,8 +314,8 @@ result = await TurboTemplate.generate({
         TurboTemplate.create_simple_variable("invoice_number", "INV-2024-001"),
         TurboTemplate.create_simple_variable("total", 1500),
 
-        # Nested objects (access with dot notation: {customer.name}, {customer.address.city})
-        TurboTemplate.create_nested_variable("customer", {
+        # Advanced engine variable (access with dot notation: {customer.name}, {customer.address.city})
+        TurboTemplate.create_advanced_engine_variable("customer", {
             "name": "Acme Corp",
             "email": "billing@acme.com",
             "address": {

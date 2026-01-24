@@ -269,8 +269,8 @@ result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateReq
         turbodocx.NewSimpleVariable("invoice_number", "INV-2024-001"),
         turbodocx.NewSimpleVariable("total", 1500),
 
-        // Nested objects (access with dot notation: {customer.name}, {customer.address.city})
-        turbodocx.NewNestedVariable("customer", map[string]interface{}{
+        // Advanced engine variable (access with dot notation: {customer.name}, {customer.address.city})
+        turbodocx.NewAdvancedEngineVariable("customer", map[string]interface{}{
             "name":  "Acme Corp",
             "email": "billing@acme.com",
             "address": map[string]interface{}{
