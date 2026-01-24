@@ -1,0 +1,51 @@
+name: Sync PHP SDK to Packagist Repo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/php-sdk/**'
+  release:
+    types: [published]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # Only run on main branch pushes or php-sdk releases
+    if: github.event_name == 'push' || (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'php-sdk-v'))
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PHP_SDK_DEPLOY_KEY }}
+
+      - name: Push subtree to php-sdk repo
+        uses: s0/git-publish-subdir-action@develop
+        env:
+          REPO: git@github.com:TurboDocx/php-sdk.git
+          BRANCH: main
+          FOLDER: packages/php-sdk
+          SSH_PRIVATE_KEY: ${{ secrets.PHP_SDK_DEPLOY_KEY }}
+
+      - name: Sync release tag
+        if: github.event_name == 'release' && startsWith(github.event.release.tag_name, 'php-sdk-v')
+        run: |
+          # Extract version from tag (php-sdk-v1.0.0 -> v1.0.0)
+          FULL_TAG="${{ github.event.release.tag_name }}"
+          VERSION_TAG="${FULL_TAG#php-sdk-}"
+
+          echo "Syncing tag: $VERSION_TAG"
+
+          # Clone the target repo
+          git clone git@github.com:TurboDocx/php-sdk.git /tmp/php-sdk-repo
+          cd /tmp/php-sdk-repo
+
+          # Create and push the tag
+          git tag "$VERSION_TAG" -m "Release $VERSION_TAG"
+          git push origin "$VERSION_TAG"
+
+          echo "✅ Tag $VERSION_TAG pushed to TurboDocx/php-sdk"
