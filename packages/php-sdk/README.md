@@ -575,7 +575,7 @@ MIT
 
 ## Support
 
-- 🌐 [TurboDocx Website](https://www.turbodocx.com)
+- 🌐 [TurboDocx](https://www.turbodocx.com)
 - 📚 [Documentation](https://docs.turbodocx.com/docs)
 - 💬 [Discord Community](https://discord.gg/NYKwz4BcpX)
 - 🐛 [GitHub Issues](https://github.com/TurboDocx/SDK/issues)
