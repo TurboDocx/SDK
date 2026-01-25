@@ -1,9 +1,7 @@
 package turbodocx
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 )
 
@@ -194,23 +192,11 @@ func (c *TurboTemplateClient) Generate(ctx context.Context, req *GenerateTemplat
 		// So we accept the variable as long as it has been initialized with either field
 	}
 
-	// Marshal request to JSON
-	body, err := json.Marshal(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
-	}
-
 	// Make request
-	resp, err := c.httpClient.Post(ctx, "/v1/deliverable", "application/json", bytes.NewReader(body))
+	var result GenerateTemplateResponse
+	err := c.httpClient.Post(ctx, "/v1/deliverable", req, &result)
 	if err != nil {
 		return nil, err
-	}
-	defer resp.Body.Close()
-
-	// Parse response
-	var result GenerateTemplateResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	return &result, nil
