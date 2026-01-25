@@ -31,6 +31,8 @@ class TurboTemplate:
         access_token: Optional[str] = None,
         base_url: str = "https://api.turbodocx.com",
         org_id: Optional[str] = None,
+        sender_email: Optional[str] = None,
+        sender_name: Optional[str] = None,
     ) -> None:
         """
         Configure the TurboTemplate module with API credentials
@@ -40,6 +42,8 @@ class TurboTemplate:
             access_token: OAuth2 access token (alternative to API key)
             base_url: Base URL for the API (optional, defaults to https://api.turbodocx.com)
             org_id: Organization ID (required)
+            sender_email: Reply-to email address for signature requests (optional for template generation).
+            sender_name: Sender name for signature requests (optional for template generation).
 
         Example:
             >>> TurboTemplate.configure(
@@ -52,6 +56,8 @@ class TurboTemplate:
             access_token=access_token,
             base_url=base_url,
             org_id=org_id,
+            sender_email=sender_email,
+            sender_name=sender_name,
         )
 
     @classmethod
@@ -157,14 +163,11 @@ class TurboTemplate:
             variable["mimeType"] = v["mimeType"]
 
             # Handle value - keep objects/arrays as-is for JSON serialization
-            if "value" in v and v["value"] is not None:
+            # Allow null/None values, don't require either property
+            if "value" in v:
                 variable["value"] = v["value"]
-            elif "text" in v and v["text"] is not None:
+            if "text" in v:
                 variable["text"] = v["text"]
-            else:
-                raise ValueError(
-                    f'Variable "{variable["placeholder"]}" must have either "value" or "text" property'
-                )
 
             # Add advanced templating flags if specified
             if "usesAdvancedTemplatingEngine" in v:
@@ -221,12 +224,7 @@ class TurboTemplate:
         if not variable.get("placeholder") or not variable.get("name"):
             errors.append('Variable must have both "placeholder" and "name" properties')
 
-        # Check value/text
-        has_value = "value" in variable and variable["value"] is not None
-        has_text = "text" in variable and variable["text"] is not None
-
-        if not has_value and not has_text:
-            errors.append('Variable must have either "value" or "text" property')
+        # Check value/text - allow None values, don't enforce either property
 
         # Check advanced templating settings
         mime_type = variable.get("mimeType")

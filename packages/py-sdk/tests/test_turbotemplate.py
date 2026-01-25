@@ -23,7 +23,11 @@ class TestTurboTemplateConfigure:
 
     def test_configure_with_api_key_and_org_id(self):
         """Should configure the client with API key and org ID"""
-        TurboTemplate.configure(api_key="test-api-key", org_id="test-org-id")
+        TurboTemplate.configure(
+            api_key="test-api-key",
+            org_id="test-org-id",
+            sender_email="test@company.com"
+        )
         assert TurboTemplate._client is not None
         assert TurboTemplate._client.api_key == "test-api-key"
         assert TurboTemplate._client.org_id == "test-org-id"
@@ -33,6 +37,7 @@ class TestTurboTemplateConfigure:
         TurboTemplate.configure(
             api_key="test-api-key",
             org_id="test-org-id",
+            sender_email="test@company.com",
             base_url="https://custom-api.example.com",
         )
         assert TurboTemplate._client.base_url == "https://custom-api.example.com"
@@ -322,12 +327,11 @@ class TestValidateVariable:
         assert result["isValid"] is False
         assert 'Variable must have both "placeholder" and "name" properties' in result["errors"]
 
-    def test_error_when_value_and_text_missing(self):
-        """Should return error when value and text are both missing"""
+    def test_allow_variable_without_value_and_text(self):
+        """Should allow variable without value or text property"""
         result = TurboTemplate.validate_variable({"placeholder": "{name}", "name": "name"})
 
-        assert result["isValid"] is False
-        assert 'Variable must have either "value" or "text" property' in result["errors"]
+        assert result["isValid"] is True
 
     def test_warn_about_array_without_json_mimetype(self):
         """Should warn about array without json mimeType"""
@@ -401,7 +405,7 @@ class TestGenerate:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboTemplate.configure(api_key="test-key", org_id="test-org")
+            TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
             result = await TurboTemplate.generate(
                 {
                     "templateId": "template-123",
@@ -438,7 +442,7 @@ class TestGenerate:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboTemplate.configure(api_key="test-key", org_id="test-org")
+            TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
             result = await TurboTemplate.generate(
                 {
                     "templateId": "template-123",
@@ -476,7 +480,7 @@ class TestGenerate:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboTemplate.configure(api_key="test-key", org_id="test-org")
+            TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
             result = await TurboTemplate.generate(
                 {
                     "templateId": "template-123",
@@ -513,7 +517,7 @@ class TestGenerate:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboTemplate.configure(api_key="test-key", org_id="test-org")
+            TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
             result = await TurboTemplate.generate(
                 {
                     "templateId": "template-123",
@@ -546,7 +550,7 @@ class TestGenerate:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboTemplate.configure(api_key="test-key", org_id="test-org")
+            TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
             await TurboTemplate.generate(
                 {
                     "templateId": "template-123",
@@ -568,22 +572,27 @@ class TestGenerate:
             assert body["metadata"] == {"customField": "value"}
 
     @pytest.mark.asyncio
-    async def test_generate_throws_error_when_variable_has_no_value_or_text(self):
-        """Should throw error when variable has no value or text"""
+    async def test_generate_allows_variable_with_no_value_or_text(self):
+        """Should allow variable with no value or text property"""
+        mock_response = {"success": True, "deliverableId": "doc-no-value"}
+
         with patch.object(TurboTemplate, "_get_client") as mock_get_client:
             mock_client = MagicMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboTemplate.configure(api_key="test-key", org_id="test-org")
-            with pytest.raises(ValueError, match='must have either "value" or "text" property'):
-                await TurboTemplate.generate(
-                    {
-                        "templateId": "template-123",
-                        "name": "Error Document",
-                        "description": "Document that should fail",
-                        "variables": [{"placeholder": "{test}", "name": "test"}],
-                    }
-                )
+            TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
+            result = await TurboTemplate.generate(
+                {
+                    "templateId": "template-123",
+                    "name": "No Value Document",
+                    "description": "Document with variable that has no value/text",
+                    "variables": [{"placeholder": "{test}", "name": "test", "mimeType": "text"}],
+                }
+            )
+
+            assert result["success"] is True
+            assert result["deliverableId"] == "doc-no-value"
 
     @pytest.mark.asyncio
     async def test_generate_handles_text_property_as_fallback(self):
@@ -595,7 +604,7 @@ class TestGenerate:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboTemplate.configure(api_key="test-key", org_id="test-org")
+            TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
             await TurboTemplate.generate(
                 {
                     "templateId": "template-123",
@@ -608,6 +617,31 @@ class TestGenerate:
             call_args = mock_client.post.call_args
             body = call_args[1]["json"]
             assert body["variables"][0]["text"] == "Legacy value"
+
+    @pytest.mark.asyncio
+    async def test_generate_allows_null_value(self):
+        """Should allow variable with None/null value"""
+        mock_response = {"success": True, "deliverableId": "doc-null"}
+
+        with patch.object(TurboTemplate, "_get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_get_client.return_value = mock_client
+
+            TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
+            result = await TurboTemplate.generate(
+                {
+                    "templateId": "template-123",
+                    "name": "Null Value Document",
+                    "description": "Document with None value",
+                    "variables": [{"placeholder": "{test}", "name": "test", "value": None, "mimeType": "text"}],
+                }
+            )
+
+            assert result["success"] is True
+            call_args = mock_client.post.call_args
+            body = call_args[1]["json"]
+            assert body["variables"][0]["value"] is None
 
 
 class TestPlaceholderAndNameHandling:
@@ -628,7 +662,7 @@ class TestPlaceholderAndNameHandling:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboTemplate.configure(api_key="test-key", org_id="test-org")
+            TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
             await TurboTemplate.generate(
                 {
                     "templateId": "template-123",
@@ -655,7 +689,7 @@ class TestPlaceholderAndNameHandling:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            TurboTemplate.configure(api_key="test-key", org_id="test-org")
+            TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
             await TurboTemplate.generate(
                 {
                     "templateId": "template-123",
@@ -704,7 +738,7 @@ class TestErrorHandling:
             mock_client.post = AsyncMock(side_effect=api_error)
             mock_get_client.return_value = mock_client
 
-            TurboTemplate.configure(api_key="test-key", org_id="test-org")
+            TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
             with pytest.raises(Exception, match="Template not found"):
                 await TurboTemplate.generate(
                     {
