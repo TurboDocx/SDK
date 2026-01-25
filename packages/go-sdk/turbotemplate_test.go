@@ -508,20 +508,58 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 		assert.Contains(t, err.Error(), "variables are required")
 	})
 
-	t.Run("returns error when variable has no value or text", func(t *testing.T) {
+	t.Run("allows variable with no value or text", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success":       true,
+				"deliverableId": "doc-no-value",
+			})
+		}))
+		defer server.Close()
+
 		client, _ := NewClientWithConfig(ClientConfig{
 			APIKey:      "test-api-key",
 			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
 			SenderEmail: "test@example.com",
 		})
 
-		_, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
+		mimeType := MimeTypeText
+		result, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
 			TemplateID: "template-123",
-			Variables:  []TemplateVariable{{Placeholder: "{test}", Name: "test"}},
+			Variables:  []TemplateVariable{{Placeholder: "{test}", Name: "test", MimeType: mimeType}},
 		})
 
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "must have either Value or Text")
+		require.NoError(t, err)
+		assert.True(t, result.Success)
+	})
+
+	t.Run("allows variable with nil value", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success":       true,
+				"deliverableId": "doc-nil-value",
+			})
+		}))
+		defer server.Close()
+
+		client, _ := NewClientWithConfig(ClientConfig{
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
+			SenderEmail: "test@example.com",
+		})
+
+		mimeType := MimeTypeText
+		result, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
+			TemplateID: "template-123",
+			Variables:  []TemplateVariable{{Placeholder: "{test}", Name: "test", Value: nil, MimeType: mimeType}},
+		})
+
+		require.NoError(t, err)
+		assert.True(t, result.Success)
 	})
 
 	t.Run("returns error when placeholder is missing", func(t *testing.T) {

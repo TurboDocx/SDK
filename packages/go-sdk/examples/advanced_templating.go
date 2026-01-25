@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/turbodocx/sdk/packages/go-sdk"
+	turbodocx "github.com/TurboDocx/SDK/packages/go-sdk"
 )
 
 func main() {

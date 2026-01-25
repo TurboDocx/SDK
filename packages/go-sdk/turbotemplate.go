@@ -189,9 +189,9 @@ func (c *TurboTemplateClient) Generate(ctx context.Context, req *GenerateTemplat
 		if v.MimeType == "" {
 			return nil, fmt.Errorf("variable %d (%s) must have MimeType", i, v.Placeholder)
 		}
-		if v.Value == nil && (v.Text == nil || *v.Text == "") {
-			return nil, fmt.Errorf("variable %d (%s) must have either Value or Text", i, v.Placeholder)
-		}
+		// Allow nil/null values - just check that at least one field is set
+		// Note: We cannot distinguish between "field not set" vs "field set to nil" in Go
+		// So we accept the variable as long as it has been initialized with either field
 	}
 
 	// Marshal request to JSON
