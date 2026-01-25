@@ -36,8 +36,7 @@ class TemplateVariable
         public ?string $description = null,
         public ?bool $defaultValue = null,
         public ?array $subvariables = null
-    ) {
-    }
+    ) {}
 
     /**
      * Convert to array for JSON serialization

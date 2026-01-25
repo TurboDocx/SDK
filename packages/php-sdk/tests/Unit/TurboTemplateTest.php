@@ -79,7 +79,7 @@ class TurboTemplateTest extends TestCase
         $user = [
             'firstName' => 'Foo',
             'lastName' => 'Bar',
-            'email' => 'foo@example.com'
+            'email' => 'foo@example.com',
         ];
 
         $variable = TemplateVariable::advancedEngine('{user}', 'user', $user);
@@ -98,8 +98,8 @@ class TurboTemplateTest extends TestCase
             'address' => [
                 'street' => '123 Test Street',
                 'city' => 'Test City',
-                'state' => 'TS'
-            ]
+                'state' => 'TS',
+            ],
         ];
 
         $variable = TemplateVariable::advancedEngine('{company}', 'company', $company);
@@ -129,7 +129,7 @@ class TurboTemplateTest extends TestCase
     {
         $items = [
             ['name' => 'Item A', 'price' => 100],
-            ['name' => 'Item B', 'price' => 200]
+            ['name' => 'Item B', 'price' => 200],
         ];
 
         $variable = TemplateVariable::loop('{items}', 'items', $items);
@@ -265,7 +265,7 @@ class TurboTemplateTest extends TestCase
             templateId: 'template-123',
             variables: [
                 TemplateVariable::simple('{customer_name}', 'customer_name', 'Person A'),
-                TemplateVariable::simple('{order_total}', 'order_total', 1500)
+                TemplateVariable::simple('{order_total}', 'order_total', 1500),
             ],
             name: 'Test Document',
             description: 'Test description'
@@ -299,7 +299,7 @@ class TurboTemplateTest extends TestCase
         $request = new GenerateTemplateRequest(
             templateId: 'template-123',
             variables: [
-                TemplateVariable::simple('{test}', 'test', 'value')
+                TemplateVariable::simple('{test}', 'test', 'value'),
             ],
             name: 'Test',
             replaceFonts: true,

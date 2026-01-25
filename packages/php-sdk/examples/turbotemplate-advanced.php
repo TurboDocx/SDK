@@ -35,8 +35,8 @@ function complexInvoice(): void
                         'street' => '123 Test Street',
                         'city' => 'Test City',
                         'state' => 'TS',
-                        'zip' => '00000'
-                    ]
+                        'zip' => '00000',
+                    ],
                 ]),
 
                 // Invoice metadata
@@ -49,18 +49,18 @@ function complexInvoice(): void
                     [
                         'description' => 'Service A',
                         'quantity' => 40,
-                        'rate' => 150
+                        'rate' => 150,
                     ],
                     [
                         'description' => 'Service B',
                         'quantity' => 1,
-                        'rate' => 5000
+                        'rate' => 5000,
                     ],
                     [
                         'description' => 'Service C',
                         'quantity' => 12,
-                        'rate' => 500
-                    ]
+                        'rate' => 500,
+                    ],
                 ]),
 
                 // Tax and totals (for expressions)
@@ -86,7 +86,7 @@ function complexInvoice(): void
                 TemplateVariable::simple('{payment_terms}', 'payment_terms', 'Net 30'),
 
                 // Notes
-                TemplateVariable::simple('{notes}', 'notes', 'Thank you for your business!')
+                TemplateVariable::simple('{notes}', 'notes', 'Thank you for your business!'),
             ],
             name: 'Invoice - Company ABC',
             description: 'Monthly invoice',
@@ -121,7 +121,7 @@ function expressionsAndCalculations(): void
                     mimeType: VariableMimeType::TEXT,
                     value: '0.08',
                     usesAdvancedTemplatingEngine: true
-                )
+                ),
             ],
             name: 'Expressions Document',
             description: 'Arithmetic expressions example'
@@ -147,21 +147,21 @@ function usingHelpers(): void
                 TemplateVariable::advancedEngine('{company}', 'company', [
                     'name' => 'Company XYZ',
                     'headquarters' => 'Test Location',
-                    'employees' => 500
+                    'employees' => 500,
                 ]),
 
                 // Loop variable
                 TemplateVariable::loop('{departments}', 'departments', [
                     ['name' => 'Dept A', 'headcount' => 200],
                     ['name' => 'Dept B', 'headcount' => 150],
-                    ['name' => 'Dept C', 'headcount' => 100]
+                    ['name' => 'Dept C', 'headcount' => 100],
                 ]),
 
                 // Conditional
                 TemplateVariable::conditional('{show_financials}', 'show_financials', true),
 
                 // Image
-                TemplateVariable::image('{company_logo}', 'company_logo', 'https://example.com/logo.png')
+                TemplateVariable::image('{company_logo}', 'company_logo', 'https://example.com/logo.png'),
             ],
             name: 'Helper Functions Document',
             description: 'Using helper functions example'
@@ -182,7 +182,7 @@ function customOptions(): void
         new GenerateTemplateRequest(
             templateId: 'your-template-id',
             variables: [
-                TemplateVariable::simple('{title}', 'title', 'Custom Document')
+                TemplateVariable::simple('{title}', 'title', 'Custom Document'),
             ],
             name: 'Custom Options Document',
             description: 'Document with custom options',
@@ -192,7 +192,7 @@ function customOptions(): void
             metadata: [
                 'customField' => 'value',
                 'department' => 'Sales',
-                'region' => 'North America'
+                'region' => 'North America',
             ]
         )
     );

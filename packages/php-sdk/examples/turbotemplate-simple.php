@@ -28,7 +28,7 @@ function simpleSubstitution(): void
             variables: [
                 TemplateVariable::simple('{customer_name}', 'customer_name', 'Foo Bar'),
                 TemplateVariable::simple('{order_total}', 'order_total', 1500),
-                TemplateVariable::simple('{order_date}', 'order_date', '2024-01-01')
+                TemplateVariable::simple('{order_date}', 'order_date', '2024-01-01'),
             ],
             name: 'Simple Substitution Document',
             description: 'Basic variable substitution example'
@@ -55,9 +55,9 @@ function nestedObjects(): void
                     'profile' => [
                         'company' => 'Company XYZ',
                         'title' => 'Role 1',
-                        'location' => 'Test City, TS'
-                    ]
-                ])
+                        'location' => 'Test City, TS',
+                    ],
+                ]),
             ],
             name: 'Nested Objects Document',
             description: 'Nested object with dot notation example'
@@ -84,8 +84,8 @@ function loopsAndArrays(): void
                 TemplateVariable::loop('{items}', 'items', [
                     ['name' => 'Item A', 'quantity' => 5, 'price' => 100, 'sku' => 'SKU-001'],
                     ['name' => 'Item B', 'quantity' => 3, 'price' => 200, 'sku' => 'SKU-002'],
-                    ['name' => 'Item C', 'quantity' => 10, 'price' => 50, 'sku' => 'SKU-003']
-                ])
+                    ['name' => 'Item C', 'quantity' => 10, 'price' => 50, 'sku' => 'SKU-003'],
+                ]),
             ],
             name: 'Array Loops Document',
             description: 'Array loop iteration example'
@@ -113,7 +113,7 @@ function conditionals(): void
             templateId: 'your-template-id',
             variables: [
                 TemplateVariable::conditional('{is_premium}', 'is_premium', true),
-                TemplateVariable::conditional('{discount}', 'discount', 0.2)
+                TemplateVariable::conditional('{discount}', 'discount', 0.2),
             ],
             name: 'Conditionals Document',
             description: 'Boolean conditional example'
@@ -133,7 +133,7 @@ function usingImages(): void
             templateId: 'your-template-id',
             variables: [
                 TemplateVariable::simple('{title}', 'title', 'Quarterly Report'),
-                TemplateVariable::image('{logo}', 'logo', 'https://example.com/logo.png')
+                TemplateVariable::image('{logo}', 'logo', 'https://example.com/logo.png'),
             ],
             name: 'Document with Images',
             description: 'Using image variables'

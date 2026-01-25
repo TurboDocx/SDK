@@ -18,8 +18,7 @@ class GenerateTemplateResponse
         public bool $success,
         public ?string $deliverableId = null,
         public ?string $message = null
-    ) {
-    }
+    ) {}
 
     /**
      * Create from API response array
