@@ -30,6 +30,10 @@ func main() {
 	// complexInvoice(ctx, client)
 	// usingHelpers(ctx, client)
 
+	// Suppress unused variable warnings when all examples are commented out
+	_ = client
+	_ = ctx
+
 	fmt.Println("Examples ready to run!")
 }
 

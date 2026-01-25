@@ -294,8 +294,8 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 			Name:        &name,
 			Description: &desc,
 			Variables: []TemplateVariable{
-				{Placeholder: "{customer_name}", Name: "customer_name", Value: "Person A"},
-				{Placeholder: "{order_total}", Name: "order_total", Value: 1500},
+				{Placeholder: "{customer_name}", Name: "customer_name", Value: "Person A", MimeType: MimeTypeText},
+				{Placeholder: "{order_total}", Name: "order_total", Value: 1500, MimeType: MimeTypeText},
 			},
 		})
 
@@ -625,7 +625,7 @@ func TestTurboTemplateClient_PlaceholderAndNameHandling(t *testing.T) {
 			Name:        &name,
 			Description: &desc,
 			Variables: []TemplateVariable{
-				{Placeholder: "{customer}", Name: "customer", Value: "Person A"},
+				{Placeholder: "{customer}", Name: "customer", Value: "Person A", MimeType: MimeTypeText},
 			},
 		})
 
@@ -661,7 +661,7 @@ func TestTurboTemplateClient_PlaceholderAndNameHandling(t *testing.T) {
 			Name:        &name,
 			Description: &desc,
 			Variables: []TemplateVariable{
-				{Placeholder: "{cust_name}", Name: "customerFullName", Value: "Person A"},
+				{Placeholder: "{cust_name}", Name: "customerFullName", Value: "Person A", MimeType: MimeTypeText},
 			},
 		})
 
