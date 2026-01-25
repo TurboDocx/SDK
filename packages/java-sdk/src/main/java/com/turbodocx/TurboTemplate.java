@@ -2,6 +2,7 @@ package com.turbodocx;
 
 import com.turbodocx.models.GenerateTemplateRequest;
 import com.turbodocx.models.GenerateTemplateResponse;
+import java.io.IOException;
 
 /**
  * TurboTemplate provides document templating operations
@@ -73,9 +74,9 @@ public class TurboTemplate {
      *
      * @param request Template ID and variables
      * @return Generated document response
-     * @throws TurboDocxException if the request fails
+     * @throws IOException if the request fails
      */
-    public GenerateTemplateResponse generate(GenerateTemplateRequest request) throws TurboDocxException {
+    public GenerateTemplateResponse generate(GenerateTemplateRequest request) throws IOException {
         if (request == null) {
             throw new IllegalArgumentException("Request cannot be null");
         }
