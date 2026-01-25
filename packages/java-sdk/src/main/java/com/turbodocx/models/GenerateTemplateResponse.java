@@ -1,27 +1,19 @@
 package com.turbodocx.models;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 /**
  * Response from template generation
  */
 public class GenerateTemplateResponse {
-    @JsonProperty("success")
     private boolean success;
 
-    @JsonProperty("deliverableId")
     private String deliverableId;
 
-    @JsonProperty("buffer")
     private byte[] buffer;
 
-    @JsonProperty("downloadUrl")
     private String downloadUrl;
 
-    @JsonProperty("message")
     private String message;
 
-    @JsonProperty("error")
     private String error;
 
     // Constructors

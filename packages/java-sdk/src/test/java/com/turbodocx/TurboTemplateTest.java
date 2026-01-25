@@ -371,14 +371,19 @@ class TurboTemplateTest {
     }
 
     @Test
-    @DisplayName("builder should throw error when value and text are both missing")
-    void builderThrowsErrorWhenValueAndTextMissing() {
-        assertThrows(IllegalStateException.class, () -> {
-            TemplateVariable.builder()
-                    .placeholder("{test}")
-                    .name("test")
-                    .build();
-        });
+    @DisplayName("builder should allow variable without value or text")
+    void builderAllowsVariableWithoutValueOrText() {
+        TemplateVariable variable = TemplateVariable.builder()
+                .placeholder("{test}")
+                .name("test")
+                .mimeType(VariableMimeType.TEXT)
+                .build();
+
+        assertNotNull(variable);
+        assertEquals("{test}", variable.getPlaceholder());
+        assertEquals("test", variable.getName());
+        assertNull(variable.getValue());
+        assertNull(variable.getText());
     }
 
     @Test
@@ -387,10 +392,25 @@ class TurboTemplateTest {
         TemplateVariable variable = TemplateVariable.builder()
                 .placeholder("{test}")
                 .name("test")
+                .mimeType(VariableMimeType.TEXT)
                 .text("text value")
                 .build();
 
         assertEquals("text value", variable.getText());
+    }
+
+    @Test
+    @DisplayName("builder should allow null value")
+    void builderAllowsNullValue() {
+        TemplateVariable variable = TemplateVariable.builder()
+                .placeholder("{test}")
+                .name("test")
+                .value(null)
+                .mimeType(VariableMimeType.TEXT)
+                .build();
+
+        assertNotNull(variable);
+        assertNull(variable.getValue());
     }
 
     // ============================================

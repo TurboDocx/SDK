@@ -1,6 +1,5 @@
 package com.turbodocx.models;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Map;
 
@@ -8,28 +7,20 @@ import java.util.Map;
  * Request for generating a document from template
  */
 public class GenerateTemplateRequest {
-    @JsonProperty("templateId")
     private String templateId;
 
-    @JsonProperty("variables")
     private List<TemplateVariable> variables;
 
-    @JsonProperty("name")
     private String name;
 
-    @JsonProperty("description")
     private String description;
 
-    @JsonProperty("replaceFonts")
     private Boolean replaceFonts;
 
-    @JsonProperty("defaultFont")
     private String defaultFont;
 
-    @JsonProperty("outputFormat")
     private String outputFormat;
 
-    @JsonProperty("metadata")
     private Map<String, Object> metadata;
 
     // Constructors

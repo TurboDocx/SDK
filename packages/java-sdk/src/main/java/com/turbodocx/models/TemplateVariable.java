@@ -1,6 +1,5 @@
 package com.turbodocx.models;
 
-import com.fasterxml.jackson.annotation.json.JsonProperty;
 import java.util.List;
 import java.util.Map;
 
@@ -10,37 +9,26 @@ import java.util.Map;
  * Supports both simple text replacement and advanced templating with Angular-like expressions
  */
 public class TemplateVariable {
-    @JsonProperty("placeholder")
     private String placeholder;
 
-    @JsonProperty("name")
     private String name;
 
-    @JsonProperty("value")
     private Object value;
 
-    @JsonProperty("text")
     private String text;
 
-    @JsonProperty("mimeType")
     private String mimeType;
 
-    @JsonProperty("usesAdvancedTemplatingEngine")
     private Boolean usesAdvancedTemplatingEngine;
 
-    @JsonProperty("nestedInAdvancedTemplatingEngine")
     private Boolean nestedInAdvancedTemplatingEngine;
 
-    @JsonProperty("allowRichTextInjection")
     private Boolean allowRichTextInjection;
 
-    @JsonProperty("description")
     private String description;
 
-    @JsonProperty("defaultValue")
     private Boolean defaultValue;
 
-    @JsonProperty("subvariables")
     private List<TemplateVariable> subvariables;
 
     // Constructors
