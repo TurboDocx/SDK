@@ -257,10 +257,7 @@ fn test_review_link_request_with_deliverable_id() {
         cc_emails: None,
     };
 
-    assert_eq!(
-        request.deliverable_id,
-        Some("deliverable-uuid".to_string())
-    );
+    assert_eq!(request.deliverable_id, Some("deliverable-uuid".to_string()));
     assert!(request.file_link.is_none());
     assert!(request.file.is_none());
 }
@@ -438,10 +435,7 @@ fn test_send_signature_request_with_deliverable_id() {
         cc_emails: None,
     };
 
-    assert_eq!(
-        request.deliverable_id,
-        Some("deliverable-uuid".to_string())
-    );
+    assert_eq!(request.deliverable_id, Some("deliverable-uuid".to_string()));
     assert_eq!(request.fields.len(), 2);
 }
 

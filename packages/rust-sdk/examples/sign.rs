@@ -21,11 +21,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         fields: vec![
             Field::coordinate_based(
                 SignatureFieldType::Signature,
-                1,      // page
-                100.0,  // x
-                500.0,  // y
-                200.0,  // width
-                50.0,   // height
+                1,     // page
+                100.0, // x
+                500.0, // y
+                200.0, // width
+                50.0,  // height
                 "john@example.com",
             ),
             Field::coordinate_based(
@@ -77,11 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "{ClientSignature}",
                 "alice@example.com",
             ),
-            Field::anchor_based(
-                SignatureFieldType::Date,
-                "{SignDate}",
-                "alice@example.com",
-            ),
+            Field::anchor_based(SignatureFieldType::Date, "{SignDate}", "alice@example.com"),
             Field::anchor_based(
                 SignatureFieldType::FullName,
                 "{ClientName}",
@@ -119,8 +115,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✓ Sent to {} recipients", response.recipient_count);
 
     println!("\n=== Example 6: Void Document ===");
-    let response =
-        TurboSign::void_document(document_id, Some("Contract terms changed")).await?;
+    let response = TurboSign::void_document(document_id, Some("Contract terms changed")).await?;
     println!("✓ {}", response.message);
 
     println!("\n=== Example 7: Download Signed Document ===");

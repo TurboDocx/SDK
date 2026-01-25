@@ -68,6 +68,10 @@ pub use types::{
     Field,
     FieldOffset,
     FieldSize,
+    // Template types
+    GenerateTemplateRequest,
+    GenerateTemplateResponse,
+    OutputFormat,
     Placement,
     Recipient,
     RecipientStatus,
@@ -76,12 +80,8 @@ pub use types::{
     SendSignatureResponse,
     SignatureFieldType,
     TemplateAnchor,
-    VoidDocumentResponse,
-    // Template types
-    GenerateTemplateRequest,
-    GenerateTemplateResponse,
-    OutputFormat,
     TemplateVariable,
     VariableMimeType,
+    VoidDocumentResponse,
 };
 pub use utils::{Result, TurboDocxError};
