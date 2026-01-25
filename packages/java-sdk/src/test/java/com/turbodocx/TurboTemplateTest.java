@@ -338,7 +338,7 @@ class TurboTemplateTest {
     @Test
     @DisplayName("image() should use custom placeholder when provided")
     void imageVariableWithCustomPlaceholder() {
-        TemplateVariable variable = TemplateVariable.image("logo", "https://example.com/logo.png", "{company_logo}");
+        TemplateVariable variable = TemplateVariable.image("{company_logo}", "logo", "https://example.com/logo.png");
 
         assertEquals("{company_logo}", variable.getPlaceholder());
         assertEquals("logo", variable.getName());
@@ -435,8 +435,8 @@ class TurboTemplateTest {
                 .name("Test Document")
                 .description("Test description")
                 .variables(Arrays.asList(
-                        TemplateVariable.simple("customer_name", "Person A"),
-                        TemplateVariable.simple("order_total", 1500)
+                        TemplateVariable.simple("{customer_name}", "customer_name", "Person A", VariableMimeType.TEXT),
+                        TemplateVariable.simple("{order_total}", "order_total", 1500, VariableMimeType.TEXT)
                 ))
                 .build();
 
@@ -473,7 +473,7 @@ class TurboTemplateTest {
                 .name("Nested Document")
                 .description("Document with nested objects")
                 .variables(Collections.singletonList(
-                        TemplateVariable.advancedEngine("user", user)
+                        TemplateVariable.advancedEngine("{user}", "user", user)
                 ))
                 .build();
 
@@ -503,7 +503,7 @@ class TurboTemplateTest {
                 .name("Loop Document")
                 .description("Document with loops")
                 .variables(Collections.singletonList(
-                        TemplateVariable.loop("items", items)
+                        TemplateVariable.loop("{items}", "items", items)
                 ))
                 .build();
 
@@ -528,11 +528,11 @@ class TurboTemplateTest {
                 .name("Helper Document")
                 .description("Document using helper functions")
                 .variables(Arrays.asList(
-                        TemplateVariable.simple("title", "Quarterly Report"),
-                        TemplateVariable.advancedEngine("company", Map.of("name", "Company XYZ", "employees", 500)),
-                        TemplateVariable.loop("departments", Arrays.asList(Map.of("name", "Dept A"), Map.of("name", "Dept B"))),
-                        TemplateVariable.conditional("show_financials", true),
-                        TemplateVariable.image("logo", "https://example.com/logo.png")
+                        TemplateVariable.simple("{title}", "title", "Quarterly Report", VariableMimeType.TEXT),
+                        TemplateVariable.advancedEngine("{company}", "company", Map.of("name", "Company XYZ", "employees", 500)),
+                        TemplateVariable.loop("{departments}", "departments", Arrays.asList(Map.of("name", "Dept A"), Map.of("name", "Dept B"))),
+                        TemplateVariable.conditional("{show_financials}", "show_financials", true),
+                        TemplateVariable.image("{logo}", "logo", "https://example.com/logo.png")
                 ))
                 .build();
 
@@ -557,7 +557,7 @@ class TurboTemplateTest {
                 .name("Options Document")
                 .description("Document with all options")
                 .variables(Collections.singletonList(
-                        TemplateVariable.simple("test", "value")
+                        TemplateVariable.simple("{test}", "test", "value", VariableMimeType.TEXT)
                 ))
                 .replaceFonts(true)
                 .defaultFont("Arial")
@@ -602,6 +602,7 @@ class TurboTemplateTest {
                                 .placeholder("{customer}")
                                 .name("customer")
                                 .value("Person A")
+                                .mimeType(VariableMimeType.TEXT)
                                 .build()
                 ))
                 .build();
@@ -631,6 +632,7 @@ class TurboTemplateTest {
                                 .placeholder("{cust_name}")
                                 .name("customerFullName")
                                 .value("Person A")
+                                .mimeType(VariableMimeType.TEXT)
                                 .build()
                 ))
                 .build();
@@ -660,7 +662,7 @@ class TurboTemplateTest {
                 .name("Error Document")
                 .description("Document that should fail")
                 .variables(Collections.singletonList(
-                        TemplateVariable.simple("test", "value")
+                        TemplateVariable.simple("{test}", "test", "value", VariableMimeType.TEXT)
                 ))
                 .build();
 
@@ -688,7 +690,7 @@ class TurboTemplateTest {
                 .name("Validation Error Document")
                 .description("Document that should fail validation")
                 .variables(Collections.singletonList(
-                        TemplateVariable.simple("test", "value")
+                        TemplateVariable.simple("{test}", "test", "value", VariableMimeType.TEXT)
                 ))
                 .build();
 
@@ -715,7 +717,7 @@ class TurboTemplateTest {
                 .name("Rate Limit Document")
                 .description("Document that should hit rate limit")
                 .variables(Collections.singletonList(
-                        TemplateVariable.simple("test", "value")
+                        TemplateVariable.simple("{test}", "test", "value", VariableMimeType.TEXT)
                 ))
                 .build();
 
