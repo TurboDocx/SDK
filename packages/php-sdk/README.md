@@ -18,6 +18,8 @@
 - 🔄 **Industry Standard** — Guzzle HTTP client, PSR standards compliance
 - 🛡️ **Type-safe** — Catch errors at development time with static analysis
 - 🤖 **100% n8n Parity** — Same operations as our n8n community nodes
+- ✍️ **TurboSign** — Digital signature workflows with comprehensive field types
+- 📄 **TurboTemplate** — Advanced document generation with templating
 
 ---
 
@@ -39,6 +41,8 @@ composer require turbodocx/sdk
 ---
 
 ## Quick Start
+
+### TurboSign - Digital Signatures
 
 ```php
 <?php
@@ -83,6 +87,51 @@ $result = TurboSign::sendSignature(
 );
 
 echo "Document ID: {$result->documentId}\n";
+```
+
+### TurboTemplate - Document Generation
+
+```php
+<?php
+
+use TurboDocx\TurboTemplate;
+use TurboDocx\Config\HttpClientConfig;
+use TurboDocx\Types\TemplateVariable;
+use TurboDocx\Types\VariableMimeType;
+use TurboDocx\Types\OutputFormat;
+use TurboDocx\Types\Requests\GenerateTemplateRequest;
+
+// 1. Configure with your API key
+TurboTemplate::configure(new HttpClientConfig(
+    apiKey: $_ENV['TURBODOCX_API_KEY'],
+    orgId: $_ENV['TURBODOCX_ORG_ID']
+));
+
+// 2. Generate a document from a template
+$result = TurboTemplate::generate(
+    new GenerateTemplateRequest(
+        templateId: 'template-uuid',
+        variables: [
+            new TemplateVariable(
+                placeholder: '{name}',
+                name: 'name',
+                value: 'John Doe',
+                mimeType: VariableMimeType::TEXT
+            ),
+            new TemplateVariable(
+                placeholder: '{company}',
+                name: 'company',
+                value: 'Acme Corporation',
+                mimeType: VariableMimeType::TEXT
+            ),
+        ],
+        outputFormat: OutputFormat::PDF,
+        outputFilename: 'contract.pdf'
+    )
+);
+
+echo "Deliverable ID: {$result->deliverableId}\n";
+echo "Download URL: {$result->downloadUrl}\n";
 ```
 
 ---
@@ -297,6 +346,277 @@ foreach ($audit->entries as $entry) {
         echo "    IP: {$entry->ipAddress}\n";
     }
 }
+```
+
+---
+
+## TurboTemplate
+
+### `generate()`
+
+Generate a document from a template with variable substitution.
+
+```php
+use TurboDocx\TurboTemplate;
+use TurboDocx\Types\Requests\GenerateTemplateRequest;
+use TurboDocx\Types\TemplateVariable;
+use TurboDocx\Types\VariableMimeType;
+use TurboDocx\Types\OutputFormat;
+
+$result = TurboTemplate::generate(
+    new GenerateTemplateRequest(
+        templateId: 'template-uuid',
+        variables: [
+            new TemplateVariable(
+                placeholder: '{customer_name}',
+                name: 'customer_name',
+                value: 'John Doe',
+                mimeType: VariableMimeType::TEXT
+            ),
+            new TemplateVariable(
+                placeholder: '{order_date}',
+                name: 'order_date',
+                value: '2024-01-15',
+                mimeType: VariableMimeType::TEXT
+            ),
+        ],
+        outputFormat: OutputFormat::PDF,
+        outputFilename: 'invoice.pdf',
+        name: 'Customer Invoice',
+        description: 'Q1 2024 Invoice'
+    )
+);
+
+echo "Deliverable ID: {$result->deliverableId}\n";
+echo "Download URL: {$result->downloadUrl}\n";
+```
+
+### Variable Types
+
+#### Simple Text Variables
+
+```php
+new TemplateVariable(
+    placeholder: '{name}',
+    name: 'name',
+    value: 'John Doe',
+    mimeType: VariableMimeType::TEXT
+)
+```
+
+#### HTML Variables
+
+```php
+new TemplateVariable(
+    placeholder: '{content}',
+    name: 'content',
+    value: '<h1>Hello</h1><p>This is <strong>bold</strong> text</p>',
+    mimeType: VariableMimeType::HTML,
+    allowRichTextInjection: true
+)
+```
+
+#### Image Variables
+
+```php
+// From URL
+new TemplateVariable(
+    placeholder: '{logo}',
+    name: 'logo',
+    value: 'https://example.com/logo.png',
+    mimeType: VariableMimeType::IMAGE
+)
+
+// From base64
+new TemplateVariable(
+    placeholder: '{signature}',
+    name: 'signature',
+    value: 'data:image/png;base64,iVBORw0KGgoAAAANS...',
+    mimeType: VariableMimeType::IMAGE
+)
+```
+
+### Advanced Templating
+
+#### Nested Objects
+
+```php
+new TemplateVariable(
+    placeholder: '{client}',
+    name: 'client',
+    value: [
+        'name' => 'John Doe',
+        'email' => 'john@example.com',
+        'address' => [
+            'street' => '123 Main St',
+            'city' => 'New York',
+            'zip' => '10001',
+        ],
+    ],
+    mimeType: VariableMimeType::JSON,
+    usesAdvancedTemplatingEngine: true
+)
+```
+
+In your template: `{{client.name}}`, `{{client.address.city}}`, etc.
+
+#### Array Loops
+
+```php
+new TemplateVariable(
+    placeholder: '{items}',
+    name: 'items',
+    value: [
+        [
+            'name' => 'Product A',
+            'price' => 99.99,
+            'quantity' => 2,
+        ],
+        [
+            'name' => 'Product B',
+            'price' => 149.99,
+            'quantity' => 1,
+        ],
+    ],
+    mimeType: VariableMimeType::JSON,
+    usesAdvancedTemplatingEngine: true
+)
+```
+
+In your template:
+```
+{{#each items}}
+  {{name}} - ${{price}} x {{quantity}}
+{{/each}}
+```
+
+#### Conditionals
+
+```php
+new TemplateVariable(
+    placeholder: '{customer_type}',
+    name: 'customer_type',
+    value: 'premium',
+    mimeType: VariableMimeType::JSON,
+    usesAdvancedTemplatingEngine: true
+),
+new TemplateVariable(
+    placeholder: '{discount}',
+    name: 'discount',
+    value: '20%',
+    mimeType: VariableMimeType::TEXT
+)
+```
+
+In your template:
+```
+{{#if customer_type == "premium"}}
+  Special discount: {{discount}}
+{{/if}}
+```
+
+#### Expressions
+
+```php
+new TemplateVariable(
+    placeholder: '{price}',
+    name: 'price',
+    value: 100,
+    mimeType: VariableMimeType::JSON,
+    usesAdvancedTemplatingEngine: true
+),
+new TemplateVariable(
+    placeholder: '{quantity}',
+    name: 'quantity',
+    value: 5,
+    mimeType: VariableMimeType::JSON,
+    usesAdvancedTemplatingEngine: true
+),
+new TemplateVariable(
+    placeholder: '{tax_rate}',
+    name: 'tax_rate',
+    value: 0.08,
+    mimeType: VariableMimeType::JSON,
+    usesAdvancedTemplatingEngine: true
+)
+```
+
+In your template:
+```
+Subtotal: {{price * quantity}}
+Tax: {{price * quantity * tax_rate}}
+Total: {{price * quantity * (1 + tax_rate)}}
+```
+
+### Output Formats
+
+```php
+// Generate as PDF
+$result = TurboTemplate::generate(
+    new GenerateTemplateRequest(
+        templateId: 'template-uuid',
+        variables: $variables,
+        outputFormat: OutputFormat::PDF,
+        outputFilename: 'document.pdf'
+    )
+);
+
+// Generate as DOCX
+$result = TurboTemplate::generate(
+    new GenerateTemplateRequest(
+        templateId: 'template-uuid',
+        variables: $variables,
+        outputFormat: OutputFormat::DOCX,
+        outputFilename: 'document.docx'
+    )
+);
+```
+
+### Integration with TurboSign
+
+Generate a document and send it for signature:
+
+```php
+// 1. Generate document with TurboTemplate
+$templateResult = TurboTemplate::generate(
+    new GenerateTemplateRequest(
+        templateId: 'template-uuid',
+        variables: [
+            new TemplateVariable(
+                placeholder: '{client_name}',
+                name: 'client_name',
+                value: 'John Doe',
+                mimeType: VariableMimeType::TEXT
+            ),
+        ],
+        outputFormat: OutputFormat::PDF,
+        outputFilename: 'contract.pdf'
+    )
+);
+
+// 2. Send for signature using the deliverable ID
+$signResult = TurboSign::sendSignature(
+    new SendSignatureRequest(
+        deliverableId: $templateResult->deliverableId,
+        recipients: [
+            new Recipient('John Doe', 'john@example.com', 1)
+        ],
+        fields: [
+            new Field(
+                type: SignatureFieldType::SIGNATURE,
+                recipientEmail: 'john@example.com',
+                template: new TemplateConfig(
+                    anchor: '{ClientSignature}',
+                    placement: FieldPlacement::REPLACE,
+                    size: ['width' => 100, 'height' => 30]
+                )
+            )
+        ],
+        documentName: 'Contract'
+    )
+);
+
+echo "Sent for signature: {$signResult->documentId}\n";
 ```
 
 ---

@@ -5,10 +5,12 @@ package com.turbodocx;
  */
 public class TurboDocxClient {
     private final TurboSign turboSign;
+    private final TurboTemplate turboTemplate;
 
     private TurboDocxClient(Builder builder) {
         HttpClient httpClient = new HttpClient(builder.baseUrl, builder.apiKey, builder.accessToken, builder.orgId, builder.senderEmail, builder.senderName);
         this.turboSign = new TurboSign(httpClient);
+        this.turboTemplate = new TurboTemplate(httpClient);
     }
 
     /**
@@ -16,6 +18,13 @@ public class TurboDocxClient {
      */
     public TurboSign turboSign() {
         return turboSign;
+    }
+
+    /**
+     * Get the TurboTemplate client for document templating operations
+     */
+    public TurboTemplate turboTemplate() {
+        return turboTemplate;
     }
 
     /**
