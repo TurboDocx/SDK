@@ -422,11 +422,11 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 			Name:        &name,
 			Description: &desc,
 			Variables: []TemplateVariable{
-				NewSimpleVariable("title", "Quarterly Report"),
-				NewAdvancedEngineVariable("company", map[string]interface{}{"name": "Company XYZ", "employees": 500}),
-				NewLoopVariable("departments", []interface{}{map[string]interface{}{"name": "Dept A"}, map[string]interface{}{"name": "Dept B"}}),
-				NewConditionalVariable("show_financials", true),
-				NewImageVariable("logo", "https://example.com/logo.png"),
+				must(NewSimpleVariable("{title}", "title", "Quarterly Report", MimeTypeText)),
+				must(NewAdvancedEngineVariable("{company}", "company", map[string]interface{}{"name": "Company XYZ", "employees": 500})),
+				must(NewLoopVariable("{departments}", "departments", []interface{}{map[string]interface{}{"name": "Dept A"}, map[string]interface{}{"name": "Dept B"}})),
+				must(NewConditionalVariable("{show_financials}", "show_financials", true)),
+				must(NewImageVariable("{logo}", "logo", "https://example.com/logo.png")),
 			},
 		})
 
@@ -467,7 +467,7 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 			TemplateID:   "template-123",
 			Name:         &name,
 			Description:  &desc,
-			Variables:    []TemplateVariable{NewSimpleVariable("test", "value")},
+			Variables:    []TemplateVariable{must(NewSimpleVariable("{test}", "test", "value", MimeTypeText))},
 			ReplaceFonts: &replaceFonts,
 			DefaultFont:  &defaultFont,
 			OutputFormat: &outputFormat,
@@ -485,7 +485,7 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 		})
 
 		_, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
-			Variables: []TemplateVariable{NewSimpleVariable("test", "value")},
+			Variables: []TemplateVariable{must(NewSimpleVariable("{test}", "test", "value", MimeTypeText))},
 		})
 
 		require.Error(t, err)
@@ -694,7 +694,7 @@ func TestTurboTemplateClient_ErrorHandling(t *testing.T) {
 			TemplateID:  "invalid-template",
 			Name:        &name,
 			Description: &desc,
-			Variables:   []TemplateVariable{NewSimpleVariable("test", "value")},
+			Variables:   []TemplateVariable{must(NewSimpleVariable("{test}", "test", "value", MimeTypeText))},
 		})
 
 		require.Error(t, err)
@@ -727,7 +727,7 @@ func TestTurboTemplateClient_ErrorHandling(t *testing.T) {
 			TemplateID:  "template-123",
 			Name:        &name,
 			Description: &desc,
-			Variables:   []TemplateVariable{NewSimpleVariable("test", "value")},
+			Variables:   []TemplateVariable{must(NewSimpleVariable("{test}", "test", "value", MimeTypeText))},
 		})
 
 		require.Error(t, err)
@@ -760,7 +760,7 @@ func TestTurboTemplateClient_ErrorHandling(t *testing.T) {
 			TemplateID:  "template-123",
 			Name:        &name,
 			Description: &desc,
-			Variables:   []TemplateVariable{NewSimpleVariable("test", "value")},
+			Variables:   []TemplateVariable{must(NewSimpleVariable("{test}", "test", "value", MimeTypeText))},
 		})
 
 		require.Error(t, err)
@@ -768,4 +768,12 @@ func TestTurboTemplateClient_ErrorHandling(t *testing.T) {
 		require.True(t, ok, "expected RateLimitError")
 		assert.Equal(t, 429, rateLimitErr.StatusCode)
 	})
+}
+
+// must is a helper function to handle errors in variable creation for tests
+func must(v TemplateVariable, err error) TemplateVariable {
+	if err != nil {
+		panic(err)
+	}
+	return v
 }

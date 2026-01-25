@@ -73,7 +73,7 @@ func nestedObjects(ctx context.Context, client *turbodocx.Client) {
 			{
 				Placeholder: "{user}",
 				Name:        "user",
-				MimeType:    &mimeTypeJSON,
+				MimeType:    mimeTypeJSON,
 				Value: map[string]interface{}{
 					"name":  "Person A",
 					"email": "persona@example.com",
@@ -112,7 +112,7 @@ func loopsAndArrays(ctx context.Context, client *turbodocx.Client) {
 			{
 				Placeholder: "{items}",
 				Name:        "items",
-				MimeType:    &mimeTypeJSON,
+				MimeType:    mimeTypeJSON,
 				Value: []map[string]interface{}{
 					{"name": "Item A", "quantity": 5, "price": 100, "sku": "SKU-001"},
 					{"name": "Item B", "quantity": 3, "price": 200, "sku": "SKU-002"},
@@ -147,8 +147,8 @@ func conditionals(ctx context.Context, client *turbodocx.Client) {
 		Name:        &name,
 		Description: &description,
 		Variables: []turbodocx.TemplateVariable{
-			{Placeholder: "{is_premium}", Name: "is_premium", MimeType: &mimeTypeJSON, Value: true},
-			{Placeholder: "{discount}", Name: "discount", MimeType: &mimeTypeJSON, Value: 0.2},
+			{Placeholder: "{is_premium}", Name: "is_premium", MimeType: mimeTypeJSON, Value: true},
+			{Placeholder: "{discount}", Name: "discount", MimeType: mimeTypeJSON, Value: 0.2},
 		},
 	})
 	if err != nil {
@@ -175,14 +175,14 @@ func expressionsAndCalculations(ctx context.Context, client *turbodocx.Client) {
 			{
 				Placeholder:                  "{subtotal}",
 				Name:                         "subtotal",
-				MimeType:                     &mimeTypeText,
+				MimeType:                     mimeTypeText,
 				Value:                        "1000",
 				UsesAdvancedTemplatingEngine: &usesAdvanced,
 			},
 			{
 				Placeholder:                  "{tax_rate}",
 				Name:                         "tax_rate",
-				MimeType:                     &mimeTypeText,
+				MimeType:                     mimeTypeText,
 				Value:                        "0.08",
 				UsesAdvancedTemplatingEngine: &usesAdvanced,
 			},
@@ -215,7 +215,7 @@ func complexInvoice(ctx context.Context, client *turbodocx.Client) {
 			{
 				Placeholder: "{customer}",
 				Name:        "customer",
-				MimeType:    &mimeTypeJSON,
+				MimeType:    mimeTypeJSON,
 				Value: map[string]interface{}{
 					"name":  "Company ABC",
 					"email": "billing@example.com",
@@ -235,7 +235,7 @@ func complexInvoice(ctx context.Context, client *turbodocx.Client) {
 			{
 				Placeholder: "{items}",
 				Name:        "items",
-				MimeType:    &mimeTypeJSON,
+				MimeType:    mimeTypeJSON,
 				Value: []map[string]interface{}{
 					{
 						"description": "Service A",
@@ -258,16 +258,16 @@ func complexInvoice(ctx context.Context, client *turbodocx.Client) {
 			{
 				Placeholder:                  "{tax_rate}",
 				Name:                         "tax_rate",
-				MimeType:                     &mimeTypeText,
+				MimeType:                     mimeTypeText,
 				Value:                        "0.08",
 				UsesAdvancedTemplatingEngine: &usesAdvanced,
 			},
 			// Premium customer flag
-			{Placeholder: "{is_premium}", Name: "is_premium", MimeType: &mimeTypeJSON, Value: true},
+			{Placeholder: "{is_premium}", Name: "is_premium", MimeType: mimeTypeJSON, Value: true},
 			{
 				Placeholder:                  "{premium_discount}",
 				Name:                         "premium_discount",
-				MimeType:                     &mimeTypeText,
+				MimeType:                     mimeTypeText,
 				Value:                        "0.05",
 				UsesAdvancedTemplatingEngine: &usesAdvanced,
 			},
