@@ -308,7 +308,7 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var reqBody GenerateTemplateRequest
 			json.NewDecoder(r.Body).Decode(&reqBody)
-			assert.Equal(t, "json", string(*reqBody.Variables[0].MimeType))
+			assert.Equal(t, "json", string(reqBody.Variables[0].MimeType))
 			assert.True(t, *reqBody.Variables[0].UsesAdvancedTemplatingEngine)
 
 			w.Header().Set("Content-Type", "application/json")
@@ -338,7 +338,7 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 				{
 					Placeholder:                  "{user}",
 					Name:                         "user",
-					MimeType:                     &mimeTypeJSON,
+					MimeType:                     mimeTypeJSON,
 					Value:                        map[string]interface{}{"firstName": "Foo", "lastName": "Bar"},
 					UsesAdvancedTemplatingEngine: &usesAdvanced,
 				},
@@ -383,7 +383,7 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 				{
 					Placeholder:                  "{items}",
 					Name:                         "items",
-					MimeType:                     &mimeTypeJSON,
+					MimeType:                     mimeTypeJSON,
 					Value:                        []map[string]interface{}{{"name": "Item A"}, {"name": "Item B"}},
 					UsesAdvancedTemplatingEngine: &usesAdvanced,
 				},
