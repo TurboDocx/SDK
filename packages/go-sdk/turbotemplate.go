@@ -118,7 +118,6 @@ type TurboTemplateClient struct {
 //   - Loops: {#products}...{/products}
 //   - Conditionals: {#if condition}...{/if}
 //   - Expressions: {price + tax}
-//   - Filters: {name | uppercase}
 //
 // Example:
 //

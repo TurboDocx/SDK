@@ -40,7 +40,7 @@ export interface TemplateVariable {
 
   /**
    * Enable advanced templating engine for this variable
-   * Allows Angular-like expressions: loops, conditions, filters, etc.
+   * Allows Angular-like expressions: loops, conditions, etc.
    */
   usesAdvancedTemplatingEngine?: boolean;
 
@@ -200,9 +200,6 @@ export interface AdvancedTemplatingFeatures {
 
   /** Support for conditionals (e.g., {#if condition}...{/if}) */
   conditionals: boolean;
-
-  /** Support for filters (e.g., {value | uppercase}) */
-  filters: boolean;
 
   /** Support for expressions (e.g., {price * quantity}) */
   expressions: boolean;

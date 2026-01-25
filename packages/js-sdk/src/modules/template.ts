@@ -58,7 +58,6 @@ export class TurboTemplate {
    * - Loops: {#products}...{/products}
    * - Conditionals: {#if condition}...{/if}
    * - Expressions: {price + tax}
-   * - Filters: {name | uppercase}
    *
    * @param request - Template ID and variables
    * @returns Generated document

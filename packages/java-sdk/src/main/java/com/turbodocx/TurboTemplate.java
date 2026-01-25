@@ -14,7 +14,6 @@ import java.io.IOException;
  *     <li>Loops: {#products}...{/products}</li>
  *     <li>Conditionals: {#if condition}...{/if}</li>
  *     <li>Expressions: {price + tax}</li>
- *     <li>Filters: {name | uppercase}</li>
  * </ul>
  *
  * <p>Example usage:</p>

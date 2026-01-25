@@ -80,7 +80,6 @@ class TurboTemplate:
         - Loops: {#products}...{/products}
         - Conditionals: {#if condition}...{/if}
         - Expressions: {price + tax}
-        - Filters: {name | uppercase}
 
         Args:
             request: Template ID and variables
