@@ -304,14 +304,13 @@ describe('TurboTemplate Module', () => {
       expect(result.errors).toContain('Variable must have both "placeholder" and "name" properties');
     });
 
-    it('should return error when value and text are both missing', () => {
+    it('should allow variable without value and text properties', () => {
       const result = TurboTemplate.validateVariable({
         placeholder: '{name}',
         name: 'name',
       } as any);
 
-      expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('Variable must have either "value" or "text" property');
+      expect(result.isValid).toBe(true);
     });
 
     it('should warn about array without json mimeType', () => {
@@ -573,18 +572,24 @@ describe('TurboTemplate Module', () => {
       );
     });
 
-    it('should throw error when variable has no value or text', async () => {
-      MockedHttpClient.prototype.post = jest.fn();
+    it('should allow variable with no value or text property', async () => {
+      const mockResponse = {
+        success: true,
+        deliverableId: 'doc-no-value',
+      };
+
+      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
       TurboTemplate.configure({ apiKey: 'test-key' });
 
-      await expect(
-        TurboTemplate.generate({
-          templateId: 'template-123',
-          name: 'Error Document',
-          description: 'Document that should fail',
-          variables: [{ placeholder: '{test}', name: 'test' } as any],
-        })
-      ).rejects.toThrow('Variable "{test}" must have either \'value\' or \'text\' property');
+      const result = await TurboTemplate.generate({
+        templateId: 'template-123',
+        name: 'No Value Document',
+        description: 'Document with variable that has no value/text',
+        variables: [{ placeholder: '{test}', name: 'test', mimeType: 'text' } as any],
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.deliverableId).toBe('doc-no-value');
     });
 
     it('should handle text property as fallback', async () => {
@@ -611,6 +616,68 @@ describe('TurboTemplate Module', () => {
               placeholder: '{legacy}',
               name: 'legacy',
               text: 'Legacy value',
+            }),
+          ]),
+        })
+      );
+    });
+
+    it('should allow variable with null value', async () => {
+      const mockResponse = {
+        success: true,
+        deliverableId: 'doc-null',
+      };
+
+      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
+      TurboTemplate.configure({ apiKey: 'test-key' });
+
+      const result = await TurboTemplate.generate({
+        templateId: 'template-123',
+        name: 'Null Value Document',
+        description: 'Document with null value',
+        variables: [{ placeholder: '{test}', name: 'test', value: null, mimeType: 'text' }],
+      });
+
+      expect(result.success).toBe(true);
+      expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
+        '/v1/deliverable',
+        expect.objectContaining({
+          variables: expect.arrayContaining([
+            expect.objectContaining({
+              placeholder: '{test}',
+              name: 'test',
+              value: null,
+            }),
+          ]),
+        })
+      );
+    });
+
+    it('should allow variable with undefined value', async () => {
+      const mockResponse = {
+        success: true,
+        deliverableId: 'doc-undefined',
+      };
+
+      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
+      TurboTemplate.configure({ apiKey: 'test-key' });
+
+      const result = await TurboTemplate.generate({
+        templateId: 'template-123',
+        name: 'Undefined Value Document',
+        description: 'Document with undefined value',
+        variables: [{ placeholder: '{test}', name: 'test', value: undefined, mimeType: 'text' }],
+      });
+
+      expect(result.success).toBe(true);
+      expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
+        '/v1/deliverable',
+        expect.objectContaining({
+          variables: expect.arrayContaining([
+            expect.objectContaining({
+              placeholder: '{test}',
+              name: 'test',
+              value: undefined,
             }),
           ]),
         })

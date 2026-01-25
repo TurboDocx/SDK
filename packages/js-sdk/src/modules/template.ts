@@ -129,20 +129,19 @@ export class TurboTemplate {
           name: v.name,
         };
 
+        // Add value/text if present - allow null/undefined values
+        if ('value' in v) {
+          variable.value = v.value;
+        }
+        if ('text' in v) {
+          variable.text = v.text;
+        }
+
         // mimeType is required
         if (!v.mimeType) {
           throw new Error(`Variable "${variable.placeholder}" must have a 'mimeType' property`);
         }
         variable.mimeType = v.mimeType;
-
-        // Handle value - keep objects/arrays as-is for JSON serialization
-        if (v.value !== undefined && v.value !== null) {
-          variable.value = v.value;
-        } else if (v.text !== undefined && v.text !== null) {
-          variable.text = v.text;
-        } else {
-          throw new Error(`Variable "${variable.placeholder}" must have either 'value' or 'text' property`);
-        }
 
         // Add advanced templating flags if specified
         if (v.usesAdvancedTemplatingEngine != null) {
@@ -193,17 +192,11 @@ export class TurboTemplate {
       errors.push('Variable must have both "placeholder" and "name" properties');
     }
 
-    // Check value/text
-    const hasValue = variable.value !== undefined && variable.value !== null;
-    const hasText = variable.text !== undefined && variable.text !== null;
-
-    if (!hasValue && !hasText) {
-      errors.push('Variable must have either "value" or "text" property');
-    }
+    // Check value/text - allow null/undefined values, don't enforce either property
 
     // Check advanced templating settings
-    if (variable.mimeType === 'json' || (typeof variable.value === 'object' && variable.value !== null)) {
-      if (!variable.mimeType) {
+    if (typeof variable.value === 'object' && variable.value !== null && !Array.isArray(variable.value)) {
+      if (variable.mimeType !== 'json') {
         warnings.push('Complex objects should explicitly set mimeType to "json"');
       }
     }
