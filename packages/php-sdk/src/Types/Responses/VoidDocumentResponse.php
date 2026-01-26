@@ -10,8 +10,11 @@ namespace TurboDocx\Types\Responses;
 final class VoidDocumentResponse
 {
     public function __construct(
-        public bool $success,
-        public string $message,
+        public string $id,
+        public string $name,
+        public string $status,
+        public ?string $voidReason = null,
+        public ?string $voidedAt = null,
     ) {}
 
     /**
@@ -23,8 +26,11 @@ final class VoidDocumentResponse
     public static function fromArray(array $data): self
     {
         return new self(
-            success: $data['success'] ?? true,
-            message: $data['message'] ?? '',
+            id: $data['id'] ?? '',
+            name: $data['name'] ?? '',
+            status: $data['status'] ?? '',
+            voidReason: $data['voidReason'] ?? null,
+            voidedAt: $data['voidedAt'] ?? null,
         );
     }
 }

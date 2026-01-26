@@ -148,8 +148,11 @@ type DocumentStatusResponse struct {
 
 // VoidDocumentResponse is the response from VoidDocument
 type VoidDocumentResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Status     string `json:"status"`
+	VoidReason string `json:"voidReason,omitempty"`
+	VoidedAt   string `json:"voidedAt,omitempty"`
 }
 
 // ResendEmailResponse is the response from ResendEmail
@@ -387,15 +390,12 @@ func (c *TurboSignClient) Download(ctx context.Context, documentID string) ([]by
 
 // VoidDocument voids a document (cancels signature request)
 func (c *TurboSignClient) VoidDocument(ctx context.Context, documentID string, reason string) (*VoidDocumentResponse, error) {
-	err := c.http.Post(ctx, "/turbosign/documents/"+documentID+"/void", map[string]string{"reason": reason}, nil)
+	var response VoidDocumentResponse
+	err := c.http.Post(ctx, "/turbosign/documents/"+documentID+"/void", map[string]string{"reason": reason}, &response)
 	if err != nil {
 		return nil, err
 	}
-
-	return &VoidDocumentResponse{
-		Success: true,
-		Message: "Document has been voided successfully",
-	}, nil
+	return &response, nil
 }
 
 // ResendEmail resends signature request email to recipients

@@ -299,18 +299,11 @@ final class TurboSign
     public static function void(string $documentId, string $reason): VoidDocumentResponse
     {
         $client = self::getClient();
-        // Backend returns empty data on success, so we just make the call
-        // and return a success response if no exception is thrown
-        $client->post(
+        $response = $client->post(
             "/turbosign/documents/{$documentId}/void",
             ['reason' => $reason]
         );
-
-        // If we get here without exception, the void was successful
-        return new VoidDocumentResponse(
-            success: true,
-            message: 'Document has been voided successfully'
-        );
+        return VoidDocumentResponse::fromArray($response);
     }
 
     /**
