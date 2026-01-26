@@ -358,8 +358,13 @@ class TestVoid:
     @pytest.mark.asyncio
     async def test_void_document_with_reason(self):
         """Should void a document with reason"""
-        # Backend returns empty response, SDK sets success/message manually
-        mock_response = {}
+        mock_response = {
+            "id": "doc-123",
+            "name": "Test Document",
+            "status": "voided",
+            "voidReason": "Document needs revision",
+            "voidedAt": "2026-01-26T12:00:00.000Z"
+        }
 
         with patch.object(TurboSign, '_get_client') as mock_get_client:
             mock_client = MagicMock()
@@ -369,8 +374,11 @@ class TestVoid:
             TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
             result = await TurboSign.void_document("doc-123", "Document needs revision")
 
-            assert result["success"] is True
-            assert result["message"] == "Document has been voided successfully"
+            assert result["id"] == "doc-123"
+            assert result["name"] == "Test Document"
+            assert result["status"] == "voided"
+            assert result["voidReason"] == "Document needs revision"
+            assert result["voidedAt"] == "2026-01-26T12:00:00.000Z"
             mock_client.post.assert_called_once_with(
                 "/turbosign/documents/doc-123/void",
                 data={"reason": "Document needs revision"}

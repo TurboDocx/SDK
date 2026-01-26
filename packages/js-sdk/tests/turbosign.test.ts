@@ -468,9 +468,14 @@ describe("TurboSign Module", () => {
 
   describe("void", () => {
     it("should void a document with reason", async () => {
-      // Backend returns empty response, SDK sets success/message manually
       // HTTP client auto-unwraps {data: ...} responses
-      const mockResponse = {};
+      const mockResponse = {
+        id: "doc-123",
+        name: "Test Document",
+        status: "voided",
+        voidReason: "Document needs revision",
+        voidedAt: "2026-01-26T12:00:00.000Z",
+      };
 
       MockedHttpClient.prototype.post = jest
         .fn()
@@ -479,8 +484,11 @@ describe("TurboSign Module", () => {
 
       const result = await TurboSign.void("doc-123", "Document needs revision");
 
-      expect(result.success).toBe(true);
-      expect(result.message).toBe("Document has been voided successfully");
+      expect(result.id).toBe("doc-123");
+      expect(result.name).toBe("Test Document");
+      expect(result.status).toBe("voided");
+      expect(result.voidReason).toBe("Document needs revision");
+      expect(result.voidedAt).toBe("2026-01-26T12:00:00.000Z");
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
         "/turbosign/documents/doc-123/void",
         { reason: "Document needs revision" }
