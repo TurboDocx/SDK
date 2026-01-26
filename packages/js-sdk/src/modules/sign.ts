@@ -236,28 +236,22 @@ export class TurboSign {
    *
    * @param documentId - ID of the document to void
    * @param reason - Reason for voiding the document
-   * @returns Void confirmation with success and message
+   * @returns Voided document details including status and timestamp
    *
    * @example
    * ```typescript
    * const result = await TurboSign.void(documentId, 'Document needs to be revised');
-   * console.log(result.message); // "Document has been voided successfully"
+   * console.log(result.status); // "voided"
+   * console.log(result.voidedAt); // "2025-01-26T12:00:00.000Z"
    * ```
    */
   static async void(documentId: string, reason: string): Promise<VoidDocumentResponse> {
     const client = this.getClient();
-    // Backend returns empty data on success, so we just make the call
-    // and return a success response if no exception is thrown
-    await client.post(
+    // HTTP client auto-unwraps {data: ...} responses
+    return client.post<VoidDocumentResponse>(
       `/turbosign/documents/${documentId}/void`,
       { reason }
     );
-
-    // If we get here without exception, the void was successful
-    return {
-      success: true,
-      message: 'Document has been voided successfully'
-    };
   }
 
   /**
