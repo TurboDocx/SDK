@@ -248,9 +248,6 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 
 	if len(req.File) > 0 {
 		fileName := req.FileName
-		if fileName == "" {
-			fileName = "document.pdf"
-		}
 		err := c.http.UploadFile(ctx, "/turbosign/single/prepare-for-review", req.File, fileName, formData, &response)
 		if err != nil {
 			return nil, err
@@ -316,9 +313,6 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 
 	if len(req.File) > 0 {
 		fileName := req.FileName
-		if fileName == "" {
-			fileName = "document.pdf"
-		}
 		err := c.http.UploadFile(ctx, "/turbosign/single/prepare-for-signing", req.File, fileName, formData, &response)
 		if err != nil {
 			return nil, err

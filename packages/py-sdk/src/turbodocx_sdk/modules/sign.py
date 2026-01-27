@@ -156,7 +156,7 @@ class TurboSign:
             return await client.upload_file(
                 "/turbosign/single/prepare-for-review",
                 file=file,
-                file_name=file_name or "document.pdf",
+                file_name=file_name or None,
                 additional_data=form_data
             )
         else:
@@ -273,7 +273,7 @@ class TurboSign:
             return await client.upload_file(
                 "/turbosign/single/prepare-for-signing",
                 file=file,
-                file_name=file_name or "document.pdf",
+                file_name=file_name or None,
                 additional_data=form_data
             )
         else:

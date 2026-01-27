@@ -42,7 +42,7 @@ public class TurboSign {
         );
 
         if (request.hasFile()) {
-            String fileName = request.getFileName() != null ? request.getFileName() : "document.pdf";
+            String fileName = request.getFileName();
             return httpClient.uploadFile(
                     "/turbosign/single/prepare-for-review",
                     request.getFile(),
@@ -85,7 +85,7 @@ public class TurboSign {
         );
 
         if (request.hasFile()) {
-            String fileName = request.getFileName() != null ? request.getFileName() : "document.pdf";
+            String fileName = request.getFileName();
             return httpClient.uploadFile(
                     "/turbosign/single/prepare-for-signing",
                     request.getFile(),
