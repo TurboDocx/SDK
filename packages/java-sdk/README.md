@@ -63,14 +63,14 @@ A modern, developer-first alternative to legacy e-signature platforms:
 <dependency>
     <groupId>com.turbodocx</groupId>
     <artifactId>sdk</artifactId>
-    <version>0.1.3</version>
+    <version>0.1.4</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'com.turbodocx:sdk:0.1.3'
+implementation 'com.turbodocx:sdk:0.1.4'
 ```
 
 <details>
