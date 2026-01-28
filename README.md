@@ -53,13 +53,13 @@ Comprehensive SDKs, detailed documentation, and responsive support. Ship faster 
 
 ## Available SDKs
 
-| Language | Package | Install | Docs |
-|:---------|:--------|:--------|:-----|
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="20"/> **JavaScript/TypeScript** | [@turbodocx/sdk](./packages/js-sdk) | `npm install @turbodocx/sdk` | [View →](./packages/js-sdk#readme) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" width="20"/> **Python** | [turbodocx-sdk](./packages/py-sdk) | `pip install turbodocx-sdk` | [View →](./packages/py-sdk#readme) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg" width="20"/> **PHP** | [turbodocx/sdk](./packages/php-sdk) | `composer require turbodocx/sdk` | [View →](./packages/php-sdk#readme) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg" width="20"/> **Go** | [turbodocx-sdk](./packages/go-sdk) | `go get github.com/turbodocx/sdk` | [View →](./packages/go-sdk#readme) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="20"/> **Java** | [com.turbodocx:sdk](./packages/java-sdk) | [Maven Central](https://search.maven.org/artifact/com.turbodocx/sdk) | [View →](./packages/java-sdk#readme) |
+| Language | Package | Install | Registry |
+|:---------|:--------|:--------|:---------|
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="20"/> **JavaScript/TypeScript** | [@turbodocx/sdk](./packages/js-sdk) | `npm install @turbodocx/sdk` | [![npm](https://img.shields.io/npm/v/@turbodocx/sdk?logo=npm&logoColor=white)](https://www.npmjs.com/package/@turbodocx/sdk) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" width="20"/> **Python** | [turbodocx-sdk](./packages/py-sdk) | `pip install turbodocx-sdk` | [![PyPI](https://img.shields.io/pypi/v/turbodocx-sdk?logo=pypi&logoColor=white)](https://pypi.org/project/turbodocx-sdk/) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg" width="20"/> **PHP** | [turbodocx/sdk](./packages/php-sdk) | `composer require turbodocx/sdk` | [![Packagist](https://img.shields.io/packagist/v/turbodocx/sdk?logo=packagist&logoColor=white)](https://packagist.org/packages/turbodocx/sdk) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg" width="20"/> **Go** | [turbodocx-sdk](./packages/go-sdk) | `go get github.com/TurboDocx/SDK/packages/go-sdk` | [![Go Reference](https://pkg.go.dev/badge/github.com/TurboDocx/SDK/packages/go-sdk.svg)](https://pkg.go.dev/github.com/TurboDocx/SDK/packages/go-sdk) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="20"/> **Java** | [com.turbodocx:turbodocx-sdk](./packages/java-sdk) | `implementation 'com.turbodocx:turbodocx-sdk:0.1.4'` | [![Maven Central](https://img.shields.io/maven-central/v/com.turbodocx/turbodocx-sdk?logo=apache-maven)](https://central.sonatype.com/artifact/com.turbodocx/turbodocx-sdk) |
 
 ### Coming Soon
 
