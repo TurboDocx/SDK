@@ -90,3 +90,4 @@ Gemfile.lock
 !ExampleAssets/**
 convert-template.js
 generate-all-pdfs.js
+test-php-sdk/
