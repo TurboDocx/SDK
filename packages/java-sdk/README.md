@@ -12,7 +12,7 @@ The most developer-friendly **DocuSign & PandaDoc alternative** for **e-signatur
 [![Java](https://img.shields.io/badge/Java-11+-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-[Documentation](https://docs.turbodocx.com/docs) • [API Reference](https://docs.turbodocx.com/docs/api) • [Examples](#examples) • [Discord](https://discord.gg/NYKwz4BcpX)
+[Documentation](https://docs.turbodocx.com/docs) • [API Reference](https://docs.turbodocx.com/docs/SDKs/) • [Examples](#examples) • [Discord](https://discord.gg/NYKwz4BcpX)
 
 </div>
 
@@ -63,14 +63,14 @@ A modern, developer-first alternative to legacy e-signature platforms:
 <dependency>
     <groupId>com.turbodocx</groupId>
     <artifactId>sdk</artifactId>
-    <version>1.0.0</version>
+    <version>0.1.3</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'com.turbodocx:sdk:1.0.0'
+implementation 'com.turbodocx:sdk:0.1.3'
 ```
 
 <details>
