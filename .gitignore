@@ -47,7 +47,6 @@ npm-debug.log*
 .env.*.local
 
 # Go
-go.sum
 *.exe
 *.exe~
 *.dll
