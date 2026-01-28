@@ -40,10 +40,12 @@ jobs:
           mvn versions:commit
 
       - name: Build and Test
-        run: mvn clean verify -B
+        run: mvn clean verify -B -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
 
       - name: Publish to Maven Central
-        run: mvn deploy -B -DskipTests
+        run: mvn deploy -B -DskipTests -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }}
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
