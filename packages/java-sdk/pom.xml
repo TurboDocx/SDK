@@ -11,7 +11,7 @@
 
     <name>TurboDocx SDK</name>
     <description>Official Java SDK for TurboDocx API - Document generation and digital signatures</description>
-    <url>https://github.com/TurboDocx/SDK</url>
+    <url>https://www.turbodocx.com</url>
 
     <licenses>
         <license>
@@ -25,7 +25,7 @@
             <name>TurboDocx Team</name>
             <email>support@turbodocx.com</email>
             <organization>TurboDocx</organization>
-            <organizationUrl>https://turbodocx.com</organizationUrl>
+            <organizationUrl>https://www.turbodocx.com</organizationUrl>
         </developer>
     </developers>
 
