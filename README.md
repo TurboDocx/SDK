@@ -12,7 +12,7 @@
 [![X](https://img.shields.io/badge/X-@TurboDocx-000?logo=x&logoColor=white)](https://twitter.com/TurboDocx)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[Documentation](https://docs.turbodocx.com) • [API Reference](https://docs.turbodocx.com/api) • [Discord](https://discord.gg/NYKwz4BcpX) • [Blog](https://www.turbodocx.com/blog)
+[Documentation](https://docs.turbodocx.com/docs) • [API Reference](https://docs.turbodocx.com/docs/api) • [Discord](https://discord.gg/NYKwz4BcpX) • [Blog](https://www.turbodocx.com/blog)
 
 </div>
 
@@ -337,7 +337,7 @@ We're looking for community maintainers for each SDK. Interested? [Open an issue
 <table>
 <tr>
 <td align="center" width="33%">
-<a href="https://docs.turbodocx.com">
+<a href="https://docs.turbodocx.com/docs">
 <img src="https://cdn-icons-png.flaticon.com/512/2991/2991112.png" width="40"/><br/>
 <strong>Documentation</strong>
 </a>
@@ -367,7 +367,7 @@ MIT License — see [LICENSE](./LICENSE) for details.
 
 <div align="center">
 
-**[Website](https://www.turbodocx.com)** • **[Documentation](https://docs.turbodocx.com)** • **[Discord](https://discord.gg/NYKwz4BcpX)** • **[Twitter/X](https://twitter.com/TurboDocx)**
+**[Website](https://www.turbodocx.com)** • **[Documentation](https://docs.turbodocx.com/docs)** • **[Discord](https://discord.gg/NYKwz4BcpX)** • **[Twitter/X](https://twitter.com/TurboDocx)**
 
 <sub>Built with ❤️ by the TurboDocx team</sub>
 

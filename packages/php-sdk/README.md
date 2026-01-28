@@ -2,11 +2,39 @@
 
 **Official PHP SDK for TurboDocx - Digital signatures, document generation, and AI-powered workflows**
 
+The most developer-friendly **DocuSign & PandaDoc alternative** for **e-signatures** and **document generation**. Send documents for signature and automate document workflows programmatically.
+
 [![Packagist Version](https://img.shields.io/packagist/v/turbodocx/sdk)](https://packagist.org/packages/turbodocx/sdk)
 [![PHP Version](https://img.shields.io/packagist/php-v/turbodocx/sdk)](https://packagist.org/packages/turbodocx/sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 [Website](https://www.turbodocx.com) • [Documentation](https://docs.turbodocx.com/docs) • [API & SDK](https://www.turbodocx.com/products/api-and-sdk) • [Examples](#examples) • [Discord](https://discord.gg/NYKwz4BcpX)
+
+---
+
+## Why TurboDocx?
+
+A modern, developer-first alternative to legacy e-signature platforms:
+
+| Looking for... | TurboDocx offers |
+|----------------|------------------|
+| DocuSign API alternative | Simple REST API, transparent pricing |
+| PandaDoc alternative | Document generation + e-signatures in one SDK |
+| HelloSign/Dropbox Sign alternative | Full API access, modern DX |
+| Adobe Sign alternative | Quick integration, developer-friendly docs |
+| SignNow alternative | Predictable costs, responsive support |
+| Documint alternative | DOCX/PDF generation from templates |
+| WebMerge alternative | Data-driven document automation |
+
+**Other platforms we compare to:** SignRequest, SignEasy, Zoho Sign, Eversign, SignWell, Formstack Documents
+
+### TurboDocx Ecosystem
+
+| Package | Description |
+|---------|-------------|
+| [@turbodocx/html-to-docx](https://github.com/turbodocx/html-to-docx) | Convert HTML to DOCX - fastest JS library |
+| [@turbodocx/n8n-nodes-turbodocx](https://github.com/turbodocx/n8n-nodes-turbodocx) | n8n community nodes for TurboDocx |
+| [TurboDocx Writer](https://appsource.microsoft.com/product/office/WA200007397) | Microsoft Word add-in |
 
 ---
 
@@ -552,18 +580,6 @@ All exceptions extend `TurboDocxException` and include:
 - `statusCode` (HTTP status code, if applicable)
 - `errorCode` (Error code string, e.g., 'AUTHENTICATION_ERROR')
 - `message` (Human-readable error message)
-
----
-
-## TypeScript → PHP Equivalents
-
-| TypeScript | PHP 8.1+ Equivalent |
-|------------|---------------------|
-| `type FieldType = 'signature' \| 'date'` | `enum SignatureFieldType: string { case SIGNATURE = 'signature'; }` |
-| `interface Recipient { name: string }` | `final readonly class Recipient { public function __construct(public string $name) {} }` |
-| `optional?: string` | `public ?string $optional = null` |
-| `static configure(config)` | `public static function configure(HttpClientConfig $config): void` |
-| `Promise<T>` | No promises in PHP, uses synchronous calls with exceptions |
 
 ---
 
