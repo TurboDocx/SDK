@@ -2,7 +2,7 @@
 
 <div align="center">
 
-# com.turbodocx:sdk
+# com.turbodocx:turbodocx-sdk
 
 **Official Java SDK for TurboDocx**
 
@@ -62,7 +62,7 @@ A modern, developer-first alternative to legacy e-signature platforms:
 ```xml
 <dependency>
     <groupId>com.turbodocx</groupId>
-    <artifactId>sdk</artifactId>
+    <artifactId>turbodocx-sdk</artifactId>
     <version>0.1.4</version>
 </dependency>
 ```
@@ -70,14 +70,14 @@ A modern, developer-first alternative to legacy e-signature platforms:
 ### Gradle
 
 ```groovy
-implementation 'com.turbodocx:sdk:0.1.4'
+implementation 'com.turbodocx:turbodocx-sdk:0.1.4'
 ```
 
 <details>
 <summary>Gradle Kotlin DSL</summary>
 
 ```kotlin
-implementation("com.turbodocx:sdk:1.0.0")
+implementation("com.turbodocx:turbodocx-sdk:0.1.4")
 ```
 </details>
 

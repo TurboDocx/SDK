@@ -133,8 +133,8 @@ composer require turbodocx/sdk
 ```xml
 <dependency>
     <groupId>com.turbodocx</groupId>
-    <artifactId>sdk</artifactId>
-    <version>1.0.0</version>
+    <artifactId>turbodocx-sdk</artifactId>
+    <version>0.1.4</version>
 </dependency>
 ```
 </details>
