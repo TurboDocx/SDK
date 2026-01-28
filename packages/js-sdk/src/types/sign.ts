@@ -33,10 +33,16 @@ export interface RecipientResponse {
 }
 
 export interface VoidDocumentResponse {
-  /** Whether the void was successful */
-  success: boolean;
-  /** Response message */
-  message: string;
+  /** Document ID */
+  id: string;
+  /** Document name */
+  name: string;
+  /** Document status (should be 'voided') */
+  status: string;
+  /** Reason for voiding */
+  voidReason?: string;
+  /** Timestamp when document was voided */
+  voidedAt?: string;
 }
 
 export interface ResendEmailResponse {

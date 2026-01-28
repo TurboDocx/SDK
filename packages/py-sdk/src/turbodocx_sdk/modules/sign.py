@@ -156,7 +156,7 @@ class TurboSign:
             return await client.upload_file(
                 "/turbosign/single/prepare-for-review",
                 file=file,
-                file_name=file_name or "document.pdf",
+                file_name=file_name or None,
                 additional_data=form_data
             )
         else:
@@ -273,7 +273,7 @@ class TurboSign:
             return await client.upload_file(
                 "/turbosign/single/prepare-for-signing",
                 file=file,
-                file_name=file_name or "document.pdf",
+                file_name=file_name or None,
                 additional_data=form_data
             )
         else:
@@ -380,26 +380,22 @@ class TurboSign:
 
         Returns:
             Dict with:
-                - success: Whether the void was successful (bool)
-                - message: Success message (str)
+                - id: Document ID (str)
+                - name: Document name (str)
+                - status: Document status, should be 'voided' (str)
+                - voidReason: Reason for voiding (str, optional)
+                - voidedAt: ISO timestamp when voided (str, optional)
 
         Example:
             >>> result = await TurboSign.void_document("doc-123", "Document needs revision")
-            >>> print(result["message"])  # "Document has been voided successfully"
+            >>> print(result["status"])  # "voided"
+            >>> print(result["voidedAt"])  # "2025-01-26T12:00:00.000Z"
         """
         client = cls._get_client()
-        # Backend returns empty data on success, so we just make the call
-        # and return a success response if no exception is thrown
-        await client.post(
+        return await client.post(
             f"/turbosign/documents/{document_id}/void",
             data={"reason": reason}
         )
-
-        # If we get here without exception, the void was successful
-        return {
-            "success": True,
-            "message": "Document has been voided successfully"
-        }
 
     @classmethod
     async def resend_email(

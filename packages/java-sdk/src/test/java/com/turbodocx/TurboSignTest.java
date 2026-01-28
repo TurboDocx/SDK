@@ -345,16 +345,24 @@ class TurboSignTest {
     @Test
     @DisplayName("should void a document with reason")
     void voidDocument() throws Exception {
-        // Backend returns empty response, SDK sets success/message manually
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(gson.toJson(Map.of())));
+                .setBody(gson.toJson(Map.of(
+                        "id", "doc-123",
+                        "name", "Test Document",
+                        "status", "voided",
+                        "voidReason", "Document needs revision",
+                        "voidedAt", "2026-01-26T12:00:00.000Z"
+                ))));
 
         VoidDocumentResponse result = client.turboSign().voidDocument("doc-123", "Document needs revision");
 
-        assertTrue(result.getSuccess());
-        assertEquals("Document has been voided successfully", result.getMessage());
+        assertEquals("doc-123", result.getId());
+        assertEquals("Test Document", result.getName());
+        assertEquals("voided", result.getStatus());
+        assertEquals("Document needs revision", result.getVoidReason());
+        assertEquals("2026-01-26T12:00:00.000Z", result.getVoidedAt());
 
         RecordedRequest recorded = server.takeRequest();
         assertEquals("POST", recorded.getMethod());

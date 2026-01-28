@@ -334,8 +334,13 @@ func TestTurboSignClient_VoidDocument(t *testing.T) {
 		assert.Equal(t, "POST", r.Method)
 
 		w.Header().Set("Content-Type", "application/json")
-		// Backend returns empty response, SDK sets success/message manually
-		json.NewEncoder(w).Encode(map[string]interface{}{})
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"id":         "doc-123",
+			"name":       "Test Document",
+			"status":     "voided",
+			"voidReason": "Document needs revision",
+			"voidedAt":   "2026-01-26T12:00:00.000Z",
+		})
 	}))
 	defer server.Close()
 
@@ -349,8 +354,11 @@ func TestTurboSignClient_VoidDocument(t *testing.T) {
 	result, err := client.TurboSign.VoidDocument(context.Background(), "doc-123", "Document needs revision")
 
 	require.NoError(t, err)
-	assert.True(t, result.Success)
-	assert.Equal(t, "Document has been voided successfully", result.Message)
+	assert.Equal(t, "doc-123", result.ID)
+	assert.Equal(t, "Test Document", result.Name)
+	assert.Equal(t, "voided", result.Status)
+	assert.Equal(t, "Document needs revision", result.VoidReason)
+	assert.Equal(t, "2026-01-26T12:00:00.000Z", result.VoidedAt)
 }
 
 func TestTurboSignClient_ResendEmail(t *testing.T) {
