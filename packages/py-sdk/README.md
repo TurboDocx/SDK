@@ -287,6 +287,25 @@ Resend signature request emails.
 await TurboSign.resend_email("doc-uuid-here", recipient_ids=["recipient-uuid-1"])
 ```
 
+#### `get_audit_trail()`
+
+Get the complete audit trail for a document, including all events and timestamps.
+
+```python
+audit = await TurboSign.get_audit_trail("doc-uuid-here")
+
+print(f"Document: {audit['document']['name']}")
+
+for entry in audit["auditTrail"]:
+    print(f"{entry['actionType']} - {entry['timestamp']}")
+    if entry.get("user"):
+        print(f"  By: {entry['user']['name']} ({entry['user']['email']})")
+    if entry.get("recipient"):
+        print(f"  Recipient: {entry['recipient']['name']}")
+```
+
+The audit trail includes a cryptographic hash chain for tamper-evidence verification.
+
 ---
 
 ## Field Types

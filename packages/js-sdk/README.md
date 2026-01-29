@@ -263,6 +263,28 @@ Resend signature request emails to specific recipients.
 await TurboSign.resend('doc-uuid-here', ['recipient-uuid-1', 'recipient-uuid-2']);
 ```
 
+#### `getAuditTrail(documentId)`
+
+Get the complete audit trail for a document, including all events and timestamps.
+
+```typescript
+const audit = await TurboSign.getAuditTrail('doc-uuid-here');
+
+console.log('Document:', audit.document.name);
+
+for (const entry of audit.auditTrail) {
+  console.log(`${entry.actionType} - ${entry.timestamp}`);
+  if (entry.user) {
+    console.log(`  By: ${entry.user.name} (${entry.user.email})`);
+  }
+  if (entry.recipient) {
+    console.log(`  Recipient: ${entry.recipient.name}`);
+  }
+}
+```
+
+The audit trail includes a cryptographic hash chain for tamper-evidence verification.
+
 ---
 
 ## Field Types

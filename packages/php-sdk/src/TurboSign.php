@@ -343,8 +343,11 @@ final class TurboSign
      * @example
      * ```php
      * $audit = TurboSign::getAuditTrail($documentId);
-     * foreach ($audit->entries as $entry) {
-     *     echo "{$entry->event} - {$entry->actor} - {$entry->timestamp}\n";
+     * foreach ($audit->auditTrail as $entry) {
+     *     echo "{$entry->actionType} - {$entry->timestamp}\n";
+     *     if ($entry->user) {
+     *         echo "  By: {$entry->user->name}\n";
+     *     }
      * }
      * ```
      */

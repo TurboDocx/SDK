@@ -258,6 +258,31 @@ Resend signature request emails.
 err := client.TurboSign.Resend(ctx, "doc-uuid-here", []string{"recipient-uuid-1"})
 ```
 
+#### `GetAuditTrail`
+
+Get the complete audit trail for a document, including all events and timestamps.
+
+```go
+audit, err := client.TurboSign.GetAuditTrail(ctx, "doc-uuid-here")
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Document: %s\n", audit.Document.Name)
+
+for _, entry := range audit.AuditTrail {
+    fmt.Printf("%s - %s\n", entry.ActionType, entry.Timestamp)
+    if entry.User != nil {
+        fmt.Printf("  By: %s (%s)\n", entry.User.Name, entry.User.Email)
+    }
+    if entry.Recipient != nil {
+        fmt.Printf("  Recipient: %s\n", entry.Recipient.Name)
+    }
+}
+```
+
+The audit trail includes a cryptographic hash chain for tamper-evidence verification.
+
 ---
 
 ## Field Types
