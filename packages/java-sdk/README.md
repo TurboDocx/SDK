@@ -291,6 +291,28 @@ Resend signature request emails.
 client.turboSign().resendEmail("doc-uuid-here", Arrays.asList("recipient-uuid-1"));
 ```
 
+#### `getAuditTrail()`
+
+Get the complete audit trail for a document, including all events and timestamps.
+
+```java
+AuditTrailResponse audit = client.turboSign().getAuditTrail("doc-uuid-here");
+
+System.out.println("Document: " + audit.getDocument().getName());
+
+for (AuditTrailEntry entry : audit.getAuditTrail()) {
+    System.out.println(entry.getActionType() + " - " + entry.getTimestamp());
+    if (entry.getUser() != null) {
+        System.out.println("  By: " + entry.getUser().getName() + " (" + entry.getUser().getEmail() + ")");
+    }
+    if (entry.getRecipient() != null) {
+        System.out.println("  Recipient: " + entry.getRecipient().getName());
+    }
+}
+```
+
+The audit trail includes a cryptographic hash chain for tamper-evidence verification.
+
 ---
 
 ## Field Types
