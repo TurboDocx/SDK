@@ -19,3 +19,7 @@ once_cell = "1.19"
 
 [dev-dependencies]
 tokio-test = "0.4"
+
+[[bin]]
+name = "manual-test"
+path = "manual-test.rs"
