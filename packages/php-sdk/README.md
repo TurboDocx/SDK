@@ -313,19 +313,26 @@ echo "Message: {$result->message}\n";
 
 #### `getAuditTrail()`
 
-Get the complete audit trail for a document.
+Get the complete audit trail for a document, including all events and timestamps.
 
 ```php
 $audit = TurboSign::getAuditTrail('doc-uuid-here');
 
+echo "Document: {$audit->document->name}\n";
 echo "Audit Trail:\n";
-foreach ($audit->entries as $entry) {
-    echo "  {$entry->timestamp} - {$entry->event} by {$entry->actor}\n";
-    if ($entry->ipAddress) {
-        echo "    IP: {$entry->ipAddress}\n";
+
+foreach ($audit->auditTrail as $entry) {
+    echo "  {$entry->actionType} - {$entry->timestamp}\n";
+    if ($entry->user) {
+        echo "    By: {$entry->user->name} ({$entry->user->email})\n";
+    }
+    if ($entry->recipient) {
+        echo "    Recipient: {$entry->recipient->name}\n";
     }
 }
 ```
+
+The audit trail includes a cryptographic hash chain for tamper-evidence verification.
 
 ---
 
