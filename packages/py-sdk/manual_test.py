@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-TurboSign Python SDK - Manual Test Suite
+TurboDocx Python SDK - Manual Test Suite
+
+Tests for both TurboSign (digital signatures) and TurboTemplate (document generation)
 
 Run: python manual_test.py
 
@@ -12,7 +14,7 @@ import json
 import os
 import sys
 
-from turbodocx_sdk import TurboSign
+from turbodocx_sdk import TurboSign, TurboTemplate
 
 # =============================================
 # CONFIGURE THESE VALUES BEFORE RUNNING
@@ -23,6 +25,7 @@ ORG_ID = "your-organization-uuid-here"  # Replace with your organization UUID
 
 TEST_PDF_PATH = "/path/to/your/test-document.pdf"  # Replace with path to your test PDF/DOCX
 TEST_EMAIL = "test-recipient@example.com"  # Replace with a real email to receive notifications
+TEMPLATE_ID = "your-template-uuid-here"  # Replace with your template UUID
 
 # Configure TurboSign
 TurboSign.configure(
@@ -31,6 +34,13 @@ TurboSign.configure(
     org_id=ORG_ID,
     sender_email="sender@example.com",     # Reply-to email for signature requests
     sender_name="Your Company Name"        # Sender name shown in emails
+)
+
+# Configure TurboTemplate
+TurboTemplate.configure(
+    api_key=API_KEY,
+    base_url=BASE_URL,
+    org_id=ORG_ID
 )
 
 
@@ -178,12 +188,160 @@ async def test_get_audit_trail(document_id: str):
 
 
 # =============================================
+# TURBOTEMPLATE TEST FUNCTIONS
+# =============================================
+
+async def test_simple_variables():
+    """
+    Test 8: Simple Variable Substitution
+
+    Template usage: "Dear {customer_name}, your order total is ${order_total}."
+    """
+    print("\n--- Test 8: Simple Variable Substitution ---")
+
+    result = await TurboTemplate.generate(
+        template_id=TEMPLATE_ID,
+        variables=[
+            {"placeholder": "{customer_name}", "name": "customer_name", "value": "John Doe", "mimeType": "text"},
+            {"placeholder": "{order_total}", "name": "order_total", "value": 1500, "mimeType": "text"},
+            {"placeholder": "{order_date}", "name": "order_date", "value": "2024-01-01", "mimeType": "text"},
+        ],
+        name="Simple Substitution Document",
+        description="Basic variable substitution example",
+        output_format="pdf",
+    )
+
+    print("Result:", json.dumps(result, indent=2))
+    return result.get("deliverableId")
+
+
+async def test_nested_objects():
+    """
+    Test 9: Nested Objects with Dot Notation
+
+    Template usage: "Name: {user.name}, Company: {user.profile.company}"
+    """
+    print("\n--- Test 9: Nested Objects with Dot Notation ---")
+
+    result = await TurboTemplate.generate(
+        template_id=TEMPLATE_ID,
+        variables=[
+            {
+                "placeholder": "{user}",
+                "name": "user",
+                "value": {
+                    "name": "John Doe",
+                    "email": "john@example.com",
+                    "profile": {
+                        "company": "Acme Corp",
+                        "title": "Software Engineer",
+                        "location": "San Francisco, CA"
+                    }
+                },
+                "mimeType": "json",
+                "usesAdvancedTemplatingEngine": True,
+            },
+        ],
+        name="Nested Objects Document",
+        description="Nested object with dot notation example",
+        output_format="pdf",
+    )
+
+    print("Result:", json.dumps(result, indent=2))
+    return result.get("deliverableId")
+
+
+async def test_array_loops():
+    """
+    Test 10: Array Loops
+
+    Template usage:
+    {#items}
+    - {name}: {quantity} x ${price}
+    {/items}
+    """
+    print("\n--- Test 10: Array Loops ---")
+
+    result = await TurboTemplate.generate(
+        template_id=TEMPLATE_ID,
+        variables=[
+            {
+                "placeholder": "{items}",
+                "name": "items",
+                "value": [
+                    {"name": "Item A", "quantity": 5, "price": 100, "sku": "SKU-001"},
+                    {"name": "Item B", "quantity": 3, "price": 200, "sku": "SKU-002"},
+                    {"name": "Item C", "quantity": 10, "price": 50, "sku": "SKU-003"},
+                ],
+                "mimeType": "json",
+                "usesAdvancedTemplatingEngine": True,
+            },
+        ],
+        name="Array Loops Document",
+        description="Array loop iteration example",
+        output_format="pdf",
+    )
+
+    print("Result:", json.dumps(result, indent=2))
+    return result.get("deliverableId")
+
+
+async def test_conditionals():
+    """
+    Test 11: Conditionals
+
+    Template usage:
+    {#if is_premium}
+    Premium Member Discount: {discount * 100}%
+    {/if}
+    """
+    print("\n--- Test 11: Conditionals ---")
+
+    result = await TurboTemplate.generate(
+        template_id=TEMPLATE_ID,
+        variables=[
+            {"placeholder": "{is_premium}", "name": "is_premium", "value": True, "mimeType": "json", "usesAdvancedTemplatingEngine": True},
+            {"placeholder": "{discount}", "name": "discount", "value": 0.2, "mimeType": "json", "usesAdvancedTemplatingEngine": True},
+        ],
+        name="Conditionals Document",
+        description="Boolean conditional example",
+        output_format="pdf",
+    )
+
+    print("Result:", json.dumps(result, indent=2))
+    return result.get("deliverableId")
+
+
+async def test_images():
+    """
+    Test 12: Images
+
+    Template usage: Insert {logo} at the top of the document
+    """
+    print("\n--- Test 12: Images ---")
+
+    result = await TurboTemplate.generate(
+        template_id=TEMPLATE_ID,
+        variables=[
+            {"placeholder": "{title}", "name": "title", "value": "Quarterly Report", "mimeType": "text"},
+            {"placeholder": "{logo}", "name": "logo", "value": "https://example.com/logo.png", "mimeType": "image"},
+        ],
+        name="Document with Images",
+        description="Using image variables",
+        output_format="pdf",
+    )
+
+    print("Result:", json.dumps(result, indent=2))
+    return result.get("deliverableId")
+
+
+# =============================================
 # MAIN TEST RUNNER
 # =============================================
 
 async def run_all_tests():
     print("==============================================")
-    print("TurboSign Python SDK - Manual Test Suite")
+    print("TurboDocx Python SDK - Manual Test Suite")
     print("==============================================")
 
     # Check if test PDF exists
@@ -194,6 +352,8 @@ async def run_all_tests():
 
     try:
         # Uncomment and run tests as needed:
+
+        # ===== TurboSign Tests =====
 
         # Test 1: Prepare for Review
         # review_doc_id = await test_create_signature_review_link()
@@ -215,6 +375,23 @@ async def run_all_tests():
 
         # Test 7: Get Audit Trail (replace with actual document ID)
         # await test_get_audit_trail("document-uuid-here")
+
+        # ===== TurboTemplate Tests =====
+
+        # Test 8: Simple Variable Substitution
+        # simple_doc_id = await test_simple_variables()
+
+        # Test 9: Nested Objects with Dot Notation
+        # nested_doc_id = await test_nested_objects()
+
+        # Test 10: Array Loops
+        # loops_doc_id = await test_array_loops()
+
+        # Test 11: Conditionals
+        # conditionals_doc_id = await test_conditionals()
+
+        # Test 12: Images
+        # images_doc_id = await test_images()
 
         print("\n==============================================")
         print("All tests completed successfully!")
