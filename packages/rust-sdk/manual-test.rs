@@ -193,8 +193,7 @@ async fn test_simple_variables() -> Result<String, Box<dyn std::error::Error>> {
         ],
     )
     .with_name("Simple Substitution Document")
-    .with_description("Basic variable substitution example")
-    .with_output_format(OutputFormat::Pdf);
+    .with_description("Basic variable substitution example");
 
     let result = TurboTemplate::generate(request).await?;
     println!("✓ Deliverable ID: {:?}", result.deliverable_id);
@@ -224,8 +223,7 @@ async fn test_nested_objects() -> Result<String, Box<dyn std::error::Error>> {
         )?],
     )
     .with_name("Nested Objects Document")
-    .with_description("Nested object with dot notation example")
-    .with_output_format(OutputFormat::Pdf);
+    .with_description("Nested object with dot notation example");
 
     let result = TurboTemplate::generate(request).await?;
     println!("✓ Deliverable ID: {:?}", result.deliverable_id);
@@ -252,8 +250,7 @@ async fn test_array_loops() -> Result<String, Box<dyn std::error::Error>> {
         vec![TemplateVariable::loop_var("{items}", "items", items)?],
     )
     .with_name("Array Loops Document")
-    .with_description("Array loop iteration example")
-    .with_output_format(OutputFormat::Pdf);
+    .with_description("Array loop iteration example");
 
     let result = TurboTemplate::generate(request).await?;
     println!("✓ Deliverable ID: {:?}", result.deliverable_id);
@@ -277,8 +274,7 @@ async fn test_conditionals() -> Result<String, Box<dyn std::error::Error>> {
         ],
     )
     .with_name("Conditionals Document")
-    .with_description("Boolean conditional example")
-    .with_output_format(OutputFormat::Pdf);
+    .with_description("Boolean conditional example");
 
     let result = TurboTemplate::generate(request).await?;
     println!("✓ Deliverable ID: {:?}", result.deliverable_id);
@@ -299,8 +295,7 @@ async fn test_images() -> Result<String, Box<dyn std::error::Error>> {
         ],
     )
     .with_name("Document with Images")
-    .with_description("Using image variables")
-    .with_output_format(OutputFormat::Pdf);
+    .with_description("Using image variables");
 
     let result = TurboTemplate::generate(request).await?;
     println!("✓ Deliverable ID: {:?}", result.deliverable_id);

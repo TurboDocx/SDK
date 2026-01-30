@@ -187,7 +187,6 @@ async function testSimpleVariables() {
     ],
     name: "Simple Substitution Document",
     description: "Basic variable substitution example",
-    outputFormat: "pdf",
   });
 
   console.log("Result:", JSON.stringify(result, null, 2));
@@ -223,7 +222,6 @@ async function testNestedObjects() {
     ],
     name: "Nested Objects Document",
     description: "Nested object with dot notation example",
-    outputFormat: "pdf",
   });
 
   console.log("Result:", JSON.stringify(result, null, 2));
@@ -258,7 +256,6 @@ async function testArrayLoops() {
     ],
     name: "Array Loops Document",
     description: "Array loop iteration example",
-    outputFormat: "pdf",
   });
 
   console.log("Result:", JSON.stringify(result, null, 2));
@@ -284,7 +281,6 @@ async function testConditionals() {
     ],
     name: "Conditionals Document",
     description: "Boolean conditional example",
-    outputFormat: "pdf",
   });
 
   console.log("Result:", JSON.stringify(result, null, 2));
@@ -307,7 +303,6 @@ async function testImages() {
     ],
     name: "Document with Images",
     description: "Using image variables",
-    outputFormat: "pdf",
   });
 
   console.log("Result:", JSON.stringify(result, null, 2));

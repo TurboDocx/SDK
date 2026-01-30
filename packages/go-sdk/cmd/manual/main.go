@@ -240,7 +240,6 @@ func testSimpleVariables(ctx context.Context) error {
 		},
 		Name:         stringPtr("Simple Substitution Document"),
 		Description:  stringPtr("Basic variable substitution example"),
-		OutputFormat: stringPtr("pdf"),
 	})
 	if err != nil {
 		return err
@@ -277,7 +276,6 @@ func testNestedObjects(ctx context.Context) error {
 		},
 		Name:         stringPtr("Nested Objects Document"),
 		Description:  stringPtr("Nested object with dot notation example"),
-		OutputFormat: stringPtr("pdf"),
 	})
 	if err != nil {
 		return err
@@ -313,7 +311,6 @@ func testArrayLoops(ctx context.Context) error {
 		},
 		Name:         stringPtr("Array Loops Document"),
 		Description:  stringPtr("Array loop iteration example"),
-		OutputFormat: stringPtr("pdf"),
 	})
 	if err != nil {
 		return err
@@ -340,7 +337,6 @@ func testConditionals(ctx context.Context) error {
 		},
 		Name:         stringPtr("Conditionals Document"),
 		Description:  stringPtr("Boolean conditional example"),
-		OutputFormat: stringPtr("pdf"),
 	})
 	if err != nil {
 		return err
@@ -364,7 +360,6 @@ func testImages(ctx context.Context) error {
 		},
 		Name:         stringPtr("Document with Images"),
 		Description:  stringPtr("Using image variables"),
-		OutputFormat: stringPtr("pdf"),
 	})
 	if err != nil {
 		return err

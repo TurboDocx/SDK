@@ -208,7 +208,6 @@ async def test_simple_variables():
         ],
         name="Simple Substitution Document",
         description="Basic variable substitution example",
-        output_format="pdf",
     )
 
     print("Result:", json.dumps(result, indent=2))
@@ -244,7 +243,6 @@ async def test_nested_objects():
         ],
         name="Nested Objects Document",
         description="Nested object with dot notation example",
-        output_format="pdf",
     )
 
     print("Result:", json.dumps(result, indent=2))
@@ -279,7 +277,6 @@ async def test_array_loops():
         ],
         name="Array Loops Document",
         description="Array loop iteration example",
-        output_format="pdf",
     )
 
     print("Result:", json.dumps(result, indent=2))
@@ -305,7 +302,6 @@ async def test_conditionals():
         ],
         name="Conditionals Document",
         description="Boolean conditional example",
-        output_format="pdf",
     )
 
     print("Result:", json.dumps(result, indent=2))
@@ -328,7 +324,6 @@ async def test_images():
         ],
         name="Document with Images",
         description="Using image variables",
-        output_format="pdf",
     )
 
     print("Result:", json.dumps(result, indent=2))

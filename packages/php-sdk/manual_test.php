@@ -259,8 +259,7 @@ function testSimpleVariables(): string
                 ),
             ],
             name: 'Simple Substitution Document',
-            description: 'Basic variable substitution example',
-            outputFormat: OutputFormat::PDF
+            description: 'Basic variable substitution example'
         )
     );
 
@@ -298,8 +297,7 @@ function testNestedObjects(): string
                 ),
             ],
             name: 'Nested Objects Document',
-            description: 'Nested object with dot notation example',
-            outputFormat: OutputFormat::PDF
+            description: 'Nested object with dot notation example'
         )
     );
 
@@ -336,8 +334,7 @@ function testArrayLoops(): string
                 ),
             ],
             name: 'Array Loops Document',
-            description: 'Array loop iteration example',
-            outputFormat: OutputFormat::PDF
+            description: 'Array loop iteration example'
         )
     );
 
@@ -377,8 +374,7 @@ function testConditionals(): string
                 ),
             ],
             name: 'Conditionals Document',
-            description: 'Boolean conditional example',
-            outputFormat: OutputFormat::PDF
+            description: 'Boolean conditional example'
         )
     );
 
@@ -413,8 +409,7 @@ function testImages(): string
                 ),
             ],
             name: 'Document with Images',
-            description: 'Using image variables',
-            outputFormat: OutputFormat::PDF
+            description: 'Using image variables'
         )
     );
 
