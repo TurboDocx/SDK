@@ -130,13 +130,6 @@ class HttpClient:
         if not self.org_id:
             raise AuthenticationError("Organization ID (org_id) is required for authentication")
 
-        if not self.sender_email:
-            raise ValidationError(
-                "sender_email is required. This email will be used as the reply-to address "
-                "for signature requests. Without it, emails will default to "
-                '"API Service User via TurboSign".'
-            )
-
     def get_sender_config(self) -> Dict[str, Optional[str]]:
         """
         Get sender email and name configuration

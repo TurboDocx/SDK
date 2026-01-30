@@ -58,6 +58,15 @@ class TurboSign:
             ...     sender_name="Your Company Name"  # Strongly recommended
             ... )
         """
+        import os
+        # Validate that senderEmail is provided for TurboSign
+        final_sender_email = sender_email or os.environ.get("TURBODOCX_SENDER_EMAIL")
+        if not final_sender_email:
+            raise ValueError(
+                "sender_email is required for TurboSign. This email will be used as the reply-to address "
+                "for signature requests. Without it, emails will default to 'API Service User via TurboSign'."
+            )
+
         cls._client = HttpClient(
             api_key=api_key,
             access_token=access_token,

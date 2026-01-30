@@ -195,8 +195,7 @@ class TurboTemplate:
             body["replaceFonts"] = request["replaceFonts"]
         if "defaultFont" in request:
             body["defaultFont"] = request["defaultFont"]
-        if "outputFormat" in request:
-            body["outputFormat"] = request["outputFormat"]
+        # Note: outputFormat is not supported in TurboTemplate API
         if "metadata" in request:
             body["metadata"] = request["metadata"]
 
