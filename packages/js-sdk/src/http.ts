@@ -87,10 +87,6 @@ export class HttpClient {
     if (!this.apiKey && !this.accessToken) {
       throw new AuthenticationError('API key or access token is required');
     }
-
-    if (!this.senderEmail) {
-      throw new ValidationError('senderEmail is required. This email will be used as the reply-to address for signature requests. Without it, emails will default to "API Service User via TurboSign".');
-    }
   }
 
   /**
