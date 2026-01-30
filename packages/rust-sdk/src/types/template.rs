@@ -270,7 +270,8 @@ impl GenerateTemplateRequest {
 #[serde(rename_all = "camelCase")]
 pub struct GenerateTemplateResponse {
     /// Success status
-    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub success: Option<bool>,
 
     /// Generated deliverable ID
     #[serde(skip_serializing_if = "Option::is_none")]
