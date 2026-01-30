@@ -42,6 +42,13 @@ final class TurboSign
      */
     public static function configure(HttpClientConfig $config): void
     {
+        // Validate that senderEmail is provided for TurboSign
+        if (empty($config->senderEmail)) {
+            throw new \InvalidArgumentException(
+                'senderEmail is required for TurboSign. This email will be used as the reply-to address ' .
+                'for signature requests. Without it, emails will default to "API Service User via TurboSign".'
+            );
+        }
         self::$client = new HttpClient($config);
     }
 

@@ -18,7 +18,6 @@ class GenerateTemplateRequest
      * @param string|null $description Document description
      * @param bool|null $replaceFonts Whether to replace fonts
      * @param string|null $defaultFont Default font to use
-     * @param string|null $outputFormat Output format (e.g., 'pdf', 'docx')
      * @param array<string, mixed>|null $metadata Additional metadata
      */
     public function __construct(
@@ -28,7 +27,6 @@ class GenerateTemplateRequest
         public ?string $description = null,
         public ?bool $replaceFonts = null,
         public ?string $defaultFont = null,
-        public ?string $outputFormat = null,
         public ?array $metadata = null
     ) {
         if (empty($templateId)) {
@@ -64,9 +62,7 @@ class GenerateTemplateRequest
         if ($this->defaultFont !== null) {
             $data['defaultFont'] = $this->defaultFont;
         }
-        if ($this->outputFormat !== null) {
-            $data['outputFormat'] = $this->outputFormat;
-        }
+        // Note: outputFormat is not supported in TurboTemplate API
         if ($this->metadata !== null) {
             $data['metadata'] = $this->metadata;
         }
