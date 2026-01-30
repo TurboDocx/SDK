@@ -94,9 +94,7 @@ public class TurboDocxClient {
             if (orgId == null || orgId.isEmpty()) {
                 throw new TurboDocxException.AuthenticationException("Organization ID (orgId) is required for authentication");
             }
-            if (senderEmail == null || senderEmail.isEmpty()) {
-                throw new TurboDocxException.ValidationException("SenderEmail is required. This email will be used as the reply-to address for signature requests. Without it, emails will default to \"API Service User via TurboSign\".");
-            }
+            // Note: senderEmail validation removed - it's only required for TurboSign operations
             return new TurboDocxClient(this);
         }
     }

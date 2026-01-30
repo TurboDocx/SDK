@@ -19,7 +19,7 @@ public class GenerateTemplateRequest {
 
     private String defaultFont;
 
-    private String outputFormat;
+    // Note: outputFormat is not supported in TurboTemplate API
 
     private Map<String, Object> metadata;
 
@@ -81,14 +81,6 @@ public class GenerateTemplateRequest {
         this.defaultFont = defaultFont;
     }
 
-    public String getOutputFormat() {
-        return outputFormat;
-    }
-
-    public void setOutputFormat(String outputFormat) {
-        this.outputFormat = outputFormat;
-    }
-
     public Map<String, Object> getMetadata() {
         return metadata;
     }
@@ -128,11 +120,6 @@ public class GenerateTemplateRequest {
 
         public Builder defaultFont(String defaultFont) {
             request.defaultFont = defaultFont;
-            return this;
-        }
-
-        public Builder outputFormat(String outputFormat) {
-            request.outputFormat = outputFormat;
             return this;
         }
 
