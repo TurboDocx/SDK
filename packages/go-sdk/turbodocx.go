@@ -108,14 +108,7 @@ func NewClientWithConfig(config ClientConfig) (*Client, error) {
 		}
 	}
 
-	if config.SenderEmail == "" {
-		return nil, &ValidationError{
-			TurboDocxError: TurboDocxError{
-				Message:    "SenderEmail is required. This email will be used as the reply-to address for signature requests. Without it, emails will default to \"API Service User via TurboSign\".",
-				StatusCode: 400,
-			},
-		}
-	}
+	// Note: SenderEmail validation removed - it's only required for TurboSign operations
 
 	httpClient := NewHTTPClient(config)
 

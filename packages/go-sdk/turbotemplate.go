@@ -77,8 +77,7 @@ type GenerateTemplateRequest struct {
 	// DefaultFont is the default font to use when replacing
 	DefaultFont *string `json:"defaultFont,omitempty"`
 
-	// OutputFormat is the output format (default: docx)
-	OutputFormat *string `json:"outputFormat,omitempty"`
+	// Note: OutputFormat is not supported in TurboTemplate API
 
 	// Metadata is additional metadata
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
