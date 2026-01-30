@@ -214,9 +214,7 @@ pub struct GenerateTemplateRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default_font: Option<String>,
 
-    /// Output format
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub output_format: Option<OutputFormat>,
+    // Note: output_format is not supported in TurboTemplate API
 
     /// Additional metadata
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -233,7 +231,6 @@ impl GenerateTemplateRequest {
             description: None,
             replace_fonts: None,
             default_font: None,
-            output_format: None,
             metadata: None,
         }
     }
@@ -258,12 +255,6 @@ impl GenerateTemplateRequest {
     ) -> Self {
         self.replace_fonts = Some(replace);
         self.default_font = default_font.map(|f| f.into());
-        self
-    }
-
-    /// Set output format
-    pub fn with_output_format(mut self, format: OutputFormat) -> Self {
-        self.output_format = Some(format);
         self
     }
 

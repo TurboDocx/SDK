@@ -139,6 +139,14 @@ impl TurboSign {
         request: CreateSignatureReviewLinkRequest,
     ) -> Result<CreateSignatureReviewLinkResponse> {
         let client = Self::get_client()?;
+
+        // Validate senderEmail is configured for TurboSign operations
+        if client.get_sender_email().is_none() || client.get_sender_email().unwrap().is_empty() {
+            return Err(crate::http::TurboDocxError::ValidationError(
+                "senderEmail is required for TurboSign operations. Please configure with sender_email.".to_string()
+            ).into());
+        }
+
         client
             .post("/v1/signature/create-review-link", request)
             .await
@@ -193,6 +201,14 @@ impl TurboSign {
     /// ```
     pub async fn send_signature(request: SendSignatureRequest) -> Result<SendSignatureResponse> {
         let client = Self::get_client()?;
+
+        // Validate senderEmail is configured for TurboSign operations
+        if client.get_sender_email().is_none() || client.get_sender_email().unwrap().is_empty() {
+            return Err(crate::http::TurboDocxError::ValidationError(
+                "senderEmail is required for TurboSign operations. Please configure with sender_email.".to_string()
+            ).into());
+        }
+
         client.post("/v1/signature/send", request).await
     }
 
