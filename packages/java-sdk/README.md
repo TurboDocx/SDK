@@ -110,15 +110,21 @@ public class Main {
 ## Configuration
 
 ```java
-// Basic client configuration (REQUIRED)
+// Basic client configuration
 TurboDocxClient client = new TurboDocxClient.Builder()
     .apiKey("your-api-key")           // REQUIRED
     .orgId("your-org-id")             // REQUIRED
-    .senderEmail("you@company.com")   // REQUIRED - reply-to address for signature requests
-    .senderName("Your Company")       // OPTIONAL but strongly recommended
+    .senderEmail("you@company.com")   // REQUIRED for TurboSign operations
+    .senderName("Your Company")       // OPTIONAL (recommended for TurboSign)
     .build();
 
-// With environment variables (recommended)
+// For TurboTemplate only (no senderEmail needed)
+TurboDocxClient client = new TurboDocxClient.Builder()
+    .apiKey(System.getenv("TURBODOCX_API_KEY"))
+    .orgId(System.getenv("TURBODOCX_ORG_ID"))
+    .build();
+
+// With environment variables (recommended for TurboSign)
 TurboDocxClient client = new TurboDocxClient.Builder()
     .apiKey(System.getenv("TURBODOCX_API_KEY"))
     .orgId(System.getenv("TURBODOCX_ORG_ID"))
@@ -151,7 +157,7 @@ TurboDocxClient client = new TurboDocxClient.Builder()
     .build();
 ```
 
-**Important:** `senderEmail` is **REQUIRED**. This email will be used as the reply-to address for signature request emails. Without it, emails will default to "API Service User via TurboSign". The `senderName` is optional but strongly recommended for a professional appearance.
+**Important:** `senderEmail` is **REQUIRED for TurboSign operations**. This email will be used as the reply-to address for signature request emails. For TurboTemplate-only usage, `senderEmail` is not required. The `senderName` is optional but strongly recommended for a professional appearance in signature emails.
 
 **Environment Variables:**
 
@@ -280,14 +286,14 @@ GenerateTemplateResponse result = client.turboTemplate().generate(
         .name("Generated Contract")
         .description("Contract for Q4 2024")
         .variables(Arrays.asList(
-            TemplateVariable.simple("customer_name", "Acme Corp"),
-            TemplateVariable.simple("contract_date", "2024-01-15"),
-            TemplateVariable.simple("total_amount", 50000)
+            TemplateVariable.simple("{customer_name}", "customer_name", "Acme Corp", VariableMimeType.TEXT),
+            TemplateVariable.simple("{contract_date}", "contract_date", "2024-01-15", VariableMimeType.TEXT),
+            TemplateVariable.simple("{total_amount}", "total_amount", 50000, VariableMimeType.TEXT)
         ))
         .build()
 );
 
-System.out.println("Document ID: " + result.getDeliverableId());
+System.out.println("Document ID: " + result.getId());
 ```
 
 #### Helper Functions
@@ -301,12 +307,12 @@ GenerateTemplateResponse result = client.turboTemplate().generate(
         .name("Invoice #1234")
         .description("Monthly invoice")
         .variables(Arrays.asList(
-            // Simple text/number variables
-            TemplateVariable.simple("invoice_number", "INV-2024-001"),
-            TemplateVariable.simple("total", 1500),
+            // Simple text/number variables (placeholder, name, value, mimeType)
+            TemplateVariable.simple("{invoice_number}", "invoice_number", "INV-2024-001", VariableMimeType.TEXT),
+            TemplateVariable.simple("{total}", "total", 1500, VariableMimeType.TEXT),
 
-            // Advanced engine variable (access with dot notation: {customer.name}, {customer.address.city})
-            TemplateVariable.advancedEngine("customer", Map.of(
+            // Advanced engine variable (placeholder, name, value) - for dot notation: {customer.name}
+            TemplateVariable.advancedEngine("{customer}", "customer", Map.of(
                 "name", "Acme Corp",
                 "email", "billing@acme.com",
                 "address", Map.of(
@@ -316,17 +322,17 @@ GenerateTemplateResponse result = client.turboTemplate().generate(
                 )
             )),
 
-            // Arrays for loops ({#items}...{/items})
-            TemplateVariable.loop("items", Arrays.asList(
+            // Arrays for loops (placeholder, name, value) - use {#items}...{/items} in template
+            TemplateVariable.loop("{items}", "items", Arrays.asList(
                 Map.of("name", "Widget A", "quantity", 5, "price", 100),
                 Map.of("name", "Widget B", "quantity", 3, "price", 200)
             )),
 
-            // Conditionals ({#is_premium}...{/is_premium})
-            TemplateVariable.conditional("is_premium", true),
+            // Conditionals (placeholder, name, value) - use {#is_premium}...{/is_premium} in template
+            TemplateVariable.conditional("{is_premium}", "is_premium", true),
 
-            // Images
-            TemplateVariable.image("logo", "https://example.com/logo.png")
+            // Images (placeholder, name, imageUrl)
+            TemplateVariable.image("{logo}", "logo", "https://example.com/logo.png")
         ))
         .build()
 );

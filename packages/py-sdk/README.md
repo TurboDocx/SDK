@@ -115,15 +115,21 @@ result = TurboSignSync.send_signature(
 from turbodocx_sdk import TurboSign
 import os
 
-# Basic configuration (REQUIRED)
+# Basic configuration
 TurboSign.configure(
     api_key="your-api-key",           # REQUIRED
     org_id="your-org-id",             # REQUIRED
-    sender_email="you@company.com",   # REQUIRED - reply-to address for signature requests
-    sender_name="Your Company"        # OPTIONAL but strongly recommended
+    sender_email="you@company.com",   # REQUIRED for TurboSign operations
+    sender_name="Your Company"        # OPTIONAL (recommended for TurboSign)
 )
 
-# With environment variables (recommended)
+# For TurboTemplate only (no sender_email needed)
+TurboTemplate.configure(
+    api_key=os.environ["TURBODOCX_API_KEY"],
+    org_id=os.environ["TURBODOCX_ORG_ID"]
+)
+
+# With environment variables (recommended for TurboSign)
 TurboSign.configure(
     api_key=os.environ["TURBODOCX_API_KEY"],
     org_id=os.environ["TURBODOCX_ORG_ID"],
@@ -142,7 +148,7 @@ TurboSign.configure(
 )
 ```
 
-**Important:** `sender_email` is **REQUIRED**. This email will be used as the reply-to address for signature request emails. Without it, emails will default to "API Service User via TurboSign". The `sender_name` is optional but strongly recommended for a professional appearance.
+**Important:** `sender_email` is **REQUIRED for TurboSign operations**. This email will be used as the reply-to address for signature request emails. For TurboTemplate-only usage, `sender_email` is not required. The `sender_name` is optional but strongly recommended for a professional appearance in signature emails.
 
 ### Environment Variables
 

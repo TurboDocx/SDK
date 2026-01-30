@@ -142,12 +142,18 @@ echo "Download URL: {$result->downloadUrl}\n";
 use TurboDocx\TurboSign;
 use TurboDocx\Config\HttpClientConfig;
 
-// Basic configuration (REQUIRED)
+// Basic configuration
 TurboSign::configure(new HttpClientConfig(
     apiKey: 'your-api-key',           // REQUIRED
     orgId: 'your-org-id',             // REQUIRED
-    senderEmail: 'you@company.com',   // REQUIRED - reply-to address for signature requests
-    senderName: 'Your Company'        // OPTIONAL but strongly recommended
+    senderEmail: 'you@company.com',   // REQUIRED for TurboSign operations
+    senderName: 'Your Company'        // OPTIONAL (recommended for TurboSign)
+));
+
+// For TurboTemplate only (no senderEmail needed)
+TurboTemplate::configure(new HttpClientConfig(
+    apiKey: getenv('TURBODOCX_API_KEY'),
+    orgId: getenv('TURBODOCX_ORG_ID')
 ));
 
 // With custom options
@@ -160,7 +166,7 @@ TurboSign::configure(new HttpClientConfig(
 ));
 ```
 
-**Important:** `senderEmail` is **REQUIRED**. This email will be used as the reply-to address for signature request emails. Without it, emails will default to "API Service User via TurboSign". The `senderName` is optional but strongly recommended for a professional appearance.
+**Important:** `senderEmail` is **REQUIRED for TurboSign operations**. This email will be used as the reply-to address for signature request emails. For TurboTemplate-only usage, `senderEmail` is not required. The `senderName` is optional but strongly recommended for a professional appearance in signature emails.
 
 ### Environment Variables
 
