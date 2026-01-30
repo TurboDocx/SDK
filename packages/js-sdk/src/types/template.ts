@@ -73,11 +73,11 @@ export interface GenerateTemplateRequest {
   /** Variables to inject into the template */
   variables: TemplateVariable[];
 
-  /** Document name */
+  /** Document name (required) */
   name: string;
 
-  /** Document description */
-  description: string;
+  /** Document description (optional) */
+  description?: string;
 
   /** Replace fonts in the document */
   replaceFonts?: boolean;
