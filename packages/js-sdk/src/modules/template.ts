@@ -167,11 +167,17 @@ export class TurboTemplate {
     if (request.description) body.description = request.description;
     if (request.replaceFonts !== undefined) body.replaceFonts = request.replaceFonts;
     if (request.defaultFont) body.defaultFont = request.defaultFont;
-    if (request.outputFormat) body.outputFormat = request.outputFormat;
     if (request.metadata) body.metadata = request.metadata;
 
-    const response = await client.post<GenerateTemplateResponse>('/v1/deliverable', body);
-    return response;
+    try {
+      const response = await client.post<GenerateTemplateResponse>('/v1/deliverable', body);
+      return response;
+    } catch (error: any) {
+      console.error("Error calling API:", error);
+      console.error("Error message:", error.message);
+      console.error("Status code:", error.statusCode);
+      throw error;
+    }
   }
 
   /**

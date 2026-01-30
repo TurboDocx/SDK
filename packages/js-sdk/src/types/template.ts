@@ -85,9 +85,6 @@ export interface GenerateTemplateRequest {
   /** Default font to use when replacing */
   defaultFont?: string;
 
-  /** Output format (default: docx) */
-  outputFormat?: 'docx' | 'pdf';
-
   /** Additional metadata */
   metadata?: Record<string, any>;
 }
