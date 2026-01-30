@@ -85,11 +85,47 @@ type GenerateTemplateRequest struct {
 
 // GenerateTemplateResponse is the response from template generation
 type GenerateTemplateResponse struct {
-	// Success indicates whether generation was successful
-	Success bool `json:"success"`
+	// ID is the deliverable ID
+	ID *string `json:"id,omitempty"`
 
-	// DeliverableID is the deliverable ID
-	DeliverableID *string `json:"deliverableId,omitempty"`
+	// Name is the document name
+	Name *string `json:"name,omitempty"`
+
+	// Description is the document description
+	Description *string `json:"description,omitempty"`
+
+	// TemplateID is the template ID used
+	TemplateID *string `json:"templateId,omitempty"`
+
+	// ProjectspaceID is the projectspace ID
+	ProjectspaceID *string `json:"projectspaceId,omitempty"`
+
+	// DeliverableFolderID is the folder ID
+	DeliverableFolderID *string `json:"deliverableFolderId,omitempty"`
+
+	// Metadata contains additional metadata
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+
+	// CreatedBy is the user who created the deliverable
+	CreatedBy *string `json:"createdBy,omitempty"`
+
+	// OrgID is the organization ID
+	OrgID *string `json:"orgId,omitempty"`
+
+	// DefaultFont is the default font used
+	DefaultFont *string `json:"defaultFont,omitempty"`
+
+	// CreatedOn is the creation timestamp
+	CreatedOn *string `json:"createdOn,omitempty"`
+
+	// UpdatedOn is the last update timestamp
+	UpdatedOn *string `json:"updatedOn,omitempty"`
+
+	// IsActive indicates if the deliverable is active
+	IsActive *int `json:"isActive,omitempty"`
+
+	// Fonts contains font information
+	Fonts interface{} `json:"fonts,omitempty"`
 
 	// Buffer is the generated document buffer (if returnBuffer is true)
 	Buffer []byte `json:"buffer,omitempty"`

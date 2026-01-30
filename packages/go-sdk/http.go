@@ -210,22 +210,38 @@ func (c *HTTPClient) handleResponse(resp *http.Response, result interface{}) err
 	}
 
 	if result != nil {
-		// Smart unwrapping: if response has ONLY "data" key, extract it
-		// This handles backend responses that wrap data in { "data": { ... } }
-		var wrapper map[string]json.RawMessage
-		if err := json.Unmarshal(body, &wrapper); err == nil {
-			// If only "data" key exists, unwrap it
-			if data, ok := wrapper["data"]; ok && len(wrapper) == 1 {
-				if err := json.Unmarshal(data, result); err != nil {
-					return fmt.Errorf("failed to decode unwrapped response: %w", err)
+		// Parse response as JSON value first
+		var jsonValue map[string]interface{}
+		if err := json.Unmarshal(body, &jsonValue); err != nil {
+			return fmt.Errorf("failed to decode response: %w", err)
+		}
+
+		// Unwrap nested structure: data.results.deliverable
+		var dataToUnmarshal interface{} = jsonValue
+
+		// Check for data wrapper
+		if data, ok := jsonValue["data"].(map[string]interface{}); ok {
+			// Check for results wrapper
+			if results, ok := data["results"].(map[string]interface{}); ok {
+				// Check for deliverable wrapper
+				if deliverable, ok := results["deliverable"]; ok {
+					dataToUnmarshal = deliverable
+				} else {
+					dataToUnmarshal = results
 				}
-				return nil
+			} else {
+				dataToUnmarshal = data
 			}
 		}
 
-		// Otherwise unmarshal directly
-		if err := json.Unmarshal(body, result); err != nil {
-			return fmt.Errorf("failed to decode response: %w", err)
+		// Marshal the data back to JSON and unmarshal into result
+		dataBytes, err := json.Marshal(dataToUnmarshal)
+		if err != nil {
+			return fmt.Errorf("failed to marshal data: %w", err)
+		}
+
+		if err := json.Unmarshal(dataBytes, result); err != nil {
+			return fmt.Errorf("failed to decode data into result: %w", err)
 		}
 	}
 
