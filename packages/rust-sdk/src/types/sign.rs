@@ -221,9 +221,10 @@ impl Recipient {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateSignatureReviewLinkRequest {
-    /// File path to PDF
+    /// File bytes (PDF/DOCX)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub file: Option<String>,
+    #[serde(skip_deserializing)]
+    pub file: Option<Vec<u8>>,
 
     /// Original filename (used when file is bytes)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -306,9 +307,10 @@ pub struct RecipientStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SendSignatureRequest {
-    /// File path to PDF
+    /// File bytes (PDF/DOCX)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub file: Option<String>,
+    #[serde(skip_deserializing)]
+    pub file: Option<Vec<u8>>,
 
     /// Original filename
     #[serde(skip_serializing_if = "Option::is_none")]

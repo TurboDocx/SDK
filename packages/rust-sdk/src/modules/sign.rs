@@ -4,7 +4,7 @@ use crate::types::{
     DocumentStatusResponse, ResendEmailResponse, SendSignatureRequest, SendSignatureResponse,
     VoidDocumentResponse,
 };
-use crate::utils::Result;
+use crate::utils::{Result, TurboDocxError};
 use once_cell::sync::OnceCell;
 use std::sync::Mutex;
 
@@ -136,20 +136,67 @@ impl TurboSign {
     /// # }
     /// ```
     pub async fn create_signature_review_link(
-        request: CreateSignatureReviewLinkRequest,
+        mut request: CreateSignatureReviewLinkRequest,
     ) -> Result<CreateSignatureReviewLinkResponse> {
+        use std::collections::HashMap;
+
         let client = Self::get_client()?;
 
         // Validate senderEmail is configured for TurboSign operations
-        if client.get_sender_email().is_none() || client.get_sender_email().unwrap().is_empty() {
-            return Err(crate::http::TurboDocxError::ValidationError(
+        let sender_email = client.config.sender_email.as_ref();
+        if sender_email.is_none() || sender_email.unwrap().is_empty() {
+            return Err(TurboDocxError::Validation(
                 "senderEmail is required for TurboSign operations. Please configure with sender_email.".to_string()
-            ).into());
+            ));
         }
 
-        client
-            .post("/v1/signature/create-review-link", request)
-            .await
+        // Check if file bytes are provided
+        if let Some(file_bytes) = request.file.take() {
+            // Use multipart/form-data for file upload
+            let mut form_data = HashMap::new();
+
+            // Serialize recipients and fields as JSON strings
+            form_data.insert(
+                "recipients".to_string(),
+                serde_json::to_value(&request.recipients)?,
+            );
+            form_data.insert(
+                "fields".to_string(),
+                serde_json::to_value(&request.fields)?,
+            );
+
+            // Add optional fields
+            if let Some(name) = &request.document_name {
+                form_data.insert("documentName".to_string(), serde_json::Value::String(name.clone()));
+            }
+            if let Some(desc) = &request.document_description {
+                form_data.insert("documentDescription".to_string(), serde_json::Value::String(desc.clone()));
+            }
+
+            // Sender email/name (use request values or fall back to config)
+            let sender_email_val = request.sender_email.as_ref()
+                .or(client.config.sender_email.as_ref())
+                .ok_or_else(|| TurboDocxError::Validation("senderEmail is required".to_string()))?;
+            form_data.insert("senderEmail".to_string(), serde_json::Value::String(sender_email_val.clone()));
+
+            if let Some(sender_name) = request.sender_name.as_ref().or(client.config.sender_name.as_ref()) {
+                form_data.insert("senderName".to_string(), serde_json::Value::String(sender_name.clone()));
+            }
+
+            if let Some(cc_emails) = &request.cc_emails {
+                form_data.insert("ccEmails".to_string(), serde_json::to_value(cc_emails)?);
+            }
+
+            let file_name = request.file_name.as_deref().unwrap_or("document.pdf");
+            client
+                .upload_file("/turbosign/single/prepare-for-review", file_bytes, file_name, form_data)
+                .await
+        } else {
+            // Use JSON body for file_link, deliverable_id, or template_id
+            client
+                .post("/v1/signature/create-review-link", request)
+                .await
+        }
     }
 
     /// Send signature request (prepare and send in single call)
@@ -199,17 +246,64 @@ impl TurboSign {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn send_signature(request: SendSignatureRequest) -> Result<SendSignatureResponse> {
+    pub async fn send_signature(mut request: SendSignatureRequest) -> Result<SendSignatureResponse> {
+        use std::collections::HashMap;
+
         let client = Self::get_client()?;
 
         // Validate senderEmail is configured for TurboSign operations
-        if client.get_sender_email().is_none() || client.get_sender_email().unwrap().is_empty() {
-            return Err(crate::http::TurboDocxError::ValidationError(
+        let sender_email = client.config.sender_email.as_ref();
+        if sender_email.is_none() || sender_email.unwrap().is_empty() {
+            return Err(TurboDocxError::Validation(
                 "senderEmail is required for TurboSign operations. Please configure with sender_email.".to_string()
-            ).into());
+            ));
         }
 
-        client.post("/v1/signature/send", request).await
+        // Check if file bytes are provided
+        if let Some(file_bytes) = request.file.take() {
+            // Use multipart/form-data for file upload
+            let mut form_data = HashMap::new();
+
+            // Serialize recipients and fields as JSON strings
+            form_data.insert(
+                "recipients".to_string(),
+                serde_json::to_value(&request.recipients)?,
+            );
+            form_data.insert(
+                "fields".to_string(),
+                serde_json::to_value(&request.fields)?,
+            );
+
+            // Add optional fields
+            if let Some(name) = &request.document_name {
+                form_data.insert("documentName".to_string(), serde_json::Value::String(name.clone()));
+            }
+            if let Some(desc) = &request.document_description {
+                form_data.insert("documentDescription".to_string(), serde_json::Value::String(desc.clone()));
+            }
+
+            // Sender email/name (use request values or fall back to config)
+            let sender_email_val = request.sender_email.as_ref()
+                .or(client.config.sender_email.as_ref())
+                .ok_or_else(|| TurboDocxError::Validation("senderEmail is required".to_string()))?;
+            form_data.insert("senderEmail".to_string(), serde_json::Value::String(sender_email_val.clone()));
+
+            if let Some(sender_name) = request.sender_name.as_ref().or(client.config.sender_name.as_ref()) {
+                form_data.insert("senderName".to_string(), serde_json::Value::String(sender_name.clone()));
+            }
+
+            if let Some(cc_emails) = &request.cc_emails {
+                form_data.insert("ccEmails".to_string(), serde_json::to_value(cc_emails)?);
+            }
+
+            let file_name = request.file_name.as_deref().unwrap_or("document.pdf");
+            client
+                .upload_file("/turbosign/single/send", file_bytes, file_name, form_data)
+                .await
+        } else {
+            // Use JSON body for file_link, deliverable_id, or template_id
+            client.post("/v1/signature/send", request).await
+        }
     }
 
     /// Void a signature request

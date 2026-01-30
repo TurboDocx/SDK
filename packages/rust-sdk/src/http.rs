@@ -185,6 +185,65 @@ impl HttpClient {
     pub async fn delete<T: DeserializeOwned>(&self, path: &str) -> Result<T> {
         self.request(Method::DELETE, path, None::<()>).await
     }
+
+    /// Upload a file with multipart/form-data
+    ///
+    /// # Arguments
+    /// * `path` - API endpoint path
+    /// * `file` - File bytes to upload
+    /// * `file_name` - Name of the file
+    /// * `form_data` - Additional form fields (will be serialized as JSON strings for complex types)
+    pub async fn upload_file<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        file: Vec<u8>,
+        file_name: &str,
+        form_data: std::collections::HashMap<String, serde_json::Value>,
+    ) -> Result<T> {
+        use reqwest::multipart::{Form, Part};
+
+        let url = format!("{}{}", self.config.base_url, path);
+
+        // Create multipart form
+        let mut form = Form::new();
+
+        // Add file part
+        let file_part = Part::bytes(file)
+            .file_name(file_name.to_string())
+            .mime_str("application/pdf")
+            .map_err(|e| TurboDocxError::Other(format!("Failed to set MIME type: {}", e)))?;
+        form = form.part("file", file_part);
+
+        // Add other form fields
+        for (key, value) in form_data {
+            let value_str = match value {
+                serde_json::Value::String(s) => s,
+                _ => value.to_string(),
+            };
+            form = form.text(key, value_str);
+        }
+
+        // Build request with auth headers
+        let mut req = self.client.post(&url).multipart(form);
+
+        // Add authentication
+        if let Some(api_key) = &self.config.api_key {
+            req = req.header("x-api-key", api_key);
+        } else if let Some(token) = &self.config.access_token {
+            req = req.header(header::AUTHORIZATION, format!("Bearer {}", token));
+        }
+
+        // Add org ID if provided
+        if let Some(org_id) = &self.config.org_id {
+            req = req.header("x-org-id", org_id);
+        }
+
+        // Send request
+        let response = req.send().await?;
+
+        // Handle response
+        self.handle_response(response).await
+    }
 }
 
 #[cfg(test)]
