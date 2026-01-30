@@ -83,21 +83,50 @@ class GenerateTemplateResponse(TypedDict, total=False):
     """
     Response from template generation
 
+    Contains the full deliverable information returned by the API.
+
     Attributes:
-        success: Whether generation was successful
-        deliverableId: Deliverable ID
-        buffer: Generated document buffer (if returnBuffer is true)
+        id: Deliverable ID
+        name: Document name
+        description: Document description
+        templateId: Template ID used for generation
+        projectspaceId: Projectspace ID
+        deliverableFolderId: Folder ID for the deliverable
+        metadata: Additional metadata
+        createdBy: User who created the deliverable
+        orgId: Organization ID
+        defaultFont: Default font used
+        createdOn: Creation timestamp
+        updatedOn: Last update timestamp
+        isActive: Active status flag
+        fonts: Font information
         downloadUrl: Document download URL
         message: Response message
         error: Error details if generation failed
+        buffer: Generated document buffer (if returnBuffer is true)
     """
 
-    success: bool
-    deliverableId: Optional[str]
-    buffer: Optional[bytes]
+    # Core deliverable fields
+    id: Optional[str]
+    name: Optional[str]
+    description: Optional[str]
+    templateId: Optional[str]
+    projectspaceId: Optional[str]
+    deliverableFolderId: Optional[str]
+    metadata: Optional[Dict[str, Any]]
+    createdBy: Optional[str]
+    orgId: Optional[str]
+    defaultFont: Optional[str]
+    createdOn: Optional[str]
+    updatedOn: Optional[str]
+    isActive: Optional[int]
+    fonts: Optional[Any]
+
+    # Response fields
     downloadUrl: Optional[str]
     message: Optional[str]
     error: Optional[str]
+    buffer: Optional[bytes]
 
 
 class VariableValidation(TypedDict, total=False):

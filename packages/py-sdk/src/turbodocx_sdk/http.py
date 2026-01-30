@@ -164,12 +164,33 @@ class HttpClient:
     def _smart_unwrap(self, data: Any) -> Any:
         """
         Smart unwrap response data.
-        If response has ONLY "data" key, extract it.
-        This handles backend responses that wrap data in { "data": { ... } }
+        Handles nested response structure: data.results.deliverable
+
+        This handles backend responses that wrap data in:
+        { "data": { "results": { "deliverable": { ... } } } }
         """
-        if isinstance(data, dict) and list(data.keys()) == ["data"]:
-            return data["data"]
-        return data
+        if not isinstance(data, dict):
+            return data
+
+        data_to_unmarshal = data
+
+        # Check for data wrapper
+        if "data" in data:
+            data_content = data["data"]
+
+            # Check for results wrapper
+            if isinstance(data_content, dict) and "results" in data_content:
+                results = data_content["results"]
+
+                # Check for deliverable wrapper
+                if isinstance(results, dict) and "deliverable" in results:
+                    data_to_unmarshal = results["deliverable"]
+                else:
+                    data_to_unmarshal = results
+            else:
+                data_to_unmarshal = data_content
+
+        return data_to_unmarshal
 
     async def _handle_error_response(self, response: httpx.Response) -> None:
         """Handle error response from API"""

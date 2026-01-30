@@ -199,7 +199,7 @@ class TurboTemplate:
         if "metadata" in request:
             body["metadata"] = request["metadata"]
 
-        response = await client.post("/v1/deliverable", json=body)
+        response = await client.post("/v1/deliverable", data=body)
         return response
 
     @classmethod
