@@ -190,7 +190,7 @@ async function testSimpleVariables() {
   });
 
   console.log("Result:", JSON.stringify(result, null, 2));
-  return result.deliverableId;
+  return result.id;
 }
 
 /**
@@ -225,7 +225,7 @@ async function testNestedObjects() {
   });
 
   console.log("Result:", JSON.stringify(result, null, 2));
-  return result.deliverableId;
+  return result.id;
 }
 
 /**
@@ -259,7 +259,7 @@ async function testArrayLoops() {
   });
 
   console.log("Result:", JSON.stringify(result, null, 2));
-  return result.deliverableId;
+  return result.id;
 }
 
 /**
@@ -284,7 +284,7 @@ async function testConditionals() {
   });
 
   console.log("Result:", JSON.stringify(result, null, 2));
-  return result.deliverableId;
+  return result.id;
 }
 
 /**
@@ -306,7 +306,7 @@ async function testImages() {
   });
 
   console.log("Result:", JSON.stringify(result, null, 2));
-  return result.deliverableId;
+  return result.id;
 }
 
 // =============================================
