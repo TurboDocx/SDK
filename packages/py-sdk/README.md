@@ -292,16 +292,16 @@ Generate a document from a template with variables.
 ```python
 result = await TurboTemplate.generate({
     "templateId": "your-template-uuid",
-    "name": "Generated Contract",
+    "name": "Generated Contract",  # name is required
     "description": "Contract for Q4 2024",
     "variables": [
-        {"placeholder": "{customer_name}", "name": "customer_name", "value": "Acme Corp"},
-        {"placeholder": "{contract_date}", "name": "contract_date", "value": "2024-01-15"},
-        {"placeholder": "{total_amount}", "name": "total_amount", "value": 50000},
+        {"placeholder": "{customer_name}", "name": "customer_name", "value": "Acme Corp", "mimeType": "text"},
+        {"placeholder": "{contract_date}", "name": "contract_date", "value": "2024-01-15", "mimeType": "text"},
+        {"placeholder": "{total_amount}", "name": "total_amount", "value": 50000, "mimeType": "text"},
     ],
 })
 
-print(f"Document ID: {result['deliverableId']}")
+print(f"Document ID: {result['id']}")
 ```
 
 #### Helper Functions
@@ -313,15 +313,15 @@ from turbodocx_sdk import TurboTemplate
 
 result = await TurboTemplate.generate({
     "templateId": "invoice-template-uuid",
-    "name": "Invoice #1234",
+    "name": "Invoice #1234",  # name is required
     "description": "Monthly invoice",
     "variables": [
-        # Simple text/number variables
-        TurboTemplate.create_simple_variable("invoice_number", "INV-2024-001"),
-        TurboTemplate.create_simple_variable("total", 1500),
+        # Simple text/number variables (placeholder, name, value, mime_type)
+        TurboTemplate.create_simple_variable("{invoice_number}", "invoice_number", "INV-2024-001", "text"),
+        TurboTemplate.create_simple_variable("{total}", "total", 1500, "text"),
 
-        # Advanced engine variable (access with dot notation: {customer.name}, {customer.address.city})
-        TurboTemplate.create_advanced_engine_variable("customer", {
+        # Advanced engine variable (placeholder, name, value) - for dot notation: {customer.name}
+        TurboTemplate.create_advanced_engine_variable("{customer}", "customer", {
             "name": "Acme Corp",
             "email": "billing@acme.com",
             "address": {
@@ -331,17 +331,17 @@ result = await TurboTemplate.generate({
             },
         }),
 
-        # Arrays for loops ({#items}...{/items})
-        TurboTemplate.create_loop_variable("items", [
+        # Arrays for loops (placeholder, name, value) - use {#items}...{/items} in template
+        TurboTemplate.create_loop_variable("{items}", "items", [
             {"name": "Widget A", "quantity": 5, "price": 100},
             {"name": "Widget B", "quantity": 3, "price": 200},
         ]),
 
-        # Conditionals ({#is_premium}...{/is_premium})
-        TurboTemplate.create_conditional_variable("is_premium", True),
+        # Conditionals (placeholder, name, value) - use {#is_premium}...{/is_premium} in template
+        TurboTemplate.create_conditional_variable("{is_premium}", "is_premium", True),
 
-        # Images
-        TurboTemplate.create_image_variable("logo", "https://example.com/logo.png"),
+        # Images (placeholder, name, image_url)
+        TurboTemplate.create_image_variable("{logo}", "logo", "https://example.com/logo.png"),
     ],
 })
 ```

@@ -12,18 +12,18 @@ use TurboDocx\Types\TemplateVariable;
 class GenerateTemplateRequest
 {
     /**
-     * @param string $templateId Template ID
-     * @param array<TemplateVariable> $variables Template variables
-     * @param string|null $name Document name
-     * @param string|null $description Document description
-     * @param bool|null $replaceFonts Whether to replace fonts
-     * @param string|null $defaultFont Default font to use
-     * @param array<string, mixed>|null $metadata Additional metadata
+     * @param string $templateId Template ID (required)
+     * @param array<TemplateVariable> $variables Template variables (required)
+     * @param string $name Document name (required)
+     * @param string|null $description Document description (optional)
+     * @param bool|null $replaceFonts Whether to replace fonts (optional)
+     * @param string|null $defaultFont Default font to use (optional)
+     * @param array<string, mixed>|null $metadata Additional metadata (optional)
      */
     public function __construct(
         public string $templateId,
         public array $variables,
-        public ?string $name = null,
+        public string $name,
         public ?string $description = null,
         public ?bool $replaceFonts = null,
         public ?string $defaultFont = null,
@@ -34,6 +34,9 @@ class GenerateTemplateRequest
         }
         if (empty($variables)) {
             throw new \InvalidArgumentException('variables are required');
+        }
+        if (empty($name)) {
+            throw new \InvalidArgumentException('name is required');
         }
     }
 
@@ -47,12 +50,10 @@ class GenerateTemplateRequest
         $data = [
             'templateId' => $this->templateId,
             'variables' => array_map(fn($v) => $v->toArray(), $this->variables),
+            'name' => $this->name,
         ];
 
         // Add optional parameters if set
-        if ($this->name !== null) {
-            $data['name'] = $this->name;
-        }
         if ($this->description !== null) {
             $data['description'] = $this->description;
         }

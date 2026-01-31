@@ -192,53 +192,51 @@ pub enum OutputFormat {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GenerateTemplateRequest {
-    /// Template ID (UUID)
+    /// Template ID (UUID) - required
     pub template_id: String,
 
-    /// Template variables
+    /// Template variables - required
     pub variables: Vec<TemplateVariable>,
 
-    /// Document name
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    /// Document name - required
+    pub name: String,
 
-    /// Document description
+    /// Document description - optional
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
-    /// Replace fonts in the document
+    /// Replace fonts in the document - optional
     #[serde(skip_serializing_if = "Option::is_none")]
     pub replace_fonts: Option<bool>,
 
-    /// Default font to use
+    /// Default font to use - optional
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default_font: Option<String>,
 
     // Note: output_format is not supported in TurboTemplate API
 
-    /// Additional metadata
+    /// Additional metadata - optional
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<HashMap<String, serde_json::Value>>,
 }
 
 impl GenerateTemplateRequest {
     /// Create a new template generation request
-    pub fn new<S: Into<String>>(template_id: S, variables: Vec<TemplateVariable>) -> Self {
+    ///
+    /// # Arguments
+    /// * `template_id` - Template ID (UUID) - required
+    /// * `variables` - Template variables - required
+    /// * `name` - Document name - required
+    pub fn new<S: Into<String>>(template_id: S, variables: Vec<TemplateVariable>, name: S) -> Self {
         Self {
             template_id: template_id.into(),
             variables,
-            name: None,
+            name: name.into(),
             description: None,
             replace_fonts: None,
             default_font: None,
             metadata: None,
         }
-    }
-
-    /// Set document name
-    pub fn with_name<S: Into<String>>(mut self, name: S) -> Self {
-        self.name = Some(name.into());
-        self
     }
 
     /// Set document description
@@ -266,17 +264,69 @@ impl GenerateTemplateRequest {
 }
 
 /// Response from template generation
+///
+/// Contains the full deliverable information returned by the API.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GenerateTemplateResponse {
-    /// Success status
+    // Core deliverable fields
+    /// Deliverable ID
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub success: Option<bool>,
+    pub id: Option<String>,
 
-    /// Generated deliverable ID
+    /// Document name
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub deliverable_id: Option<String>,
+    pub name: Option<String>,
 
+    /// Document description
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    /// Template ID used for generation
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub template_id: Option<String>,
+
+    /// Projectspace ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub projectspace_id: Option<String>,
+
+    /// Folder ID for the deliverable
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deliverable_folder_id: Option<String>,
+
+    /// Additional metadata
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<HashMap<String, serde_json::Value>>,
+
+    /// User who created the deliverable
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_by: Option<String>,
+
+    /// Organization ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub org_id: Option<String>,
+
+    /// Default font used
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_font: Option<String>,
+
+    /// Creation timestamp
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_on: Option<String>,
+
+    /// Last update timestamp
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_on: Option<String>,
+
+    /// Active status flag
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_active: Option<i32>,
+
+    /// Font information
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fonts: Option<serde_json::Value>,
+
+    // Response fields
     /// Download URL (if available)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub download_url: Option<String>,
@@ -335,13 +385,12 @@ mod tests {
         let request = GenerateTemplateRequest::new(
             "template-123",
             vec![TemplateVariable::simple("{name}", "name", "Test")],
+            "Test Document",
         )
-        .with_name("Test Document")
-        .with_description("A test document")
-        .with_output_format(OutputFormat::Pdf);
+        .with_description("A test document");
 
         assert_eq!(request.template_id, "template-123");
-        assert_eq!(request.name, Some("Test Document".to_string()));
-        assert_eq!(request.output_format, Some(OutputFormat::Pdf));
+        assert_eq!(request.name, "Test Document".to_string());
+        assert_eq!(request.description, Some("A test document".to_string()));
     }
 }

@@ -91,17 +91,54 @@ export interface GenerateTemplateRequest {
 
 /**
  * Response from template generation
+ *
+ * Contains the full deliverable information returned by the API.
  */
 export interface GenerateTemplateResponse {
-  /** Whether generation was successful */
-  success: boolean;
-
+  // Core deliverable fields
   /** Deliverable ID */
-  deliverableId?: string;
+  id?: string;
 
-  /** Generated document buffer (if returnBuffer is true) */
-  buffer?: Buffer;
+  /** Document name */
+  name?: string;
 
+  /** Document description */
+  description?: string;
+
+  /** Template ID used for generation */
+  templateId?: string;
+
+  /** Projectspace ID */
+  projectspaceId?: string;
+
+  /** Folder ID for the deliverable */
+  deliverableFolderId?: string;
+
+  /** Additional metadata */
+  metadata?: Record<string, any>;
+
+  /** User who created the deliverable */
+  createdBy?: string;
+
+  /** Organization ID */
+  orgId?: string;
+
+  /** Default font used */
+  defaultFont?: string;
+
+  /** Creation timestamp */
+  createdOn?: string;
+
+  /** Last update timestamp */
+  updatedOn?: string;
+
+  /** Active status flag */
+  isActive?: number;
+
+  /** Font information */
+  fonts?: any;
+
+  // Response fields
   /** Document download URL */
   downloadUrl?: string;
 
@@ -110,6 +147,9 @@ export interface GenerateTemplateResponse {
 
   /** Error details if generation failed */
   error?: string;
+
+  /** Generated document buffer (if returnBuffer is true) */
+  buffer?: Buffer;
 }
 
 /**

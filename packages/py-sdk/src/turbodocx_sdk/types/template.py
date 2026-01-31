@@ -54,24 +54,29 @@ class TemplateVariable(_TemplateVariableRequired, total=False):
     subvariables: Optional[List["TemplateVariable"]]
 
 
-class GenerateTemplateRequest(TypedDict, total=False):
+class _GenerateTemplateRequestRequired(TypedDict):
+    """Required fields for GenerateTemplateRequest"""
+
+    templateId: str
+    variables: List[TemplateVariable]
+    name: str  # Document name is required
+
+
+class GenerateTemplateRequest(_GenerateTemplateRequestRequired, total=False):
     """
     Request for generating a document from template
 
     Attributes:
-        templateId: Template ID to use for generation
-        variables: Variables to inject into the template
-        name: Document name
-        description: Document description
-        replaceFonts: Replace fonts in the document
-        defaultFont: Default font to use when replacing
-        outputFormat: Output format (default: docx)
-        metadata: Additional metadata
+        templateId: Template ID to use for generation (required)
+        variables: Variables to inject into the template (required)
+        name: Document name (required)
+        description: Document description (optional)
+        replaceFonts: Replace fonts in the document (optional)
+        defaultFont: Default font to use when replacing (optional)
+        outputFormat: Output format (default: docx) (optional)
+        metadata: Additional metadata (optional)
     """
 
-    templateId: str
-    variables: List[TemplateVariable]
-    name: Optional[str]
     description: Optional[str]
     replaceFonts: Optional[bool]
     defaultFont: Optional[str]

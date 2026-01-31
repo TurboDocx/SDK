@@ -135,6 +135,9 @@ public class GenerateTemplateRequest {
             if (request.variables == null || request.variables.isEmpty()) {
                 throw new IllegalStateException("variables are required");
             }
+            if (request.name == null || request.name.isEmpty()) {
+                throw new IllegalStateException("name is required");
+            }
             return request;
         }
     }

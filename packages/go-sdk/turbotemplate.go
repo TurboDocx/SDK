@@ -59,27 +59,27 @@ type TemplateVariable struct {
 
 // GenerateTemplateRequest is the request for generating a document from template
 type GenerateTemplateRequest struct {
-	// TemplateID is the template ID to use for generation
+	// TemplateID is the template ID to use for generation (required)
 	TemplateID string `json:"templateId"`
 
-	// Variables to inject into the template
+	// Variables to inject into the template (required)
 	Variables []TemplateVariable `json:"variables"`
 
-	// Name is the document name
-	Name *string `json:"name,omitempty"`
+	// Name is the document name (required)
+	Name string `json:"name"`
 
-	// Description is the document description
+	// Description is the document description (optional)
 	Description *string `json:"description,omitempty"`
 
-	// ReplaceFonts replaces fonts in the document
+	// ReplaceFonts replaces fonts in the document (optional)
 	ReplaceFonts *bool `json:"replaceFonts,omitempty"`
 
-	// DefaultFont is the default font to use when replacing
+	// DefaultFont is the default font to use when replacing (optional)
 	DefaultFont *string `json:"defaultFont,omitempty"`
 
 	// Note: OutputFormat is not supported in TurboTemplate API
 
-	// Metadata is additional metadata
+	// Metadata is additional metadata (optional)
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 

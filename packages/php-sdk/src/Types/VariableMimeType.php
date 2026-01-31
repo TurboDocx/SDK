@@ -13,4 +13,5 @@ enum VariableMimeType: string
     case HTML = 'html';
     case JSON = 'json';
     case IMAGE = 'image';
+    case MARKDOWN = 'markdown';
 }

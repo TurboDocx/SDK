@@ -93,18 +93,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     // Generate document
-    let request = GenerateTemplateRequest {
-        template_id: "template-uuid".to_string(),
-        variables: vec![
-            TemplateVariable::text("name", "John Doe"),
-            TemplateVariable::text("company", "Acme Corp"),
+    let request = GenerateTemplateRequest::new(
+        "template-uuid",
+        vec![
+            TemplateVariable::simple("{name}", "name", "John Doe"),
+            TemplateVariable::simple("{company}", "company", "Acme Corp"),
         ],
-        output_format: Some(OutputFormat::Pdf),
-        output_filename: Some("contract.pdf".to_string()),
-    };
+        "Generated Contract",  // name is required
+    );
 
     let response = TurboTemplate::generate(request).await?;
-    println!("Deliverable ID: {}", response.deliverable_id);
+    println!("Deliverable ID: {:?}", response.id);
 
     Ok(())
 }
@@ -451,22 +450,21 @@ You can send TurboTemplate-generated documents for signature:
 
 ```rust
 // 1. Generate document with TurboTemplate
-let template_request = GenerateTemplateRequest {
-    template_id: "template-uuid".to_string(),
-    variables: vec![
-        TemplateVariable::text("client_name", "John Doe"),
-        TemplateVariable::text("contract_date", "2024-01-15"),
+let template_request = GenerateTemplateRequest::new(
+    "template-uuid",
+    vec![
+        TemplateVariable::simple("{client_name}", "client_name", "John Doe"),
+        TemplateVariable::simple("{contract_date}", "contract_date", "2024-01-15"),
     ],
-    output_format: Some(OutputFormat::Pdf),
-    output_filename: Some("contract.pdf".to_string()),
-};
+    "Contract",  // name is required
+);
 
 let template_response = TurboTemplate::generate(template_request).await?;
-let deliverable_id = template_response.deliverable_id;
+let deliverable_id = template_response.id.unwrap();
 
 // 2. Send for signature using the deliverable_id
 let sign_request = SendSignatureRequest {
-    deliverable_id: Some(deliverable_id),
+    deliverable_id: Some(deliverable_id.clone()),
     file_link: None,
     file: None,
     file_name: None,
@@ -500,22 +498,21 @@ TurboTemplate enables advanced document generation with variable substitution, l
 ### Simple Variable Substitution
 
 ```rust
-use turbodocx_sdk::{TurboTemplate, GenerateTemplateRequest, TemplateVariable, OutputFormat};
+use turbodocx_sdk::{TurboTemplate, GenerateTemplateRequest, TemplateVariable};
 
-let request = GenerateTemplateRequest {
-    template_id: "template-uuid".to_string(),
-    variables: vec![
-        TemplateVariable::text("name", "John Doe"),
-        TemplateVariable::text("company", "Acme Corporation"),
-        TemplateVariable::text("date", "2024-01-15"),
+let request = GenerateTemplateRequest::new(
+    "template-uuid",
+    vec![
+        TemplateVariable::simple("{name}", "name", "John Doe"),
+        TemplateVariable::simple("{company}", "company", "Acme Corporation"),
+        TemplateVariable::simple("{date}", "date", "2024-01-15"),
     ],
-    output_format: Some(OutputFormat::Pdf),
-    output_filename: Some("document.pdf".to_string()),
-};
+    "Generated Document",  // name is required
+);
 
 let response = TurboTemplate::generate(request).await?;
-println!("Deliverable ID: {}", response.deliverable_id);
-println!("Download URL: {}", response.download_url);
+println!("Deliverable ID: {:?}", response.id);
+println!("Download URL: {:?}", response.download_url);
 ```
 
 ### Nested Objects
@@ -523,10 +520,10 @@ println!("Download URL: {}", response.download_url);
 ```rust
 use serde_json::json;
 
-let request = GenerateTemplateRequest {
-    template_id: "template-uuid".to_string(),
-    variables: vec![
-        TemplateVariable::object("client", json!({
+let request = GenerateTemplateRequest::new(
+    "template-uuid",
+    vec![
+        TemplateVariable::advanced_engine("{client}", "client", json!({
             "name": "John Doe",
             "email": "john@example.com",
             "address": {
@@ -534,22 +531,21 @@ let request = GenerateTemplateRequest {
                 "city": "New York",
                 "zip": "10001"
             }
-        })),
+        }))?,
     ],
-    output_format: Some(OutputFormat::Pdf),
-    output_filename: Some("document.pdf".to_string()),
-};
+    "Client Document",  // name is required
+);
 ```
 
-In your template, use: `{{client.name}}`, `{{client.address.city}}`, etc.
+In your template, use: `{client.name}`, `{client.address.city}`, etc.
 
 ### Array Loops
 
 ```rust
-let request = GenerateTemplateRequest {
-    template_id: "template-uuid".to_string(),
-    variables: vec![
-        TemplateVariable::object("items", json!([
+let request = GenerateTemplateRequest::new(
+    "template-uuid",
+    vec![
+        TemplateVariable::loop_var("{items}", "items", json!([
             {
                 "name": "Product A",
                 "price": 99.99,
@@ -560,107 +556,71 @@ let request = GenerateTemplateRequest {
                 "price": 149.99,
                 "quantity": 1
             }
-        ])),
+        ]))?,
     ],
-    output_format: Some(OutputFormat::Pdf),
-    output_filename: Some("invoice.pdf".to_string()),
-};
+    "Invoice",  // name is required
+);
 ```
 
 In your template:
 ```
-{{#each items}}
-  {{name}} - ${{price}} x {{quantity}}
-{{/each}}
+{#items}
+  {name} - ${price} x {quantity}
+{/items}
 ```
 
 ### Conditionals
 
 ```rust
-let request = GenerateTemplateRequest {
-    template_id: "template-uuid".to_string(),
-    variables: vec![
-        TemplateVariable::text("customer_type", "premium"),
-        TemplateVariable::text("discount", "20%"),
+let request = GenerateTemplateRequest::new(
+    "template-uuid",
+    vec![
+        TemplateVariable::conditional("{customer_type}", "customer_type", "premium")?,
+        TemplateVariable::simple("{discount}", "discount", "20%"),
     ],
-    output_format: Some(OutputFormat::Pdf),
-    output_filename: Some("offer.pdf".to_string()),
-};
+    "Special Offer",  // name is required
+);
 ```
 
 In your template:
 ```
-{{#if customer_type == "premium"}}
-  Special discount: {{discount}}
-{{/if}}
+{#if customer_type == "premium"}
+  Special discount: {discount}
+{/if}
 ```
 
 ### Images
 
 ```rust
-use turbodocx_sdk::VariableMimeType;
-
-let request = GenerateTemplateRequest {
-    template_id: "template-uuid".to_string(),
-    variables: vec![
-        TemplateVariable::new(
-            "company_logo",
-            "https://example.com/logo.png",
-            VariableMimeType::Image
-        ),
-        TemplateVariable::new(
-            "signature",
-            "data:image/png;base64,iVBORw0KGgoAAAANS...",
-            VariableMimeType::Image
-        ),
+let request = GenerateTemplateRequest::new(
+    "template-uuid",
+    vec![
+        TemplateVariable::image("{company_logo}", "company_logo", "https://example.com/logo.png"),
+        TemplateVariable::image("{signature}", "signature", "data:image/png;base64,iVBORw0KGgoAAAANS..."),
     ],
-    output_format: Some(OutputFormat::Pdf),
-    output_filename: Some("letterhead.pdf".to_string()),
-};
+    "Letterhead",  // name is required
+);
 ```
 
 ### Expressions
 
 ```rust
-let request = GenerateTemplateRequest {
-    template_id: "template-uuid".to_string(),
-    variables: vec![
-        TemplateVariable::text("price", "100"),
-        TemplateVariable::text("quantity", "5"),
-        TemplateVariable::text("tax_rate", "0.08"),
+let request = GenerateTemplateRequest::new(
+    "template-uuid",
+    vec![
+        TemplateVariable::simple("{price}", "price", "100"),
+        TemplateVariable::simple("{quantity}", "quantity", "5"),
+        TemplateVariable::simple("{tax_rate}", "tax_rate", "0.08"),
     ],
-    output_format: Some(OutputFormat::Pdf),
-    output_filename: Some("invoice.pdf".to_string()),
-};
+    "Invoice",  // name is required
+);
 ```
 
 In your template:
 ```
-Subtotal: {{price * quantity}}
-Tax: {{price * quantity * tax_rate}}
-Total: {{price * quantity * (1 + tax_rate)}}
-```
-
-### Output Formats
-
-```rust
-use turbodocx_sdk::OutputFormat;
-
-// Generate as PDF
-let pdf_request = GenerateTemplateRequest {
-    template_id: "template-uuid".to_string(),
-    variables: vec![],
-    output_format: Some(OutputFormat::Pdf),
-    output_filename: Some("document.pdf".to_string()),
-};
-
-// Generate as DOCX
-let docx_request = GenerateTemplateRequest {
-    template_id: "template-uuid".to_string(),
-    variables: vec![],
-    output_format: Some(OutputFormat::Docx),
-    output_filename: Some("document.docx".to_string()),
-};
+Subtotal: {price * quantity}
+Tax: {price * quantity * tax_rate}
+Total: {price * quantity * (1 + tax_rate)}
 ```
 
 ### Advanced Templating Features
