@@ -281,7 +281,8 @@ class TurboTemplateTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         new GenerateTemplateRequest(
             templateId: '',
-            variables: [TemplateVariable::simple('{test}', 'test', 'value')]
+            variables: [TemplateVariable::simple('{test}', 'test', 'value')],
+            name: 'Test Document'
         );
     }
 
@@ -290,7 +291,8 @@ class TurboTemplateTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         new GenerateTemplateRequest(
             templateId: 'template-123',
-            variables: []
+            variables: [],
+            name: 'Test Document'
         );
     }
 
@@ -304,7 +306,7 @@ class TurboTemplateTest extends TestCase
             name: 'Test',
             replaceFonts: true,
             defaultFont: 'Arial',
-            outputFormat: 'pdf',
+            // Note: outputFormat is not supported in TurboTemplate API
             metadata: ['customField' => 'value']
         );
 
@@ -315,7 +317,6 @@ class TurboTemplateTest extends TestCase
         $this->assertEquals('Test', $array['name']);
         $this->assertTrue($array['replaceFonts']);
         $this->assertEquals('Arial', $array['defaultFont']);
-        $this->assertEquals('pdf', $array['outputFormat']);
         $this->assertEquals(['customField' => 'value'], $array['metadata']);
     }
 
