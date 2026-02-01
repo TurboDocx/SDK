@@ -50,7 +50,7 @@ public class TurboSign {
         );
 
         if (request.hasFile()) {
-            String fileName = request.getFileName() != null ? request.getFileName() : "document.pdf";
+            String fileName = request.getFileName();
             return httpClient.uploadFile(
                     "/turbosign/single/prepare-for-review",
                     request.getFile(),
@@ -101,7 +101,7 @@ public class TurboSign {
         );
 
         if (request.hasFile()) {
-            String fileName = request.getFileName() != null ? request.getFileName() : "document.pdf";
+            String fileName = request.getFileName();
             return httpClient.uploadFile(
                     "/turbosign/single/prepare-for-signing",
                     request.getFile(),
@@ -174,16 +174,11 @@ public class TurboSign {
         Map<String, String> body = new HashMap<>();
         body.put("reason", reason);
 
-        // Backend returns empty data on success, so we just make the call
-        // and return a success response if no exception is thrown
-        httpClient.post(
+        return httpClient.post(
                 "/turbosign/documents/" + documentId + "/void",
                 body,
                 VoidDocumentResponse.class
         );
-
-        // If we get here without exception, the void was successful
-        return new VoidDocumentResponse(true, "Document has been voided successfully");
     }
 
     /**

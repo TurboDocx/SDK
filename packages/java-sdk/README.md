@@ -1,18 +1,46 @@
-[![TurboDocx](./banner.png)](https://www.turbodocx.com)
+[![TurboDocx](https://raw.githubusercontent.com/TurboDocx/SDK/main/packages/java-sdk/banner.png)](https://www.turbodocx.com)
 
 <div align="center">
 
-# com.turbodocx:sdk
+# com.turbodocx:turbodocx-sdk
 
 **Official Java SDK for TurboDocx**
+
+The most developer-friendly **DocuSign & PandaDoc alternative** for **e-signatures** and **document generation**. Send documents for signature and automate document workflows programmatically.
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.turbodocx/sdk.svg)](https://search.maven.org/artifact/com.turbodocx/sdk)
 [![Java](https://img.shields.io/badge/Java-11+-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-[Documentation](https://www.turbodocx.com/docs) • [API Reference](https://www.turbodocx.com/docs/api) • [Examples](#examples) • [Discord](https://discord.gg/NYKwz4BcpX)
+[Documentation](https://docs.turbodocx.com/docs) • [API Reference](https://docs.turbodocx.com/docs/SDKs/) • [Examples](#examples) • [Discord](https://discord.gg/NYKwz4BcpX)
 
 </div>
+
+---
+
+## Why TurboDocx?
+
+A modern, developer-first alternative to legacy e-signature platforms:
+
+| Looking for... | TurboDocx offers |
+|----------------|------------------|
+| DocuSign API alternative | Simple REST API, transparent pricing |
+| PandaDoc alternative | Document generation + e-signatures in one SDK |
+| HelloSign/Dropbox Sign alternative | Full API access, modern DX |
+| Adobe Sign alternative | Quick integration, developer-friendly docs |
+| SignNow alternative | Predictable costs, responsive support |
+| Documint alternative | DOCX/PDF generation from templates |
+| WebMerge alternative | Data-driven document automation |
+
+**Other platforms we compare to:** SignRequest, SignEasy, Zoho Sign, Eversign, SignWell, Formstack Documents
+
+### TurboDocx Ecosystem
+
+| Package | Description |
+|---------|-------------|
+| [@turbodocx/html-to-docx](https://github.com/turbodocx/html-to-docx) | Convert HTML to DOCX - fastest JS library |
+| [@turbodocx/n8n-nodes-turbodocx](https://github.com/turbodocx/n8n-nodes-turbodocx) | n8n community nodes for TurboDocx |
+| [TurboDocx Writer](https://appsource.microsoft.com/product/office/WA200007397) | Microsoft Word add-in |
 
 ---
 
@@ -34,22 +62,22 @@
 ```xml
 <dependency>
     <groupId>com.turbodocx</groupId>
-    <artifactId>sdk</artifactId>
-    <version>1.0.0</version>
+    <artifactId>turbodocx-sdk</artifactId>
+    <version>0.1.4</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'com.turbodocx:sdk:1.0.0'
+implementation 'com.turbodocx:turbodocx-sdk:0.1.4'
 ```
 
 <details>
 <summary>Gradle Kotlin DSL</summary>
 
 ```kotlin
-implementation("com.turbodocx:sdk:1.0.0")
+implementation("com.turbodocx:turbodocx-sdk:0.1.4")
 ```
 </details>
 
@@ -268,6 +296,28 @@ Resend signature request emails.
 ```java
 client.turboSign().resendEmail("doc-uuid-here", Arrays.asList("recipient-uuid-1"));
 ```
+
+#### `getAuditTrail()`
+
+Get the complete audit trail for a document, including all events and timestamps.
+
+```java
+AuditTrailResponse audit = client.turboSign().getAuditTrail("doc-uuid-here");
+
+System.out.println("Document: " + audit.getDocument().getName());
+
+for (AuditTrailEntry entry : audit.getAuditTrail()) {
+    System.out.println(entry.getActionType() + " - " + entry.getTimestamp());
+    if (entry.getUser() != null) {
+        System.out.println("  By: " + entry.getUser().getName() + " (" + entry.getUser().getEmail() + ")");
+    }
+    if (entry.getRecipient() != null) {
+        System.out.println("  Recipient: " + entry.getRecipient().getName());
+    }
+}
+```
+
+The audit trail includes a cryptographic hash chain for tamper-evidence verification.
 
 ---
 
@@ -559,10 +609,9 @@ try {
 
 ## Support
 
-- 📖 [Documentation](https://www.turbodocx.com/docs)
+- 📖 [Documentation](https://docs.turbodocx.com/docs)
 - 💬 [Discord](https://discord.gg/NYKwz4BcpX)
 - 🐛 [GitHub Issues](https://github.com/TurboDocx/SDK/issues)
-- 📧 [Email Support](mailto:support@turbodocx.com)
 
 ---
 
@@ -574,6 +623,6 @@ MIT — see [LICENSE](./LICENSE)
 
 <div align="center">
 
-[![TurboDocx](./footer.png)](https://www.turbodocx.com)
+[![TurboDocx](https://raw.githubusercontent.com/TurboDocx/SDK/main/packages/java-sdk/footer.png)](https://www.turbodocx.com)
 
 </div>

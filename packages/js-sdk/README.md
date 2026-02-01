@@ -1,4 +1,4 @@
-[![TurboDocx](./banner.png)](https://www.turbodocx.com)
+[![TurboDocx](https://raw.githubusercontent.com/TurboDocx/SDK/main/packages/js-sdk/banner.png)](https://www.turbodocx.com)
 
 <div align="center">
 
@@ -6,15 +6,43 @@
 
 **Official JavaScript/TypeScript SDK for TurboDocx**
 
+The most developer-friendly **DocuSign & PandaDoc alternative** for **e-signatures** and **document generation**. Send documents for signature and automate document workflows programmatically.
+
 [![NPM Version](https://img.shields.io/npm/v/@turbodocx/sdk.svg)](https://npmjs.org/package/@turbodocx/sdk)
 [![npm downloads](https://img.shields.io/npm/dm/@turbodocx/sdk)](https://www.npmjs.com/package/@turbodocx/sdk)
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/@turbodocx/sdk)](https://bundlephobia.com/package/@turbodocx/sdk)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-[Documentation](https://www.turbodocx.com/docs) • [API Reference](https://www.turbodocx.com/docs/api) • [Examples](#examples) • [Discord](https://discord.gg/NYKwz4BcpX)
+[Documentation](https://docs.turbodocx.com/docs) • [API Reference](https://docs.turbodocx.com/docs/SDKs/) • [Examples](#examples) • [Discord](https://discord.gg/NYKwz4BcpX)
 
 </div>
+
+---
+
+## Why TurboDocx?
+
+A modern, developer-first alternative to legacy e-signature platforms:
+
+| Looking for... | TurboDocx offers |
+|----------------|------------------|
+| DocuSign API alternative | Simple REST API, transparent pricing |
+| PandaDoc alternative | Document generation + e-signatures in one SDK |
+| HelloSign/Dropbox Sign alternative | Full API access, modern DX |
+| Adobe Sign alternative | Quick integration, developer-friendly docs |
+| SignNow alternative | Predictable costs, responsive support |
+| Documint alternative | DOCX/PDF generation from templates |
+| WebMerge alternative | Data-driven document automation |
+
+**Other platforms we compare to:** SignRequest, SignEasy, Zoho Sign, Eversign, SignWell, Formstack Documents
+
+### TurboDocx Ecosystem
+
+| Package | Description |
+|---------|-------------|
+| [@turbodocx/html-to-docx](https://github.com/turbodocx/html-to-docx) | Convert HTML to DOCX - fastest JS library |
+| [@turbodocx/n8n-nodes-turbodocx](https://github.com/turbodocx/n8n-nodes-turbodocx) | n8n community nodes for TurboDocx |
+| [TurboDocx Writer](https://appsource.microsoft.com/product/office/WA200007397) | Microsoft Word add-in |
 
 ---
 
@@ -234,6 +262,28 @@ Resend signature request emails to specific recipients.
 ```typescript
 await TurboSign.resend('doc-uuid-here', ['recipient-uuid-1', 'recipient-uuid-2']);
 ```
+
+#### `getAuditTrail(documentId)`
+
+Get the complete audit trail for a document, including all events and timestamps.
+
+```typescript
+const audit = await TurboSign.getAuditTrail('doc-uuid-here');
+
+console.log('Document:', audit.document.name);
+
+for (const entry of audit.auditTrail) {
+  console.log(`${entry.actionType} - ${entry.timestamp}`);
+  if (entry.user) {
+    console.log(`  By: ${entry.user.name} (${entry.user.email})`);
+  }
+  if (entry.recipient) {
+    console.log(`  Recipient: ${entry.recipient.name}`);
+  }
+}
+```
+
+The audit trail includes a cryptographic hash chain for tamper-evidence verification.
 
 ---
 
@@ -568,10 +618,9 @@ const result = await TurboSign.sendSignature(options);
 
 ## Support
 
-- 📖 [Documentation](https://www.turbodocx.com/docs)
+- 📖 [Documentation](https://docs.turbodocx.com/docs)
 - 💬 [Discord](https://discord.gg/NYKwz4BcpX)
 - 🐛 [GitHub Issues](https://github.com/TurboDocx/SDK/issues)
-- 📧 [Email Support](mailto:support@turbodocx.com)
 
 ---
 
@@ -583,6 +632,6 @@ MIT — see [LICENSE](./LICENSE)
 
 <div align="center">
 
-[![TurboDocx](./footer.png)](https://www.turbodocx.com)
+[![TurboDocx](https://raw.githubusercontent.com/TurboDocx/SDK/main/packages/js-sdk/footer.png)](https://www.turbodocx.com)
 
 </div>

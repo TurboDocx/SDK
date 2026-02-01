@@ -12,7 +12,7 @@
 [![X](https://img.shields.io/badge/X-@TurboDocx-000?logo=x&logoColor=white)](https://twitter.com/TurboDocx)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[Documentation](https://docs.turbodocx.com) • [API Reference](https://docs.turbodocx.com/api) • [Discord](https://discord.gg/NYKwz4BcpX) • [Blog](https://www.turbodocx.com/blog)
+[Documentation](https://docs.turbodocx.com/docs) • [API Reference](https://docs.turbodocx.com/docs/SDKs/) • [Discord](https://discord.gg/NYKwz4BcpX) • [Blog](https://www.turbodocx.com/blog)
 
 </div>
 
@@ -53,13 +53,13 @@ Comprehensive SDKs, detailed documentation, and responsive support. Ship faster 
 
 ## Available SDKs
 
-| Language | Package | Install | Docs |
-|:---------|:--------|:--------|:-----|
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="20"/> **JavaScript/TypeScript** | [@turbodocx/sdk](./packages/js-sdk) | `npm install @turbodocx/sdk` | [View →](./packages/js-sdk#readme) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" width="20"/> **Python** | [turbodocx-sdk](./packages/py-sdk) | `pip install turbodocx-sdk` | [View →](./packages/py-sdk#readme) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg" width="20"/> **PHP** | [turbodocx/sdk](./packages/php-sdk) | `composer require turbodocx/sdk` | [View →](./packages/php-sdk#readme) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg" width="20"/> **Go** | [turbodocx-sdk](./packages/go-sdk) | `go get github.com/turbodocx/sdk` | [View →](./packages/go-sdk#readme) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="20"/> **Java** | [com.turbodocx:sdk](./packages/java-sdk) | [Maven Central](https://search.maven.org/artifact/com.turbodocx/sdk) | [View →](./packages/java-sdk#readme) |
+| Language | Package | Install | Registry |
+|:---------|:--------|:--------|:---------|
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="20"/> **JavaScript/TypeScript** | [@turbodocx/sdk](./packages/js-sdk) | `npm install @turbodocx/sdk` | [![npm](https://img.shields.io/npm/v/@turbodocx/sdk?logo=npm&logoColor=white)](https://www.npmjs.com/package/@turbodocx/sdk) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" width="20"/> **Python** | [turbodocx-sdk](./packages/py-sdk) | `pip install turbodocx-sdk` | [![PyPI](https://img.shields.io/pypi/v/turbodocx-sdk?logo=pypi&logoColor=white)](https://pypi.org/project/turbodocx-sdk/) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg" width="20"/> **PHP** | [turbodocx/sdk](./packages/php-sdk) | `composer require turbodocx/sdk` | [![Packagist](https://img.shields.io/packagist/v/turbodocx/sdk?logo=packagist&logoColor=white)](https://packagist.org/packages/turbodocx/sdk) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg" width="20"/> **Go** | [turbodocx-sdk](./packages/go-sdk) | `go get github.com/TurboDocx/SDK/packages/go-sdk` | [![Go](https://img.shields.io/github/v/tag/TurboDocx/SDK?filter=packages/go-sdk/*&logo=go&logoColor=white&label=go)](./packages/go-sdk) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="20"/> **Java** | [com.turbodocx:turbodocx-sdk](./packages/java-sdk) | `implementation 'com.turbodocx:turbodocx-sdk:0.1.4'` | [![Maven Central](https://img.shields.io/maven-central/v/com.turbodocx/turbodocx-sdk?logo=apachemaven)](https://search.maven.org/artifact/com.turbodocx/turbodocx-sdk) |
 
 ### Coming Soon
 
@@ -133,8 +133,8 @@ composer require turbodocx/sdk
 ```xml
 <dependency>
     <groupId>com.turbodocx</groupId>
-    <artifactId>sdk</artifactId>
-    <version>1.0.0</version>
+    <artifactId>turbodocx-sdk</artifactId>
+    <version>0.1.4</version>
 </dependency>
 ```
 </details>
@@ -337,7 +337,7 @@ We're looking for community maintainers for each SDK. Interested? [Open an issue
 <table>
 <tr>
 <td align="center" width="33%">
-<a href="https://docs.turbodocx.com">
+<a href="https://docs.turbodocx.com/docs">
 <img src="https://cdn-icons-png.flaticon.com/512/2991/2991112.png" width="40"/><br/>
 <strong>Documentation</strong>
 </a>
@@ -367,7 +367,7 @@ MIT License — see [LICENSE](./LICENSE) for details.
 
 <div align="center">
 
-**[Website](https://www.turbodocx.com)** • **[Documentation](https://docs.turbodocx.com)** • **[Discord](https://discord.gg/NYKwz4BcpX)** • **[Twitter/X](https://twitter.com/TurboDocx)**
+**[Website](https://www.turbodocx.com)** • **[Documentation](https://docs.turbodocx.com/docs)** • **[Discord](https://discord.gg/NYKwz4BcpX)** • **[Twitter/X](https://twitter.com/TurboDocx)**
 
 <sub>Built with ❤️ by the TurboDocx team</sub>
 

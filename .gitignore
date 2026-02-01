@@ -47,7 +47,6 @@ npm-debug.log*
 .env.*.local
 
 # Go
-go.sum
 *.exe
 *.exe~
 *.dll
@@ -90,3 +89,4 @@ Gemfile.lock
 !ExampleAssets/**
 convert-template.js
 generate-all-pdfs.js
+test-php-sdk/

@@ -1,6 +1,6 @@
 {
   "name": "@turbodocx/sdk",
-  "version": "0.1.1",
+  "version": "0.1.4",
   "description": "TurboDocx JavaScript SDK - Digital signatures, document generation, and AI-powered workflows",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
