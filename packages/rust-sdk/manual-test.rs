@@ -12,12 +12,11 @@
  * name = "manual-test"
  * path = "manual-test.rs"
  */
-
 use serde_json::json;
 use std::fs;
 use turbodocx_sdk::{
     http::HttpClientConfig, CreateSignatureReviewLinkRequest, Field, GenerateTemplateRequest,
-    OutputFormat, Recipient, SendSignatureRequest, SignatureFieldType, TemplateVariable, TurboSign,
+    Recipient, SendSignatureRequest, SignatureFieldType, TemplateVariable, TurboSign,
     TurboTemplate,
 };
 
@@ -191,13 +190,13 @@ async fn test_simple_variables() -> Result<String, Box<dyn std::error::Error>> {
             TemplateVariable::simple("{order_total}", "order_total", 1500),
             TemplateVariable::simple("{order_date}", "order_date", "2024-01-01"),
         ],
+        "Simple Substitution Document",
     )
-    .with_name("Simple Substitution Document")
     .with_description("Basic variable substitution example");
 
     let result = TurboTemplate::generate(request).await?;
-    println!("✓ Deliverable ID: {:?}", result.deliverable_id);
-    Ok(result.deliverable_id.unwrap_or_default())
+    println!("✓ Deliverable ID: {:?}", result.id);
+    Ok(result.id.unwrap_or_default())
 }
 
 /// Test 9: Nested Objects with Dot Notation
@@ -221,13 +220,13 @@ async fn test_nested_objects() -> Result<String, Box<dyn std::error::Error>> {
         vec![TemplateVariable::advanced_engine(
             "{user}", "user", user_data,
         )?],
+        "Nested Objects Document",
     )
-    .with_name("Nested Objects Document")
     .with_description("Nested object with dot notation example");
 
     let result = TurboTemplate::generate(request).await?;
-    println!("✓ Deliverable ID: {:?}", result.deliverable_id);
-    Ok(result.deliverable_id.unwrap_or_default())
+    println!("✓ Deliverable ID: {:?}", result.id);
+    Ok(result.id.unwrap_or_default())
 }
 
 /// Test 10: Array Loops
@@ -248,13 +247,13 @@ async fn test_array_loops() -> Result<String, Box<dyn std::error::Error>> {
     let request = GenerateTemplateRequest::new(
         TEMPLATE_ID,
         vec![TemplateVariable::loop_var("{items}", "items", items)?],
+        "Array Loops Document",
     )
-    .with_name("Array Loops Document")
     .with_description("Array loop iteration example");
 
     let result = TurboTemplate::generate(request).await?;
-    println!("✓ Deliverable ID: {:?}", result.deliverable_id);
-    Ok(result.deliverable_id.unwrap_or_default())
+    println!("✓ Deliverable ID: {:?}", result.id);
+    Ok(result.id.unwrap_or_default())
 }
 
 /// Test 11: Conditionals
@@ -272,13 +271,13 @@ async fn test_conditionals() -> Result<String, Box<dyn std::error::Error>> {
             TemplateVariable::conditional("{is_premium}", "is_premium", true),
             TemplateVariable::conditional("{discount}", "discount", 0.2),
         ],
+        "Conditionals Document",
     )
-    .with_name("Conditionals Document")
     .with_description("Boolean conditional example");
 
     let result = TurboTemplate::generate(request).await?;
-    println!("✓ Deliverable ID: {:?}", result.deliverable_id);
-    Ok(result.deliverable_id.unwrap_or_default())
+    println!("✓ Deliverable ID: {:?}", result.id);
+    Ok(result.id.unwrap_or_default())
 }
 
 /// Test 12: Images
@@ -293,13 +292,13 @@ async fn test_images() -> Result<String, Box<dyn std::error::Error>> {
             TemplateVariable::simple("{title}", "title", "Quarterly Report"),
             TemplateVariable::image("{logo}", "logo", "https://example.com/logo.png"),
         ],
+        "Document with Images",
     )
-    .with_name("Document with Images")
     .with_description("Using image variables");
 
     let result = TurboTemplate::generate(request).await?;
-    println!("✓ Deliverable ID: {:?}", result.deliverable_id);
-    Ok(result.deliverable_id.unwrap_or_default())
+    println!("✓ Deliverable ID: {:?}", result.id);
+    Ok(result.id.unwrap_or_default())
 }
 
 /// Test 13: Download Deliverable

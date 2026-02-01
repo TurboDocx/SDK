@@ -1,6 +1,6 @@
 use serde_json::json;
 use std::collections::HashMap;
-use turbodocx_sdk::{GenerateTemplateRequest, OutputFormat, TemplateVariable, TurboTemplate};
+use turbodocx_sdk::{GenerateTemplateRequest, TemplateVariable, TurboTemplate};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -45,13 +45,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             TemplateVariable::simple("{payment_terms}", "payment_terms", "Net 30"),
             TemplateVariable::simple("{notes}", "notes", "Thank you for your business!"),
         ],
+        "Invoice - Acme Corporation",
     )
-    .with_name("Invoice - Acme Corporation")
-    .with_description("Monthly invoice")
-    .with_output_format(OutputFormat::Pdf);
+    .with_description("Monthly invoice");
 
     let response = TurboTemplate::generate(request).await?;
-    println!("✓ Deliverable ID: {:?}", response.deliverable_id);
+    println!("✓ Deliverable ID: {:?}", response.id);
 
     // Example 2: Using Expressions for Calculations
     println!("\n=== Example 2: Expressions ===");
@@ -63,12 +62,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             TemplateVariable::simple("{quantity}", "quantity", 5),
             TemplateVariable::simple("{tax_rate}", "tax_rate", 0.08),
         ],
+        "Expressions Document",
     )
-    .with_name("Expressions Document")
     .with_description("Arithmetic expressions example");
 
     let response = TurboTemplate::generate(request).await?;
-    println!("✓ Deliverable ID: {:?}", response.deliverable_id);
+    println!("✓ Deliverable ID: {:?}", response.id);
 
     // Example 3: Using All Helper Functions
     println!("\n=== Example 3: All Helper Functions ===");
@@ -101,12 +100,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "https://example.com/logo.png",
             ),
         ],
+        "Helper Functions Document",
     )
-    .with_name("Helper Functions Document")
     .with_description("Using helper functions example");
 
     let response = TurboTemplate::generate(request).await?;
-    println!("✓ Deliverable ID: {:?}", response.deliverable_id);
+    println!("✓ Deliverable ID: {:?}", response.id);
 
     // Example 4: Custom Options
     println!("\n=== Example 4: Custom Options ===");
@@ -123,15 +122,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "title",
             "Custom Document",
         )],
+        "Custom Options Document",
     )
-    .with_name("Custom Options Document")
     .with_description("Document with custom options")
     .with_font_replacement(true, Some("Arial"))
-    .with_output_format(OutputFormat::Pdf)
     .with_metadata(metadata);
 
     let response = TurboTemplate::generate(request).await?;
-    println!("✓ Deliverable ID: {:?}", response.deliverable_id);
+    println!("✓ Deliverable ID: {:?}", response.id);
 
     // Example 5: HTML Content
     println!("\n=== Example 5: HTML Content ===");
@@ -141,11 +139,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let request = GenerateTemplateRequest::new(
         "your-template-id",
         vec![TemplateVariable::html("{content}", "content", html_content)],
-    )
-    .with_name("HTML Content Document");
+        "HTML Content Document",
+    );
 
     let response = TurboTemplate::generate(request).await?;
-    println!("✓ Deliverable ID: {:?}", response.deliverable_id);
+    println!("✓ Deliverable ID: {:?}", response.id);
 
     Ok(())
 }

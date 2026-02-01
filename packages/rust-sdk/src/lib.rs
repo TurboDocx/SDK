@@ -31,11 +31,11 @@
 //!             TemplateVariable::simple("{name}", "name", "John Doe"),
 //!             TemplateVariable::simple("{amount}", "amount", 1000),
 //!         ],
-//!     )
-//!     .with_name("My Document");
+//!         "My Document",
+//!     );
 //!
 //!     let response = TurboTemplate::generate(request).await?;
-//!     println!("Deliverable ID: {:?}", response.deliverable_id);
+//!     println!("Deliverable ID: {:?}", response.id);
 //!
 //!     Ok(())
 //! }

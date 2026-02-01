@@ -226,7 +226,11 @@ impl HttpClient {
             });
         }
 
-        response.bytes().await.map(|b| b.to_vec()).map_err(|e| TurboDocxError::Network(e.to_string()))
+        response
+            .bytes()
+            .await
+            .map(|b| b.to_vec())
+            .map_err(|e| TurboDocxError::Network(e.to_string()))
     }
 
     /// Upload a file with multipart/form-data
