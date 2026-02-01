@@ -41,24 +41,23 @@ func main() {
 //
 // Template: "Dear {customer_name}, your order total is ${order_total}."
 func simpleSubstitution(ctx context.Context, client *turbodocx.Client) {
-	name := "Simple Substitution Document"
 	description := "Basic variable substitution example"
 
 	result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
 		TemplateID:  "your-template-id",
-		Name:        &name,
+		Name:        "Simple Substitution Document",
 		Description: &description,
 		Variables: []turbodocx.TemplateVariable{
-			{Placeholder: "{customer_name}", Name: "customer_name", Value: "Foo Bar"},
-			{Placeholder: "{order_total}", Name: "order_total", Value: 1500},
-			{Placeholder: "{order_date}", Name: "order_date", Value: "2024-01-01"},
+			{Placeholder: "{customer_name}", Name: "customer_name", Value: "Foo Bar", MimeType: turbodocx.MimeTypeText},
+			{Placeholder: "{order_total}", Name: "order_total", Value: 1500, MimeType: turbodocx.MimeTypeText},
+			{Placeholder: "{order_date}", Name: "order_date", Value: "2024-01-01", MimeType: turbodocx.MimeTypeText},
 		},
 	})
 	if err != nil {
 		log.Fatal("Error:", err)
 	}
 
-	fmt.Println("Document generated:", *result.DeliverableID)
+	fmt.Println("Document generated:", *result.ID)
 }
 
 // Example 2: Nested Objects with Dot Notation
@@ -66,12 +65,11 @@ func simpleSubstitution(ctx context.Context, client *turbodocx.Client) {
 // Template: "Name: {user.name}, Email: {user.email}, Company: {user.profile.company}"
 func nestedObjects(ctx context.Context, client *turbodocx.Client) {
 	mimeTypeJSON := turbodocx.MimeTypeJSON
-	name := "Nested Objects Document"
 	description := "Nested object with dot notation example"
 
 	result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
 		TemplateID:  "your-template-id",
-		Name:        &name,
+		Name:        "Nested Objects Document",
 		Description: &description,
 		Variables: []turbodocx.TemplateVariable{
 			{
@@ -94,7 +92,7 @@ func nestedObjects(ctx context.Context, client *turbodocx.Client) {
 		log.Fatal("Error:", err)
 	}
 
-	fmt.Println("Document with nested data generated:", *result.DeliverableID)
+	fmt.Println("Document with nested data generated:", *result.ID)
 }
 
 // Example 3: Loops/Arrays
@@ -105,12 +103,11 @@ func nestedObjects(ctx context.Context, client *turbodocx.Client) {
 // {/items}
 func loopsAndArrays(ctx context.Context, client *turbodocx.Client) {
 	mimeTypeJSON := turbodocx.MimeTypeJSON
-	name := "Array Loops Document"
 	description := "Array loop iteration example"
 
 	result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
 		TemplateID:  "your-template-id",
-		Name:        &name,
+		Name:        "Array Loops Document",
 		Description: &description,
 		Variables: []turbodocx.TemplateVariable{
 			{
@@ -129,7 +126,7 @@ func loopsAndArrays(ctx context.Context, client *turbodocx.Client) {
 		log.Fatal("Error:", err)
 	}
 
-	fmt.Println("Document with loop generated:", *result.DeliverableID)
+	fmt.Println("Document with loop generated:", *result.ID)
 }
 
 // Example 4: Conditionals
@@ -143,12 +140,11 @@ func loopsAndArrays(ctx context.Context, client *turbodocx.Client) {
 // {/if}
 func conditionals(ctx context.Context, client *turbodocx.Client) {
 	mimeTypeJSON := turbodocx.MimeTypeJSON
-	name := "Conditionals Document"
 	description := "Boolean conditional example"
 
 	result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
 		TemplateID:  "your-template-id",
-		Name:        &name,
+		Name:        "Conditionals Document",
 		Description: &description,
 		Variables: []turbodocx.TemplateVariable{
 			{Placeholder: "{is_premium}", Name: "is_premium", MimeType: mimeTypeJSON, Value: true},
@@ -159,7 +155,7 @@ func conditionals(ctx context.Context, client *turbodocx.Client) {
 		log.Fatal("Error:", err)
 	}
 
-	fmt.Println("Document with conditionals generated:", *result.DeliverableID)
+	fmt.Println("Document with conditionals generated:", *result.ID)
 }
 
 // Example 5: Expressions and Calculations
@@ -168,12 +164,11 @@ func conditionals(ctx context.Context, client *turbodocx.Client) {
 func expressionsAndCalculations(ctx context.Context, client *turbodocx.Client) {
 	mimeTypeText := turbodocx.MimeTypeText
 	usesAdvanced := true
-	name := "Expressions Document"
 	description := "Arithmetic expressions example"
 
 	result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
 		TemplateID:  "your-template-id",
-		Name:        &name,
+		Name:        "Expressions Document",
 		Description: &description,
 		Variables: []turbodocx.TemplateVariable{
 			{
@@ -196,7 +191,7 @@ func expressionsAndCalculations(ctx context.Context, client *turbodocx.Client) {
 		log.Fatal("Error:", err)
 	}
 
-	fmt.Println("Document with expressions generated:", *result.DeliverableID)
+	fmt.Println("Document with expressions generated:", *result.ID)
 }
 
 // Example 6: Complex Invoice Example
@@ -207,12 +202,11 @@ func complexInvoice(ctx context.Context, client *turbodocx.Client) {
 	mimeTypeText := turbodocx.MimeTypeText
 	usesAdvanced := true
 
-	name := "Invoice - Company ABC"
 	description := "Monthly invoice"
 
 	result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
 		TemplateID:  "invoice-template-id",
-		Name:        &name,
+		Name:        "Invoice - Company ABC",
 		Description: &description,
 		Variables: []turbodocx.TemplateVariable{
 			// Customer info (nested object)
@@ -232,9 +226,9 @@ func complexInvoice(ctx context.Context, client *turbodocx.Client) {
 				},
 			},
 			// Invoice metadata
-			{Placeholder: "{invoice_number}", Name: "invoice_number", Value: "INV-0000-001"},
-			{Placeholder: "{invoice_date}", Name: "invoice_date", Value: "2024-01-01"},
-			{Placeholder: "{due_date}", Name: "due_date", Value: "2024-02-01"},
+			{Placeholder: "{invoice_number}", Name: "invoice_number", Value: "INV-0000-001", MimeType: mimeTypeText},
+			{Placeholder: "{invoice_date}", Name: "invoice_date", Value: "2024-01-01", MimeType: mimeTypeText},
+			{Placeholder: "{due_date}", Name: "due_date", Value: "2024-02-01", MimeType: mimeTypeText},
 			// Line items (array for loops)
 			{
 				Placeholder: "{items}",
@@ -276,26 +270,25 @@ func complexInvoice(ctx context.Context, client *turbodocx.Client) {
 				UsesAdvancedTemplatingEngine: &usesAdvanced,
 			},
 			// Payment terms
-			{Placeholder: "{payment_terms}", Name: "payment_terms", Value: "Net 30"},
+			{Placeholder: "{payment_terms}", Name: "payment_terms", Value: "Net 30", MimeType: mimeTypeText},
 			// Notes
-			{Placeholder: "{notes}", Name: "notes", Value: "Thank you for your business!"},
+			{Placeholder: "{notes}", Name: "notes", Value: "Thank you for your business!", MimeType: mimeTypeText},
 		},
 	})
 	if err != nil {
 		log.Fatal("Error:", err)
 	}
 
-	fmt.Println("Complex invoice generated:", *result.DeliverableID)
+	fmt.Println("Complex invoice generated:", *result.ID)
 }
 
 // Example 7: Using Helper Functions
 func usingHelpers(ctx context.Context, client *turbodocx.Client) {
-	name := "Helper Functions Document"
 	description := "Using helper functions example"
 
 	result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
 		TemplateID:  "your-template-id",
-		Name:        &name,
+		Name:        "Helper Functions Document",
 		Description: &description,
 		Variables: []turbodocx.TemplateVariable{
 			// Simple variable
@@ -326,7 +319,7 @@ func usingHelpers(ctx context.Context, client *turbodocx.Client) {
 		log.Fatal("Error:", err)
 	}
 
-	fmt.Println("Document with helpers generated:", *result.DeliverableID)
+	fmt.Println("Document with helpers generated:", *result.ID)
 }
 
 // must is a helper function to handle errors in variable creation

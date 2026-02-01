@@ -287,11 +287,10 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 			SenderEmail: "test@example.com",
 		})
 
-		name := "Test Document"
 		desc := "Test description"
 		result, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
 			TemplateID:  "template-123",
-			Name:        &name,
+			Name:        "Test Document",
 			Description: &desc,
 			Variables: []TemplateVariable{
 				{Placeholder: "{customer_name}", Name: "customer_name", Value: "Person A", MimeType: MimeTypeText},
@@ -300,8 +299,7 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.True(t, result.Success)
-		assert.Equal(t, "doc-123", *result.DeliverableID)
+		require.NotNil(t, result.ID)
 	})
 
 	t.Run("generates document with nested object variables", func(t *testing.T) {
@@ -328,11 +326,10 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 
 		mimeTypeJSON := MimeTypeJSON
 		usesAdvanced := true
-		name := "Nested Document"
 		desc := "Document with nested objects"
 		result, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
 			TemplateID:  "template-123",
-			Name:        &name,
+			Name:        "Nested Document",
 			Description: &desc,
 			Variables: []TemplateVariable{
 				{
@@ -346,7 +343,7 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.True(t, result.Success)
+		require.NotNil(t, result.ID)
 	})
 
 	t.Run("generates document with loop/array variables", func(t *testing.T) {
@@ -373,11 +370,10 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 
 		mimeTypeJSON := MimeTypeJSON
 		usesAdvanced := true
-		name := "Loop Document"
 		desc := "Document with loops"
 		result, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
 			TemplateID:  "template-123",
-			Name:        &name,
+			Name:        "Loop Document",
 			Description: &desc,
 			Variables: []TemplateVariable{
 				{
@@ -391,7 +387,7 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.True(t, result.Success)
+		require.NotNil(t, result.ID)
 	})
 
 	t.Run("generates document with helper-created variables", func(t *testing.T) {
@@ -415,11 +411,10 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 			SenderEmail: "test@example.com",
 		})
 
-		name := "Helper Document"
 		desc := "Document using helper functions"
 		result, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
 			TemplateID:  "template-123",
-			Name:        &name,
+			Name:        "Helper Document",
 			Description: &desc,
 			Variables: []TemplateVariable{
 				must(NewSimpleVariable("{title}", "title", "Quarterly Report", MimeTypeText)),
@@ -431,7 +426,7 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.True(t, result.Success)
+		require.NotNil(t, result.ID)
 	})
 
 	t.Run("includes optional request parameters", func(t *testing.T) {
@@ -440,13 +435,13 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 			json.NewDecoder(r.Body).Decode(&reqBody)
 			assert.True(t, *reqBody.ReplaceFonts)
 			assert.Equal(t, "Arial", *reqBody.DefaultFont)
-			assert.Equal(t, "pdf", *reqBody.OutputFormat)
+			// Note: OutputFormat is not supported in TurboTemplate API
 			assert.Equal(t, "value", reqBody.Metadata["customField"])
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"success":       true,
-				"deliverableId": "doc-options",
+				"id":   "doc-options",
+				"name": "Options Document",
 			})
 		}))
 		defer server.Close()
@@ -458,19 +453,16 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 			SenderEmail: "test@example.com",
 		})
 
-		name := "Options Document"
 		desc := "Document with all options"
 		replaceFonts := true
 		defaultFont := "Arial"
-		outputFormat := "pdf"
 		_, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
 			TemplateID:   "template-123",
-			Name:         &name,
+			Name:         "Options Document",
 			Description:  &desc,
 			Variables:    []TemplateVariable{must(NewSimpleVariable("{test}", "test", "value", MimeTypeText))},
 			ReplaceFonts: &replaceFonts,
 			DefaultFont:  &defaultFont,
-			OutputFormat: &outputFormat,
 			Metadata:     map[string]interface{}{"customField": "value"},
 		})
 
@@ -528,19 +520,20 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 		mimeType := MimeTypeText
 		result, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
 			TemplateID: "template-123",
+			Name:       "No Value Document",
 			Variables:  []TemplateVariable{{Placeholder: "{test}", Name: "test", MimeType: mimeType}},
 		})
 
 		require.NoError(t, err)
-		assert.True(t, result.Success)
+		require.NotNil(t, result.ID)
 	})
 
 	t.Run("allows variable with nil value", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"success":       true,
-				"deliverableId": "doc-nil-value",
+				"id":   "doc-nil-value",
+				"name": "Nil Value Document",
 			})
 		}))
 		defer server.Close()
@@ -555,11 +548,12 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 		mimeType := MimeTypeText
 		result, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
 			TemplateID: "template-123",
+			Name:       "Nil Value Document",
 			Variables:  []TemplateVariable{{Placeholder: "{test}", Name: "test", Value: nil, MimeType: mimeType}},
 		})
 
 		require.NoError(t, err)
-		assert.True(t, result.Success)
+		require.NotNil(t, result.ID)
 	})
 
 	t.Run("returns error when placeholder is missing", func(t *testing.T) {
@@ -618,11 +612,10 @@ func TestTurboTemplateClient_PlaceholderAndNameHandling(t *testing.T) {
 			SenderEmail: "test@example.com",
 		})
 
-		name := "Both Fields Document"
 		desc := "Document with both placeholder and name"
 		_, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
 			TemplateID:  "template-123",
-			Name:        &name,
+			Name:        "Both Fields Document",
 			Description: &desc,
 			Variables: []TemplateVariable{
 				{Placeholder: "{customer}", Name: "customer", Value: "Person A", MimeType: MimeTypeText},
@@ -654,11 +647,10 @@ func TestTurboTemplateClient_PlaceholderAndNameHandling(t *testing.T) {
 			SenderEmail: "test@example.com",
 		})
 
-		name := "Distinct Fields Document"
 		desc := "Document with distinct placeholder and name"
 		_, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
 			TemplateID:  "template-123",
-			Name:        &name,
+			Name:        "Distinct Fields Document",
 			Description: &desc,
 			Variables: []TemplateVariable{
 				{Placeholder: "{cust_name}", Name: "customerFullName", Value: "Person A", MimeType: MimeTypeText},
@@ -688,11 +680,10 @@ func TestTurboTemplateClient_ErrorHandling(t *testing.T) {
 			SenderEmail: "test@example.com",
 		})
 
-		name := "Error Document"
 		desc := "Document that should fail"
 		_, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
 			TemplateID:  "invalid-template",
-			Name:        &name,
+			Name:        "Error Document",
 			Description: &desc,
 			Variables:   []TemplateVariable{must(NewSimpleVariable("{test}", "test", "value", MimeTypeText))},
 		})
@@ -721,11 +712,10 @@ func TestTurboTemplateClient_ErrorHandling(t *testing.T) {
 			SenderEmail: "test@example.com",
 		})
 
-		name := "Validation Error Document"
 		desc := "Document that should fail validation"
 		_, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
 			TemplateID:  "template-123",
-			Name:        &name,
+			Name:        "Validation Error Document",
 			Description: &desc,
 			Variables:   []TemplateVariable{must(NewSimpleVariable("{test}", "test", "value", MimeTypeText))},
 		})
@@ -754,11 +744,10 @@ func TestTurboTemplateClient_ErrorHandling(t *testing.T) {
 			SenderEmail: "test@example.com",
 		})
 
-		name := "Rate Limit Document"
 		desc := "Document that should hit rate limit"
 		_, err := client.TurboTemplate.Generate(context.Background(), &GenerateTemplateRequest{
 			TemplateID:  "template-123",
-			Name:        &name,
+			Name:        "Rate Limit Document",
 			Description: &desc,
 			Variables:   []TemplateVariable{must(NewSimpleVariable("{test}", "test", "value", MimeTypeText))},
 		})
