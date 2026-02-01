@@ -89,6 +89,50 @@ impl TurboTemplate {
         let client = Self::get_client()?;
         client.post("/v1/deliverable", request).await
     }
+
+    /// Download a generated deliverable
+    ///
+    /// # Arguments
+    ///
+    /// * `deliverable_id` - ID of the deliverable to download
+    /// * `format` - Download format: "source" (original DOCX/PPTX) or "pdf"
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use turbodocx_sdk::TurboTemplate;
+    /// use std::fs;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     // Download in original format (DOCX/PPTX)
+    ///     let doc_bytes = TurboTemplate::download("deliverable-uuid", "source").await?;
+    ///     fs::write("document.docx", doc_bytes)?;
+    ///
+    ///     // Download as PDF
+    ///     let pdf_bytes = TurboTemplate::download("deliverable-uuid", "pdf").await?;
+    ///     fs::write("document.pdf", pdf_bytes)?;
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn download(deliverable_id: &str, format: &str) -> Result<Vec<u8>> {
+        if deliverable_id.is_empty() {
+            return Err(crate::utils::TurboDocxError::Validation(
+                "deliverable_id is required".into(),
+            ));
+        }
+
+        let client = Self::get_client()?;
+
+        let path = if format == "pdf" {
+            format!("/v1/deliverable/file/pdf/{}", deliverable_id)
+        } else {
+            format!("/v1/deliverable/file/{}", deliverable_id)
+        };
+
+        client.get_raw(&path).await
+    }
 }
 
 #[cfg(test)]

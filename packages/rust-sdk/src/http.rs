@@ -186,6 +186,49 @@ impl HttpClient {
         self.request(Method::DELETE, path, None::<()>).await
     }
 
+    /// Make a GET request and return raw bytes
+    /// Used for file downloads where response is not JSON
+    pub async fn get_raw(&self, path: &str) -> Result<Vec<u8>> {
+        let url = format!("{}{}", self.config.base_url, path);
+
+        let mut request = self.client.request(Method::GET, &url);
+
+        // Add authorization header
+        if let Some(ref api_key) = self.config.api_key {
+            request = request.header(header::AUTHORIZATION, format!("Bearer {}", api_key));
+        } else if let Some(ref token) = self.config.access_token {
+            request = request.header(header::AUTHORIZATION, format!("Bearer {}", token));
+        }
+
+        // Add organization ID header
+        if let Some(ref org_id) = self.config.org_id {
+            request = request.header("x-rapiddocx-org-id", org_id);
+        }
+
+        let response = request.send().await?;
+        let status = response.status();
+
+        if !status.is_success() {
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+
+            return Err(match status.as_u16() {
+                401 => TurboDocxError::Authentication(error_text),
+                400 => TurboDocxError::Validation(error_text),
+                404 => TurboDocxError::NotFound(error_text),
+                429 => TurboDocxError::RateLimit(error_text),
+                _ => TurboDocxError::Api {
+                    status: status.as_u16(),
+                    message: error_text,
+                },
+            });
+        }
+
+        response.bytes().await.map(|b| b.to_vec()).map_err(|e| TurboDocxError::Network(e.to_string()))
+    }
+
     /// Upload a file with multipart/form-data
     ///
     /// # Arguments
