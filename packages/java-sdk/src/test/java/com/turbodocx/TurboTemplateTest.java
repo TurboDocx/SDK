@@ -421,9 +421,8 @@ class TurboTemplateTest {
     @DisplayName("should generate document with simple variables")
     void generateDocumentWithSimpleVariables() throws Exception {
         Map<String, Object> responseData = new HashMap<>();
-        responseData.put("success", true);
-        responseData.put("deliverableId", "doc-123");
-        responseData.put("message", "Document generated successfully");
+        responseData.put("id", "doc-123");
+        responseData.put("name", "Test Document");
 
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
@@ -442,8 +441,8 @@ class TurboTemplateTest {
 
         GenerateTemplateResponse result = client.turboTemplate().generate(request);
 
-        assertTrue(result.isSuccess());
-        assertEquals("doc-123", result.getDeliverableId());
+        assertNotNull(result.getId());
+        assertEquals("doc-123", result.getId());
 
         RecordedRequest recorded = server.takeRequest();
         assertEquals("POST", recorded.getMethod());
@@ -459,8 +458,8 @@ class TurboTemplateTest {
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
                 .setBody(gson.toJson(Map.of(
-                        "success", true,
-                        "deliverableId", "doc-456"
+                        "id", "doc-456",
+                        "name", "Nested Document"
                 ))));
 
         Map<String, Object> user = new HashMap<>();
@@ -479,7 +478,7 @@ class TurboTemplateTest {
 
         GenerateTemplateResponse result = client.turboTemplate().generate(request);
 
-        assertTrue(result.isSuccess());
+        assertNotNull(result.getId());
     }
 
     @Test
@@ -489,8 +488,8 @@ class TurboTemplateTest {
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
                 .setBody(gson.toJson(Map.of(
-                        "success", true,
-                        "deliverableId", "doc-789"
+                        "id", "doc-789",
+                        "name", "Loop Document"
                 ))));
 
         List<Map<String, Object>> items = Arrays.asList(
@@ -509,7 +508,7 @@ class TurboTemplateTest {
 
         GenerateTemplateResponse result = client.turboTemplate().generate(request);
 
-        assertTrue(result.isSuccess());
+        assertNotNull(result.getId());
     }
 
     @Test
@@ -519,8 +518,8 @@ class TurboTemplateTest {
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
                 .setBody(gson.toJson(Map.of(
-                        "success", true,
-                        "deliverableId", "doc-helper"
+                        "id", "doc-helper",
+                        "name", "Helper Document"
                 ))));
 
         GenerateTemplateRequest request = GenerateTemplateRequest.builder()
@@ -538,7 +537,7 @@ class TurboTemplateTest {
 
         GenerateTemplateResponse result = client.turboTemplate().generate(request);
 
-        assertTrue(result.isSuccess());
+        assertNotNull(result.getId());
     }
 
     @Test
@@ -548,8 +547,8 @@ class TurboTemplateTest {
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
                 .setBody(gson.toJson(Map.of(
-                        "success", true,
-                        "deliverableId", "doc-options"
+                        "id", "doc-options",
+                        "name", "Options Document"
                 ))));
 
         GenerateTemplateRequest request = GenerateTemplateRequest.builder()
@@ -561,13 +560,13 @@ class TurboTemplateTest {
                 ))
                 .replaceFonts(true)
                 .defaultFont("Arial")
-                .outputFormat("pdf")
+                // Note: outputFormat is not supported in TurboTemplate API
                 .metadata(Map.of("customField", "value"))
                 .build();
 
         GenerateTemplateResponse result = client.turboTemplate().generate(request);
 
-        assertTrue(result.isSuccess());
+        assertNotNull(result.getId());
     }
 
     @Test
@@ -589,8 +588,8 @@ class TurboTemplateTest {
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
                 .setBody(gson.toJson(Map.of(
-                        "success", true,
-                        "deliverableId", "doc-both"
+                        "id", "doc-both",
+                        "name", "Both Fields Document"
                 ))));
 
         GenerateTemplateRequest request = GenerateTemplateRequest.builder()
@@ -609,7 +608,7 @@ class TurboTemplateTest {
 
         GenerateTemplateResponse result = client.turboTemplate().generate(request);
 
-        assertTrue(result.isSuccess());
+        assertNotNull(result.getId());
     }
 
     @Test
@@ -619,8 +618,8 @@ class TurboTemplateTest {
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
                 .setBody(gson.toJson(Map.of(
-                        "success", true,
-                        "deliverableId", "doc-distinct"
+                        "id", "doc-distinct",
+                        "name", "Distinct Fields Document"
                 ))));
 
         GenerateTemplateRequest request = GenerateTemplateRequest.builder()
@@ -639,7 +638,7 @@ class TurboTemplateTest {
 
         GenerateTemplateResponse result = client.turboTemplate().generate(request);
 
-        assertTrue(result.isSuccess());
+        assertNotNull(result.getId());
     }
 
     // ============================================
