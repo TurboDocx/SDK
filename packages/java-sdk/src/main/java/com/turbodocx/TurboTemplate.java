@@ -1,5 +1,6 @@
 package com.turbodocx;
 
+import com.turbodocx.models.DeliverableDownloadFormat;
 import com.turbodocx.models.GenerateTemplateRequest;
 import com.turbodocx.models.GenerateTemplateResponse;
 import java.io.IOException;
@@ -81,5 +82,47 @@ public class TurboTemplate {
         }
 
         return httpClient.post("/v1/deliverable", request, GenerateTemplateResponse.class);
+    }
+
+    /**
+     * Download a generated deliverable
+     *
+     * @param deliverableId ID of the deliverable to download
+     * @param format Download format: SOURCE (original DOCX/PPTX) or PDF
+     * @return Document file as byte array
+     * @throws IOException if the request fails
+     *
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * // Download in original format (DOCX/PPTX)
+     * byte[] docBytes = client.turboTemplate().download("deliverable-uuid", DeliverableDownloadFormat.SOURCE);
+     * Files.write(Paths.get("document.docx"), docBytes);
+     *
+     * // Download as PDF
+     * byte[] pdfBytes = client.turboTemplate().download("deliverable-uuid", DeliverableDownloadFormat.PDF);
+     * Files.write(Paths.get("document.pdf"), pdfBytes);
+     * }</pre>
+     */
+    public byte[] download(String deliverableId, DeliverableDownloadFormat format) throws IOException {
+        if (deliverableId == null || deliverableId.isEmpty()) {
+            throw new IllegalArgumentException("deliverableId is required");
+        }
+
+        String path = format == DeliverableDownloadFormat.PDF
+            ? "/v1/deliverable/file/pdf/" + deliverableId
+            : "/v1/deliverable/file/" + deliverableId;
+
+        return httpClient.getRaw(path);
+    }
+
+    /**
+     * Download a generated deliverable in source format (DOCX/PPTX)
+     *
+     * @param deliverableId ID of the deliverable to download
+     * @return Document file as byte array
+     * @throws IOException if the request fails
+     */
+    public byte[] download(String deliverableId) throws IOException {
+        return download(deliverableId, DeliverableDownloadFormat.SOURCE);
     }
 }
