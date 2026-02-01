@@ -273,9 +273,8 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"success":       true,
-				"deliverableId": "doc-123",
-				"message":       "Document generated successfully",
+				"id":   "doc-123",
+				"name": "Test Document",
 			})
 		}))
 		defer server.Close()
@@ -311,8 +310,8 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"success":       true,
-				"deliverableId": "doc-456",
+				"id":   "doc-456",
+				"name": "Nested Document",
 			})
 		}))
 		defer server.Close()
@@ -355,8 +354,8 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"success":       true,
-				"deliverableId": "doc-789",
+				"id":   "doc-789",
+				"name": "Loop Document",
 			})
 		}))
 		defer server.Close()
@@ -398,8 +397,8 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"success":       true,
-				"deliverableId": "doc-helper",
+				"id":   "doc-helper",
+				"name": "Helper Document",
 			})
 		}))
 		defer server.Close()
@@ -504,8 +503,8 @@ func TestTurboTemplateClient_Generate(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"success":       true,
-				"deliverableId": "doc-no-value",
+				"id":   "doc-no-value",
+				"name": "No Value Document",
 			})
 		}))
 		defer server.Close()
@@ -599,8 +598,8 @@ func TestTurboTemplateClient_PlaceholderAndNameHandling(t *testing.T) {
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"success":       true,
-				"deliverableId": "doc-both",
+				"id":   "doc-both",
+				"name": "Both Fields Document",
 			})
 		}))
 		defer server.Close()
@@ -634,8 +633,8 @@ func TestTurboTemplateClient_PlaceholderAndNameHandling(t *testing.T) {
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"success":       true,
-				"deliverableId": "doc-distinct",
+				"id":   "doc-distinct",
+				"name": "Distinct Fields Document",
 			})
 		}))
 		defer server.Close()
