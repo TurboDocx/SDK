@@ -6,7 +6,7 @@ Tests for configuration validation including senderEmail/senderName requirements
 
 import os
 import pytest
-from turbodocx_sdk.http import HttpClient, ValidationError, AuthenticationError
+from turbodocx_sdk.http import HttpClient, AuthenticationError
 
 
 @pytest.fixture(autouse=True)
@@ -28,27 +28,24 @@ def clear_env_vars():
 class TestSenderEmailValidation:
     """Tests for sender_email validation"""
 
-    def test_should_raise_validation_error_when_sender_email_missing(self):
-        """Should throw ValidationError when sender_email is not provided"""
-        with pytest.raises(ValidationError) as exc_info:
-            HttpClient(
-                api_key="test-api-key",
-                org_id="test-org-id",
-                # sender_email intentionally missing
-            )
-        assert "sender_email is required" in str(exc_info.value).lower()
+    def test_should_not_throw_when_sender_email_missing(self):
+        """Should not throw when sender_email is not provided (optional in HttpClient)"""
+        # Note: sender_email validation is done in TurboSign.configure(), not HttpClient
+        client = HttpClient(
+            api_key="test-api-key",
+            org_id="test-org-id",
+            # sender_email intentionally missing - this is valid for HttpClient
+        )
+        assert client is not None
 
-    def test_should_raise_validation_error_with_descriptive_message(self):
-        """Should throw ValidationError with descriptive message"""
-        with pytest.raises(ValidationError) as exc_info:
-            HttpClient(
-                api_key="test-api-key",
-                org_id="test-org-id",
-            )
-        error_msg = str(exc_info.value).lower()
-        assert "sender_email is required" in error_msg
-        assert "reply-to address" in error_msg
-        assert "api service user via turbosign" in error_msg
+    def test_should_return_none_for_sender_email_when_not_provided(self):
+        """Should return None for sender_email when not provided"""
+        client = HttpClient(
+            api_key="test-api-key",
+            org_id="test-org-id",
+        )
+        config = client.get_sender_config()
+        assert config["sender_email"] is None
 
     def test_should_accept_valid_sender_email(self):
         """Should accept valid sender_email"""

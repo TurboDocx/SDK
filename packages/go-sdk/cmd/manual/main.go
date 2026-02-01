@@ -2,7 +2,9 @@
 // +build manual
 
 /*
-TurboSign Go SDK - Manual Test Suite
+TurboDocx Go SDK - Manual Test Suite
+
+Tests for both TurboSign (digital signatures) and TurboTemplate (document generation)
 
 Run: go run -tags manual manual_runner.go
 
@@ -29,6 +31,7 @@ const (
 	testPDFPath = "/path/to/your/test-document.pdf" // Replace with path to your test PDF/DOCX
 	testEmail   = "test-recipient@example.com"     // Replace with a real email to receive notifications
 	fileURL     = "https://example.com/sample-document.pdf" // Replace with publicly accessible PDF URL
+	templateID  = "your-template-uuid-here"        // Replace with your template UUID
 )
 
 var client *turbodocx.Client
@@ -219,12 +222,160 @@ func testGetAuditTrail(ctx context.Context, documentID string) error {
 }
 
 // =============================================
+// TURBOTEMPLATE TEST FUNCTIONS
+// =============================================
+
+// Test 8: Simple Variable Substitution
+//
+// Template usage: "Dear {customer_name}, your order total is ${order_total}."
+func testSimpleVariables(ctx context.Context) error {
+	fmt.Println("\n--- Test 8: Simple Variable Substitution ---")
+
+	result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
+		TemplateID: templateID,
+		Variables: []turbodocx.TemplateVariable{
+			{Placeholder: "{customer_name}", Name: "customer_name", Value: "John Doe", MimeType: "text"},
+			{Placeholder: "{order_total}", Name: "order_total", Value: 1500, MimeType: "text"},
+			{Placeholder: "{order_date}", Name: "order_date", Value: "2024-01-01", MimeType: "text"},
+		},
+		Name:         stringPtr("Simple Substitution Document"),
+		Description:  stringPtr("Basic variable substitution example"),
+	})
+	if err != nil {
+		return err
+	}
+
+	prettyPrint(result)
+	return nil
+}
+
+// Test 9: Nested Objects with Dot Notation
+//
+// Template usage: "Name: {user.name}, Company: {user.profile.company}"
+func testNestedObjects(ctx context.Context) error {
+	fmt.Println("\n--- Test 9: Nested Objects with Dot Notation ---")
+
+	result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
+		TemplateID: templateID,
+		Variables: []turbodocx.TemplateVariable{
+			{
+				Placeholder: "{user}",
+				Name:        "user",
+				Value: map[string]interface{}{
+					"name":  "John Doe",
+					"email": "john@example.com",
+					"profile": map[string]interface{}{
+						"company":  "Acme Corp",
+						"title":    "Software Engineer",
+						"location": "San Francisco, CA",
+					},
+				},
+				MimeType:                       "json",
+				UsesAdvancedTemplatingEngine: boolPtr(true),
+			},
+		},
+		Name:         stringPtr("Nested Objects Document"),
+		Description:  stringPtr("Nested object with dot notation example"),
+	})
+	if err != nil {
+		return err
+	}
+
+	prettyPrint(result)
+	return nil
+}
+
+// Test 10: Array Loops
+//
+// Template usage:
+// {#items}
+// - {name}: {quantity} x ${price}
+// {/items}
+func testArrayLoops(ctx context.Context) error {
+	fmt.Println("\n--- Test 10: Array Loops ---")
+
+	result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
+		TemplateID: templateID,
+		Variables: []turbodocx.TemplateVariable{
+			{
+				Placeholder: "{items}",
+				Name:        "items",
+				Value: []map[string]interface{}{
+					{"name": "Item A", "quantity": 5, "price": 100, "sku": "SKU-001"},
+					{"name": "Item B", "quantity": 3, "price": 200, "sku": "SKU-002"},
+					{"name": "Item C", "quantity": 10, "price": 50, "sku": "SKU-003"},
+				},
+				MimeType:                       "json",
+				UsesAdvancedTemplatingEngine: boolPtr(true),
+			},
+		},
+		Name:         stringPtr("Array Loops Document"),
+		Description:  stringPtr("Array loop iteration example"),
+	})
+	if err != nil {
+		return err
+	}
+
+	prettyPrint(result)
+	return nil
+}
+
+// Test 11: Conditionals
+//
+// Template usage:
+// {#if is_premium}
+// Premium Member Discount: {discount * 100}%
+// {/if}
+func testConditionals(ctx context.Context) error {
+	fmt.Println("\n--- Test 11: Conditionals ---")
+
+	result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
+		TemplateID: templateID,
+		Variables: []turbodocx.TemplateVariable{
+			{Placeholder: "{is_premium}", Name: "is_premium", Value: true, MimeType: "json", UsesAdvancedTemplatingEngine: boolPtr(true)},
+			{Placeholder: "{discount}", Name: "discount", Value: 0.2, MimeType: "json", UsesAdvancedTemplatingEngine: boolPtr(true)},
+		},
+		Name:         stringPtr("Conditionals Document"),
+		Description:  stringPtr("Boolean conditional example"),
+	})
+	if err != nil {
+		return err
+	}
+
+	prettyPrint(result)
+	return nil
+}
+
+// Test 12: Images
+//
+// Template usage: Insert {logo} at the top of the document
+func testImages(ctx context.Context) error {
+	fmt.Println("\n--- Test 12: Images ---")
+
+	result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
+		TemplateID: templateID,
+		Variables: []turbodocx.TemplateVariable{
+			{Placeholder: "{title}", Name: "title", Value: "Quarterly Report", MimeType: "text"},
+			{Placeholder: "{logo}", Name: "logo", Value: "https://example.com/logo.png", MimeType: "image"},
+		},
+		Name:         stringPtr("Document with Images"),
+		Description:  stringPtr("Using image variables"),
+	})
+	if err != nil {
+		return err
+	}
+
+	prettyPrint(result)
+	return nil
+}
+
+// =============================================
 // MAIN TEST RUNNER
 // =============================================
 
 func main() {
 	fmt.Println("==============================================")
-	fmt.Println("TurboSign Go SDK - Manual Test Suite")
+	fmt.Println("TurboDocx Go SDK - Manual Test Suite")
 	fmt.Println("==============================================")
 
 	// Check if test PDF exists
@@ -244,6 +395,8 @@ func main() {
 
 	// Uncomment and run tests as needed:
 	_ = pdfBytes // Suppress unused variable warning
+
+	// ===== TurboSign Tests =====
 
 	// Test 1: Prepare for Review (uses fileLink, doesn't need pdfBytes)
 	// _, err = testCreateSignatureReviewLink(ctx)
@@ -273,11 +426,42 @@ func main() {
 	// err = testGetAuditTrail(ctx, "document-uuid-here")
 	// if err != nil { handleError(err); return }
 
+	// ===== TurboTemplate Tests =====
+
+	// Test 8: Simple Variable Substitution
+	// err = testSimpleVariables(ctx)
+	// if err != nil { handleError(err); return }
+
+	// Test 9: Nested Objects with Dot Notation
+	// err = testNestedObjects(ctx)
+	// if err != nil { handleError(err); return }
+
+	// Test 10: Array Loops
+	// err = testArrayLoops(ctx)
+	// if err != nil { handleError(err); return }
+
+	// Test 11: Conditionals
+	// err = testConditionals(ctx)
+	// if err != nil { handleError(err); return }
+
+	// Test 12: Images
+	// err = testImages(ctx)
+	// if err != nil { handleError(err); return }
+
 	_ = ctx // Suppress unused variable warning
 
 	fmt.Println("\n==============================================")
 	fmt.Println("All tests completed successfully!")
 	fmt.Println("==============================================")
+}
+
+// Helper functions
+func stringPtr(s string) *string {
+	return &s
+}
+
+func boolPtr(b bool) *bool {
+	return &b
 }
 
 func handleError(err error) {

@@ -1,7 +1,9 @@
 package com.turbodocx;
 
 /*
- * TurboSign Java SDK - Manual Test Suite
+ * TurboDocx Java SDK - Manual Test Suite
+ *
+ * Tests for both TurboSign (digital signatures) and TurboTemplate (document generation)
  *
  * Run: mvn exec:java -Dexec.mainClass="com.turbodocx.ManualTest"
  *
@@ -32,13 +34,14 @@ public class ManualTest {
     private static final String TEST_PDF_PATH = "/path/to/your/test-document.pdf"; // Replace with path to your test PDF/DOCX
     private static final String TEST_EMAIL = "test-recipient@example.com"; // Replace with a real email to receive notifications
     private static final String FILE_URL = "https://example.com/sample-document.pdf"; // Replace with publicly accessible PDF URL
+    private static final String TEMPLATE_ID = "your-template-uuid-here"; // Replace with your template UUID
 
     private static TurboDocxClient client;
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     public static void main(String[] args) {
         System.out.println("==============================================");
-        System.out.println("TurboSign Java SDK - Manual Test Suite");
+        System.out.println("TurboDocx Java SDK - Manual Test Suite");
         System.out.println("==============================================");
 
         // Check if test PDF exists
@@ -60,6 +63,8 @@ public class ManualTest {
         try {
             // Uncomment and run tests as needed:
 
+            // ===== TurboSign Tests =====
+
             // Test 1: Prepare for Review
             // String reviewDocId = testPrepareForReview();
 
@@ -80,6 +85,23 @@ public class ManualTest {
 
             // Test 7: Get Audit Trail (replace with actual document ID)
             // testGetAuditTrail("document-uuid-here");
+
+            // ===== TurboTemplate Tests =====
+
+            // Test 8: Simple Variable Substitution
+            // String simpleDocId = testSimpleVariables();
+
+            // Test 9: Nested Objects with Dot Notation
+            // String nestedDocId = testNestedObjects();
+
+            // Test 10: Array Loops
+            // String loopsDocId = testArrayLoops();
+
+            // Test 11: Conditionals
+            // String conditionalsDocId = testConditionals();
+
+            // Test 12: Images
+            // String imagesDocId = testImages();
 
             System.out.println("\n==============================================");
             System.out.println("All tests completed successfully!");
@@ -236,5 +258,195 @@ public class ManualTest {
 
         AuditTrailResponse result = client.turboSign().getAuditTrail(documentId);
         System.out.println("Result: " + gson.toJson(result));
+    }
+
+    // =============================================
+    // TURBOTEMPLATE TEST FUNCTIONS
+    // =============================================
+
+    /**
+     * Test 8: Simple Variable Substitution
+     *
+     * Template usage: "Dear {customer_name}, your order total is ${order_total}."
+     */
+    private static String testSimpleVariables() throws IOException {
+        System.out.println("\n--- Test 8: Simple Variable Substitution ---");
+
+        GenerateTemplateResponse result = client.turboTemplate().generate(
+            GenerateTemplateRequest.builder()
+                .templateId(TEMPLATE_ID)
+                .variables(Arrays.asList(
+                    TemplateVariable.builder()
+                        .placeholder("{customer_name}")
+                        .name("customer_name")
+                        .value("John Doe")
+                        .mimeType("text")
+                        .build(),
+                    TemplateVariable.builder()
+                        .placeholder("{order_total}")
+                        .name("order_total")
+                        .value(1500)
+                        .mimeType("text")
+                        .build(),
+                    TemplateVariable.builder()
+                        .placeholder("{order_date}")
+                        .name("order_date")
+                        .value("2024-01-01")
+                        .mimeType("text")
+                        .build()
+                ))
+                .name("Simple Substitution Document")
+                .description("Basic variable substitution example")
+                .build()
+        );
+
+        System.out.println("Result: " + gson.toJson(result));
+        return result.getDeliverableId();
+    }
+
+    /**
+     * Test 9: Nested Objects with Dot Notation
+     *
+     * Template usage: "Name: {user.name}, Company: {user.profile.company}"
+     */
+    private static String testNestedObjects() throws IOException {
+        System.out.println("\n--- Test 9: Nested Objects with Dot Notation ---");
+
+        GenerateTemplateResponse result = client.turboTemplate().generate(
+            GenerateTemplateRequest.builder()
+                .templateId(TEMPLATE_ID)
+                .variables(Arrays.asList(
+                    TemplateVariable.builder()
+                        .placeholder("{user}")
+                        .name("user")
+                        .value(java.util.Map.of(
+                            "name", "John Doe",
+                            "email", "john@example.com",
+                            "profile", java.util.Map.of(
+                                "company", "Acme Corp",
+                                "title", "Software Engineer",
+                                "location", "San Francisco, CA"
+                            )
+                        ))
+                        .mimeType("json")
+                        .usesAdvancedTemplatingEngine(true)
+                        .build()
+                ))
+                .name("Nested Objects Document")
+                .description("Nested object with dot notation example")
+                .build()
+        );
+
+        System.out.println("Result: " + gson.toJson(result));
+        return result.getDeliverableId();
+    }
+
+    /**
+     * Test 10: Array Loops
+     *
+     * Template usage:
+     * {#items}
+     * - {name}: {quantity} x ${price}
+     * {/items}
+     */
+    private static String testArrayLoops() throws IOException {
+        System.out.println("\n--- Test 10: Array Loops ---");
+
+        GenerateTemplateResponse result = client.turboTemplate().generate(
+            GenerateTemplateRequest.builder()
+                .templateId(TEMPLATE_ID)
+                .variables(Arrays.asList(
+                    TemplateVariable.builder()
+                        .placeholder("{items}")
+                        .name("items")
+                        .value(Arrays.asList(
+                            java.util.Map.of("name", "Item A", "quantity", 5, "price", 100, "sku", "SKU-001"),
+                            java.util.Map.of("name", "Item B", "quantity", 3, "price", 200, "sku", "SKU-002"),
+                            java.util.Map.of("name", "Item C", "quantity", 10, "price", 50, "sku", "SKU-003")
+                        ))
+                        .mimeType("json")
+                        .usesAdvancedTemplatingEngine(true)
+                        .build()
+                ))
+                .name("Array Loops Document")
+                .description("Array loop iteration example")
+                .build()
+        );
+
+        System.out.println("Result: " + gson.toJson(result));
+        return result.getDeliverableId();
+    }
+
+    /**
+     * Test 11: Conditionals
+     *
+     * Template usage:
+     * {#if is_premium}
+     * Premium Member Discount: {discount * 100}%
+     * {/if}
+     */
+    private static String testConditionals() throws IOException {
+        System.out.println("\n--- Test 11: Conditionals ---");
+
+        GenerateTemplateResponse result = client.turboTemplate().generate(
+            GenerateTemplateRequest.builder()
+                .templateId(TEMPLATE_ID)
+                .variables(Arrays.asList(
+                    TemplateVariable.builder()
+                        .placeholder("{is_premium}")
+                        .name("is_premium")
+                        .value(true)
+                        .mimeType("json")
+                        .usesAdvancedTemplatingEngine(true)
+                        .build(),
+                    TemplateVariable.builder()
+                        .placeholder("{discount}")
+                        .name("discount")
+                        .value(0.2)
+                        .mimeType("json")
+                        .usesAdvancedTemplatingEngine(true)
+                        .build()
+                ))
+                .name("Conditionals Document")
+                .description("Boolean conditional example")
+                .build()
+        );
+
+        System.out.println("Result: " + gson.toJson(result));
+        return result.getDeliverableId();
+    }
+
+    /**
+     * Test 12: Images
+     *
+     * Template usage: Insert {logo} at the top of the document
+     */
+    private static String testImages() throws IOException {
+        System.out.println("\n--- Test 12: Images ---");
+
+        GenerateTemplateResponse result = client.turboTemplate().generate(
+            GenerateTemplateRequest.builder()
+                .templateId(TEMPLATE_ID)
+                .variables(Arrays.asList(
+                    TemplateVariable.builder()
+                        .placeholder("{title}")
+                        .name("title")
+                        .value("Quarterly Report")
+                        .mimeType("text")
+                        .build(),
+                    TemplateVariable.builder()
+                        .placeholder("{logo}")
+                        .name("logo")
+                        .value("https://example.com/logo.png")
+                        .mimeType("image")
+                        .build()
+                ))
+                .name("Document with Images")
+                .description("Using image variables")
+                .build()
+        );
+
+        System.out.println("Result: " + gson.toJson(result));
+        return result.getDeliverableId();
     }
 }

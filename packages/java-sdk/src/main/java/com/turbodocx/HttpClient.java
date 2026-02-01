@@ -208,15 +208,25 @@ public class HttpClient {
 
             String responseBody = response.body() != null ? response.body().string() : "";
 
-            // Smart unwrapping: if response has ONLY "data" key, extract it
-            // This handles backend responses that wrap data in { "data": { ... } }
+            // Unwrap nested structure: data.results.deliverable
             JsonObject json = gson.fromJson(responseBody, JsonObject.class);
-            if (json != null && json.has("data") && json.size() == 1) {
-                return gson.fromJson(json.get("data"), responseClass);
+            Object dataToUnmarshal = json;
+
+            if (json != null && json.has("data")) {
+                JsonObject data = json.getAsJsonObject("data");
+                if (data.has("results")) {
+                    JsonObject results = data.getAsJsonObject("results");
+                    if (results.has("deliverable")) {
+                        dataToUnmarshal = results.get("deliverable");
+                    } else {
+                        dataToUnmarshal = results;
+                    }
+                } else {
+                    dataToUnmarshal = data;
+                }
             }
 
-            // Otherwise return as-is (for direct responses)
-            return gson.fromJson(responseBody, responseClass);
+            return gson.fromJson(gson.toJson(dataToUnmarshal), responseClass);
         }
     }
 

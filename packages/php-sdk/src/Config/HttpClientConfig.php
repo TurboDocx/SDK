@@ -32,13 +32,7 @@ final class HttpClientConfig
         if (empty($this->apiKey) && empty($this->accessToken)) {
             throw new AuthenticationException('API key or access token is required');
         }
-
-        if (empty($this->senderEmail)) {
-            throw new ValidationException(
-                'senderEmail is required. This email will be used as the reply-to address for signature requests. '
-                . 'Without it, emails will default to "API Service User via TurboSign".'
-            );
-        }
+        // Note: senderEmail validation removed - it's only required for TurboSign operations
     }
 
     /**
