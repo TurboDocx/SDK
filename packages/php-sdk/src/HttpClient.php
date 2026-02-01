@@ -176,6 +176,23 @@ final class HttpClient
     }
 
     /**
+     * GET request returning raw binary data
+     * Used for file downloads where response is not JSON
+     *
+     * @param string $path
+     * @return string Raw response body as binary string
+     */
+    public function getRaw(string $path): string
+    {
+        try {
+            $response = $this->client->get($path);
+            return $response->getBody()->getContents();
+        } catch (GuzzleException $e) {
+            $this->handleException($e);
+        }
+    }
+
+    /**
      * Handle Guzzle exceptions and map to custom exceptions
      *
      * @throws TurboDocxException

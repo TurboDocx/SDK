@@ -358,4 +358,16 @@ class TurboTemplateTest extends TestCase
         $this->assertArrayHasKey('value', $array);
         $this->assertNull($array['value']);
     }
+
+    // ============================================
+    // Download Tests
+    // ============================================
+
+    public function testDownloadThrowsWhenDeliverableIdEmpty(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('deliverableId is required');
+
+        \TurboDocx\TurboTemplate::download('');
+    }
 }

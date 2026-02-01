@@ -123,6 +123,39 @@ final class TurboTemplate
     }
 
     /**
+     * Download a generated deliverable
+     *
+     * @param string $deliverableId ID of the deliverable to download
+     * @param string $format Download format: 'source' (original DOCX/PPTX) or 'pdf'
+     * @return string Document file content as binary string
+     *
+     * @example
+     * ```php
+     * // Download in original format (DOCX/PPTX)
+     * $docContent = TurboTemplate::download('deliverable-uuid');
+     * file_put_contents('document.docx', $docContent);
+     *
+     * // Download as PDF
+     * $pdfContent = TurboTemplate::download('deliverable-uuid', 'pdf');
+     * file_put_contents('document.pdf', $pdfContent);
+     * ```
+     */
+    public static function download(string $deliverableId, string $format = 'source'): string
+    {
+        if (empty($deliverableId)) {
+            throw new \InvalidArgumentException('deliverableId is required');
+        }
+
+        $client = self::getClient();
+
+        $path = $format === 'pdf'
+            ? "/v1/deliverable/file/pdf/{$deliverableId}"
+            : "/v1/deliverable/file/{$deliverableId}";
+
+        return $client->getRaw($path);
+    }
+
+    /**
      * Validate a variable configuration
      *
      * Checks if a variable is properly configured for advanced templating
