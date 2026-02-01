@@ -214,7 +214,6 @@ pub struct GenerateTemplateRequest {
     pub default_font: Option<String>,
 
     // Note: output_format is not supported in TurboTemplate API
-
     /// Additional metadata - optional
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<HashMap<String, serde_json::Value>>,

@@ -76,12 +76,12 @@ impl TurboTemplate {
     ///             TemplateVariable::simple("{customer_name}", "customer_name", "John Doe"),
     ///             TemplateVariable::simple("{order_total}", "order_total", 1500),
     ///         ],
+    ///         "Invoice Document",
     ///     )
-    ///     .with_name("Invoice Document")
     ///     .with_description("Customer invoice");
     ///
     ///     let response = TurboTemplate::generate(request).await?;
-    ///     println!("Deliverable ID: {:?}", response.deliverable_id);
+    ///     println!("Deliverable ID: {:?}", response.id);
     ///     Ok(())
     /// }
     /// ```
@@ -152,8 +152,8 @@ mod tests {
         let request = GenerateTemplateRequest::new(
             "template-123",
             vec![TemplateVariable::simple("{name}", "name", "Test")],
-        )
-        .with_name("Test Document");
+            "Test Document",
+        );
 
         let json = serde_json::to_string(&request).unwrap();
         assert!(json.contains("template-123"));

@@ -1,5 +1,5 @@
 use serde_json::json;
-use turbodocx_sdk::{GenerateTemplateRequest, OutputFormat, TemplateVariable, VariableMimeType};
+use turbodocx_sdk::{GenerateTemplateRequest, TemplateVariable, VariableMimeType};
 
 #[test]
 fn test_simple_variable() {
@@ -57,15 +57,13 @@ fn test_request_builder() {
     let request = GenerateTemplateRequest::new(
         "template-123",
         vec![TemplateVariable::simple("{name}", "name", "Test")],
+        "Test Document",
     )
-    .with_name("Test Document")
-    .with_description("A test document")
-    .with_output_format(OutputFormat::Pdf);
+    .with_description("A test document");
 
     assert_eq!(request.template_id, "template-123");
-    assert_eq!(request.name, Some("Test Document".to_string()));
+    assert_eq!(request.name, "Test Document");
     assert_eq!(request.description, Some("A test document".to_string()));
-    assert_eq!(request.output_format, Some(OutputFormat::Pdf));
     assert_eq!(request.variables.len(), 1);
 }
 
@@ -77,8 +75,8 @@ fn test_request_serialization() {
             TemplateVariable::simple("{customer_name}", "customer_name", "John Doe"),
             TemplateVariable::simple("{order_total}", "order_total", 1500),
         ],
-    )
-    .with_name("Invoice");
+        "Invoice",
+    );
 
     let json = serde_json::to_string(&request).unwrap();
     assert!(json.contains("template-123"));
@@ -115,17 +113,6 @@ fn test_variable_with_numbers() {
 fn test_variable_with_boolean() {
     let var = TemplateVariable::simple("{is_active}", "is_active", true);
     assert_eq!(var.value, Some(json!(true)));
-}
-
-#[test]
-fn test_output_format_serialization() {
-    let format = OutputFormat::Docx;
-    let json = serde_json::to_string(&format).unwrap();
-    assert_eq!(json, r#""docx""#);
-
-    let format = OutputFormat::Pdf;
-    let json = serde_json::to_string(&format).unwrap();
-    assert_eq!(json, r#""pdf""#);
 }
 
 #[test]
