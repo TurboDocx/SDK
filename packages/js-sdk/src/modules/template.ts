@@ -174,6 +174,39 @@ export class TurboTemplate {
   }
 
   /**
+   * Download a generated deliverable
+   *
+   * @param deliverableId - ID of the deliverable to download
+   * @param format - Download format: 'source' (original DOCX/PPTX) or 'pdf'
+   * @returns Document file as Buffer
+   *
+   * @example
+   * ```typescript
+   * // Download in original format (DOCX/PPTX)
+   * const docBuffer = await TurboTemplate.download('deliverable-uuid');
+   * fs.writeFileSync('document.docx', docBuffer);
+   *
+   * // Download as PDF
+   * const pdfBuffer = await TurboTemplate.download('deliverable-uuid', 'pdf');
+   * fs.writeFileSync('document.pdf', pdfBuffer);
+   * ```
+   */
+  static async download(deliverableId: string, format: 'source' | 'pdf' = 'source'): Promise<Buffer> {
+    if (!deliverableId) {
+      throw new Error('deliverableId is required');
+    }
+
+    const client = this.getClient();
+
+    const path =
+      format === 'pdf'
+        ? `/v1/deliverable/file/pdf/${deliverableId}`
+        : `/v1/deliverable/file/${deliverableId}`;
+
+    return client.getRaw(path);
+  }
+
+  /**
    * Validate a variable configuration
    *
    * Checks if a variable is properly configured for advanced templating
