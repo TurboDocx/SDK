@@ -727,4 +727,77 @@ class TurboTemplateTest {
 
         assertEquals(429, exception.getStatusCode());
     }
+
+    // ============================================
+    // Download Tests
+    // ============================================
+
+    @Test
+    @DisplayName("should download deliverable in source format by default")
+    void downloadDeliverableSourceFormat() throws Exception {
+        byte[] mockContent = "mock document content".getBytes();
+
+        server.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/octet-stream")
+                .setBody(new okio.Buffer().write(mockContent)));
+
+        byte[] result = client.turboTemplate().download("deliverable-123");
+
+        assertArrayEquals(mockContent, result);
+
+        RecordedRequest recorded = server.takeRequest();
+        assertEquals("GET", recorded.getMethod());
+        assertEquals("/v1/deliverable/file/deliverable-123", recorded.getPath());
+    }
+
+    @Test
+    @DisplayName("should download deliverable as PDF when format is PDF")
+    void downloadDeliverablePdfFormat() throws Exception {
+        byte[] mockContent = "mock pdf content".getBytes();
+
+        server.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/pdf")
+                .setBody(new okio.Buffer().write(mockContent)));
+
+        byte[] result = client.turboTemplate().download("deliverable-456", DeliverableDownloadFormat.PDF);
+
+        assertArrayEquals(mockContent, result);
+
+        RecordedRequest recorded = server.takeRequest();
+        assertEquals("GET", recorded.getMethod());
+        assertEquals("/v1/deliverable/file/pdf/deliverable-456", recorded.getPath());
+    }
+
+    @Test
+    @DisplayName("should throw error when deliverableId is null")
+    void downloadThrowsWhenDeliverableIdNull() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            client.turboTemplate().download(null);
+        });
+    }
+
+    @Test
+    @DisplayName("should throw error when deliverableId is empty")
+    void downloadThrowsWhenDeliverableIdEmpty() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            client.turboTemplate().download("");
+        });
+    }
+
+    @Test
+    @DisplayName("should handle download errors")
+    void downloadHandlesErrors() {
+        server.enqueue(new MockResponse()
+                .setResponseCode(404)
+                .setHeader("Content-Type", "application/json")
+                .setBody(gson.toJson(Map.of(
+                        "message", "Deliverable not found"
+                ))));
+
+        assertThrows(TurboDocxException.NotFoundException.class, () -> {
+            client.turboTemplate().download("invalid-id");
+        });
+    }
 }

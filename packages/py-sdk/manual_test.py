@@ -330,6 +330,31 @@ async def test_images():
     return result.get("deliverableId")
 
 
+async def test_download_deliverable(deliverable_id: str):
+    """
+    Test 13: Download Generated Deliverable
+
+    Downloads a generated deliverable in both source and PDF formats
+    """
+    print("\n--- Test 13: Download Generated Deliverable ---")
+
+    # Download in source format (DOCX/PPTX)
+    source_bytes = await TurboTemplate.download(deliverable_id)
+    print(f"Source file downloaded: {len(source_bytes)} bytes")
+    with open("./downloaded-source.docx", "wb") as f:
+        f.write(source_bytes)
+    print("Saved to: ./downloaded-source.docx")
+
+    # Download as PDF
+    pdf_bytes = await TurboTemplate.download(deliverable_id, "pdf")
+    print(f"PDF file downloaded: {len(pdf_bytes)} bytes")
+    with open("./downloaded-deliverable.pdf", "wb") as f:
+        f.write(pdf_bytes)
+    print("Saved to: ./downloaded-deliverable.pdf")
+
+    return {"source_bytes": source_bytes, "pdf_bytes": pdf_bytes}
+
+
 # =============================================
 # MAIN TEST RUNNER
 # =============================================
@@ -387,6 +412,9 @@ async def run_all_tests():
 
         # Test 12: Images
         # images_doc_id = await test_images()
+
+        # Test 13: Download Generated Deliverable (replace with actual deliverable ID)
+        # await test_download_deliverable("deliverable-uuid-here")
 
         print("\n==============================================")
         print("All tests completed successfully!")

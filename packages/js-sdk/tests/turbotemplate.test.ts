@@ -794,4 +794,42 @@ describe('TurboTemplate Module', () => {
       ).rejects.toEqual(rateLimitError);
     });
   });
+
+  describe('download', () => {
+    it('should download deliverable in source format by default', async () => {
+      const mockBuffer = Buffer.from('mock document content');
+      MockedHttpClient.prototype.getRaw = jest.fn().mockResolvedValue(mockBuffer);
+      TurboTemplate.configure({ apiKey: 'test-key' });
+
+      const result = await TurboTemplate.download('deliverable-123');
+
+      expect(result).toBe(mockBuffer);
+      expect(MockedHttpClient.prototype.getRaw).toHaveBeenCalledWith('/v1/deliverable/file/deliverable-123');
+    });
+
+    it('should download deliverable as PDF when format is pdf', async () => {
+      const mockBuffer = Buffer.from('mock pdf content');
+      MockedHttpClient.prototype.getRaw = jest.fn().mockResolvedValue(mockBuffer);
+      TurboTemplate.configure({ apiKey: 'test-key' });
+
+      const result = await TurboTemplate.download('deliverable-456', 'pdf');
+
+      expect(result).toBe(mockBuffer);
+      expect(MockedHttpClient.prototype.getRaw).toHaveBeenCalledWith('/v1/deliverable/file/pdf/deliverable-456');
+    });
+
+    it('should throw error when deliverableId is empty', async () => {
+      TurboTemplate.configure({ apiKey: 'test-key' });
+
+      await expect(TurboTemplate.download('')).rejects.toThrow('deliverableId is required');
+    });
+
+    it('should handle download errors', async () => {
+      const error = new Error('Not found');
+      MockedHttpClient.prototype.getRaw = jest.fn().mockRejectedValue(error);
+      TurboTemplate.configure({ apiKey: 'test-key' });
+
+      await expect(TurboTemplate.download('invalid-id')).rejects.toThrow('Not found');
+    });
+  });
 });

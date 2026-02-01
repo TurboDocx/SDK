@@ -417,6 +417,28 @@ function testImages(): string
     return $result->deliverableId;
 }
 
+/**
+ * Test 13: Download Generated Deliverable
+ *
+ * Downloads a generated deliverable in both source and PDF formats
+ */
+function testDownloadDeliverable(string $deliverableId): void
+{
+    echo "\n--- Test 13: Download Generated Deliverable ---\n";
+
+    // Download in source format (DOCX/PPTX)
+    $sourceContent = TurboTemplate::download($deliverableId);
+    echo "Source file downloaded: " . strlen($sourceContent) . " bytes\n";
+    file_put_contents('./downloaded-source.docx', $sourceContent);
+    echo "Saved to: ./downloaded-source.docx\n";
+
+    // Download as PDF
+    $pdfContent = TurboTemplate::download($deliverableId, 'pdf');
+    echo "PDF file downloaded: " . strlen($pdfContent) . " bytes\n";
+    file_put_contents('./downloaded-deliverable.pdf', $pdfContent);
+    echo "Saved to: ./downloaded-deliverable.pdf\n";
+}
+
 // =============================================
 // MAIN TEST RUNNER
 // =============================================
@@ -476,6 +498,9 @@ function main(): void
 
         // Test 12: Images
         // $imagesDocId = testImages();
+
+        // Test 13: Download Generated Deliverable (replace with actual deliverable ID)
+        // testDownloadDeliverable('deliverable-uuid-here');
 
         echo "\n==============================================\n";
         echo "All tests completed successfully!\n";

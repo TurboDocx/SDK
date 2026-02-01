@@ -777,3 +777,84 @@ func must(v TemplateVariable, err error) TemplateVariable {
 	}
 	return v
 }
+
+func TestTurboTemplateClient_Download(t *testing.T) {
+	t.Run("downloads deliverable in source format by default", func(t *testing.T) {
+		mockContent := []byte("mock document content")
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/v1/deliverable/file/deliverable-123", r.URL.Path)
+			assert.Equal(t, "GET", r.Method)
+			w.Write(mockContent)
+		}))
+		defer server.Close()
+
+		client, _ := NewClientWithConfig(ClientConfig{
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
+			SenderEmail: "test@example.com",
+		})
+
+		result, err := client.TurboTemplate.Download(context.Background(), "deliverable-123", DownloadFormatSource)
+
+		require.NoError(t, err)
+		assert.Equal(t, mockContent, result)
+	})
+
+	t.Run("downloads deliverable as PDF when format is pdf", func(t *testing.T) {
+		mockContent := []byte("mock pdf content")
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/v1/deliverable/file/pdf/deliverable-456", r.URL.Path)
+			assert.Equal(t, "GET", r.Method)
+			w.Write(mockContent)
+		}))
+		defer server.Close()
+
+		client, _ := NewClientWithConfig(ClientConfig{
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
+			SenderEmail: "test@example.com",
+		})
+
+		result, err := client.TurboTemplate.Download(context.Background(), "deliverable-456", DownloadFormatPDF)
+
+		require.NoError(t, err)
+		assert.Equal(t, mockContent, result)
+	})
+
+	t.Run("returns error when deliverableID is empty", func(t *testing.T) {
+		client, _ := NewClientWithConfig(ClientConfig{
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			SenderEmail: "test@example.com",
+		})
+
+		_, err := client.TurboTemplate.Download(context.Background(), "", DownloadFormatSource)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "deliverableID is required")
+	})
+
+	t.Run("handles download errors", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"message": "Deliverable not found"}`))
+		}))
+		defer server.Close()
+
+		client, _ := NewClientWithConfig(ClientConfig{
+			APIKey:      "test-api-key",
+			OrgID:       "test-org-id",
+			BaseURL:     server.URL,
+			SenderEmail: "test@example.com",
+		})
+
+		_, err := client.TurboTemplate.Download(context.Background(), "invalid-id", DownloadFormatSource)
+
+		require.Error(t, err)
+	})
+}

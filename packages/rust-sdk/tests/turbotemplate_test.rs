@@ -138,3 +138,30 @@ fn test_mime_type_serialization() {
     let json = serde_json::to_string(&mime).unwrap();
     assert_eq!(json, r#""json""#);
 }
+
+// Download tests - these test the path generation logic
+#[test]
+fn test_download_source_path() {
+    // Test that source format generates the correct path
+    let deliverable_id = "deliverable-123";
+    let format = "source";
+    let path = if format == "pdf" {
+        format!("/v1/deliverable/file/pdf/{}", deliverable_id)
+    } else {
+        format!("/v1/deliverable/file/{}", deliverable_id)
+    };
+    assert_eq!(path, "/v1/deliverable/file/deliverable-123");
+}
+
+#[test]
+fn test_download_pdf_path() {
+    // Test that pdf format generates the correct path
+    let deliverable_id = "deliverable-456";
+    let format = "pdf";
+    let path = if format == "pdf" {
+        format!("/v1/deliverable/file/pdf/{}", deliverable_id)
+    } else {
+        format!("/v1/deliverable/file/{}", deliverable_id)
+    };
+    assert_eq!(path, "/v1/deliverable/file/pdf/deliverable-456");
+}

@@ -302,6 +302,33 @@ async fn test_images() -> Result<String, Box<dyn std::error::Error>> {
     Ok(result.deliverable_id.unwrap_or_default())
 }
 
+/// Test 13: Download Deliverable
+///
+/// Downloads a generated deliverable in source format (DOCX/PPTX) or PDF
+async fn test_download_deliverable(deliverable_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    println!("\n--- Test 13: Download Deliverable ---");
+
+    // Download in source format (DOCX/PPTX)
+    println!("Downloading in source format...");
+    let source_bytes = TurboTemplate::download(deliverable_id, "source").await?;
+    println!("✓ Source file size: {} bytes", source_bytes.len());
+
+    // Save to file
+    fs::write("downloaded_document.docx", &source_bytes)?;
+    println!("✓ Saved to downloaded_document.docx");
+
+    // Download as PDF
+    println!("Downloading as PDF...");
+    let pdf_bytes = TurboTemplate::download(deliverable_id, "pdf").await?;
+    println!("✓ PDF file size: {} bytes", pdf_bytes.len());
+
+    // Save to file
+    fs::write("downloaded_document.pdf", &pdf_bytes)?;
+    println!("✓ Saved to downloaded_document.pdf");
+
+    Ok(())
+}
+
 // =============================================
 // MAIN TEST RUNNER
 // =============================================
@@ -382,6 +409,9 @@ async fn main() {
 
     // Test 12: Images
     // let images_doc_id = test_images().await.unwrap();
+
+    // Test 13: Download Deliverable (replace with actual deliverable ID)
+    // test_download_deliverable("deliverable-uuid-here").await.unwrap();
 
     println!("\n==============================================");
     println!("All tests completed successfully!");

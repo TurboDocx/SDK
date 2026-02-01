@@ -309,6 +309,29 @@ async function testImages() {
   return result.id;
 }
 
+/**
+ * Test 13: Download Generated Deliverable
+ *
+ * Downloads a generated deliverable in both source and PDF formats
+ */
+async function testDownloadDeliverable(deliverableId: string) {
+  console.log("\n--- Test 13: Download Generated Deliverable ---");
+
+  // Download in source format (DOCX/PPTX)
+  const sourceBuffer = await TurboTemplate.download(deliverableId);
+  console.log(`Source file downloaded: ${sourceBuffer.length} bytes`);
+  fs.writeFileSync("./downloaded-source.docx", sourceBuffer);
+  console.log("Saved to: ./downloaded-source.docx");
+
+  // Download as PDF
+  const pdfBuffer = await TurboTemplate.download(deliverableId, "pdf");
+  console.log(`PDF file downloaded: ${pdfBuffer.length} bytes`);
+  fs.writeFileSync("./downloaded-deliverable.pdf", pdfBuffer);
+  console.log("Saved to: ./downloaded-deliverable.pdf");
+
+  return { sourceBuffer, pdfBuffer };
+}
+
 // =============================================
 // MAIN TEST RUNNER
 // =============================================
@@ -367,6 +390,9 @@ async function runAllTests() {
 
     // Test 12: Images
     // const imagesDocId = await testImages();
+
+    // Test 13: Download Generated Deliverable (replace with actual deliverable ID)
+    // await testDownloadDeliverable("deliverable-uuid-here");
 
     console.log("\n==============================================");
     console.log("All tests completed successfully!");

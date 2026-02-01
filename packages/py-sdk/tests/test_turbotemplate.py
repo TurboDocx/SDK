@@ -748,3 +748,64 @@ class TestErrorHandling:
                         "variables": [{"placeholder": "{test}", "name": "test", "value": "value", "mimeType": "text"}],
                     }
                 )
+
+
+class TestDownload:
+    """Test download function"""
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Reset client before each test"""
+        TurboTemplate._client = None
+
+    @pytest.mark.asyncio
+    async def test_download_deliverable_source_format(self):
+        """Should download deliverable in source format by default"""
+        mock_buffer = b"mock document content"
+
+        with patch.object(TurboTemplate, "_get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.get_raw = AsyncMock(return_value=mock_buffer)
+            mock_get_client.return_value = mock_client
+
+            TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
+            result = await TurboTemplate.download("deliverable-123")
+
+            assert result == mock_buffer
+            mock_client.get_raw.assert_called_once_with("/v1/deliverable/file/deliverable-123")
+
+    @pytest.mark.asyncio
+    async def test_download_deliverable_pdf_format(self):
+        """Should download deliverable as PDF when format is pdf"""
+        mock_buffer = b"mock pdf content"
+
+        with patch.object(TurboTemplate, "_get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.get_raw = AsyncMock(return_value=mock_buffer)
+            mock_get_client.return_value = mock_client
+
+            TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
+            result = await TurboTemplate.download("deliverable-456", "pdf")
+
+            assert result == mock_buffer
+            mock_client.get_raw.assert_called_once_with("/v1/deliverable/file/pdf/deliverable-456")
+
+    @pytest.mark.asyncio
+    async def test_download_throws_when_deliverable_id_empty(self):
+        """Should throw error when deliverable_id is empty"""
+        TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
+
+        with pytest.raises(ValueError, match="deliverable_id is required"):
+            await TurboTemplate.download("")
+
+    @pytest.mark.asyncio
+    async def test_download_handles_errors(self):
+        """Should handle download errors"""
+        with patch.object(TurboTemplate, "_get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.get_raw = AsyncMock(side_effect=Exception("Not found"))
+            mock_get_client.return_value = mock_client
+
+            TurboTemplate.configure(api_key="test-key", org_id="test-org", sender_email="test@company.com")
+            with pytest.raises(Exception, match="Not found"):
+                await TurboTemplate.download("invalid-id")
