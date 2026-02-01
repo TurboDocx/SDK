@@ -5,7 +5,7 @@
  */
 
 import { HttpClient } from '../src/http';
-import { ValidationError, AuthenticationError } from '../src/utils/errors';
+import { AuthenticationError } from '../src/utils/errors';
 
 describe('HttpClient Configuration', () => {
   // Clear environment variables before each test
@@ -17,26 +17,25 @@ describe('HttpClient Configuration', () => {
     delete process.env.TURBODOCX_BASE_URL;
   });
 
-  describe('senderEmail validation', () => {
-    it('should throw ValidationError when senderEmail is not provided', () => {
+  describe('senderEmail configuration', () => {
+    it('should not throw when senderEmail is not provided (optional in HttpClient)', () => {
+      // Note: senderEmail validation is done in TurboSign.configure(), not HttpClient
       expect(() => {
         new HttpClient({
           apiKey: 'test-api-key',
           orgId: 'test-org-id',
-          // senderEmail intentionally missing
+          // senderEmail intentionally missing - this is valid for HttpClient
         });
-      }).toThrow(ValidationError);
+      }).not.toThrow();
     });
 
-    it('should throw ValidationError with descriptive message', () => {
-      expect(() => {
-        new HttpClient({
-          apiKey: 'test-api-key',
-          orgId: 'test-org-id',
-        });
-      }).toThrow(
-        /senderEmail is required.*reply-to address.*API Service User via TurboSign/i
-      );
+    it('should return undefined for senderEmail when not provided', () => {
+      const client = new HttpClient({
+        apiKey: 'test-api-key',
+        orgId: 'test-org-id',
+      });
+      const config = client.getSenderConfig();
+      expect(config.senderEmail).toBeUndefined();
     });
 
     it('should accept valid senderEmail', () => {

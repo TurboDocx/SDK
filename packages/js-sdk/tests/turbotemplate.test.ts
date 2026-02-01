@@ -376,8 +376,8 @@ describe('TurboTemplate Module', () => {
   describe('generate', () => {
     it('should generate document with simple variables', async () => {
       const mockResponse = {
-        success: true,
-        deliverableId: 'doc-123',
+        id: 'doc-123',
+        name: 'Test Document',
         message: 'Document generated successfully',
       };
 
@@ -394,8 +394,8 @@ describe('TurboTemplate Module', () => {
         ],
       });
 
-      expect(result.success).toBe(true);
-      expect(result.deliverableId).toBe('doc-123');
+      expect(result.id).toBe('doc-123');
+      expect(result.name).toBe('Test Document');
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
         '/v1/deliverable',
         expect.objectContaining({
@@ -422,8 +422,8 @@ describe('TurboTemplate Module', () => {
 
     it('should generate document with nested object variables', async () => {
       const mockResponse = {
-        success: true,
-        deliverableId: 'doc-456',
+        id: 'doc-456',
+        name: 'Nested Document',
       };
 
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
@@ -450,7 +450,7 @@ describe('TurboTemplate Module', () => {
         ],
       });
 
-      expect(result.success).toBe(true);
+      expect(result.id).toBe('doc-456');
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
         '/v1/deliverable',
         expect.objectContaining({
@@ -475,8 +475,8 @@ describe('TurboTemplate Module', () => {
 
     it('should generate document with loop/array variables', async () => {
       const mockResponse = {
-        success: true,
-        deliverableId: 'doc-789',
+        id: 'doc-789',
+        name: 'Loop Document',
       };
 
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
@@ -500,7 +500,7 @@ describe('TurboTemplate Module', () => {
         ],
       });
 
-      expect(result.success).toBe(true);
+      expect(result.id).toBe('doc-789');
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
         '/v1/deliverable',
         expect.objectContaining({
@@ -517,8 +517,8 @@ describe('TurboTemplate Module', () => {
 
     it('should generate document with helper-created variables', async () => {
       const mockResponse = {
-        success: true,
-        deliverableId: 'doc-helper',
+        id: 'doc-helper',
+        name: 'Helper Document',
       };
 
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
@@ -537,14 +537,14 @@ describe('TurboTemplate Module', () => {
         ],
       });
 
-      expect(result.success).toBe(true);
+      expect(result.id).toBe('doc-helper');
       expect(MockedHttpClient.prototype.post).toHaveBeenCalled();
     });
 
     it('should include optional request parameters', async () => {
       const mockResponse = {
-        success: true,
-        deliverableId: 'doc-options',
+        id: 'doc-options',
+        name: 'Options Document',
       };
 
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
@@ -557,7 +557,6 @@ describe('TurboTemplate Module', () => {
         variables: [{ placeholder: '{test}', name: 'test', value: 'value', mimeType: 'text' }],
         replaceFonts: true,
         defaultFont: 'Arial',
-        outputFormat: 'pdf',
         metadata: { customField: 'value' },
       });
 
@@ -566,7 +565,6 @@ describe('TurboTemplate Module', () => {
         expect.objectContaining({
           replaceFonts: true,
           defaultFont: 'Arial',
-          outputFormat: 'pdf',
           metadata: { customField: 'value' },
         })
       );
@@ -574,8 +572,8 @@ describe('TurboTemplate Module', () => {
 
     it('should allow variable with no value or text property', async () => {
       const mockResponse = {
-        success: true,
-        deliverableId: 'doc-no-value',
+        id: 'doc-no-value',
+        name: 'No Value Document',
       };
 
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
@@ -588,8 +586,8 @@ describe('TurboTemplate Module', () => {
         variables: [{ placeholder: '{test}', name: 'test', mimeType: 'text' } as any],
       });
 
-      expect(result.success).toBe(true);
-      expect(result.deliverableId).toBe('doc-no-value');
+      expect(result.id).toBe('doc-no-value');
+      expect(result.name).toBe('No Value Document');
     });
 
     it('should handle text property as fallback', async () => {
@@ -624,8 +622,8 @@ describe('TurboTemplate Module', () => {
 
     it('should allow variable with null value', async () => {
       const mockResponse = {
-        success: true,
-        deliverableId: 'doc-null',
+        id: 'doc-null',
+        name: 'Null Value Document',
       };
 
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
@@ -638,7 +636,7 @@ describe('TurboTemplate Module', () => {
         variables: [{ placeholder: '{test}', name: 'test', value: null, mimeType: 'text' }],
       });
 
-      expect(result.success).toBe(true);
+      expect(result.id).toBe('doc-null');
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
         '/v1/deliverable',
         expect.objectContaining({
@@ -655,8 +653,8 @@ describe('TurboTemplate Module', () => {
 
     it('should allow variable with undefined value', async () => {
       const mockResponse = {
-        success: true,
-        deliverableId: 'doc-undefined',
+        id: 'doc-undefined',
+        name: 'Undefined Value Document',
       };
 
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
@@ -669,7 +667,7 @@ describe('TurboTemplate Module', () => {
         variables: [{ placeholder: '{test}', name: 'test', value: undefined, mimeType: 'text' }],
       });
 
-      expect(result.success).toBe(true);
+      expect(result.id).toBe('doc-undefined');
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
         '/v1/deliverable',
         expect.objectContaining({
@@ -688,8 +686,8 @@ describe('TurboTemplate Module', () => {
   describe('Placeholder and Name Handling', () => {
     it('should require both placeholder and name in generated request', async () => {
       const mockResponse = {
-        success: true,
-        deliverableId: 'doc-both',
+        id: 'doc-both',
+        name: 'Both Fields Document',
       };
 
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
@@ -711,8 +709,8 @@ describe('TurboTemplate Module', () => {
 
     it('should allow distinct placeholder and name values', async () => {
       const mockResponse = {
-        success: true,
-        deliverableId: 'doc-distinct',
+        id: 'doc-distinct',
+        name: 'Distinct Fields Document',
       };
 
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
