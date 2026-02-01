@@ -21,6 +21,16 @@ const (
 	MimeTypeJSON VariableMimeType = "json"
 )
 
+// DeliverableDownloadFormat represents the format for downloading deliverables
+type DeliverableDownloadFormat string
+
+const (
+	// DownloadFormatSource downloads the original format (DOCX/PPTX)
+	DownloadFormatSource DeliverableDownloadFormat = "source"
+	// DownloadFormatPDF downloads as PDF
+	DownloadFormatPDF DeliverableDownloadFormat = "pdf"
+)
+
 // TemplateVariable represents a variable to inject into a template
 type TemplateVariable struct {
 	// Placeholder is the variable placeholder in template (e.g., "{customer_name}", "{order_total}")
@@ -234,6 +244,45 @@ func (c *TurboTemplateClient) Generate(ctx context.Context, req *GenerateTemplat
 	}
 
 	return &result, nil
+}
+
+// Download downloads a generated deliverable
+//
+// Parameters:
+//   - ctx: Context for the request
+//   - deliverableID: ID of the deliverable to download
+//   - format: Download format - DownloadFormatSource (original DOCX/PPTX) or DownloadFormatPDF
+//
+// Returns the document file as bytes
+//
+// Example:
+//
+//	// Download in original format (DOCX/PPTX)
+//	docBytes, err := client.TurboTemplate.Download(ctx, "deliverable-uuid", DownloadFormatSource)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	os.WriteFile("document.docx", docBytes, 0644)
+//
+//	// Download as PDF
+//	pdfBytes, err := client.TurboTemplate.Download(ctx, "deliverable-uuid", DownloadFormatPDF)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	os.WriteFile("document.pdf", pdfBytes, 0644)
+func (c *TurboTemplateClient) Download(ctx context.Context, deliverableID string, format DeliverableDownloadFormat) ([]byte, error) {
+	if deliverableID == "" {
+		return nil, fmt.Errorf("deliverableID is required")
+	}
+
+	var path string
+	if format == DownloadFormatPDF {
+		path = fmt.Sprintf("/v1/deliverable/file/pdf/%s", deliverableID)
+	} else {
+		path = fmt.Sprintf("/v1/deliverable/file/%s", deliverableID)
+	}
+
+	return c.httpClient.GetRaw(ctx, path)
 }
 
 // Helper functions for creating common variable types
