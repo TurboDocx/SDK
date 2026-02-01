@@ -395,9 +395,8 @@ class TestGenerate:
     async def test_generate_document_with_simple_variables(self):
         """Should generate document with simple variables"""
         mock_response = {
-            "success": True,
-            "deliverableId": "doc-123",
-            "message": "Document generated successfully",
+            "id": "doc-123",
+            "name": "Test Document",
         }
 
         with patch.object(TurboTemplate, "_get_client") as mock_get_client:
@@ -418,12 +417,12 @@ class TestGenerate:
                 }
             )
 
-            assert result["success"] is True
-            assert result["deliverableId"] == "doc-123"
+            assert result["id"] == "doc-123"
+            assert result["name"] == "Test Document"
             mock_client.post.assert_called_once()
             call_args = mock_client.post.call_args
             assert call_args[0][0] == "/v1/deliverable"
-            body = call_args[1]["json"]
+            body = call_args[1]["data"]
             assert body["templateId"] == "template-123"
             assert body["name"] == "Test Document"
             assert len(body["variables"]) == 2
@@ -435,7 +434,7 @@ class TestGenerate:
     @pytest.mark.asyncio
     async def test_generate_document_with_nested_object_variables(self):
         """Should generate document with nested object variables"""
-        mock_response = {"success": True, "deliverableId": "doc-456"}
+        mock_response = {"id": "doc-456", "name": "Nested Document"}
 
         with patch.object(TurboTemplate, "_get_client") as mock_get_client:
             mock_client = MagicMock()
@@ -464,16 +463,16 @@ class TestGenerate:
                 }
             )
 
-            assert result["success"] is True
+            assert result["id"] == "doc-456"
             call_args = mock_client.post.call_args
-            body = call_args[1]["json"]
+            body = call_args[1]["data"]
             assert body["variables"][0]["mimeType"] == "json"
             assert body["variables"][0]["usesAdvancedTemplatingEngine"] is True
 
     @pytest.mark.asyncio
     async def test_generate_document_with_loop_array_variables(self):
         """Should generate document with loop/array variables"""
-        mock_response = {"success": True, "deliverableId": "doc-789"}
+        mock_response = {"id": "doc-789", "name": "Loop Document"}
 
         with patch.object(TurboTemplate, "_get_client") as mock_get_client:
             mock_client = MagicMock()
@@ -501,16 +500,16 @@ class TestGenerate:
                 }
             )
 
-            assert result["success"] is True
+            assert result["id"] == "doc-789"
             call_args = mock_client.post.call_args
-            body = call_args[1]["json"]
+            body = call_args[1]["data"]
             assert body["variables"][0]["placeholder"] == "{items}"
             assert body["variables"][0]["mimeType"] == "json"
 
     @pytest.mark.asyncio
     async def test_generate_document_with_helper_created_variables(self):
         """Should generate document with helper-created variables"""
-        mock_response = {"success": True, "deliverableId": "doc-helper"}
+        mock_response = {"id": "doc-helper", "name": "Helper Document"}
 
         with patch.object(TurboTemplate, "_get_client") as mock_get_client:
             mock_client = MagicMock()
@@ -537,13 +536,13 @@ class TestGenerate:
                 }
             )
 
-            assert result["success"] is True
+            assert result["id"] == "doc-helper"
             mock_client.post.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_generate_includes_optional_request_parameters(self):
         """Should include optional request parameters"""
-        mock_response = {"success": True, "deliverableId": "doc-options"}
+        mock_response = {"id": "doc-options", "name": "Options Document"}
 
         with patch.object(TurboTemplate, "_get_client") as mock_get_client:
             mock_client = MagicMock()
@@ -559,22 +558,21 @@ class TestGenerate:
                     "variables": [{"placeholder": "{test}", "name": "test", "value": "value", "mimeType": "text"}],
                     "replaceFonts": True,
                     "defaultFont": "Arial",
-                    "outputFormat": "pdf",
                     "metadata": {"customField": "value"},
                 }
             )
 
             call_args = mock_client.post.call_args
-            body = call_args[1]["json"]
+            body = call_args[1]["data"]
             assert body["replaceFonts"] is True
             assert body["defaultFont"] == "Arial"
-            assert body["outputFormat"] == "pdf"
+            # Note: outputFormat is not supported in TurboTemplate API
             assert body["metadata"] == {"customField": "value"}
 
     @pytest.mark.asyncio
     async def test_generate_allows_variable_with_no_value_or_text(self):
         """Should allow variable with no value or text property"""
-        mock_response = {"success": True, "deliverableId": "doc-no-value"}
+        mock_response = {"id": "doc-no-value", "name": "No Value Document"}
 
         with patch.object(TurboTemplate, "_get_client") as mock_get_client:
             mock_client = MagicMock()
@@ -591,13 +589,13 @@ class TestGenerate:
                 }
             )
 
-            assert result["success"] is True
-            assert result["deliverableId"] == "doc-no-value"
+            assert result["id"] == "doc-no-value"
+            assert result["name"] == "No Value Document"
 
     @pytest.mark.asyncio
     async def test_generate_handles_text_property_as_fallback(self):
         """Should handle text property as fallback"""
-        mock_response = {"success": True, "deliverableId": "doc-text"}
+        mock_response = {"id": "doc-text", "name": "Text Document"}
 
         with patch.object(TurboTemplate, "_get_client") as mock_get_client:
             mock_client = MagicMock()
@@ -615,13 +613,13 @@ class TestGenerate:
             )
 
             call_args = mock_client.post.call_args
-            body = call_args[1]["json"]
+            body = call_args[1]["data"]
             assert body["variables"][0]["text"] == "Legacy value"
 
     @pytest.mark.asyncio
     async def test_generate_allows_null_value(self):
         """Should allow variable with None/null value"""
-        mock_response = {"success": True, "deliverableId": "doc-null"}
+        mock_response = {"id": "doc-null", "name": "Null Value Document"}
 
         with patch.object(TurboTemplate, "_get_client") as mock_get_client:
             mock_client = MagicMock()
@@ -638,9 +636,9 @@ class TestGenerate:
                 }
             )
 
-            assert result["success"] is True
+            assert result["id"] == "doc-null"
             call_args = mock_client.post.call_args
-            body = call_args[1]["json"]
+            body = call_args[1]["data"]
             assert body["variables"][0]["value"] is None
 
 
@@ -655,7 +653,7 @@ class TestPlaceholderAndNameHandling:
     @pytest.mark.asyncio
     async def test_require_both_placeholder_and_name_in_generated_request(self):
         """Should require both placeholder and name in generated request"""
-        mock_response = {"success": True, "deliverableId": "doc-both"}
+        mock_response = {"id": "doc-both", "name": "Both Fields Document"}
 
         with patch.object(TurboTemplate, "_get_client") as mock_get_client:
             mock_client = MagicMock()
@@ -675,14 +673,14 @@ class TestPlaceholderAndNameHandling:
             )
 
             call_args = mock_client.post.call_args
-            body = call_args[1]["json"]
+            body = call_args[1]["data"]
             assert body["variables"][0]["placeholder"] == "{customer}"
             assert body["variables"][0]["name"] == "customer"
 
     @pytest.mark.asyncio
     async def test_allow_distinct_placeholder_and_name_values(self):
         """Should allow distinct placeholder and name values"""
-        mock_response = {"success": True, "deliverableId": "doc-distinct"}
+        mock_response = {"id": "doc-distinct", "name": "Distinct Fields Document"}
 
         with patch.object(TurboTemplate, "_get_client") as mock_get_client:
             mock_client = MagicMock()
@@ -702,7 +700,7 @@ class TestPlaceholderAndNameHandling:
             )
 
             call_args = mock_client.post.call_args
-            body = call_args[1]["json"]
+            body = call_args[1]["data"]
             assert body["variables"][0]["placeholder"] == "{cust_name}"
             assert body["variables"][0]["name"] == "customerFullName"
 
