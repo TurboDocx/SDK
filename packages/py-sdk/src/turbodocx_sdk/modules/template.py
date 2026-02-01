@@ -7,7 +7,7 @@ Provides template generation operations:
 - Helper functions for creating common variable types
 """
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from ..http import HttpClient
 from ..types.template import (
@@ -201,6 +201,46 @@ class TurboTemplate:
 
         response = await client.post("/v1/deliverable", data=body)
         return response
+
+    @classmethod
+    async def download(
+        cls,
+        deliverable_id: str,
+        format: Literal["source", "pdf"] = "source",
+    ) -> bytes:
+        """
+        Download a generated deliverable
+
+        Args:
+            deliverable_id: ID of the deliverable to download
+            format: Download format - 'source' (original DOCX/PPTX) or 'pdf'
+
+        Returns:
+            Document file content as bytes
+
+        Example:
+            >>> # Download in original format (DOCX/PPTX)
+            >>> doc_bytes = await TurboTemplate.download('deliverable-uuid')
+            >>> with open('document.docx', 'wb') as f:
+            ...     f.write(doc_bytes)
+
+            >>> # Download as PDF
+            >>> pdf_bytes = await TurboTemplate.download('deliverable-uuid', 'pdf')
+            >>> with open('document.pdf', 'wb') as f:
+            ...     f.write(pdf_bytes)
+        """
+        if not deliverable_id:
+            raise ValueError("deliverable_id is required")
+
+        client = cls._get_client()
+
+        path = (
+            f"/v1/deliverable/file/pdf/{deliverable_id}"
+            if format == "pdf"
+            else f"/v1/deliverable/file/{deliverable_id}"
+        )
+
+        return await client.get_raw(path)
 
     @classmethod
     def validate_variable(cls, variable: TemplateVariable) -> VariableValidation:

@@ -337,3 +337,34 @@ class HttpClient:
                 raise NetworkError(f"File upload failed: {str(e) or 'Connection error'}")
             except Exception as e:
                 raise NetworkError(f"File upload failed: {str(e) or 'Unknown error'}")
+
+    async def get_raw(self, path: str) -> bytes:
+        """
+        Make GET request and return raw binary data.
+        Used for file downloads where response is not JSON.
+
+        Args:
+            path: API endpoint path
+
+        Returns:
+            Raw response content as bytes
+        """
+        url = f"{self.base_url}{path}"
+        headers = self._get_headers()
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            try:
+                response = await client.get(url, headers=headers)
+
+                if not response.is_success:
+                    await self._handle_error_response(response)
+
+                return response.content
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out: {str(e) or 'Timeout'}")
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+            except TurboDocxError:
+                raise
+            except Exception as e:
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
