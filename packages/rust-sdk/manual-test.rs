@@ -1,17 +1,18 @@
-/**
- * TurboDocx Rust SDK - Manual Test Suite
- *
- * Tests for both TurboSign (digital signatures) and TurboTemplate (document generation)
- *
- * Run: cargo run --bin manual-test
- *
- * Make sure to configure the values below before running.
- *
- * Note: Add this to Cargo.toml under [[bin]]:
- * [[bin]]
- * name = "manual-test"
- * path = "manual-test.rs"
- */
+#![allow(dead_code)]
+
+// TurboDocx Rust SDK - Manual Test Suite
+//
+// Tests for both TurboSign (digital signatures) and TurboTemplate (document generation)
+//
+// Run: cargo run --bin manual-test
+//
+// Make sure to configure the values below before running.
+//
+// Note: Add this to Cargo.toml under [[bin]]:
+// [[bin]]
+// name = "manual-test"
+// path = "manual-test.rs"
+
 use serde_json::json;
 use std::fs;
 use turbodocx_sdk::{
@@ -232,9 +233,11 @@ async fn test_nested_objects() -> Result<String, Box<dyn std::error::Error>> {
 /// Test 10: Array Loops
 ///
 /// Template usage:
+/// ```text
 /// {#items}
 /// - {name}: {quantity} x ${price}
 /// {/items}
+/// ```
 async fn test_array_loops() -> Result<String, Box<dyn std::error::Error>> {
     println!("\n--- Test 10: Array Loops ---");
 
@@ -259,9 +262,11 @@ async fn test_array_loops() -> Result<String, Box<dyn std::error::Error>> {
 /// Test 11: Conditionals
 ///
 /// Template usage:
+/// ```text
 /// {#if is_premium}
 /// Premium Member Discount: {discount * 100}%
 /// {/if}
+/// ```
 async fn test_conditionals() -> Result<String, Box<dyn std::error::Error>> {
     println!("\n--- Test 11: Conditionals ---");
 
