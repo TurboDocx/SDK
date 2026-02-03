@@ -214,7 +214,7 @@ impl TurboSign {
         } else {
             // Use JSON body for file_link, deliverable_id, or template_id
             client
-                .post("/v1/signature/create-review-link", request)
+                .post("/turbosign/single/prepare-for-review", request)
                 .await
         }
     }
@@ -335,11 +335,11 @@ impl TurboSign {
 
             let file_name = request.file_name.as_deref().unwrap_or("document.pdf");
             client
-                .upload_file("/turbosign/single/send", file_bytes, file_name, form_data)
+                .upload_file("/turbosign/single/prepare-for-signing", file_bytes, file_name, form_data)
                 .await
         } else {
             // Use JSON body for file_link, deliverable_id, or template_id
-            client.post("/v1/signature/send", request).await
+            client.post("/turbosign/single/prepare-for-signing", request).await
         }
     }
 
@@ -371,13 +371,10 @@ impl TurboSign {
         reason: Option<&str>,
     ) -> Result<VoidDocumentResponse> {
         let client = Self::get_client()?;
-        let mut body = serde_json::json!({
-            "documentId": document_id
+        let body = serde_json::json!({
+            "reason": reason.unwrap_or("")
         });
-        if let Some(reason) = reason {
-            body["reason"] = serde_json::json!(reason);
-        }
-        client.post("/v1/signature/void", body).await
+        client.post(&format!("/turbosign/documents/{}/void", document_id), body).await
     }
 
     /// Resend signature request emails to specific recipients
@@ -407,10 +404,9 @@ impl TurboSign {
     ) -> Result<ResendEmailResponse> {
         let client = Self::get_client()?;
         let body = serde_json::json!({
-            "documentId": document_id,
             "recipientIds": recipient_ids
         });
-        client.post("/v1/signature/resend", body).await
+        client.post(&format!("/turbosign/documents/{}/resend-email", document_id), body).await
     }
 
     /// Get audit trail for a document
@@ -438,7 +434,7 @@ impl TurboSign {
     pub async fn get_audit_trail(document_id: &str) -> Result<AuditTrailResponse> {
         let client = Self::get_client()?;
         client
-            .get(&format!("/v1/signature/{}/audit-trail", document_id))
+            .get(&format!("/turbosign/documents/{}/audit-trail", document_id))
             .await
     }
 
@@ -464,7 +460,7 @@ impl TurboSign {
     pub async fn get_status(document_id: &str) -> Result<DocumentStatusResponse> {
         let client = Self::get_client()?;
         client
-            .get(&format!("/v1/signature/{}/status", document_id))
+            .get(&format!("/turbosign/documents/{}/status", document_id))
             .await
     }
 
@@ -494,7 +490,7 @@ impl TurboSign {
     pub async fn download(document_id: &str) -> Result<String> {
         let client = Self::get_client()?;
         let response: serde_json::Value = client
-            .get(&format!("/v1/signature/{}/download", document_id))
+            .get(&format!("/turbosign/documents/{}/download", document_id))
             .await?;
 
         response
