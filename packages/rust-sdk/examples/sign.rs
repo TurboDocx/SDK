@@ -56,7 +56,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let response = TurboSign::create_signature_review_link(request).await?;
     println!("✓ Document ID: {}", response.document_id);
-    println!("✓ Status: {}", response.status);
+    if let Some(status) = &response.status {
+        println!("✓ Status: {}", status);
+    }
     if let Some(preview_url) = response.preview_url {
         println!("✓ Preview URL: {}", preview_url);
     }
