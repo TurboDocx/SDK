@@ -280,7 +280,8 @@ pub struct CreateSignatureReviewLinkResponse {
     pub document_id: String,
 
     /// Document status
-    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
 
     /// Preview URL for reviewing the document
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -294,13 +295,26 @@ pub struct CreateSignatureReviewLinkResponse {
     pub message: String,
 }
 
+/// Recipient metadata in response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecipientMetadata {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub light_color: Option<String>,
+}
+
 /// Recipient status in response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecipientStatus {
     pub id: String,
     pub name: String,
     pub email: String,
-    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<RecipientMetadata>,
 }
 
 /// Request to send signature (prepare and send in single call)
