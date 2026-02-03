@@ -362,7 +362,7 @@ impl TurboSign {
     ///     "doc-uuid",
     ///     Some("Contract terms changed")
     /// ).await?;
-    /// println!("{}", response.message);
+    /// println!("Document {} voided, status: {}", response.name, response.status);
     /// # Ok(())
     /// # }
     /// ```

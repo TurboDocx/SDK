@@ -385,12 +385,24 @@ pub struct SendSignatureResponse {
 
 /// Response from voiding a document
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct VoidDocumentResponse {
-    /// Whether the void was successful
-    pub success: bool,
+    /// Document ID
+    pub id: String,
 
-    /// Response message
-    pub message: String,
+    /// Document name
+    pub name: String,
+
+    /// Document status (should be 'voided')
+    pub status: String,
+
+    /// Reason for voiding
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub void_reason: Option<String>,
+
+    /// Timestamp when document was voided
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub voided_at: Option<String>,
 }
 
 /// Response from resending emails
