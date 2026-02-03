@@ -335,11 +335,18 @@ impl TurboSign {
 
             let file_name = request.file_name.as_deref().unwrap_or("document.pdf");
             client
-                .upload_file("/turbosign/single/prepare-for-signing", file_bytes, file_name, form_data)
+                .upload_file(
+                    "/turbosign/single/prepare-for-signing",
+                    file_bytes,
+                    file_name,
+                    form_data,
+                )
                 .await
         } else {
             // Use JSON body for file_link, deliverable_id, or template_id
-            client.post("/turbosign/single/prepare-for-signing", request).await
+            client
+                .post("/turbosign/single/prepare-for-signing", request)
+                .await
         }
     }
 
@@ -374,7 +381,9 @@ impl TurboSign {
         let body = serde_json::json!({
             "reason": reason.unwrap_or("")
         });
-        client.post(&format!("/turbosign/documents/{}/void", document_id), body).await
+        client
+            .post(&format!("/turbosign/documents/{}/void", document_id), body)
+            .await
     }
 
     /// Resend signature request emails to specific recipients
@@ -406,7 +415,12 @@ impl TurboSign {
         let body = serde_json::json!({
             "recipientIds": recipient_ids
         });
-        client.post(&format!("/turbosign/documents/{}/resend-email", document_id), body).await
+        client
+            .post(
+                &format!("/turbosign/documents/{}/resend-email", document_id),
+                body,
+            )
+            .await
     }
 
     /// Get audit trail for a document

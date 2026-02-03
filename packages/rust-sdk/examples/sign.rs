@@ -118,7 +118,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n=== Example 6: Void Document ===");
     let response = TurboSign::void_document(document_id, Some("Contract terms changed")).await?;
-    println!("✓ Document {} voided, status: {}", response.name, response.status);
+    println!(
+        "✓ Document {} voided, status: {}",
+        response.name, response.status
+    );
 
     println!("\n=== Example 7: Download Signed Document ===");
     let download_url = TurboSign::download(document_id).await?;
