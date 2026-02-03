@@ -320,7 +320,7 @@ const result = await TurboTemplate.generate({
   ],
 });
 
-console.log('Document ID:', result.deliverableId);
+console.log('Document ID:', result.id);
 ```
 
 #### Helper Functions

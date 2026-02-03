@@ -36,7 +36,7 @@ async function simpleSubstitution() {
     ],
   });
 
-  console.log('Document generated:', result.deliverableId);
+  console.log('Document generated:', result.id);
 }
 
 /**
@@ -62,7 +62,7 @@ async function nestedObjects() {
     ],
   });
 
-  console.log('Document with nested data generated:', result.deliverableId);
+  console.log('Document with nested data generated:', result.id);
 }
 
 /**
@@ -97,7 +97,7 @@ async function deepNestedObjects() {
     ],
   });
 
-  console.log('Document with deep nested data generated:', result.deliverableId);
+  console.log('Document with deep nested data generated:', result.id);
 }
 
 /**
@@ -127,7 +127,7 @@ async function loopsAndArrays() {
     ],
   });
 
-  console.log('Document with loop generated:', result.deliverableId);
+  console.log('Document with loop generated:', result.id);
 }
 
 /**
@@ -149,7 +149,7 @@ async function conditionals() {
     ],
   });
 
-  console.log('Document with conditionals generated:', result.deliverableId);
+  console.log('Document with conditionals generated:', result.id);
 }
 
 /**
@@ -197,7 +197,7 @@ async function expressionsAndCalculations() {
     ],
   });
 
-  console.log('Document with expressions generated:', result.deliverableId);
+  console.log('Document with expressions generated:', result.id);
 }
 
 /**
@@ -218,7 +218,7 @@ async function complexExpressions() {
     ],
   });
 
-  console.log('Document with complex expressions generated:', result.deliverableId);
+  console.log('Document with complex expressions generated:', result.id);
 }
 
 /**
@@ -244,7 +244,7 @@ async function objectPropertyExpressions() {
     ],
   });
 
-  console.log('Document with object property expressions generated:', result.deliverableId);
+  console.log('Document with object property expressions generated:', result.id);
 }
 
 /**
@@ -285,7 +285,7 @@ async function nestedLoops() {
     ],
   });
 
-  console.log('Document with nested loops generated:', result.deliverableId);
+  console.log('Document with nested loops generated:', result.id);
 }
 
 /**
@@ -315,7 +315,7 @@ async function conditionalsInLoops() {
     ],
   });
 
-  console.log('Document with conditionals in loops generated:', result.deliverableId);
+  console.log('Document with conditionals in loops generated:', result.id);
 }
 
 /**
@@ -405,7 +405,7 @@ async function complexInvoice() {
     ],
   });
 
-  console.log('Complex invoice generated:', result.deliverableId);
+  console.log('Complex invoice generated:', result.id);
 }
 
 /**
@@ -444,7 +444,7 @@ async function usingHelpers() {
     ],
   });
 
-  console.log('Document with helpers generated:', result.deliverableId);
+  console.log('Document with helpers generated:', result.id);
 }
 
 /**
