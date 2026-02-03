@@ -143,15 +143,21 @@ result = TurboSignSync.send_signature(
 from turbodocx_sdk import TurboSign
 import os
 
-# Basic configuration (REQUIRED)
+# Basic configuration
 TurboSign.configure(
     api_key="your-api-key",           # REQUIRED
     org_id="your-org-id",             # REQUIRED
-    sender_email="you@company.com",   # REQUIRED - reply-to address for signature requests
-    sender_name="Your Company"        # OPTIONAL but strongly recommended
+    sender_email="you@company.com",   # REQUIRED for TurboSign operations
+    sender_name="Your Company"        # OPTIONAL (recommended for TurboSign)
 )
 
-# With environment variables (recommended)
+# For TurboTemplate only (no sender_email needed)
+TurboTemplate.configure(
+    api_key=os.environ["TURBODOCX_API_KEY"],
+    org_id=os.environ["TURBODOCX_ORG_ID"]
+)
+
+# With environment variables (recommended for TurboSign)
 TurboSign.configure(
     api_key=os.environ["TURBODOCX_API_KEY"],
     org_id=os.environ["TURBODOCX_ORG_ID"],
@@ -170,7 +176,7 @@ TurboSign.configure(
 )
 ```
 
-**Important:** `sender_email` is **REQUIRED**. This email will be used as the reply-to address for signature request emails. Without it, emails will default to "API Service User via TurboSign". The `sender_name` is optional but strongly recommended for a professional appearance.
+**Important:** `sender_email` is **REQUIRED for TurboSign operations**. This email will be used as the reply-to address for signature request emails. For TurboTemplate-only usage, `sender_email` is not required. The `sender_name` is optional but strongly recommended for a professional appearance in signature emails.
 
 ### Environment Variables
 
@@ -305,6 +311,111 @@ for entry in audit["auditTrail"]:
 ```
 
 The audit trail includes a cryptographic hash chain for tamper-evidence verification.
+
+---
+
+### TurboTemplate
+
+Generate documents from templates with advanced variable substitution.
+
+#### `TurboTemplate.configure()`
+
+Configure the TurboTemplate module (same configuration as TurboSign).
+
+```python
+from turbodocx_sdk import TurboTemplate
+import os
+
+TurboTemplate.configure(
+    api_key=os.environ["TURBODOCX_API_KEY"],
+    org_id=os.environ["TURBODOCX_ORG_ID"],
+)
+```
+
+#### `TurboTemplate.generate()`
+
+Generate a document from a template with variables.
+
+```python
+result = await TurboTemplate.generate({
+    "templateId": "your-template-uuid",
+    "name": "Generated Contract",  # name is required
+    "description": "Contract for Q4 2024",
+    "variables": [
+        {"placeholder": "{customer_name}", "name": "customer_name", "value": "Acme Corp", "mimeType": "text"},
+        {"placeholder": "{contract_date}", "name": "contract_date", "value": "2024-01-15", "mimeType": "text"},
+        {"placeholder": "{total_amount}", "name": "total_amount", "value": 50000, "mimeType": "text"},
+    ],
+})
+
+print(f"Document ID: {result['id']}")
+```
+
+#### Helper Functions
+
+Use helper functions for cleaner variable creation:
+
+```python
+from turbodocx_sdk import TurboTemplate
+
+result = await TurboTemplate.generate({
+    "templateId": "invoice-template-uuid",
+    "name": "Invoice #1234",  # name is required
+    "description": "Monthly invoice",
+    "variables": [
+        # Simple text/number variables (placeholder, name, value, mime_type)
+        TurboTemplate.create_simple_variable("{invoice_number}", "invoice_number", "INV-2024-001", "text"),
+        TurboTemplate.create_simple_variable("{total}", "total", 1500, "text"),
+
+        # Advanced engine variable (placeholder, name, value) - for dot notation: {customer.name}
+        TurboTemplate.create_advanced_engine_variable("{customer}", "customer", {
+            "name": "Acme Corp",
+            "email": "billing@acme.com",
+            "address": {
+                "street": "123 Main St",
+                "city": "New York",
+                "state": "NY",
+            },
+        }),
+
+        # Arrays for loops (placeholder, name, value) - use {#items}...{/items} in template
+        TurboTemplate.create_loop_variable("{items}", "items", [
+            {"name": "Widget A", "quantity": 5, "price": 100},
+            {"name": "Widget B", "quantity": 3, "price": 200},
+        ]),
+
+        # Conditionals (placeholder, name, value) - use {#is_premium}...{/is_premium} in template
+        TurboTemplate.create_conditional_variable("{is_premium}", "is_premium", True),
+
+        # Images (placeholder, name, image_url)
+        TurboTemplate.create_image_variable("{logo}", "logo", "https://example.com/logo.png"),
+    ],
+})
+```
+
+#### Advanced Templating Features
+
+TurboTemplate supports Angular-like expressions:
+
+| Feature | Template Syntax | Example |
+|:--------|:----------------|:--------|
+| Simple substitution | `{variable}` | `{customer_name}` |
+| Nested objects | `{object.property}` | `{user.address.city}` |
+| Loops | `{#array}...{/array}` | `{#items}{name}: ${price}{/items}` |
+| Conditionals | `{#condition}...{/condition}` | `{#is_premium}Premium Member{/is_premium}` |
+| Expressions | `{expression}` | `{price * quantity}` |
+
+#### Variable Configuration
+
+| Property | Type | Required | Description |
+|:---------|:-----|:---------|:------------|
+| `placeholder` | str | Yes | The placeholder in template (e.g., `{name}`) |
+| `name` | str | Yes | Variable name for the templating engine |
+| `value` | any | Yes* | The value to substitute |
+| `mimeType` | str | Yes | `text`, `json`, `html`, `image`, `markdown` |
+| `usesAdvancedTemplatingEngine` | bool | No | Enable for loops, conditionals, expressions |
+
+*Either `value` or `text` must be provided.
 
 ---
 

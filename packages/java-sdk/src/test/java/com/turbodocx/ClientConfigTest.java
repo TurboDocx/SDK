@@ -17,20 +17,16 @@ class ClientConfigTest {
     // ============================================
 
     @Test
-    @DisplayName("should throw ValidationException when senderEmail is not provided")
-    void throwErrorWhenSenderEmailMissing() {
-        TurboDocxException.ValidationException exception = assertThrows(
-                TurboDocxException.ValidationException.class,
-                () -> new TurboDocxClient.Builder()
-                        .apiKey("test-api-key")
-                        .orgId("test-org-id")
-                        // senderEmail intentionally missing
-                        .build()
-        );
+    @DisplayName("should not throw when senderEmail is not provided (optional in Client)")
+    void notThrowWhenSenderEmailMissing() {
+        // Note: senderEmail validation is done in TurboSign-specific operations, not Client initialization
+        TurboDocxClient client = new TurboDocxClient.Builder()
+                .apiKey("test-api-key")
+                .orgId("test-org-id")
+                // senderEmail intentionally missing - this is valid for Client
+                .build();
 
-        assertTrue(exception.getMessage().contains("SenderEmail is required"));
-        assertTrue(exception.getMessage().contains("reply-to address"));
-        assertTrue(exception.getMessage().contains("API Service User via TurboSign"));
+        assertNotNull(client);
     }
 
     @Test
@@ -47,18 +43,16 @@ class ClientConfigTest {
     }
 
     @Test
-    @DisplayName("should throw ValidationException when senderEmail is empty string")
-    void throwErrorWhenSenderEmailEmpty() {
-        TurboDocxException.ValidationException exception = assertThrows(
-                TurboDocxException.ValidationException.class,
-                () -> new TurboDocxClient.Builder()
-                        .apiKey("test-api-key")
-                        .orgId("test-org-id")
-                        .senderEmail("")
-                        .build()
-        );
+    @DisplayName("should accept empty senderEmail string (optional)")
+    void acceptEmptySenderEmailString() {
+        // Note: senderEmail validation is done in TurboSign-specific operations, not Client initialization
+        TurboDocxClient client = new TurboDocxClient.Builder()
+                .apiKey("test-api-key")
+                .orgId("test-org-id")
+                .senderEmail("")
+                .build();
 
-        assertTrue(exception.getMessage().contains("SenderEmail is required"));
+        assertNotNull(client);
     }
 
     // ============================================

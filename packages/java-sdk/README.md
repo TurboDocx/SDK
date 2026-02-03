@@ -138,15 +138,21 @@ public class Main {
 ## Configuration
 
 ```java
-// Basic client configuration (REQUIRED)
+// Basic client configuration
 TurboDocxClient client = new TurboDocxClient.Builder()
     .apiKey("your-api-key")           // REQUIRED
     .orgId("your-org-id")             // REQUIRED
-    .senderEmail("you@company.com")   // REQUIRED - reply-to address for signature requests
-    .senderName("Your Company")       // OPTIONAL but strongly recommended
+    .senderEmail("you@company.com")   // REQUIRED for TurboSign operations
+    .senderName("Your Company")       // OPTIONAL (recommended for TurboSign)
     .build();
 
-// With environment variables (recommended)
+// For TurboTemplate only (no senderEmail needed)
+TurboDocxClient client = new TurboDocxClient.Builder()
+    .apiKey(System.getenv("TURBODOCX_API_KEY"))
+    .orgId(System.getenv("TURBODOCX_ORG_ID"))
+    .build();
+
+// With environment variables (recommended for TurboSign)
 TurboDocxClient client = new TurboDocxClient.Builder()
     .apiKey(System.getenv("TURBODOCX_API_KEY"))
     .orgId(System.getenv("TURBODOCX_ORG_ID"))
@@ -179,7 +185,7 @@ TurboDocxClient client = new TurboDocxClient.Builder()
     .build();
 ```
 
-**Important:** `senderEmail` is **REQUIRED**. This email will be used as the reply-to address for signature request emails. Without it, emails will default to "API Service User via TurboSign". The `senderName` is optional but strongly recommended for a professional appearance.
+**Important:** `senderEmail` is **REQUIRED for TurboSign operations**. This email will be used as the reply-to address for signature request emails. For TurboTemplate-only usage, `senderEmail` is not required. The `senderName` is optional but strongly recommended for a professional appearance in signature emails.
 
 **Environment Variables:**
 
@@ -312,6 +318,99 @@ for (AuditTrailEntry entry : audit.getAuditTrail()) {
 ```
 
 The audit trail includes a cryptographic hash chain for tamper-evidence verification.
+
+---
+
+### TurboTemplate
+
+Generate documents from templates with advanced variable substitution.
+
+#### `turboTemplate().generate()`
+
+Generate a document from a template with variables.
+
+```java
+GenerateTemplateResponse result = client.turboTemplate().generate(
+    GenerateTemplateRequest.builder()
+        .templateId("your-template-uuid")
+        .name("Generated Contract")
+        .description("Contract for Q4 2024")
+        .variables(Arrays.asList(
+            TemplateVariable.simple("{customer_name}", "customer_name", "Acme Corp", VariableMimeType.TEXT),
+            TemplateVariable.simple("{contract_date}", "contract_date", "2024-01-15", VariableMimeType.TEXT),
+            TemplateVariable.simple("{total_amount}", "total_amount", 50000, VariableMimeType.TEXT)
+        ))
+        .build()
+);
+
+System.out.println("Document ID: " + result.getId());
+```
+
+#### Helper Functions
+
+Use helper functions for cleaner variable creation:
+
+```java
+GenerateTemplateResponse result = client.turboTemplate().generate(
+    GenerateTemplateRequest.builder()
+        .templateId("invoice-template-uuid")
+        .name("Invoice #1234")
+        .description("Monthly invoice")
+        .variables(Arrays.asList(
+            // Simple text/number variables (placeholder, name, value, mimeType)
+            TemplateVariable.simple("{invoice_number}", "invoice_number", "INV-2024-001", VariableMimeType.TEXT),
+            TemplateVariable.simple("{total}", "total", 1500, VariableMimeType.TEXT),
+
+            // Advanced engine variable (placeholder, name, value) - for dot notation: {customer.name}
+            TemplateVariable.advancedEngine("{customer}", "customer", Map.of(
+                "name", "Acme Corp",
+                "email", "billing@acme.com",
+                "address", Map.of(
+                    "street", "123 Main St",
+                    "city", "New York",
+                    "state", "NY"
+                )
+            )),
+
+            // Arrays for loops (placeholder, name, value) - use {#items}...{/items} in template
+            TemplateVariable.loop("{items}", "items", Arrays.asList(
+                Map.of("name", "Widget A", "quantity", 5, "price", 100),
+                Map.of("name", "Widget B", "quantity", 3, "price", 200)
+            )),
+
+            // Conditionals (placeholder, name, value) - use {#is_premium}...{/is_premium} in template
+            TemplateVariable.conditional("{is_premium}", "is_premium", true),
+
+            // Images (placeholder, name, imageUrl)
+            TemplateVariable.image("{logo}", "logo", "https://example.com/logo.png")
+        ))
+        .build()
+);
+```
+
+#### Advanced Templating Features
+
+TurboTemplate supports Angular-like expressions:
+
+| Feature | Template Syntax | Example |
+|:--------|:----------------|:--------|
+| Simple substitution | `{variable}` | `{customer_name}` |
+| Nested objects | `{object.property}` | `{user.address.city}` |
+| Loops | `{#array}...{/array}` | `{#items}{name}: ${price}{/items}` |
+| Conditionals | `{#condition}...{/condition}` | `{#is_premium}Premium Member{/is_premium}` |
+| Expressions | `{expression}` | `{price * quantity}` |
+
+#### Variable Configuration
+
+| Property | Type | Required | Description |
+|:---------|:-----|:---------|:------------|
+| `placeholder` | String | Yes | The placeholder in template (e.g., `{name}`) |
+| `name` | String | Yes | Variable name for the templating engine |
+| `value` | Object | Yes* | The value to substitute |
+| `mimeType` | VariableMimeType | Yes | `TEXT`, `JSON`, `HTML`, `IMAGE`, `MARKDOWN` |
+| `usesAdvancedTemplatingEngine` | Boolean | No | Enable for loops, conditionals, expressions |
+
+*Either `value` or `text` must be provided.
 
 ---
 

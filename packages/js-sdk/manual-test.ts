@@ -1,12 +1,14 @@
 /**
- * TurboSign JS SDK - Manual Test Suite
+ * TurboDocx JS SDK - Manual Test Suite
+ *
+ * Tests for both TurboSign (digital signatures) and TurboTemplate (document generation)
  *
  * Run: npx ts-node manual-test.ts
  *
  * Make sure to configure the values below before running.
  */
 
-import { TurboSign } from "./src";
+import { TurboSign, TurboTemplate } from "./src";
 import * as fs from "fs";
 
 // =============================================
@@ -19,14 +21,22 @@ const ORG_ID = "your-org-id-here"; // Replace with your organization UUID
 const TEST_PDF_PATH = "./test-document.pdf"; // Replace with path to your test PDF/DOCX
 const TEST_EMAIL = "recipient@example.com"; // Replace with a real email to receive notifications
 const FILE_URL = "https://example.com/your-document.pdf"; // Replace with publicly accessible PDF URL
+const TEMPLATE_ID = "your-template-uuid-here"; // Replace with your template UUID
 
-// Initialize client
+// Initialize TurboSign client
 TurboSign.configure({
   apiKey: API_KEY,
   baseUrl: BASE_URL,
   orgId: ORG_ID,
   senderEmail: "sender@example.com",     // Reply-to email for signature requests
   senderName: "Your Company Name",       // Sender name shown in emails
+});
+
+// Initialize TurboTemplate client
+TurboTemplate.configure({
+  apiKey: API_KEY,
+  baseUrl: BASE_URL,
+  orgId: ORG_ID,
 });
 
 // =============================================
@@ -157,6 +167,172 @@ async function testGetAuditTrail(documentId: string) {
 }
 
 // =============================================
+// TURBOTEMPLATE TEST FUNCTIONS
+// =============================================
+
+/**
+ * Test 8: Simple Variable Substitution
+ *
+ * Template usage: "Dear {customer_name}, your order total is ${order_total}."
+ */
+async function testSimpleVariables() {
+  console.log("\n--- Test 8: Simple Variable Substitution ---");
+
+  const result = await TurboTemplate.generate({
+    templateId: TEMPLATE_ID,
+    variables: [
+      { placeholder: "{customer_name}", name: "customer_name", value: "John Doe", mimeType: "text" },
+      { placeholder: "{order_total}", name: "order_total", value: 1500, mimeType: "text" },
+      { placeholder: "{order_date}", name: "order_date", value: "2024-01-01", mimeType: "text" },
+    ],
+    name: "Simple Substitution Document",
+    description: "Basic variable substitution example",
+  });
+
+  console.log("Result:", JSON.stringify(result, null, 2));
+  return result.id;
+}
+
+/**
+ * Test 9: Nested Objects with Dot Notation
+ *
+ * Template usage: "Name: {user.name}, Company: {user.profile.company}"
+ */
+async function testNestedObjects() {
+  console.log("\n--- Test 9: Nested Objects with Dot Notation ---");
+
+  const result = await TurboTemplate.generate({
+    templateId: TEMPLATE_ID,
+    variables: [
+      {
+        placeholder: "{user}",
+        name: "user",
+        value: {
+          name: "John Doe",
+          email: "john@example.com",
+          profile: {
+            company: "Acme Corp",
+            title: "Software Engineer",
+            location: "San Francisco, CA"
+          }
+        },
+        mimeType: "json",
+        usesAdvancedTemplatingEngine: true,
+      },
+    ],
+    name: "Nested Objects Document",
+    description: "Nested object with dot notation example",
+  });
+
+  console.log("Result:", JSON.stringify(result, null, 2));
+  return result.id;
+}
+
+/**
+ * Test 10: Array Loops
+ *
+ * Template usage:
+ * {#items}
+ * - {name}: {quantity} x ${price}
+ * {/items}
+ */
+async function testArrayLoops() {
+  console.log("\n--- Test 10: Array Loops ---");
+
+  const result = await TurboTemplate.generate({
+    templateId: TEMPLATE_ID,
+    variables: [
+      {
+        placeholder: "{items}",
+        name: "items",
+        value: [
+          { name: "Item A", quantity: 5, price: 100, sku: "SKU-001" },
+          { name: "Item B", quantity: 3, price: 200, sku: "SKU-002" },
+          { name: "Item C", quantity: 10, price: 50, sku: "SKU-003" },
+        ],
+        mimeType: "json",
+        usesAdvancedTemplatingEngine: true,
+      },
+    ],
+    name: "Array Loops Document",
+    description: "Array loop iteration example",
+  });
+
+  console.log("Result:", JSON.stringify(result, null, 2));
+  return result.id;
+}
+
+/**
+ * Test 11: Conditionals
+ *
+ * Template usage:
+ * {#if is_premium}
+ * Premium Member Discount: {discount * 100}%
+ * {/if}
+ */
+async function testConditionals() {
+  console.log("\n--- Test 11: Conditionals ---");
+
+  const result = await TurboTemplate.generate({
+    templateId: TEMPLATE_ID,
+    variables: [
+      { placeholder: "{is_premium}", name: "is_premium", value: true, mimeType: "json", usesAdvancedTemplatingEngine: true },
+      { placeholder: "{discount}", name: "discount", value: 0.2, mimeType: "json", usesAdvancedTemplatingEngine: true },
+    ],
+    name: "Conditionals Document",
+    description: "Boolean conditional example",
+  });
+
+  console.log("Result:", JSON.stringify(result, null, 2));
+  return result.id;
+}
+
+/**
+ * Test 12: Images
+ *
+ * Template usage: Insert {logo} at the top of the document
+ */
+async function testImages() {
+  console.log("\n--- Test 12: Images ---");
+
+  const result = await TurboTemplate.generate({
+    templateId: TEMPLATE_ID,
+    variables: [
+      { placeholder: "{title}", name: "title", value: "Quarterly Report", mimeType: "text" },
+      { placeholder: "{logo}", name: "logo", value: "https://example.com/logo.png", mimeType: "image" },
+    ],
+    name: "Document with Images",
+    description: "Using image variables",
+  });
+
+  console.log("Result:", JSON.stringify(result, null, 2));
+  return result.id;
+}
+
+/**
+ * Test 13: Download Generated Deliverable
+ *
+ * Downloads a generated deliverable in both source and PDF formats
+ */
+async function testDownloadDeliverable(deliverableId: string) {
+  console.log("\n--- Test 13: Download Generated Deliverable ---");
+
+  // Download in source format (DOCX/PPTX)
+  const sourceBuffer = await TurboTemplate.download(deliverableId);
+  console.log(`Source file downloaded: ${sourceBuffer.length} bytes`);
+  fs.writeFileSync("./downloaded-source.docx", sourceBuffer);
+  console.log("Saved to: ./downloaded-source.docx");
+
+  // Download as PDF
+  const pdfBuffer = await TurboTemplate.download(deliverableId, "pdf");
+  console.log(`PDF file downloaded: ${pdfBuffer.length} bytes`);
+  fs.writeFileSync("./downloaded-deliverable.pdf", pdfBuffer);
+  console.log("Saved to: ./downloaded-deliverable.pdf");
+
+  return { sourceBuffer, pdfBuffer };
+}
+
+// =============================================
 // MAIN TEST RUNNER
 // =============================================
 
@@ -174,6 +350,8 @@ async function runAllTests() {
 
   try {
     // Uncomment and run tests as needed:
+
+    // ===== TurboSign Tests =====
 
     // Test 1: Create Signature Review Link
     // const reviewDocId = await testCreateSignatureReviewLink();
@@ -195,6 +373,26 @@ async function runAllTests() {
 
     // Test 7: Get Audit Trail (replace with actual document ID)
     // await testGetAuditTrail("document-uuid-here");
+
+    // ===== TurboTemplate Tests =====
+
+    // Test 8: Simple Variable Substitution
+    // const simpleDocId = await testSimpleVariables();
+
+    // Test 9: Nested Objects with Dot Notation
+    // const nestedDocId = await testNestedObjects();
+
+    // Test 10: Array Loops
+    // const loopsDocId = await testArrayLoops();
+
+    // Test 11: Conditionals
+    // const conditionalsDocId = await testConditionals();
+
+    // Test 12: Images
+    // const imagesDocId = await testImages();
+
+    // Test 13: Download Generated Deliverable (replace with actual deliverable ID)
+    // await testDownloadDeliverable("deliverable-uuid-here");
 
     console.log("\n==============================================");
     console.log("All tests completed successfully!");

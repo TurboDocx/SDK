@@ -62,15 +62,16 @@ final class HttpClientConfigTest extends TestCase
         );
     }
 
-    public function testMissingSenderEmailThrowsException(): void
+    public function testMissingSenderEmailDoesNotThrow(): void
     {
-        $this->expectException(ValidationException::class);
-        $this->expectExceptionMessage('senderEmail is required');
-
-        new HttpClientConfig(
+        // Note: senderEmail validation is done in TurboSign-specific operations, not HttpClientConfig
+        $config = new HttpClientConfig(
             apiKey: 'test-api-key',
             orgId: 'test-org-id'
         );
+
+        $this->assertNotNull($config);
+        $this->assertNull($config->senderEmail);
     }
 
     public function testFromEnvironment(): void

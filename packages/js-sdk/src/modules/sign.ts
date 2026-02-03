@@ -38,6 +38,11 @@ export class TurboSign {
    * ```
    */
   static configure(config: HttpClientConfig): void {
+    // Validate that senderEmail is provided for TurboSign
+    const senderEmail = config.senderEmail || process.env.TURBODOCX_SENDER_EMAIL;
+    if (!senderEmail) {
+      throw new Error('senderEmail is required for TurboSign. This email will be used as the reply-to address for signature requests. Without it, emails will default to "API Service User via TurboSign".');
+    }
     this.client = new HttpClient(config);
   }
 
@@ -47,6 +52,10 @@ export class TurboSign {
   private static getClient(): HttpClient {
     if (!this.client) {
       // Auto-initialize with environment variables if not configured
+      const senderEmail = process.env.TURBODOCX_SENDER_EMAIL;
+      if (!senderEmail) {
+        throw new Error('senderEmail is required for TurboSign. Please configure TurboSign with senderEmail or set TURBODOCX_SENDER_EMAIL environment variable.');
+      }
       this.client = new HttpClient();
     }
     return this.client;

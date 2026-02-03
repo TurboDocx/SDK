@@ -5,10 +5,12 @@ package com.turbodocx;
  */
 public class TurboDocxClient {
     private final TurboSign turboSign;
+    private final TurboTemplate turboTemplate;
 
     private TurboDocxClient(Builder builder) {
         HttpClient httpClient = new HttpClient(builder.baseUrl, builder.apiKey, builder.accessToken, builder.orgId, builder.senderEmail, builder.senderName);
         this.turboSign = new TurboSign(httpClient);
+        this.turboTemplate = new TurboTemplate(httpClient);
     }
 
     /**
@@ -16,6 +18,13 @@ public class TurboDocxClient {
      */
     public TurboSign turboSign() {
         return turboSign;
+    }
+
+    /**
+     * Get the TurboTemplate client for document templating operations
+     */
+    public TurboTemplate turboTemplate() {
+        return turboTemplate;
     }
 
     /**
@@ -85,9 +94,7 @@ public class TurboDocxClient {
             if (orgId == null || orgId.isEmpty()) {
                 throw new TurboDocxException.AuthenticationException("Organization ID (orgId) is required for authentication");
             }
-            if (senderEmail == null || senderEmail.isEmpty()) {
-                throw new TurboDocxException.ValidationException("SenderEmail is required. This email will be used as the reply-to address for signature requests. Without it, emails will default to \"API Service User via TurboSign\".");
-            }
+            // Note: senderEmail validation removed - it's only required for TurboSign operations
             return new TurboDocxClient(this);
         }
     }

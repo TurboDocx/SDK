@@ -87,10 +87,6 @@ export class HttpClient {
     if (!this.apiKey && !this.accessToken) {
       throw new AuthenticationError('API key or access token is required');
     }
-
-    if (!this.senderEmail) {
-      throw new ValidationError('senderEmail is required. This email will be used as the reply-to address for signature requests. Without it, emails will default to "API Service User via TurboSign".');
-    }
   }
 
   /**
@@ -334,5 +330,36 @@ export class HttpClient {
 
   async post<T>(path: string, data?: any, options?: RequestInit): Promise<T> {
     return this.request<T>('POST', path, data, options);
+  }
+
+  /**
+   * Make a GET request and return raw binary data
+   * Used for file downloads where response is not JSON
+   *
+   * @param path - API endpoint path
+   * @returns Raw response as Buffer
+   */
+  async getRaw(path: string): Promise<Buffer> {
+    const url = `${this.baseUrl}${path}`;
+    const headers = this.getHeaders();
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        await this.handleErrorResponse(response);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      return Buffer.from(arrayBuffer);
+    } catch (error) {
+      if (error instanceof TurboDocxError) {
+        throw error;
+      }
+      throw new NetworkError(`Network request failed: ${error}`);
+    }
   }
 }

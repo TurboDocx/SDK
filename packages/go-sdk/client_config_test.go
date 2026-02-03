@@ -10,19 +10,16 @@ import (
 
 // Test senderEmail validation
 func TestClientConfig_SenderEmailValidation(t *testing.T) {
-	t.Run("should throw ValidationError when senderEmail is not provided", func(t *testing.T) {
-		_, err := NewClientWithConfig(ClientConfig{
+	t.Run("should not throw error when senderEmail is not provided (optional in Client)", func(t *testing.T) {
+		// Note: senderEmail validation is done in TurboSign-specific operations, not Client initialization
+		client, err := NewClientWithConfig(ClientConfig{
 			APIKey: "test-api-key",
 			OrgID:  "test-org-id",
-			// senderEmail intentionally missing
+			// senderEmail intentionally missing - this is valid for Client
 		})
 
-		require.Error(t, err)
-		validationErr, ok := err.(*ValidationError)
-		require.True(t, ok, "expected ValidationError")
-		assert.Contains(t, validationErr.Message, "SenderEmail is required")
-		assert.Contains(t, validationErr.Message, "reply-to address")
-		assert.Equal(t, 400, validationErr.StatusCode)
+		require.NoError(t, err)
+		assert.NotNil(t, client)
 	})
 
 	t.Run("should accept valid senderEmail", func(t *testing.T) {

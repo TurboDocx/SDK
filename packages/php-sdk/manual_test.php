@@ -1,7 +1,9 @@
 <?php
 
 /**
- * TurboSign PHP SDK - Manual Test Suite
+ * TurboDocx PHP SDK - Manual Test Suite
+ *
+ * Tests for both TurboSign (digital signatures) and TurboTemplate (document generation)
  *
  * Run: php manual_test.php
  *
@@ -13,14 +15,19 @@ declare(strict_types=1);
 require __DIR__ . '/vendor/autoload.php';
 
 use TurboDocx\TurboSign;
+use TurboDocx\TurboTemplate;
 use TurboDocx\Config\HttpClientConfig;
 use TurboDocx\Types\Recipient;
 use TurboDocx\Types\Field;
 use TurboDocx\Types\SignatureFieldType;
 use TurboDocx\Types\TemplateConfig;
 use TurboDocx\Types\FieldPlacement;
+use TurboDocx\Types\TemplateVariable;
+use TurboDocx\Types\VariableMimeType;
+use TurboDocx\Types\OutputFormat;
 use TurboDocx\Types\Requests\CreateSignatureReviewLinkRequest;
 use TurboDocx\Types\Requests\SendSignatureRequest;
+use TurboDocx\Types\Requests\GenerateTemplateRequest;
 use TurboDocx\Exceptions\TurboDocxException;
 
 // =============================================
@@ -33,14 +40,22 @@ const ORG_ID = 'your-organization-uuid-here';      // Replace with your organiza
 const TEST_PDF_PATH = '/path/to/your/test-document.pdf';  // Replace with path to your test PDF/DOCX
 const TEST_EMAIL = 'recipient@example.com';               // Replace with a real email to receive notifications
 const FILE_URL = 'https://example.com/sample-document.pdf'; // Replace with publicly accessible PDF URL
+const TEMPLATE_ID = 'your-template-uuid-here';            // Replace with your template UUID
 
-// Initialize client
+// Initialize TurboSign client
 TurboSign::configure(new HttpClientConfig(
     apiKey: API_KEY,
     orgId: ORG_ID,
     baseUrl: BASE_URL,
     senderEmail: 'sender@example.com',     // Reply-to email for signature requests
     senderName: 'Your Company Name'        // Sender name shown in emails
+));
+
+// Initialize TurboTemplate client
+TurboTemplate::configure(new HttpClientConfig(
+    apiKey: API_KEY,
+    orgId: ORG_ID,
+    baseUrl: BASE_URL
 ));
 
 // =============================================
@@ -208,13 +223,230 @@ function testGetAuditTrail(string $documentId): void
 }
 
 // =============================================
+// TURBOTEMPLATE TEST FUNCTIONS
+// =============================================
+
+/**
+ * Test 8: Simple Variable Substitution
+ *
+ * Template usage: "Dear {customer_name}, your order total is ${order_total}."
+ */
+function testSimpleVariables(): string
+{
+    echo "\n--- Test 8: Simple Variable Substitution ---\n";
+
+    $result = TurboTemplate::generate(
+        new GenerateTemplateRequest(
+            templateId: TEMPLATE_ID,
+            variables: [
+                new TemplateVariable(
+                    placeholder: '{customer_name}',
+                    name: 'customer_name',
+                    value: 'John Doe',
+                    mimeType: VariableMimeType::TEXT
+                ),
+                new TemplateVariable(
+                    placeholder: '{order_total}',
+                    name: 'order_total',
+                    value: 1500,
+                    mimeType: VariableMimeType::TEXT
+                ),
+                new TemplateVariable(
+                    placeholder: '{order_date}',
+                    name: 'order_date',
+                    value: '2024-01-01',
+                    mimeType: VariableMimeType::TEXT
+                ),
+            ],
+            name: 'Simple Substitution Document',
+            description: 'Basic variable substitution example'
+        )
+    );
+
+    echo "Result: " . json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+    return $result->deliverableId;
+}
+
+/**
+ * Test 9: Nested Objects with Dot Notation
+ *
+ * Template usage: "Name: {user.name}, Company: {user.profile.company}"
+ */
+function testNestedObjects(): string
+{
+    echo "\n--- Test 9: Nested Objects with Dot Notation ---\n";
+
+    $result = TurboTemplate::generate(
+        new GenerateTemplateRequest(
+            templateId: TEMPLATE_ID,
+            variables: [
+                new TemplateVariable(
+                    placeholder: '{user}',
+                    name: 'user',
+                    value: [
+                        'name' => 'John Doe',
+                        'email' => 'john@example.com',
+                        'profile' => [
+                            'company' => 'Acme Corp',
+                            'title' => 'Software Engineer',
+                            'location' => 'San Francisco, CA',
+                        ],
+                    ],
+                    mimeType: VariableMimeType::JSON,
+                    usesAdvancedTemplatingEngine: true
+                ),
+            ],
+            name: 'Nested Objects Document',
+            description: 'Nested object with dot notation example'
+        )
+    );
+
+    echo "Result: " . json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+    return $result->deliverableId;
+}
+
+/**
+ * Test 10: Array Loops
+ *
+ * Template usage:
+ * {#items}
+ * - {name}: {quantity} x ${price}
+ * {/items}
+ */
+function testArrayLoops(): string
+{
+    echo "\n--- Test 10: Array Loops ---\n";
+
+    $result = TurboTemplate::generate(
+        new GenerateTemplateRequest(
+            templateId: TEMPLATE_ID,
+            variables: [
+                new TemplateVariable(
+                    placeholder: '{items}',
+                    name: 'items',
+                    value: [
+                        ['name' => 'Item A', 'quantity' => 5, 'price' => 100, 'sku' => 'SKU-001'],
+                        ['name' => 'Item B', 'quantity' => 3, 'price' => 200, 'sku' => 'SKU-002'],
+                        ['name' => 'Item C', 'quantity' => 10, 'price' => 50, 'sku' => 'SKU-003'],
+                    ],
+                    mimeType: VariableMimeType::JSON,
+                    usesAdvancedTemplatingEngine: true
+                ),
+            ],
+            name: 'Array Loops Document',
+            description: 'Array loop iteration example'
+        )
+    );
+
+    echo "Result: " . json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+    return $result->deliverableId;
+}
+
+/**
+ * Test 11: Conditionals
+ *
+ * Template usage:
+ * {#if is_premium}
+ * Premium Member Discount: {discount * 100}%
+ * {/if}
+ */
+function testConditionals(): string
+{
+    echo "\n--- Test 11: Conditionals ---\n";
+
+    $result = TurboTemplate::generate(
+        new GenerateTemplateRequest(
+            templateId: TEMPLATE_ID,
+            variables: [
+                new TemplateVariable(
+                    placeholder: '{is_premium}',
+                    name: 'is_premium',
+                    value: true,
+                    mimeType: VariableMimeType::JSON,
+                    usesAdvancedTemplatingEngine: true
+                ),
+                new TemplateVariable(
+                    placeholder: '{discount}',
+                    name: 'discount',
+                    value: 0.2,
+                    mimeType: VariableMimeType::JSON,
+                    usesAdvancedTemplatingEngine: true
+                ),
+            ],
+            name: 'Conditionals Document',
+            description: 'Boolean conditional example'
+        )
+    );
+
+    echo "Result: " . json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+    return $result->deliverableId;
+}
+
+/**
+ * Test 12: Images
+ *
+ * Template usage: Insert {logo} at the top of the document
+ */
+function testImages(): string
+{
+    echo "\n--- Test 12: Images ---\n";
+
+    $result = TurboTemplate::generate(
+        new GenerateTemplateRequest(
+            templateId: TEMPLATE_ID,
+            variables: [
+                new TemplateVariable(
+                    placeholder: '{title}',
+                    name: 'title',
+                    value: 'Quarterly Report',
+                    mimeType: VariableMimeType::TEXT
+                ),
+                new TemplateVariable(
+                    placeholder: '{logo}',
+                    name: 'logo',
+                    value: 'https://example.com/logo.png',
+                    mimeType: VariableMimeType::IMAGE
+                ),
+            ],
+            name: 'Document with Images',
+            description: 'Using image variables'
+        )
+    );
+
+    echo "Result: " . json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+    return $result->deliverableId;
+}
+
+/**
+ * Test 13: Download Generated Deliverable
+ *
+ * Downloads a generated deliverable in both source and PDF formats
+ */
+function testDownloadDeliverable(string $deliverableId): void
+{
+    echo "\n--- Test 13: Download Generated Deliverable ---\n";
+
+    // Download in source format (DOCX/PPTX)
+    $sourceContent = TurboTemplate::download($deliverableId);
+    echo "Source file downloaded: " . strlen($sourceContent) . " bytes\n";
+    file_put_contents('./downloaded-source.docx', $sourceContent);
+    echo "Saved to: ./downloaded-source.docx\n";
+
+    // Download as PDF
+    $pdfContent = TurboTemplate::download($deliverableId, 'pdf');
+    echo "PDF file downloaded: " . strlen($pdfContent) . " bytes\n";
+    file_put_contents('./downloaded-deliverable.pdf', $pdfContent);
+    echo "Saved to: ./downloaded-deliverable.pdf\n";
+}
+
+// =============================================
 // MAIN TEST RUNNER
 // =============================================
 
 function main(): void
 {
     echo "==============================================\n";
-    echo "TurboSign PHP SDK - Manual Test Suite\n";
+    echo "TurboDocx PHP SDK - Manual Test Suite\n";
     echo "==============================================\n";
 
     // Check if test PDF exists
@@ -226,6 +458,8 @@ function main(): void
 
     try {
         // Uncomment and run tests as needed:
+
+        // ===== TurboSign Tests =====
 
         // Test 1: Prepare for Review (uses fileLink, doesn't need PDF file)
         // $reviewDocId = testCreateSignatureReviewLink();
@@ -247,6 +481,26 @@ function main(): void
 
         // Test 7: Get Audit Trail (replace with actual document ID)
         // testGetAuditTrail('document-uuid-here');
+
+        // ===== TurboTemplate Tests =====
+
+        // Test 8: Simple Variable Substitution
+        // $simpleDocId = testSimpleVariables();
+
+        // Test 9: Nested Objects with Dot Notation
+        // $nestedDocId = testNestedObjects();
+
+        // Test 10: Array Loops
+        // $loopsDocId = testArrayLoops();
+
+        // Test 11: Conditionals
+        // $conditionalsDocId = testConditionals();
+
+        // Test 12: Images
+        // $imagesDocId = testImages();
+
+        // Test 13: Download Generated Deliverable (replace with actual deliverable ID)
+        // testDownloadDeliverable('deliverable-uuid-here');
 
         echo "\n==============================================\n";
         echo "All tests completed successfully!\n";
