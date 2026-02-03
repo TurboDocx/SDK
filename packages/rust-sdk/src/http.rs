@@ -273,16 +273,16 @@ impl HttpClient {
         // Build request with auth headers
         let mut req = self.client.post(&url).multipart(form);
 
-        // Add authentication
+        // Add authentication - API key is sent as Bearer token (backend expects Authorization header)
         if let Some(api_key) = &self.config.api_key {
-            req = req.header("x-api-key", api_key);
+            req = req.header(header::AUTHORIZATION, format!("Bearer {}", api_key));
         } else if let Some(token) = &self.config.access_token {
             req = req.header(header::AUTHORIZATION, format!("Bearer {}", token));
         }
 
         // Add org ID if provided
         if let Some(org_id) = &self.config.org_id {
-            req = req.header("x-org-id", org_id);
+            req = req.header("x-rapiddocx-org-id", org_id);
         }
 
         // Send request
