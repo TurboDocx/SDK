@@ -345,9 +345,9 @@ use TurboDocx\Types\SignatureFieldType;
 
 SignatureFieldType::SIGNATURE    // Signature field
 SignatureFieldType::INITIAL       // Initial field
-SignatureFieldType::DATE          // Date stamp (auto-filled when signed)
+SignatureFieldType::DATE          // Date stamp
 SignatureFieldType::TEXT          // Free text input
-SignatureFieldType::FULL_NAME     // Full name (auto-filled from recipient)
+SignatureFieldType::FULL_NAME     // Full name
 SignatureFieldType::FIRST_NAME    // First name
 SignatureFieldType::LAST_NAME     // Last name
 SignatureFieldType::EMAIL         // Email address

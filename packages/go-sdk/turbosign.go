@@ -92,14 +92,22 @@ type CreateSignatureReviewLinkRequest struct {
 	CCEmails            []string
 }
 
+// ReviewRecipient represents a recipient in the review link response
+type ReviewRecipient struct {
+	ID       string                 `json:"id"`
+	Name     string                 `json:"name"`
+	Email    string                 `json:"email"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
 // CreateSignatureReviewLinkResponse is the response from CreateSignatureReviewLink
 type CreateSignatureReviewLinkResponse struct {
-	Success    bool                      `json:"success"`
-	DocumentID string                    `json:"documentId"`
-	Status     string                    `json:"status"`
-	PreviewURL string                    `json:"previewUrl,omitempty"`
-	Message    string                    `json:"message"`
-	Recipients []RecipientResponse `json:"recipients,omitempty"`
+	Success    bool              `json:"success"`
+	DocumentID string            `json:"documentId"`
+	Status     string            `json:"status"`
+	PreviewURL string            `json:"previewUrl,omitempty"`
+	Message    string            `json:"message"`
+	Recipients []ReviewRecipient `json:"recipients,omitempty"`
 }
 
 // SendSignatureRequest is the request for SendSignature

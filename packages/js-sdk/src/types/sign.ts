@@ -211,12 +211,12 @@ export interface CreateSignatureReviewLinkResponse {
   status: string;
   /** Preview URL for reviewing the document */
   previewUrl?: string;
-  /** Recipients with their status */
+  /** Recipients with their metadata */
   recipients?: Array<{
     id: string;
     name: string;
     email: string;
-    status: string;
+    metadata?: Record<string, any>;
   }>;
   /** Response message */
   message: string;
