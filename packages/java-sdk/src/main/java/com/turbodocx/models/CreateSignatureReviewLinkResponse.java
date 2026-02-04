@@ -23,7 +23,7 @@ public class CreateSignatureReviewLinkResponse {
     private String message;
 
     @SerializedName("recipients")
-    private List<RecipientResponse> recipients;
+    private List<ReviewRecipient> recipients;
 
     public boolean isSuccess() {
         return success;
@@ -45,7 +45,7 @@ public class CreateSignatureReviewLinkResponse {
         return message;
     }
 
-    public List<RecipientResponse> getRecipients() {
+    public List<ReviewRecipient> getRecipients() {
         return recipients;
     }
 }
