@@ -116,11 +116,9 @@ function apiKeyManagementExample(): void
         );
 
         echo "Organization API key updated!\n";
-        if ($updateOrgKeyResult->apiKey !== null) {
-            echo "  Key ID: {$updateOrgKeyResult->apiKey->id}\n";
-            echo "  New Name: {$updateOrgKeyResult->apiKey->name}\n";
-            echo "  New Role: {$updateOrgKeyResult->apiKey->role}\n";
-        }
+        echo "  Key ID: {$updateOrgKeyResult->data->id}\n";
+        echo "  New Name: {$updateOrgKeyResult->data->name}\n";
+        echo "  New Role: {$updateOrgKeyResult->data->role}\n";
         echo "\n";
 
         // 4. REVOKE ORGANIZATION API KEY
@@ -199,10 +197,8 @@ function apiKeyManagementExample(): void
         );
 
         echo "Partner API key updated!\n";
-        if ($updatePartnerKeyResult->apiKey !== null) {
-            echo "  Key ID: {$updatePartnerKeyResult->apiKey->id}\n";
-            echo "  New Name: {$updatePartnerKeyResult->apiKey->name}\n";
-        }
+        echo "  Key ID: {$updatePartnerKeyResult->data->id}\n";
+        echo "  New Name: {$updatePartnerKeyResult->data->name}\n";
         echo "\n";
 
         // 8. REVOKE PARTNER API KEY
