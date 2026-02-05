@@ -1,5 +1,6 @@
 {
   "name": "turbodocx/sdk",
+  "version": "0.1.6",
   "description": "Official PHP SDK for TurboDocx - E-signature API, document generation, PDF signing, and workflow automation",
   "type": "library",
   "license": "MIT",
