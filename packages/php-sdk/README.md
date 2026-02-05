@@ -1,3 +1,5 @@
+[![TurboDocx](https://raw.githubusercontent.com/TurboDocx/SDK/main/packages/php-sdk/banner.png)](https://www.turbodocx.com)
+
 # TurboDocx PHP SDK
 
 **Official PHP SDK for TurboDocx - Digital signatures, document generation, and AI-powered workflows**
