@@ -9,6 +9,7 @@ use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use Psr\Http\Message\ResponseInterface;
 use TurboDocx\Config\HttpClientConfig;
+use TurboDocx\Config\PartnerClientConfig;
 use TurboDocx\Exceptions\AuthenticationException;
 use TurboDocx\Exceptions\NetworkException;
 use TurboDocx\Exceptions\NotFoundException;
@@ -26,10 +27,15 @@ final class HttpClient
     private ?string $senderEmail;
     private ?string $senderName;
 
-    public function __construct(HttpClientConfig $config)
+    public function __construct(HttpClientConfig|PartnerClientConfig $config)
     {
-        $this->senderEmail = $config->senderEmail;
-        $this->senderName = $config->senderName;
+        if ($config instanceof HttpClientConfig) {
+            $this->senderEmail = $config->senderEmail;
+            $this->senderName = $config->senderName;
+        } else {
+            $this->senderEmail = null;
+            $this->senderName = null;
+        }
 
         // Create Guzzle client
         $this->client = new Client([
@@ -100,6 +106,43 @@ final class HttpClient
             $response = $this->client->post($path, [
                 'json' => $data,
             ]);
+
+            return $this->smartUnwrap($this->parseResponse($response));
+        } catch (GuzzleException $e) {
+            $this->handleException($e);
+        }
+    }
+
+    /**
+     * Generic PATCH request
+     *
+     * @param string $path
+     * @param array<string, mixed>|null $data
+     * @return array<string, mixed>
+     */
+    public function patch(string $path, ?array $data = null): mixed
+    {
+        try {
+            $response = $this->client->patch($path, [
+                'json' => $data,
+            ]);
+
+            return $this->smartUnwrap($this->parseResponse($response));
+        } catch (GuzzleException $e) {
+            $this->handleException($e);
+        }
+    }
+
+    /**
+     * Generic DELETE request
+     *
+     * @param string $path
+     * @return array<string, mixed>
+     */
+    public function delete(string $path): mixed
+    {
+        try {
+            $response = $this->client->delete($path);
 
             return $this->smartUnwrap($this->parseResponse($response));
         } catch (GuzzleException $e) {
@@ -200,26 +243,30 @@ final class HttpClient
     /**
      * Get headers for requests
      *
-     * @param HttpClientConfig $config
+     * @param HttpClientConfig|PartnerClientConfig $config
      * @return array<string, string>
      */
-    private function getHeaders(HttpClientConfig $config): array
+    private function getHeaders(HttpClientConfig|PartnerClientConfig $config): array
     {
         $headers = [
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ];
 
-        // Authorization
-        if (!empty($config->accessToken)) {
-            $headers['Authorization'] = "Bearer {$config->accessToken}";
-        } elseif (!empty($config->apiKey)) {
-            $headers['Authorization'] = "Bearer {$config->apiKey}";
-        }
+        if ($config instanceof PartnerClientConfig) {
+            $headers['Authorization'] = "Bearer {$config->partnerApiKey}";
+        } else {
+            // Authorization
+            if (!empty($config->accessToken)) {
+                $headers['Authorization'] = "Bearer {$config->accessToken}";
+            } elseif (!empty($config->apiKey)) {
+                $headers['Authorization'] = "Bearer {$config->apiKey}";
+            }
 
-        // Organization ID
-        if (!empty($config->orgId)) {
-            $headers['x-rapiddocx-org-id'] = $config->orgId;
+            // Organization ID
+            if (!empty($config->orgId)) {
+                $headers['x-rapiddocx-org-id'] = $config->orgId;
+            }
         }
 
         return $headers;
