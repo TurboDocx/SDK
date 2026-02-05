@@ -598,6 +598,7 @@ final class TurboPartnerResponsesTest extends TestCase
         $response = SuccessResponse::fromArray($data);
         $json = json_encode($response);
 
+        $this->assertIsString($json);
         $decoded = json_decode($json, true);
         $this->assertArrayNotHasKey('message', $decoded); // null fields excluded
     }

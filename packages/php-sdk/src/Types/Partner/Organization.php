@@ -9,6 +9,9 @@ namespace TurboDocx\Types\Partner;
  */
 final class Organization implements \JsonSerializable
 {
+    /**
+     * @param array<string, mixed>|null $metadata
+     */
     public function __construct(
         public readonly string $id,
         public readonly string $name,

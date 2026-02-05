@@ -9,6 +9,9 @@ namespace TurboDocx\Types\Partner;
  */
 final class AuditLogEntry implements \JsonSerializable
 {
+    /**
+     * @param array<string, mixed>|null $details
+     */
     public function __construct(
         public readonly string $id,
         public readonly string $partnerId,
