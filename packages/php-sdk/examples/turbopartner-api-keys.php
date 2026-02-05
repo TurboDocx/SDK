@@ -152,7 +152,7 @@ function apiKeyManagementExample(): void
                     PartnerScope::ORG_UPDATE,
                     PartnerScope::ORG_DELETE,
                     PartnerScope::ENTITLEMENTS_UPDATE,
-                    PartnerScope::AUDIT_LOG_READ,
+                    PartnerScope::AUDIT_READ,
                 ],
                 description: 'API key for third-party integration'
             )

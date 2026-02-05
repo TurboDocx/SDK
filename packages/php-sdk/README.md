@@ -593,8 +593,7 @@ use TurboDocx\Types\Requests\Partner\CreateOrganizationRequest;
 $result = TurboPartner::createOrganization(
     new CreateOrganizationRequest(
         name: 'Acme Corporation',
-        metadata: ['customerId' => 'cust-123'],  // Optional
-        features: ['maxUsers' => 50]              // Optional entitlements override
+        features: ['maxUsers' => 50]  // Optional entitlements override
     )
 );
 

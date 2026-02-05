@@ -79,11 +79,11 @@ function organizationManagementExample(): void
         $detailResult = TurboPartner::getOrganizationDetails($organizationId);
 
         echo "Organization Details:\n";
-        echo "  ID: {$detailResult->data->id}\n";
-        echo "  Name: {$detailResult->data->name}\n";
-        if ($detailResult->data->features !== null) {
-            echo "  Max Users: {$detailResult->data->features->maxUsers}\n";
-            echo "  Max Storage: {$detailResult->data->features->maxStorage} bytes\n";
+        echo "  ID: {$detailResult->organization->id}\n";
+        echo "  Name: {$detailResult->organization->name}\n";
+        if ($detailResult->features !== null) {
+            echo "  Max Users: {$detailResult->features->maxUsers}\n";
+            echo "  Max Storage: {$detailResult->features->maxStorage} bytes\n";
         }
         echo "\n";
 
