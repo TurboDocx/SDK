@@ -1,0 +1,25 @@
+[package]
+name = "turbodocx_sdk"
+version = "0.1.0"
+edition = "2021"
+authors = ["TurboDocx Team"]
+description = "Official Rust SDK for TurboDocx API - Document generation and digital signatures"
+license = "MIT"
+repository = "https://github.com/turbodocx/sdk"
+keywords = ["turbodocx", "document", "template", "signature", "pdf"]
+categories = ["api-bindings"]
+
+[dependencies]
+reqwest = { version = "0.12", features = ["json", "multipart", "rustls-tls"], default-features = false }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+thiserror = "1.0"
+once_cell = "1.19"
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[[bin]]
+name = "manual-test"
+path = "manual-test.rs"

@@ -78,12 +78,12 @@ import (
 )
 
 func main() {
-    // 1. Create client with sender configuration
+    // 1. Create client with configuration
     client, err := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
         APIKey:      os.Getenv("TURBODOCX_API_KEY"),      // REQUIRED
         OrgID:       os.Getenv("TURBODOCX_ORG_ID"),       // REQUIRED
-        SenderEmail: os.Getenv("TURBODOCX_SENDER_EMAIL"), // REQUIRED
-        SenderName:  os.Getenv("TURBODOCX_SENDER_NAME"),  // OPTIONAL (but strongly recommended)
+        SenderEmail: os.Getenv("TURBODOCX_SENDER_EMAIL"), // REQUIRED for TurboSign operations
+        SenderName:  os.Getenv("TURBODOCX_SENDER_NAME"),  // OPTIONAL (but recommended for TurboSign)
     })
     if err != nil {
         log.Fatal(err)
@@ -128,15 +128,21 @@ func main() {
 ## Configuration
 
 ```go
-// Basic client configuration (REQUIRED)
+// Basic client configuration
 client, err := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
     APIKey:      "your-api-key",      // REQUIRED
     OrgID:       "your-org-id",       // REQUIRED
-    SenderEmail: "you@company.com",   // REQUIRED - reply-to address for signature requests
-    SenderName:  "Your Company",      // OPTIONAL but strongly recommended
+    SenderEmail: "you@company.com",   // REQUIRED for TurboSign operations
+    SenderName:  "Your Company",      // OPTIONAL (recommended for TurboSign)
 })
 
-// With environment variables (recommended)
+// For TurboTemplate only (no SenderEmail needed)
+client, err := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
+    APIKey: os.Getenv("TURBODOCX_API_KEY"),
+    OrgID:  os.Getenv("TURBODOCX_ORG_ID"),
+})
+
+// With environment variables (recommended for TurboSign)
 client, err := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
     APIKey:      os.Getenv("TURBODOCX_API_KEY"),
     OrgID:       os.Getenv("TURBODOCX_ORG_ID"),
@@ -162,7 +168,7 @@ client, err := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
 })
 ```
 
-**Important:** `SenderEmail` is **REQUIRED**. This email will be used as the reply-to address for signature request emails. Without it, emails will default to "API Service User via TurboSign". The `SenderName` is optional but strongly recommended for a professional appearance.
+**Important:** `SenderEmail` is **REQUIRED for TurboSign operations**. This email will be used as the reply-to address for signature request emails. For TurboTemplate-only usage, `SenderEmail` is not required. The `SenderName` is optional but strongly recommended for a professional appearance in signature emails.
 
 **Environment Variables:**
 
@@ -292,6 +298,101 @@ for _, entry := range audit.AuditTrail {
 ```
 
 The audit trail includes a cryptographic hash chain for tamper-evidence verification.
+
+---
+
+### TurboTemplate
+
+Generate documents from templates with advanced variable substitution.
+
+#### `TurboTemplate.Generate`
+
+Generate a document from a template with variables.
+
+```go
+result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
+    TemplateID: "your-template-uuid",
+    Name:       stringPtr("Generated Contract"),
+    Description: stringPtr("Contract for Q4 2024"),
+    Variables: []turbodocx.TemplateVariable{
+        {Placeholder: "{customer_name}", Name: "customer_name", Value: "Acme Corp", MimeType: turbodocx.MimeTypeText},
+        {Placeholder: "{contract_date}", Name: "contract_date", Value: "2024-01-15", MimeType: turbodocx.MimeTypeText},
+        {Placeholder: "{total_amount}", Name: "total_amount", Value: 50000, MimeType: turbodocx.MimeTypeText},
+    },
+})
+
+fmt.Printf("Document ID: %s\n", *result.ID)
+```
+
+#### Helper Functions
+
+Use helper functions for cleaner variable creation:
+
+```go
+// Helper functions return (TemplateVariable, error) - use must() helper for cleaner code
+must := func(v turbodocx.TemplateVariable, err error) turbodocx.TemplateVariable {
+    if err != nil { panic(err) }
+    return v
+}
+
+result, err := client.TurboTemplate.Generate(ctx, &turbodocx.GenerateTemplateRequest{
+    TemplateID: "invoice-template-uuid",
+    Name:       stringPtr("Invoice #1234"),
+    Description: stringPtr("Monthly invoice"),
+    Variables: []turbodocx.TemplateVariable{
+        // Simple text/number variables (placeholder, name, value, mimeType)
+        must(turbodocx.NewSimpleVariable("{invoice_number}", "invoice_number", "INV-2024-001", turbodocx.MimeTypeText)),
+        must(turbodocx.NewSimpleVariable("{total}", "total", 1500, turbodocx.MimeTypeText)),
+
+        // Advanced engine variable (placeholder, name, value) - for nested objects with dot notation
+        must(turbodocx.NewAdvancedEngineVariable("{customer}", "customer", map[string]interface{}{
+            "name":  "Acme Corp",
+            "email": "billing@acme.com",
+            "address": map[string]interface{}{
+                "street": "123 Main St",
+                "city":   "New York",
+                "state":  "NY",
+            },
+        })),
+
+        // Arrays for loops (placeholder, name, value) - use {#items}...{/items} in template
+        must(turbodocx.NewLoopVariable("{items}", "items", []interface{}{
+            map[string]interface{}{"name": "Widget A", "quantity": 5, "price": 100},
+            map[string]interface{}{"name": "Widget B", "quantity": 3, "price": 200},
+        })),
+
+        // Conditionals (placeholder, name, value) - use {#is_premium}...{/is_premium} in template
+        must(turbodocx.NewConditionalVariable("{is_premium}", "is_premium", true)),
+
+        // Images (placeholder, name, imageURL)
+        must(turbodocx.NewImageVariable("{logo}", "logo", "https://example.com/logo.png")),
+    },
+})
+```
+
+#### Advanced Templating Features
+
+TurboTemplate supports Angular-like expressions:
+
+| Feature | Template Syntax | Example |
+|:--------|:----------------|:--------|
+| Simple substitution | `{variable}` | `{customer_name}` |
+| Nested objects | `{object.property}` | `{user.address.city}` |
+| Loops | `{#array}...{/array}` | `{#items}{name}: ${price}{/items}` |
+| Conditionals | `{#condition}...{/condition}` | `{#is_premium}Premium Member{/is_premium}` |
+| Expressions | `{expression}` | `{price * quantity}` |
+
+#### Variable Configuration
+
+| Field | Type | Required | Description |
+|:------|:-----|:---------|:------------|
+| `Placeholder` | string | Yes | The placeholder in template (e.g., `{name}`) |
+| `Name` | string | Yes | Variable name for the templating engine |
+| `Value` | interface{} | Yes* | The value to substitute |
+| `MimeType` | VariableMimeType | Yes | `MimeTypeText`, `MimeTypeJSON`, `MimeTypeHTML`, `MimeTypeImage`, `MimeTypeMarkdown` |
+| `UsesAdvancedTemplatingEngine` | *bool | No | Enable for loops, conditionals, expressions |
+
+*Either `Value` or `Text` must be provided.
 
 ---
 

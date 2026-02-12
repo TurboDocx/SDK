@@ -117,7 +117,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.uploadFile = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.createSignatureReviewLink({
         file: mockFile,
@@ -143,7 +143,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.post = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.createSignatureReviewLink({
         fileLink: "https://storage.example.com/contract.pdf",
@@ -173,7 +173,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.post = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.createSignatureReviewLink({
         deliverableId: "deliverable-abc",
@@ -201,7 +201,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.post = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.createSignatureReviewLink({
         templateId: "template-xyz",
@@ -222,7 +222,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.post = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       await TurboSign.createSignatureReviewLink({
         fileLink: "https://example.com/doc.pdf",
@@ -270,7 +270,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.post = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.createSignatureReviewLink({
         templateId: "template-with-anchors",
@@ -308,7 +308,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.post = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.sendSignature({
         fileLink: "https://storage.example.com/contract.pdf",
@@ -336,7 +336,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.uploadFile = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.sendSignature({
         file: mockFile,
@@ -380,7 +380,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.post = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.sendSignature({
         fileLink: "https://example.com/doc.pdf",
@@ -402,7 +402,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.get = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.getStatus("doc-123");
 
@@ -430,7 +430,7 @@ describe("TurboSign Module", () => {
         .fn()
         .mockResolvedValue(mockPresignedResponse);
       mockFetch.mockResolvedValue(mockFetchResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.download("doc-123");
 
@@ -458,7 +458,7 @@ describe("TurboSign Module", () => {
         .fn()
         .mockResolvedValue(mockPresignedResponse);
       mockFetch.mockResolvedValue(mockFetchResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       await expect(TurboSign.download("doc-123")).rejects.toThrow(
         "Failed to download file"
@@ -480,7 +480,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.post = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.void("doc-123", "Document needs revision");
 
@@ -507,7 +507,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.post = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.resend("doc-123", ["rec-1", "rec-2"]);
 
@@ -529,7 +529,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.post = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.resend("doc-123", []);
 
@@ -581,7 +581,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.get = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.getAuditTrail("doc-123");
 
@@ -608,7 +608,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.get = jest
         .fn()
         .mockResolvedValue(mockResponse);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       const result = await TurboSign.getAuditTrail("doc-new");
 
@@ -635,7 +635,7 @@ describe("TurboSign Module", () => {
       };
 
       MockedHttpClient.prototype.get = jest.fn().mockRejectedValue(apiError);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       await expect(TurboSign.getStatus("invalid-doc")).rejects.toEqual(
         apiError
@@ -654,7 +654,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.post = jest
         .fn()
         .mockRejectedValue(validationError);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       await expect(
         TurboSign.sendSignature({
@@ -677,7 +677,7 @@ describe("TurboSign Module", () => {
       MockedHttpClient.prototype.post = jest
         .fn()
         .mockRejectedValue(rateLimitError);
-      TurboSign.configure({ apiKey: "test-key" });
+      TurboSign.configure({ apiKey: "test-key", senderEmail: "test@company.com" });
 
       await expect(
         TurboSign.createSignatureReviewLink({

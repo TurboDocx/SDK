@@ -53,18 +53,35 @@ final class HttpClient
     }
 
     /**
-     * Smart unwrap response data
-     * If response has ONLY "data" key, extract it
+     * Unwrap nested response structure: data.results.deliverable
      *
      * @param array<string, mixed> $data
      * @return array<string, mixed>
      */
     private function smartUnwrap(array $data): array
     {
-        if (count($data) === 1 && isset($data['data'])) {
-            return $data['data'];
+        $dataToUnmarshal = $data;
+
+        // Check for data wrapper
+        if (isset($data['data'])) {
+            $dataContent = $data['data'];
+
+            // Check for results wrapper
+            if (isset($dataContent['results'])) {
+                $results = $dataContent['results'];
+
+                // Check for deliverable wrapper
+                if (isset($results['deliverable'])) {
+                    $dataToUnmarshal = $results['deliverable'];
+                } else {
+                    $dataToUnmarshal = $results;
+                }
+            } else {
+                $dataToUnmarshal = $dataContent;
+            }
         }
-        return $data;
+
+        return $dataToUnmarshal;
     }
 
     /**
@@ -153,6 +170,23 @@ final class HttpClient
             ]);
 
             return $this->smartUnwrap($this->parseResponse($response));
+        } catch (GuzzleException $e) {
+            $this->handleException($e);
+        }
+    }
+
+    /**
+     * GET request returning raw binary data
+     * Used for file downloads where response is not JSON
+     *
+     * @param string $path
+     * @return string Raw response body as binary string
+     */
+    public function getRaw(string $path): string
+    {
+        try {
+            $response = $this->client->get($path);
+            return $response->getBody()->getContents();
         } catch (GuzzleException $e) {
             $this->handleException($e);
         }

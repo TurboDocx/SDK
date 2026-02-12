@@ -130,13 +130,6 @@ class HttpClient:
         if not self.org_id:
             raise AuthenticationError("Organization ID (org_id) is required for authentication")
 
-        if not self.sender_email:
-            raise ValidationError(
-                "sender_email is required. This email will be used as the reply-to address "
-                "for signature requests. Without it, emails will default to "
-                '"API Service User via TurboSign".'
-            )
-
     def get_sender_config(self) -> Dict[str, Optional[str]]:
         """
         Get sender email and name configuration
@@ -171,12 +164,33 @@ class HttpClient:
     def _smart_unwrap(self, data: Any) -> Any:
         """
         Smart unwrap response data.
-        If response has ONLY "data" key, extract it.
-        This handles backend responses that wrap data in { "data": { ... } }
+        Handles nested response structure: data.results.deliverable
+
+        This handles backend responses that wrap data in:
+        { "data": { "results": { "deliverable": { ... } } } }
         """
-        if isinstance(data, dict) and list(data.keys()) == ["data"]:
-            return data["data"]
-        return data
+        if not isinstance(data, dict):
+            return data
+
+        data_to_unmarshal = data
+
+        # Check for data wrapper
+        if "data" in data:
+            data_content = data["data"]
+
+            # Check for results wrapper
+            if isinstance(data_content, dict) and "results" in data_content:
+                results = data_content["results"]
+
+                # Check for deliverable wrapper
+                if isinstance(results, dict) and "deliverable" in results:
+                    data_to_unmarshal = results["deliverable"]
+                else:
+                    data_to_unmarshal = results
+            else:
+                data_to_unmarshal = data_content
+
+        return data_to_unmarshal
 
     async def _handle_error_response(self, response: httpx.Response) -> None:
         """Handle error response from API"""
@@ -323,3 +337,34 @@ class HttpClient:
                 raise NetworkError(f"File upload failed: {str(e) or 'Connection error'}")
             except Exception as e:
                 raise NetworkError(f"File upload failed: {str(e) or 'Unknown error'}")
+
+    async def get_raw(self, path: str) -> bytes:
+        """
+        Make GET request and return raw binary data.
+        Used for file downloads where response is not JSON.
+
+        Args:
+            path: API endpoint path
+
+        Returns:
+            Raw response content as bytes
+        """
+        url = f"{self.base_url}{path}"
+        headers = self._get_headers()
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            try:
+                response = await client.get(url, headers=headers)
+
+                if not response.is_success:
+                    await self._handle_error_response(response)
+
+                return response.content
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out: {str(e) or 'Timeout'}")
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+            except TurboDocxError:
+                raise
+            except Exception as e:
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")

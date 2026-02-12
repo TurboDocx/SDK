@@ -287,6 +287,108 @@ The audit trail includes a cryptographic hash chain for tamper-evidence verifica
 
 ---
 
+### TurboTemplate
+
+Generate documents from templates with advanced variable substitution.
+
+#### `TurboTemplate.configure(options)`
+
+Configure the TurboTemplate module (same configuration as TurboSign).
+
+```typescript
+import { TurboTemplate } from '@turbodocx/sdk';
+
+TurboTemplate.configure({
+  apiKey: process.env.TURBODOCX_API_KEY,
+  orgId: process.env.TURBODOCX_ORG_ID,
+});
+```
+
+#### `TurboTemplate.generate(options)`
+
+Generate a document from a template with variables.
+
+```typescript
+const result = await TurboTemplate.generate({
+  templateId: 'your-template-uuid',
+  name: 'Generated Contract',
+  description: 'Contract for Q4 2024',
+  variables: [
+    { placeholder: '{customer_name}', name: 'customer_name', value: 'Acme Corp' },
+    { placeholder: '{contract_date}', name: 'contract_date', value: '2024-01-15' },
+    { placeholder: '{total_amount}', name: 'total_amount', value: 50000 },
+  ],
+});
+
+console.log('Document ID:', result.id);
+```
+
+#### Helper Functions
+
+Use helper functions for cleaner variable creation:
+
+```typescript
+const result = await TurboTemplate.generate({
+  templateId: 'invoice-template-uuid',
+  name: 'Invoice #1234',
+  description: 'Monthly invoice',
+  variables: [
+    // Simple text/number variables
+    TurboTemplate.createSimpleVariable('invoice_number', 'INV-2024-001'),
+    TurboTemplate.createSimpleVariable('total', 1500),
+
+    // Advanced engine variable (access with dot notation: {customer.name}, {customer.address.city})
+    TurboTemplate.createAdvancedEngineVariable('customer', {
+      name: 'Acme Corp',
+      email: 'billing@acme.com',
+      address: {
+        street: '123 Main St',
+        city: 'New York',
+        state: 'NY',
+      },
+    }),
+
+    // Arrays for loops ({#items}...{/items})
+    TurboTemplate.createLoopVariable('items', [
+      { name: 'Widget A', quantity: 5, price: 100 },
+      { name: 'Widget B', quantity: 3, price: 200 },
+    ]),
+
+    // Conditionals ({#is_premium}...{/is_premium})
+    TurboTemplate.createConditionalVariable('is_premium', true),
+
+    // Images
+    TurboTemplate.createImageVariable('logo', 'https://example.com/logo.png'),
+  ],
+});
+```
+
+#### Advanced Templating Features
+
+TurboTemplate supports Angular-like expressions:
+
+| Feature | Template Syntax | Example |
+|:--------|:----------------|:--------|
+| Simple substitution | `{variable}` | `{customer_name}` |
+| Nested objects | `{object.property}` | `{user.address.city}` |
+| Loops | `{#array}...{/array}` | `{#items}{name}: ${price}{/items}` |
+| Conditionals | `{#condition}...{/condition}` | `{#is_premium}Premium Member{/is_premium}` |
+| Expressions | `{expression}` | `{price * quantity}` |
+
+#### Variable Configuration
+
+| Property | Type | Required | Description |
+|:---------|:-----|:---------|:------------|
+| `placeholder` | string | Yes | The placeholder in template (e.g., `{name}`) |
+| `name` | string | Yes | Variable name for the templating engine |
+| `value` | any | Yes* | The value to substitute |
+| `mimeType` | string | Yes | `text`, `json`, `html`, `image`, `markdown` |
+| `usesAdvancedTemplatingEngine` | boolean | No | Enable for loops, conditionals, expressions |
+
+*Either `value` or `text` must be provided.
+
+---
+
 ## Field Types
 
 | Type | Description |

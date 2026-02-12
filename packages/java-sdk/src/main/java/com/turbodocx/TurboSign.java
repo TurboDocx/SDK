@@ -31,6 +31,14 @@ public class TurboSign {
      * Use this to preview field placement before sending.
      */
     public CreateSignatureReviewLinkResponse createSignatureReviewLink(CreateSignatureReviewLinkRequest request) throws IOException {
+        // Validate senderEmail is configured for TurboSign operations
+        if (httpClient.getSenderEmail() == null || httpClient.getSenderEmail().isEmpty()) {
+            throw new TurboDocxException.ValidationException(
+                "senderEmail is required for TurboSign operations. " +
+                "Please configure the client with senderEmail when building the TurboDocxClient."
+            );
+        }
+
         Map<String, String> formData = buildFormData(
                 request.getRecipients(),
                 request.getFields(),
@@ -74,6 +82,14 @@ public class TurboSign {
      * This is the equivalent "Prepare for Signing" operation.
      */
     public SendSignatureResponse sendSignature(SendSignatureRequest request) throws IOException {
+        // Validate senderEmail is configured for TurboSign operations
+        if (httpClient.getSenderEmail() == null || httpClient.getSenderEmail().isEmpty()) {
+            throw new TurboDocxException.ValidationException(
+                "senderEmail is required for TurboSign operations. " +
+                "Please configure the client with senderEmail when building the TurboDocxClient."
+            );
+        }
+
         Map<String, String> formData = buildFormData(
                 request.getRecipients(),
                 request.getFields(),

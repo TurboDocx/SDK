@@ -217,11 +217,19 @@ type AuditTrailResponse struct {
 // CreateSignatureReviewLink prepares a document for review without sending emails.
 // Use this to preview field placement before sending.
 func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *CreateSignatureReviewLinkRequest) (*CreateSignatureReviewLinkResponse, error) {
+	// Validate senderEmail is configured for TurboSign operations
+	senderEmail, senderName := c.http.GetSenderConfig()
+	if senderEmail == "" {
+		return nil, &ValidationError{
+			TurboDocxError: TurboDocxError{
+				Message:    "SenderEmail is required for TurboSign operations. Please configure the client with SenderEmail.",
+				StatusCode: 400,
+			},
+		}
+	}
+
 	recipientsJSON, _ := json.Marshal(req.Recipients)
 	fieldsJSON, _ := json.Marshal(req.Fields)
-
-	// Get sender config from client
-	senderEmail, senderName := c.http.GetSenderConfig()
 
 	formData := map[string]string{
 		"recipients": string(recipientsJSON),
@@ -282,11 +290,19 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 
 // SendSignature prepares a document for signing and sends emails in a single call.
 func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureRequest) (*SendSignatureResponse, error) {
+	// Validate senderEmail is configured for TurboSign operations
+	senderEmail, senderName := c.http.GetSenderConfig()
+	if senderEmail == "" {
+		return nil, &ValidationError{
+			TurboDocxError: TurboDocxError{
+				Message:    "SenderEmail is required for TurboSign operations. Please configure the client with SenderEmail.",
+				StatusCode: 400,
+			},
+		}
+	}
+
 	recipientsJSON, _ := json.Marshal(req.Recipients)
 	fieldsJSON, _ := json.Marshal(req.Fields)
-
-	// Get sender config from client
-	senderEmail, senderName := c.http.GetSenderConfig()
 
 	formData := map[string]string{
 		"recipients": string(recipientsJSON),
