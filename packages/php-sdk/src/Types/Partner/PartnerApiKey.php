@@ -12,7 +12,7 @@ final class PartnerApiKey implements \JsonSerializable
     /**
      * @param string $id
      * @param string $name
-     * @param string|null $key Masked key (full key only on creation)
+     * @param string|null $key Masked preview (e.g. "TDXP-a1b2...5e6f") when listing; full plaintext key only returned once on creation
      * @param string|null $description
      * @param array<string>|null $scopes
      * @param array<string>|null $ipWhitelist

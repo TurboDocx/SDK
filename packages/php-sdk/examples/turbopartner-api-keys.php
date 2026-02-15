@@ -181,7 +181,8 @@ function apiKeyManagementExample(): void
 
         echo "Found {$listPartnerKeysResult->totalRecords} partner API key(s)\n";
         foreach ($listPartnerKeysResult->results as $key) {
-            echo "  - {$key->name} (ID: {$key->id})\n";
+            // Listed keys show a masked preview (e.g. "TDXP-a1b2...5e6f"), never the full key
+            echo "  - {$key->name} (ID: {$key->id}, Key: {$key->key})\n";
         }
         echo "\n";
 

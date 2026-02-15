@@ -816,7 +816,7 @@ $result = TurboPartner::revokeOrganizationApiKey(
 
 #### `createPartnerApiKey()`
 
-Create a new partner-level API key with specific scopes.
+Create a new partner-level API key with specific scopes. The full key is only returned once in the response — save it securely. Subsequent list calls return a masked preview only.
 
 ```php
 use TurboDocx\Types\Requests\Partner\CreatePartnerApiKeyRequest;
@@ -844,7 +844,7 @@ echo "Full Key: {$result->data->key}\n";  // Only shown once!
 
 #### `listPartnerApiKeys()`
 
-List all partner API keys.
+List all partner API keys. Listed keys contain a masked preview (e.g. `TDXP-a1b2...5e6f`), never the full key.
 
 ```php
 use TurboDocx\Types\Requests\Partner\ListPartnerApiKeysRequest;
@@ -852,6 +852,10 @@ use TurboDocx\Types\Requests\Partner\ListPartnerApiKeysRequest;
 $result = TurboPartner::listPartnerApiKeys(
     new ListPartnerApiKeysRequest(limit: 50)
 );
+
+foreach ($result->results as $key) {
+    echo "{$key->name}: {$key->key}\n"; // Shows masked preview
+}
 ```
 
 #### `updatePartnerApiKey()`

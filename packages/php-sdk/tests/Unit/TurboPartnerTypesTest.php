@@ -238,7 +238,7 @@ final class TurboPartnerTypesTest extends TestCase
         $data = [
             'id' => 'pkey-123',
             'name' => 'Integration Key',
-            'key' => 'TDXP-abc123xyz',
+            'key' => 'TDXP-a1b2...3xyz',
             'scopes' => ['org:create', 'org:read', 'org:update'],
             'description' => 'For third-party integration',
             'createdOn' => '2024-01-15T10:30:00Z',
@@ -248,7 +248,7 @@ final class TurboPartnerTypesTest extends TestCase
 
         $this->assertEquals('pkey-123', $apiKey->id);
         $this->assertEquals('Integration Key', $apiKey->name);
-        $this->assertEquals('TDXP-abc123xyz', $apiKey->key);
+        $this->assertEquals('TDXP-a1b2...3xyz', $apiKey->key);
         $this->assertEquals(['org:create', 'org:read', 'org:update'], $apiKey->scopes);
     }
 

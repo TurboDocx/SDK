@@ -436,8 +436,8 @@ final class TurboPartnerResponsesTest extends TestCase
             'success' => true,
             'data' => [
                 'results' => [
-                    ['id' => 'pk1', 'name' => 'Key 1', 'scopes' => ['org:read']],
-                    ['id' => 'pk2', 'name' => 'Key 2', 'scopes' => ['org:create']],
+                    ['id' => 'pk1', 'name' => 'Key 1', 'key' => 'TDXP-a1b2...5e6f', 'scopes' => ['org:read']],
+                    ['id' => 'pk2', 'name' => 'Key 2', 'key' => 'TDXP-c3d4...7g8h', 'scopes' => ['org:create']],
                 ],
                 'totalRecords' => 2,
                 'limit' => 50,
@@ -450,6 +450,8 @@ final class TurboPartnerResponsesTest extends TestCase
         $this->assertTrue($response->success);
         $this->assertCount(2, $response->results);
         $this->assertEquals(2, $response->totalRecords);
+        // Listed keys contain masked preview, not the full key
+        $this->assertEquals('TDXP-a1b2...5e6f', $response->results[0]->key);
     }
 
     // =============================================

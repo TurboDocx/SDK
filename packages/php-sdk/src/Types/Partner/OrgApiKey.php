@@ -12,7 +12,7 @@ final class OrgApiKey implements \JsonSerializable
     /**
      * @param string $id
      * @param string $name
-     * @param string|null $key Masked key (full key only on creation)
+     * @param string|null $key Masked preview when listing; full plaintext key only returned once on creation
      * @param string|null $role
      * @param array<string>|null $scopes
      * @param string|null $createdOn
