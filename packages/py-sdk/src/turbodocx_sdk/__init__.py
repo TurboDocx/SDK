@@ -5,7 +5,7 @@ Official SDK for TurboDocx API - Digital signatures, document generation,
 and AI-powered workflows.
 """
 
-__version__ = "0.1.6"
+__version__ = "0.2.0"
 
 from typing import Optional
 
