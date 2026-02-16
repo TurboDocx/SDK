@@ -324,6 +324,57 @@ func (c *HTTPClient) Post(ctx context.Context, path string, data interface{}, re
 	return c.handleResponse(resp, result)
 }
 
+// Patch performs a PATCH request with JSON body
+func (c *HTTPClient) Patch(ctx context.Context, path string, data interface{}, result interface{}) error {
+	var body io.Reader
+	if data != nil {
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("failed to marshal request body: %w", err)
+		}
+		body = bytes.NewReader(jsonData)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "PATCH", c.baseURL+path, body)
+	if err != nil {
+		return &NetworkError{TurboDocxError: TurboDocxError{
+			Message: fmt.Sprintf("failed to create request: %v", err),
+		}}
+	}
+
+	c.setHeaders(req, "application/json")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return &NetworkError{TurboDocxError: TurboDocxError{
+			Message: fmt.Sprintf("request failed: %v", err),
+		}}
+	}
+
+	return c.handleResponse(resp, result)
+}
+
+// Delete performs a DELETE request
+func (c *HTTPClient) Delete(ctx context.Context, path string, result interface{}) error {
+	req, err := http.NewRequestWithContext(ctx, "DELETE", c.baseURL+path, nil)
+	if err != nil {
+		return &NetworkError{TurboDocxError: TurboDocxError{
+			Message: fmt.Sprintf("failed to create request: %v", err),
+		}}
+	}
+
+	c.setHeaders(req, "application/json")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return &NetworkError{TurboDocxError: TurboDocxError{
+			Message: fmt.Sprintf("request failed: %v", err),
+		}}
+	}
+
+	return c.handleResponse(resp, result)
+}
+
 // UploadFile performs a multipart file upload
 // file can be either a file path (string) or file content ([]byte)
 func (c *HTTPClient) UploadFile(ctx context.Context, path string, file interface{}, fileName string, additionalData map[string]string, result interface{}) error {
