@@ -42,7 +42,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://www.turbodocx.com"
-Documentation = "https://www.turbodocx.com/docs"
+Documentation = "https://docs.turbodocx.com/docs"
 Repository = "https://github.com/TurboDocx/SDK"
 Issues = "https://github.com/TurboDocx/SDK/issues"
 

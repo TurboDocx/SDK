@@ -547,6 +547,7 @@ The `manual_test.py` file tests all SDK methods:
 - ✅ `download()` - Download signed document
 - ✅ `void_document()` - Cancel signature request
 - ✅ `resend_email()` - Resend signature emails
+- ✅ `get_audit_trail()` - Get document audit trail
 
 ### Configuration
 
@@ -554,7 +555,7 @@ Before running, update the hardcoded values in `manual_test.py`:
 - `API_KEY` - Your TurboDocx API key
 - `BASE_URL` - API endpoint (default: `http://localhost:3000`)
 - `ORG_ID` - Your organization UUID
-- `TEST_FILE_PATH` - Path to a test PDF/DOCX file
+- `TEST_PDF_PATH` - Path to a test PDF/DOCX file
 - `TEST_EMAIL` - Email address for testing
 
 ### Expected Output
