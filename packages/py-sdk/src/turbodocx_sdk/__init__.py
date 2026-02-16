@@ -5,13 +5,39 @@ Official SDK for TurboDocx API - Digital signatures, document generation,
 and AI-powered workflows.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 from typing import Optional
 
 from .modules.sign import TurboSign
+from .modules.partner import TurboPartner
+from .modules.partner import (
+    SCOPE_ORG_CREATE,
+    SCOPE_ORG_READ,
+    SCOPE_ORG_UPDATE,
+    SCOPE_ORG_DELETE,
+    SCOPE_ENTITLEMENTS_UPDATE,
+    SCOPE_ORG_USERS_CREATE,
+    SCOPE_ORG_USERS_READ,
+    SCOPE_ORG_USERS_UPDATE,
+    SCOPE_ORG_USERS_DELETE,
+    SCOPE_PARTNER_USERS_CREATE,
+    SCOPE_PARTNER_USERS_READ,
+    SCOPE_PARTNER_USERS_UPDATE,
+    SCOPE_PARTNER_USERS_DELETE,
+    SCOPE_ORG_APIKEYS_CREATE,
+    SCOPE_ORG_APIKEYS_READ,
+    SCOPE_ORG_APIKEYS_UPDATE,
+    SCOPE_ORG_APIKEYS_DELETE,
+    SCOPE_PARTNER_APIKEYS_CREATE,
+    SCOPE_PARTNER_APIKEYS_READ,
+    SCOPE_PARTNER_APIKEYS_UPDATE,
+    SCOPE_PARTNER_APIKEYS_DELETE,
+    SCOPE_AUDIT_READ,
+)
 from .http import (
     HttpClient,
+    PartnerHttpClient,
     TurboDocxError,
     AuthenticationError,
     ValidationError,
@@ -54,7 +80,9 @@ class TurboDocxClient:
 __all__ = [
     "TurboDocxClient",
     "TurboSign",
+    "TurboPartner",
     "HttpClient",
+    "PartnerHttpClient",
     "TurboDocxError",
     "AuthenticationError",
     "ValidationError",
@@ -62,4 +90,27 @@ __all__ = [
     "RateLimitError",
     "NetworkError",
     "__version__",
+    # Scope constants
+    "SCOPE_ORG_CREATE",
+    "SCOPE_ORG_READ",
+    "SCOPE_ORG_UPDATE",
+    "SCOPE_ORG_DELETE",
+    "SCOPE_ENTITLEMENTS_UPDATE",
+    "SCOPE_ORG_USERS_CREATE",
+    "SCOPE_ORG_USERS_READ",
+    "SCOPE_ORG_USERS_UPDATE",
+    "SCOPE_ORG_USERS_DELETE",
+    "SCOPE_PARTNER_USERS_CREATE",
+    "SCOPE_PARTNER_USERS_READ",
+    "SCOPE_PARTNER_USERS_UPDATE",
+    "SCOPE_PARTNER_USERS_DELETE",
+    "SCOPE_ORG_APIKEYS_CREATE",
+    "SCOPE_ORG_APIKEYS_READ",
+    "SCOPE_ORG_APIKEYS_UPDATE",
+    "SCOPE_ORG_APIKEYS_DELETE",
+    "SCOPE_PARTNER_APIKEYS_CREATE",
+    "SCOPE_PARTNER_APIKEYS_READ",
+    "SCOPE_PARTNER_APIKEYS_UPDATE",
+    "SCOPE_PARTNER_APIKEYS_DELETE",
+    "SCOPE_AUDIT_READ",
 ]

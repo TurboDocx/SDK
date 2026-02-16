@@ -1,6 +1,6 @@
 [project]
 name = "turbodocx-sdk"
-version = "0.1.6"
+version = "0.2.0"
 description = "TurboDocx Python SDK - Digital signatures, document generation, and AI-powered workflows"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -31,7 +31,6 @@ classifiers = [
 ]
 dependencies = [
     "httpx>=0.24.0",
-    "pydantic>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -43,7 +42,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://www.turbodocx.com"
-Documentation = "https://www.turbodocx.com/docs"
+Documentation = "https://docs.turbodocx.com/docs"
 Repository = "https://github.com/TurboDocx/SDK"
 Issues = "https://github.com/TurboDocx/SDK/issues"
 

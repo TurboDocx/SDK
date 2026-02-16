@@ -22,6 +22,7 @@ BASE_URL = "http://localhost:3000"  # Replace with your API URL
 ORG_ID = "your-organization-uuid-here"  # Replace with your organization UUID
 
 TEST_PDF_PATH = "/path/to/your/test-document.pdf"  # Replace with path to your test PDF/DOCX
+FILE_URL = "https://example.com/your-test-document.pdf"  # Replace with a URL to a test PDF
 TEST_EMAIL = "test-recipient@example.com"  # Replace with a real email to receive notifications
 
 # Configure TurboSign

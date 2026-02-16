@@ -48,10 +48,9 @@ A modern, developer-first alternative to legacy e-signature platforms:
 ## Features
 
 - 🚀 **Production-Ready** — Battle-tested, processing thousands of documents daily
-- ⚡ **Async-First** — Native asyncio support with sync wrappers available
+- ⚡ **Async-First** — Native asyncio support with `httpx`
 - 🐍 **Pythonic API** — Idiomatic Python with type hints throughout
 - 📝 **Full Type Hints** — Complete type annotations for IDE support
-- 🛡️ **Pydantic Models** — Validated request/response models
 - 🤖 **100% n8n Parity** — Same operations as our n8n community nodes
 
 ---
@@ -121,18 +120,23 @@ async def main():
 asyncio.run(main())
 ```
 
-### Sync
+### Sync (via asyncio.run)
 
 ```python
-from turbodocx_sdk import TurboSignSync
+import asyncio
+from turbodocx_sdk import TurboSign
 
-TurboSignSync.configure(api_key="your-api-key")
+TurboSign.configure(
+    api_key="your-api-key",
+    org_id="your-org-id",
+    sender_email="you@company.com"
+)
 
-result = TurboSignSync.send_signature(
+result = asyncio.run(TurboSign.send_signature(
     file_link="https://example.com/contract.pdf",
     recipients=[{"name": "John Doe", "email": "john@example.com", "signingOrder": 1}],
-    fields=[{"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientOrder": 1}]
-)
+    fields=[{"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientEmail": "john@example.com"}]
+))
 ```
 
 ---
@@ -159,14 +163,13 @@ TurboSign.configure(
     sender_name=os.environ["TURBODOCX_SENDER_NAME"]
 )
 
-# With custom options
+# With custom base URL
 TurboSign.configure(
     api_key=os.environ["TURBODOCX_API_KEY"],
     org_id=os.environ["TURBODOCX_ORG_ID"],
     sender_email=os.environ["TURBODOCX_SENDER_EMAIL"],
     sender_name=os.environ["TURBODOCX_SENDER_NAME"],
     base_url="https://custom-api.example.com",  # Optional
-    timeout=30.0,                                # Optional: seconds
 )
 ```
 
@@ -308,6 +311,97 @@ The audit trail includes a cryptographic hash chain for tamper-evidence verifica
 
 ---
 
+### TurboPartner
+
+Partner management for multi-tenant applications — manage organizations, users, API keys, and entitlements.
+
+#### Configuration
+
+```python
+from turbodocx_sdk import TurboPartner
+import os
+
+TurboPartner.configure(
+    partner_api_key=os.environ["TURBODOCX_PARTNER_API_KEY"],  # starts with TDXP-
+    partner_id=os.environ["TURBODOCX_PARTNER_ID"],
+)
+```
+
+#### Organization Management
+
+```python
+# Create an organization with entitlements
+org = await TurboPartner.create_organization(
+    "Acme Corporation",
+    features={"maxUsers": 25, "maxSignatures": 500, "hasTDAI": True}
+)
+org_id = org["data"]["id"]
+
+# List organizations
+orgs = await TurboPartner.list_organizations(limit=10, search="acme")
+
+# Get organization details (includes features + usage tracking)
+details = await TurboPartner.get_organization_details(org_id)
+
+# Update entitlements
+await TurboPartner.update_organization_entitlements(
+    org_id, features={"maxUsers": 50}
+)
+
+# Delete organization
+await TurboPartner.delete_organization(org_id)
+```
+
+#### Organization User & API Key Management
+
+```python
+# Add user to organization
+user = await TurboPartner.add_user_to_organization(
+    org_id, email="admin@acme.com", role="admin"
+)
+
+# Create organization API key
+api_key = await TurboPartner.create_organization_api_key(
+    org_id, name="Production Key", role="admin"
+)
+print(api_key["data"]["key"])  # TDX-... (only shown once)
+```
+
+#### Partner API Keys & Users
+
+```python
+from turbodocx_sdk import SCOPE_ORG_READ, SCOPE_AUDIT_READ
+
+# Create scoped partner API key
+key = await TurboPartner.create_partner_api_key(
+    name="Read-Only Key",
+    scopes=[SCOPE_ORG_READ, SCOPE_AUDIT_READ]
+)
+
+# Add user to partner portal
+await TurboPartner.add_user_to_partner_portal(
+    email="ops@company.com",
+    role="member",
+    permissions={"canManageOrgs": True, "canViewAuditLogs": True}
+)
+
+# Query audit logs
+logs = await TurboPartner.get_partner_audit_logs(limit=10)
+```
+
+#### All 25 Methods
+
+| Category | Method |
+|:---------|:-------|
+| **Organizations** | `create_organization()`, `list_organizations()`, `get_organization_details()`, `update_organization_info()`, `delete_organization()`, `update_organization_entitlements()` |
+| **Org Users** | `add_user_to_organization()`, `list_organization_users()`, `update_organization_user_role()`, `remove_user_from_organization()`, `resend_organization_invitation_to_user()` |
+| **Org API Keys** | `create_organization_api_key()`, `list_organization_api_keys()`, `update_organization_api_key()`, `revoke_organization_api_key()` |
+| **Partner API Keys** | `create_partner_api_key()`, `list_partner_api_keys()`, `update_partner_api_key()`, `revoke_partner_api_key()` |
+| **Partner Users** | `add_user_to_partner_portal()`, `list_partner_portal_users()`, `update_partner_user_permissions()`, `remove_user_from_partner_portal()`, `resend_partner_portal_invitation_to_user()` |
+| **Audit Logs** | `get_partner_audit_logs()` |
+
+---
+
 ## Field Types
 
 | Type | Description |
@@ -333,6 +427,8 @@ For complete, working examples including template anchors, advanced field types,
 - [`turbosign_send_simple.py`](./examples/turbosign_send_simple.py) - Send document directly with template anchors
 - [`turbosign_basic.py`](./examples/turbosign_basic.py) - Create review link first, then send manually
 - [`turbosign_advanced.py`](./examples/turbosign_advanced.py) - Advanced field types (checkbox, readonly, multiline text, etc.)
+- [`turbopartner_basic.py`](./examples/turbopartner_basic.py) - Full organization lifecycle (create org, add users, create API keys)
+- [`turbopartner_api_keys.py`](./examples/turbopartner_api_keys.py) - Partner API keys, portal users, and audit logs
 
 ### Sequential Signing
 
@@ -384,7 +480,11 @@ from turbodocx_sdk import TurboSign
 import os
 
 app = FastAPI()
-TurboSign.configure(api_key=os.environ["TURBODOCX_API_KEY"])
+TurboSign.configure(
+    api_key=os.environ["TURBODOCX_API_KEY"],
+    org_id=os.environ["TURBODOCX_ORG_ID"],
+    sender_email=os.environ["TURBODOCX_SENDER_EMAIL"],
+)
 
 @app.post("/api/send-contract")
 async def send_contract(pdf_url: str, recipients: list, fields: list):
@@ -402,18 +502,23 @@ async def send_contract(pdf_url: str, recipients: list, fields: list):
 ### With Django
 
 ```python
+import asyncio
 from django.http import JsonResponse
-from turbodocx_sdk import TurboSignSync
+from turbodocx_sdk import TurboSign
 import os
 
-TurboSignSync.configure(api_key=os.environ["TURBODOCX_API_KEY"])
+TurboSign.configure(
+    api_key=os.environ["TURBODOCX_API_KEY"],
+    org_id=os.environ["TURBODOCX_ORG_ID"],
+    sender_email=os.environ["TURBODOCX_SENDER_EMAIL"],
+)
 
 def send_contract(request):
-    result = TurboSignSync.send_signature(
+    result = asyncio.run(TurboSign.send_signature(
         file_link=request.POST["pdf_url"],
         recipients=request.POST["recipients"],
         fields=request.POST["fields"]
-    )
+    ))
     return JsonResponse({"document_id": result["documentId"]})
 ```
 
@@ -442,6 +547,7 @@ The `manual_test.py` file tests all SDK methods:
 - ✅ `download()` - Download signed document
 - ✅ `void_document()` - Cancel signature request
 - ✅ `resend_email()` - Resend signature emails
+- ✅ `get_audit_trail()` - Get document audit trail
 
 ### Configuration
 
@@ -449,7 +555,7 @@ Before running, update the hardcoded values in `manual_test.py`:
 - `API_KEY` - Your TurboDocx API key
 - `BASE_URL` - API endpoint (default: `http://localhost:3000`)
 - `ORG_ID` - Your organization UUID
-- `TEST_FILE_PATH` - Path to a test PDF/DOCX file
+- `TEST_PDF_PATH` - Path to a test PDF/DOCX file
 - `TEST_EMAIL` - Email address for testing
 
 ### Expected Output
@@ -472,7 +578,7 @@ try:
     await TurboSign.get_status("invalid-id")
 except TurboDocxError as e:
     print(f"Status: {e.status_code}")
-    print(f"Message: {e.message}")
+    print(f"Message: {e}")
     print(f"Code: {e.code}")
 except Exception as e:
     print(f"Unexpected error: {e}")
@@ -492,24 +598,18 @@ except Exception as e:
 
 ## Type Hints
 
-Full type hint support for IDE autocompletion:
+The SDK includes type hints throughout for IDE autocompletion:
 
 ```python
-from turbodocx_sdk import TurboSign
-from turbodocx_sdk.types import (
-    PrepareForSigningOptions,
-    Recipient,
-    Field,
-    DocumentStatus
-)
+from turbodocx_sdk import TurboSign, TurboPartner, TurboDocxError
+from typing import Dict, List, Any
 
-recipients: list[Recipient] = [
-    {"name": "John", "email": "john@example.com", "order": 1}
-]
+# All methods have full type annotations
+result: Dict[str, Any] = await TurboSign.get_status("doc-uuid-here")
 
-fields: list[Field] = [
-    {"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientOrder": 1}
-]
+# Scope constants are typed strings
+from turbodocx_sdk import SCOPE_ORG_READ, SCOPE_AUDIT_READ
+scopes: List[str] = [SCOPE_ORG_READ, SCOPE_AUDIT_READ]
 ```
 
 ---
@@ -517,8 +617,7 @@ fields: list[Field] = [
 ## Requirements
 
 - Python 3.9+
-- aiohttp (for async)
-- requests (for sync)
+- httpx (async HTTP client)
 
 ---
 
