@@ -321,7 +321,7 @@ export interface OrgUserListResponse {
     limit: number;
     offset: number;
   };
-  userLimit?: number;
+  userLimit?: Record<string, any>;
 }
 
 export interface OrgApiKeyResponse {

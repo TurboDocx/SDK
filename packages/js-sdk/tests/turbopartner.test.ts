@@ -1053,14 +1053,14 @@ describe("TurboPartner Module", () => {
           limit: 50,
           offset: 0,
         },
-        userLimit: 100,
+        userLimit: { max: 25, current: 2 },
       };
       MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
       setup();
 
       const result = await TurboPartner.listOrganizationUsers("org-1");
 
-      expect(result.userLimit).toBe(100);
+      expect(result.userLimit).toEqual({ max: 25, current: 2 });
     });
   });
 
