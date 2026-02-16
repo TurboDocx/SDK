@@ -554,6 +554,447 @@ For more examples, see the [`examples/`](./examples) directory.
 
 ---
 
+## TurboPartner (Partner API)
+
+TurboPartner provides partner-level management capabilities for multi-tenant applications. Use this to programmatically manage organizations, users, API keys, and entitlements.
+
+### Partner Configuration
+
+```php
+use TurboDocx\TurboPartner;
+use TurboDocx\Config\PartnerClientConfig;
+
+TurboPartner::configure(new PartnerClientConfig(
+    partnerApiKey: getenv('TURBODOCX_PARTNER_API_KEY'),  // REQUIRED - must start with TDXP-
+    partnerId: getenv('TURBODOCX_PARTNER_ID'),           // REQUIRED - your partner UUID
+    baseUrl: 'https://api.turbodocx.com'                 // Optional
+));
+
+// Or use auto-configuration from environment
+TurboPartner::configure(PartnerClientConfig::fromEnvironment());
+```
+
+### Partner Environment Variables
+
+```bash
+# .env
+TURBODOCX_PARTNER_API_KEY=TDXP-your-partner-api-key
+TURBODOCX_PARTNER_ID=your-partner-uuid
+TURBODOCX_BASE_URL=https://api.turbodocx.com
+```
+
+### Organization Management
+
+#### `createOrganization()`
+
+Create a new organization under your partner account.
+
+```php
+use TurboDocx\Types\Requests\Partner\CreateOrganizationRequest;
+
+$result = TurboPartner::createOrganization(
+    new CreateOrganizationRequest(
+        name: 'Acme Corporation',
+        features: ['maxUsers' => 50]  // Optional entitlements override
+    )
+);
+
+echo "Organization ID: {$result->data->id}\n";
+```
+
+#### `listOrganizations()`
+
+List all organizations with pagination and search.
+
+```php
+use TurboDocx\Types\Requests\Partner\ListOrganizationsRequest;
+
+$result = TurboPartner::listOrganizations(
+    new ListOrganizationsRequest(
+        limit: 25,
+        offset: 0,
+        search: 'Acme'  // Optional search by name
+    )
+);
+
+echo "Total: {$result->totalRecords}\n";
+foreach ($result->results as $org) {
+    echo "- {$org->name} (ID: {$org->id})\n";
+}
+```
+
+#### `getOrganizationDetails()`
+
+Get full details including features and tracking for an organization.
+
+```php
+$result = TurboPartner::getOrganizationDetails('org-uuid-here');
+
+echo "Name: {$result->organization->name}\n";
+if ($result->features) {
+    echo "Max Users: {$result->features->maxUsers}\n";
+}
+```
+
+#### `updateOrganizationInfo()`
+
+Update an organization's name.
+
+```php
+use TurboDocx\Types\Requests\Partner\UpdateOrganizationRequest;
+
+$result = TurboPartner::updateOrganizationInfo(
+    'org-uuid-here',
+    new UpdateOrganizationRequest(name: 'Acme Corp (Updated)')
+);
+```
+
+#### `updateOrganizationEntitlements()`
+
+Update an organization's features and tracking limits.
+
+```php
+use TurboDocx\Types\Requests\Partner\UpdateEntitlementsRequest;
+
+$result = TurboPartner::updateOrganizationEntitlements(
+    'org-uuid-here',
+    new UpdateEntitlementsRequest(
+        features: [
+            'maxUsers' => 100,
+            'maxStorage' => 10737418240,  // 10GB
+            'maxSignatures' => 500,
+            'hasTDAI' => true,
+            'hasFileDownload' => true,
+        ]
+    )
+);
+```
+
+#### `deleteOrganization()`
+
+Delete an organization (use with caution).
+
+```php
+$result = TurboPartner::deleteOrganization('org-uuid-here');
+echo "Success: " . ($result->success ? 'Yes' : 'No') . "\n";
+```
+
+### Organization User Management
+
+#### `addUserToOrganization()`
+
+Add a user to an organization with a specific role.
+
+```php
+use TurboDocx\Types\Requests\Partner\AddOrgUserRequest;
+use TurboDocx\Types\Enums\OrgUserRole;
+
+$result = TurboPartner::addUserToOrganization(
+    'org-uuid-here',
+    new AddOrgUserRequest(
+        email: 'user@example.com',
+        role: OrgUserRole::ADMIN  // ADMIN, CONTRIBUTOR, or VIEWER
+    )
+);
+
+echo "User ID: {$result->data->id}\n";
+```
+
+#### `listOrganizationUsers()`
+
+List all users in an organization.
+
+```php
+use TurboDocx\Types\Requests\Partner\ListOrgUsersRequest;
+
+$result = TurboPartner::listOrganizationUsers(
+    'org-uuid-here',
+    new ListOrgUsersRequest(limit: 50, offset: 0)
+);
+
+echo "User Limit: {$result->userLimit}\n";
+foreach ($result->results as $user) {
+    echo "- {$user->email} ({$user->role})\n";
+}
+```
+
+#### `updateOrganizationUserRole()`
+
+Change a user's role within an organization.
+
+```php
+use TurboDocx\Types\Requests\Partner\UpdateOrgUserRequest;
+use TurboDocx\Types\Enums\OrgUserRole;
+
+$result = TurboPartner::updateOrganizationUserRole(
+    'org-uuid-here',
+    'user-uuid-here',
+    new UpdateOrgUserRequest(role: OrgUserRole::CONTRIBUTOR)
+);
+```
+
+#### `resendOrganizationInvitationToUser()`
+
+Resend the invitation email to a pending user.
+
+```php
+$result = TurboPartner::resendOrganizationInvitationToUser(
+    'org-uuid-here',
+    'user-uuid-here'
+);
+```
+
+#### `removeUserFromOrganization()`
+
+Remove a user from an organization.
+
+```php
+$result = TurboPartner::removeUserFromOrganization(
+    'org-uuid-here',
+    'user-uuid-here'
+);
+```
+
+### Organization API Key Management
+
+#### `createOrganizationApiKey()`
+
+Create an API key for an organization.
+
+```php
+use TurboDocx\Types\Requests\Partner\CreateOrgApiKeyRequest;
+
+$result = TurboPartner::createOrganizationApiKey(
+    'org-uuid-here',
+    new CreateOrgApiKeyRequest(
+        name: 'Production API Key',
+        role: 'admin'  // admin, contributor, or viewer
+    )
+);
+
+echo "Key ID: {$result->data->id}\n";
+echo "Full Key: {$result->data->key}\n";  // Only shown once!
+```
+
+#### `listOrganizationApiKeys()`
+
+List all API keys for an organization.
+
+```php
+use TurboDocx\Types\Requests\Partner\ListOrgApiKeysRequest;
+
+$result = TurboPartner::listOrganizationApiKeys(
+    'org-uuid-here',
+    new ListOrgApiKeysRequest(limit: 50)
+);
+```
+
+#### `updateOrganizationApiKey()`
+
+Update an organization API key's name or role.
+
+```php
+use TurboDocx\Types\Requests\Partner\UpdateOrgApiKeyRequest;
+
+$result = TurboPartner::updateOrganizationApiKey(
+    'org-uuid-here',
+    'api-key-uuid-here',
+    new UpdateOrgApiKeyRequest(name: 'Updated Key Name', role: 'contributor')
+);
+```
+
+#### `revokeOrganizationApiKey()`
+
+Revoke (delete) an organization API key.
+
+```php
+$result = TurboPartner::revokeOrganizationApiKey(
+    'org-uuid-here',
+    'api-key-uuid-here'
+);
+```
+
+### Partner API Key Management
+
+#### `createPartnerApiKey()`
+
+Create a new partner-level API key with specific scopes. The full key is only returned once in the response — save it securely. Subsequent list calls return a masked preview only.
+
+```php
+use TurboDocx\Types\Requests\Partner\CreatePartnerApiKeyRequest;
+use TurboDocx\Types\Enums\PartnerScope;
+
+$result = TurboPartner::createPartnerApiKey(
+    new CreatePartnerApiKeyRequest(
+        name: 'Integration API Key',
+        scopes: [
+            PartnerScope::ORG_CREATE,
+            PartnerScope::ORG_READ,
+            PartnerScope::ORG_UPDATE,
+            PartnerScope::ENTITLEMENTS_UPDATE,
+            PartnerScope::AUDIT_LOG_READ,
+        ],
+        description: 'For third-party integration',
+    )
+);
+
+echo "Key ID: {$result->data->id}\n";
+echo "Full Key: {$result->data->key}\n";  // Only shown once!
+```
+
+#### `listPartnerApiKeys()`
+
+List all partner API keys. Listed keys contain a masked preview (e.g. `TDXP-a1b2...5e6f`), never the full key.
+
+```php
+use TurboDocx\Types\Requests\Partner\ListPartnerApiKeysRequest;
+
+$result = TurboPartner::listPartnerApiKeys(
+    new ListPartnerApiKeysRequest(limit: 50)
+);
+
+foreach ($result->results as $key) {
+    echo "{$key->name}: {$key->key}\n"; // Shows masked preview
+}
+```
+
+#### `updatePartnerApiKey()`
+
+Update a partner API key.
+
+```php
+use TurboDocx\Types\Requests\Partner\UpdatePartnerApiKeyRequest;
+
+$result = TurboPartner::updatePartnerApiKey(
+    'partner-key-uuid-here',
+    new UpdatePartnerApiKeyRequest(
+        name: 'Updated Integration Key',
+        description: 'Updated description'
+    )
+);
+```
+
+#### `revokePartnerApiKey()`
+
+Revoke a partner API key.
+
+```php
+$result = TurboPartner::revokePartnerApiKey('partner-key-uuid-here');
+```
+
+### Partner User Management
+
+#### `addUserToPartnerPortal()`
+
+Add a user to the partner portal with specific permissions.
+
+```php
+use TurboDocx\Types\Requests\Partner\AddPartnerUserRequest;
+use TurboDocx\Types\Partner\PartnerPermissions;
+
+$result = TurboPartner::addUserToPartnerPortal(
+    new AddPartnerUserRequest(
+        email: 'admin@partner.com',
+        role: 'admin',  // admin, member, or viewer
+        permissions: new PartnerPermissions(
+            canManageOrgs: true,
+            canManageOrgUsers: true,
+            canManagePartnerUsers: false,
+            canManageOrgAPIKeys: false,
+            canManagePartnerAPIKeys: false,
+            canUpdateEntitlements: true,
+            canViewAuditLogs: true
+        )
+    )
+);
+```
+
+#### `listPartnerPortalUsers()`
+
+List all partner portal users.
+
+```php
+use TurboDocx\Types\Requests\Partner\ListPartnerUsersRequest;
+
+$result = TurboPartner::listPartnerPortalUsers(
+    new ListPartnerUsersRequest(limit: 50)
+);
+```
+
+#### `updatePartnerUserPermissions()`
+
+Update a partner user's role and permissions.
+
+```php
+use TurboDocx\Types\Requests\Partner\UpdatePartnerUserRequest;
+use TurboDocx\Types\Partner\PartnerPermissions;
+
+$result = TurboPartner::updatePartnerUserPermissions(
+    'partner-user-uuid-here',
+    new UpdatePartnerUserRequest(
+        role: 'admin',
+        permissions: new PartnerPermissions(
+            canManageOrgs: true,
+            canManageOrgUsers: true,
+            canManagePartnerUsers: true,
+            canManageOrgAPIKeys: true,
+            canManagePartnerAPIKeys: true,
+            canUpdateEntitlements: true,
+            canViewAuditLogs: true
+        )
+    )
+);
+```
+
+#### `resendPartnerPortalInvitationToUser()`
+
+Resend the invitation email to a pending partner user.
+
+```php
+$result = TurboPartner::resendPartnerPortalInvitationToUser('partner-user-uuid-here');
+```
+
+#### `removeUserFromPartnerPortal()`
+
+Remove a user from the partner portal.
+
+```php
+$result = TurboPartner::removeUserFromPartnerPortal('partner-user-uuid-here');
+```
+
+### Audit Logs
+
+#### `getPartnerAuditLogs()`
+
+Get audit logs for all partner activities with filtering.
+
+```php
+use TurboDocx\Types\Requests\Partner\ListAuditLogsRequest;
+
+$result = TurboPartner::getPartnerAuditLogs(
+    new ListAuditLogsRequest(
+        limit: 50,
+        offset: 0,
+        action: 'ORG_CREATED',           // Optional filter
+        resourceType: 'organization',    // Optional filter
+        success: true,                   // Optional filter
+        startDate: '2024-01-01',        // Optional filter
+        endDate: '2024-12-31'           // Optional filter
+    )
+);
+
+foreach ($result->results as $entry) {
+    echo "{$entry->action} - {$entry->createdOn}\n";
+}
+```
+
+For more TurboPartner examples, see:
+- [`examples/turbopartner-organizations.php`](./examples/turbopartner-organizations.php)
+- [`examples/turbopartner-users.php`](./examples/turbopartner-users.php)
+- [`examples/turbopartner-api-keys.php`](./examples/turbopartner-api-keys.php)
+
+---
+
 ## Error Handling
 
 The SDK provides typed exceptions for different error scenarios:

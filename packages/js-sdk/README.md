@@ -134,7 +134,6 @@ TurboSign.configure({
   senderEmail: 'you@company.com',
   senderName: 'Your Company',
   baseUrl: 'https://custom-api.example.com',  // Optional: custom API endpoint
-  timeout: 30000,                              // Optional: request timeout (ms)
 });
 ```
 
@@ -284,6 +283,181 @@ for (const entry of audit.auditTrail) {
 ```
 
 The audit trail includes a cryptographic hash chain for tamper-evidence verification.
+
+---
+
+### TurboPartner (Partner API)
+
+The `TurboPartner` module provides partner portal operations for managing organizations, users, API keys, and audit logs.
+
+#### Configuration
+
+```typescript
+import { TurboPartner } from '@turbodocx/sdk';
+
+TurboPartner.configure({
+  partnerApiKey: process.env.TURBODOCX_PARTNER_API_KEY,  // Must start with TDXP-
+  partnerId: process.env.TURBODOCX_PARTNER_ID,           // UUID format
+});
+```
+
+**Environment Variables:**
+
+```bash
+# .env
+TURBODOCX_PARTNER_API_KEY=TDXP-your-partner-api-key
+TURBODOCX_PARTNER_ID=your-partner-uuid
+```
+
+#### Organization Management
+
+```typescript
+// Create an organization
+const org = await TurboPartner.createOrganization({
+  name: 'Acme Corp',
+  metadata: { industry: 'Technology' },
+  features: { maxUsers: 50, hasTDAI: true },
+});
+console.log('Org ID:', org.data.id);
+
+// List organizations
+const orgs = await TurboPartner.listOrganizations({ limit: 10, search: 'acme' });
+
+// Get organization details (includes features and tracking)
+const details = await TurboPartner.getOrganizationDetails('org-uuid');
+console.log('Features:', details.data.features);
+console.log('Tracking:', details.data.tracking);
+
+// Update organization name
+await TurboPartner.updateOrganizationInfo('org-uuid', { name: 'New Name' });
+
+// Delete an organization
+await TurboPartner.deleteOrganization('org-uuid');
+
+// Update organization entitlements
+await TurboPartner.updateOrganizationEntitlements('org-uuid', {
+  features: { maxUsers: 100, hasTDAI: true },
+});
+```
+
+#### Organization User Management
+
+```typescript
+// List users in an organization
+const users = await TurboPartner.listOrganizationUsers('org-uuid', { limit: 25 });
+
+// Add a user to an organization
+const user = await TurboPartner.addUserToOrganization('org-uuid', {
+  email: 'user@example.com',
+  role: 'contributor',  // 'admin' | 'contributor' | 'user' | 'viewer'
+});
+
+// Update a user's role
+await TurboPartner.updateOrganizationUserRole('org-uuid', 'user-uuid', {
+  role: 'admin',
+});
+
+// Remove a user from an organization
+await TurboPartner.removeUserFromOrganization('org-uuid', 'user-uuid');
+
+// Resend invitation email
+await TurboPartner.resendOrganizationInvitationToUser('org-uuid', 'user-uuid');
+```
+
+#### Organization API Key Management
+
+```typescript
+// List API keys
+const keys = await TurboPartner.listOrganizationApiKeys('org-uuid');
+
+// Create an API key (full key value is only returned on creation)
+const key = await TurboPartner.createOrganizationApiKey('org-uuid', {
+  name: 'Production Key',
+  role: 'admin',
+});
+console.log('Key:', key.data.key);
+
+// Update an API key
+await TurboPartner.updateOrganizationApiKey('org-uuid', 'key-uuid', {
+  name: 'Updated Key Name',
+});
+
+// Revoke an API key
+await TurboPartner.revokeOrganizationApiKey('org-uuid', 'key-uuid');
+```
+
+#### Partner API Key Management
+
+```typescript
+// List partner API keys
+const partnerKeys = await TurboPartner.listPartnerApiKeys();
+
+// Create a partner API key with scopes
+const partnerKey = await TurboPartner.createPartnerApiKey({
+  name: 'CI/CD Key',
+  scopes: ['org:create', 'org:read', 'org:update'],
+  description: 'Key for automated deployments',
+});
+
+// Update a partner API key
+await TurboPartner.updatePartnerApiKey('key-uuid', {
+  name: 'Updated Name',
+  scopes: ['org:create', 'org:read'],
+});
+
+// Revoke a partner API key
+await TurboPartner.revokePartnerApiKey('key-uuid');
+```
+
+#### Partner User Management
+
+```typescript
+// List partner portal users
+const partnerUsers = await TurboPartner.listPartnerPortalUsers();
+
+// Add a user to the partner portal
+const partnerUser = await TurboPartner.addUserToPartnerPortal({
+  email: 'admin@partner.com',
+  role: 'admin',  // 'admin' | 'member' | 'viewer'
+  permissions: {
+    canManageOrgs: true,
+    canManageOrgUsers: true,
+    canManagePartnerUsers: false,
+    canManageOrgAPIKeys: true,
+    canManagePartnerAPIKeys: false,
+    canUpdateEntitlements: true,
+    canViewAuditLogs: true,
+  },
+});
+
+// Update partner user permissions
+await TurboPartner.updatePartnerUserPermissions('user-uuid', {
+  role: 'member',
+  permissions: { canManageOrgs: false },
+});
+
+// Remove a partner user
+await TurboPartner.removeUserFromPartnerPortal('user-uuid');
+
+// Resend partner portal invitation
+await TurboPartner.resendPartnerPortalInvitationToUser('user-uuid');
+```
+
+#### Audit Logs
+
+```typescript
+// Get audit logs with filters
+const logs = await TurboPartner.getPartnerAuditLogs({
+  action: 'org.created',
+  startDate: '2025-01-01',
+  endDate: '2025-12-31',
+  limit: 100,
+});
+
+for (const entry of logs.data.results) {
+  console.log(`${entry.action} - ${entry.resourceType} - ${entry.createdOn}`);
+}
+```
 
 ---
 
