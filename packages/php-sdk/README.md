@@ -833,8 +833,6 @@ $result = TurboPartner::createPartnerApiKey(
             PartnerScope::AUDIT_LOG_READ,
         ],
         description: 'For third-party integration',
-        ipWhitelist: ['192.168.1.1'],           // Optional
-        allowedOrigins: ['https://example.com'] // Optional
     )
 );
 

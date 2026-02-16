@@ -16,15 +16,11 @@ final class UpdatePartnerApiKeyRequest
      * @param string|null $name New name (1-255 chars)
      * @param string|null $description New description
      * @param array<PartnerScope>|null $scopes New scopes (at least one if provided)
-     * @param array<string>|null $ipWhitelist New IP whitelist (IPv4 addresses)
-     * @param array<string>|null $allowedOrigins New allowed origins (URIs)
      */
     public function __construct(
         public readonly ?string $name = null,
         public readonly ?string $description = null,
         public readonly ?array $scopes = null,
-        public readonly ?array $ipWhitelist = null,
-        public readonly ?array $allowedOrigins = null,
     ) {
         if ($this->name !== null) {
             $nameLength = mb_strlen($this->name);
@@ -46,21 +42,6 @@ final class UpdatePartnerApiKeyRequest
             }
         }
 
-        if ($this->ipWhitelist !== null) {
-            foreach ($this->ipWhitelist as $ip) {
-                if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-                    throw new ValidationException("Invalid IPv4 address: {$ip}");
-                }
-            }
-        }
-
-        if ($this->allowedOrigins !== null) {
-            foreach ($this->allowedOrigins as $origin) {
-                if (!filter_var($origin, FILTER_VALIDATE_URL)) {
-                    throw new ValidationException("Invalid URI: {$origin}");
-                }
-            }
-        }
     }
 
     /**
@@ -78,12 +59,6 @@ final class UpdatePartnerApiKeyRequest
         }
         if ($this->scopes !== null) {
             $data['scopes'] = array_map(fn(PartnerScope $s) => $s->value, $this->scopes);
-        }
-        if ($this->ipWhitelist !== null) {
-            $data['ipWhitelist'] = $this->ipWhitelist;
-        }
-        if ($this->allowedOrigins !== null) {
-            $data['allowedOrigins'] = $this->allowedOrigins;
         }
 
         return $data;

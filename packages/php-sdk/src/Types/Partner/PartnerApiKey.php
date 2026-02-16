@@ -15,8 +15,6 @@ final class PartnerApiKey implements \JsonSerializable
      * @param string|null $key Masked preview (e.g. "TDXP-a1b2...5e6f") when listing; full plaintext key only returned once on creation
      * @param string|null $description
      * @param array<string>|null $scopes
-     * @param array<string>|null $ipWhitelist
-     * @param array<string>|null $allowedOrigins
      * @param string|null $createdOn
      * @param string|null $createdBy
      * @param string|null $lastUsedOn
@@ -29,8 +27,6 @@ final class PartnerApiKey implements \JsonSerializable
         public readonly ?string $key = null,
         public readonly ?string $description = null,
         public readonly ?array $scopes = null,
-        public readonly ?array $ipWhitelist = null,
-        public readonly ?array $allowedOrigins = null,
         public readonly ?string $createdOn = null,
         public readonly ?string $createdBy = null,
         public readonly ?string $lastUsedOn = null,
@@ -49,24 +45,12 @@ final class PartnerApiKey implements \JsonSerializable
             $scopes = json_decode($scopes, true);
         }
 
-        $ipWhitelist = $data['ipWhitelist'] ?? null;
-        if (is_string($ipWhitelist)) {
-            $ipWhitelist = json_decode($ipWhitelist, true);
-        }
-
-        $allowedOrigins = $data['allowedOrigins'] ?? null;
-        if (is_string($allowedOrigins)) {
-            $allowedOrigins = json_decode($allowedOrigins, true);
-        }
-
         return new self(
             id: $data['id'] ?? '',
             name: $data['name'] ?? '',
             key: $data['key'] ?? null,
             description: $data['description'] ?? null,
             scopes: $scopes,
-            ipWhitelist: $ipWhitelist,
-            allowedOrigins: $allowedOrigins,
             createdOn: $data['createdOn'] ?? null,
             createdBy: $data['createdBy'] ?? null,
             lastUsedOn: $data['lastUsedOn'] ?? null,
@@ -87,8 +71,6 @@ final class PartnerApiKey implements \JsonSerializable
             'key' => $this->key,
             'description' => $this->description,
             'scopes' => $this->scopes,
-            'ipWhitelist' => $this->ipWhitelist,
-            'allowedOrigins' => $this->allowedOrigins,
             'createdOn' => $this->createdOn,
             'createdBy' => $this->createdBy,
             'lastUsedOn' => $this->lastUsedOn,

@@ -319,15 +319,11 @@ final class TurboPartnerRequestsTest extends TestCase
             name: 'Full Key',
             scopes: [PartnerScope::ORG_CREATE],
             description: 'Test description',
-            ipWhitelist: ['192.168.1.1', '10.0.0.1'],
-            allowedOrigins: ['https://example.com']
         );
 
         $array = $request->toArray();
         $this->assertEquals('Full Key', $array['name']);
         $this->assertEquals('Test description', $array['description']);
-        $this->assertEquals(['192.168.1.1', '10.0.0.1'], $array['ipWhitelist']);
-        $this->assertEquals(['https://example.com'], $array['allowedOrigins']);
     }
 
     public function testCreatePartnerApiKeyRequestEmptyNameThrows(): void
@@ -340,26 +336,6 @@ final class TurboPartnerRequestsTest extends TestCase
     {
         $this->expectException(ValidationException::class);
         new CreatePartnerApiKeyRequest(name: 'Test', scopes: []);
-    }
-
-    public function testCreatePartnerApiKeyRequestInvalidIpThrows(): void
-    {
-        $this->expectException(ValidationException::class);
-        new CreatePartnerApiKeyRequest(
-            name: 'Test',
-            scopes: [PartnerScope::ORG_CREATE],
-            ipWhitelist: ['invalid-ip']
-        );
-    }
-
-    public function testCreatePartnerApiKeyRequestInvalidOriginThrows(): void
-    {
-        $this->expectException(ValidationException::class);
-        new CreatePartnerApiKeyRequest(
-            name: 'Test',
-            scopes: [PartnerScope::ORG_CREATE],
-            allowedOrigins: ['not-a-url']
-        );
     }
 
     // =============================================
