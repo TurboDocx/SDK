@@ -404,7 +404,7 @@ class TestRemoveUserFromOrganization:
             )
 
 
-class TestResendOrganizationInvitation:
+class TestResendOrganizationInvitationToUser:
     def setup_method(self):
         TurboPartner._client = None
         TurboPartner._partner_id = None
@@ -419,7 +419,7 @@ class TestResendOrganizationInvitation:
             mock_get.return_value = mock_client
             TurboPartner._partner_id = PARTNER_ID
 
-            result = await TurboPartner.resend_organization_invitation("org-123", "user-1")
+            result = await TurboPartner.resend_organization_invitation_to_user("org-123", "user-1")
 
             assert result["success"] is True
             mock_client.post.assert_called_once_with(
@@ -765,7 +765,7 @@ class TestAddUserToPartnerPortal:
             )
 
     @pytest.mark.asyncio
-    async def test_add_partner_user_without_permissions(self):
+    async def test_add_partner_user_all_permissions_false(self):
         mock_response = {"success": True, "data": {"email": "u@p.com", "role": "admin"}}
 
         with patch.object(TurboPartner, '_get_client') as mock_get:
@@ -774,10 +774,13 @@ class TestAddUserToPartnerPortal:
             mock_get.return_value = mock_client
             TurboPartner._partner_id = PARTNER_ID
 
-            await TurboPartner.add_user_to_partner_portal(email="u@p.com", role="admin")
+            perms = {"canManageOrgs": False, "canViewAuditLogs": False}
+            await TurboPartner.add_user_to_partner_portal(
+                email="u@p.com", role="admin", permissions=perms
+            )
 
             call_data = mock_client.post.call_args[1]["data"]
-            assert "permissions" not in call_data
+            assert call_data["permissions"] == perms
 
 
 class TestUpdatePartnerUserPermissions:
@@ -838,7 +841,7 @@ class TestRemoveUserFromPartnerPortal:
             )
 
 
-class TestResendPartnerPortalInvitation:
+class TestResendPartnerPortalInvitationToUser:
     def setup_method(self):
         TurboPartner._client = None
         TurboPartner._partner_id = None
@@ -853,7 +856,7 @@ class TestResendPartnerPortalInvitation:
             mock_get.return_value = mock_client
             TurboPartner._partner_id = PARTNER_ID
 
-            result = await TurboPartner.resend_partner_portal_invitation("pu-1")
+            result = await TurboPartner.resend_partner_portal_invitation_to_user("pu-1")
 
             assert result["success"] is True
             mock_client.post.assert_called_once_with(

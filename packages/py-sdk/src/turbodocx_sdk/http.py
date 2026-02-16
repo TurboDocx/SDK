@@ -418,7 +418,6 @@ class PartnerHttpClient:
         return {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.partner_api_key}",
-            "x-partner-id": self.partner_id,
         }
 
     async def _handle_error_response(self, response: httpx.Response) -> None:

@@ -391,10 +391,10 @@ logs = await TurboPartner.get_partner_audit_logs(limit=10)
 | Category | Method |
 |:---------|:-------|
 | **Organizations** | `create_organization()`, `list_organizations()`, `get_organization_details()`, `update_organization_info()`, `delete_organization()`, `update_organization_entitlements()` |
-| **Org Users** | `add_user_to_organization()`, `list_organization_users()`, `update_organization_user_role()`, `remove_user_from_organization()`, `resend_organization_invitation()` |
+| **Org Users** | `add_user_to_organization()`, `list_organization_users()`, `update_organization_user_role()`, `remove_user_from_organization()`, `resend_organization_invitation_to_user()` |
 | **Org API Keys** | `create_organization_api_key()`, `list_organization_api_keys()`, `update_organization_api_key()`, `revoke_organization_api_key()` |
 | **Partner API Keys** | `create_partner_api_key()`, `list_partner_api_keys()`, `update_partner_api_key()`, `revoke_partner_api_key()` |
-| **Partner Users** | `add_user_to_partner_portal()`, `list_partner_portal_users()`, `update_partner_user_permissions()`, `remove_user_from_partner_portal()`, `resend_partner_portal_invitation()` |
+| **Partner Users** | `add_user_to_partner_portal()`, `list_partner_portal_users()`, `update_partner_user_permissions()`, `remove_user_from_partner_portal()`, `resend_partner_portal_invitation_to_user()` |
 | **Audit Logs** | `get_partner_audit_logs()` |
 
 ---

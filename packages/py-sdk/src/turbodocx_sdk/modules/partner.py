@@ -339,7 +339,7 @@ class TurboPartner:
         )
 
     @classmethod
-    async def resend_organization_invitation(
+    async def resend_organization_invitation_to_user(
         cls,
         organization_id: str,
         user_id: str
@@ -598,7 +598,7 @@ class TurboPartner:
         *,
         email: str,
         role: str,
-        permissions: Optional[Dict[str, bool]] = None
+        permissions: Dict[str, bool]
     ) -> Dict[str, Any]:
         """
         Add a user to the partner portal
@@ -606,18 +606,16 @@ class TurboPartner:
         Args:
             email: User email address
             role: User role ("admin" or "member")
-            permissions: Permission flags dict with keys:
-                can_manage_orgs, can_manage_org_users, can_manage_partner_users,
-                can_manage_org_api_keys, can_manage_partner_api_keys,
-                can_update_entitlements, can_view_audit_logs
+            permissions: Permission flags dict with camelCase keys:
+                canManageOrgs, canManageOrgUsers, canManagePartnerUsers,
+                canManageOrgAPIKeys, canManagePartnerAPIKeys,
+                canUpdateEntitlements, canViewAuditLogs
 
         Returns:
             Dict with success and data (user details)
         """
         client = cls._get_client()
-        body: Dict[str, Any] = {"email": email, "role": role}
-        if permissions is not None:
-            body["permissions"] = permissions
+        body: Dict[str, Any] = {"email": email, "role": role, "permissions": permissions}
         return await client.post(f"{cls._base_path()}/users", data=body)
 
     @classmethod
@@ -662,7 +660,7 @@ class TurboPartner:
         return await client.delete(f"{cls._base_path()}/users/{user_id}")
 
     @classmethod
-    async def resend_partner_portal_invitation(cls, user_id: str) -> Dict[str, Any]:
+    async def resend_partner_portal_invitation_to_user(cls, user_id: str) -> Dict[str, Any]:
         """
         Resend partner portal invitation email to a user
 
