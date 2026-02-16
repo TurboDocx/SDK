@@ -65,7 +65,7 @@ class TurboPartner:
         cls,
         partner_api_key: Optional[str] = None,
         partner_id: Optional[str] = None,
-        base_url: str = "https://api.turbodocx.com"
+        base_url: Optional[str] = None
     ) -> None:
         """
         Configure the TurboPartner module with partner API credentials
@@ -213,7 +213,8 @@ class TurboPartner:
         cls,
         organization_id: str,
         *,
-        features: Optional[Dict[str, Any]] = None
+        features: Optional[Dict[str, Any]] = None,
+        tracking: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Update organization entitlements (feature limits and capabilities)
@@ -221,8 +222,9 @@ class TurboPartner:
         Args:
             organization_id: Organization UUID
             features: Feature configuration dict with keys like:
-                max_users, max_storage, max_templates, max_signatures,
-                max_ai_credits, has_tdai, has_pptx, has_file_download, etc.
+                maxUsers, maxStorage, maxTemplates, maxSignatures,
+                maxAICredits, hasTDAI, hasPptx, hasFileDownload, etc.
+            tracking: Optional tracking data dict
 
         Returns:
             Dict with success and data (features, tracking)
@@ -231,6 +233,8 @@ class TurboPartner:
         body: Dict[str, Any] = {}
         if features is not None:
             body["features"] = features
+        if tracking is not None:
+            body["tracking"] = tracking
         return await client.patch(
             f"{cls._base_path()}/organizations/{organization_id}/entitlements",
             data=body
@@ -281,7 +285,7 @@ class TurboPartner:
         Args:
             organization_id: Organization UUID
             email: User email address
-            role: User role ("admin" or "member")
+            role: User role ("admin", "contributor", "user", or "viewer")
 
         Returns:
             Dict with success and data (user details)
@@ -306,7 +310,7 @@ class TurboPartner:
         Args:
             organization_id: Organization UUID
             user_id: User UUID
-            role: New role ("admin" or "member")
+            role: New role ("admin", "contributor", "user", or "viewer")
 
         Returns:
             Dict with success and data (updated user)
@@ -404,7 +408,7 @@ class TurboPartner:
         Args:
             organization_id: Organization UUID
             name: API key name
-            role: API key role ("admin" or "member")
+            role: API key role ("admin", "contributor", or "viewer")
 
         Returns:
             Dict with success, data (key details including the key value), and message
@@ -605,7 +609,7 @@ class TurboPartner:
 
         Args:
             email: User email address
-            role: User role ("admin" or "member")
+            role: User role ("admin", "member", or "viewer")
             permissions: Permission flags dict with camelCase keys:
                 canManageOrgs, canManageOrgUsers, canManagePartnerUsers,
                 canManageOrgAPIKeys, canManagePartnerAPIKeys,

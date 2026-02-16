@@ -121,18 +121,23 @@ async def main():
 asyncio.run(main())
 ```
 
-### Sync
+### Sync (via asyncio.run)
 
 ```python
-from turbodocx_sdk import TurboSignSync
+import asyncio
+from turbodocx_sdk import TurboSign
 
-TurboSignSync.configure(api_key="your-api-key")
+TurboSign.configure(
+    api_key="your-api-key",
+    org_id="your-org-id",
+    sender_email="you@company.com"
+)
 
-result = TurboSignSync.send_signature(
+result = asyncio.run(TurboSign.send_signature(
     file_link="https://example.com/contract.pdf",
     recipients=[{"name": "John Doe", "email": "john@example.com", "signingOrder": 1}],
-    fields=[{"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientOrder": 1}]
-)
+    fields=[{"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientEmail": "john@example.com"}]
+))
 ```
 
 ---
@@ -495,18 +500,23 @@ async def send_contract(pdf_url: str, recipients: list, fields: list):
 ### With Django
 
 ```python
+import asyncio
 from django.http import JsonResponse
-from turbodocx_sdk import TurboSignSync
+from turbodocx_sdk import TurboSign
 import os
 
-TurboSignSync.configure(api_key=os.environ["TURBODOCX_API_KEY"])
+TurboSign.configure(
+    api_key=os.environ["TURBODOCX_API_KEY"],
+    org_id=os.environ["TURBODOCX_ORG_ID"],
+    sender_email=os.environ["TURBODOCX_SENDER_EMAIL"],
+)
 
 def send_contract(request):
-    result = TurboSignSync.send_signature(
+    result = asyncio.run(TurboSign.send_signature(
         file_link=request.POST["pdf_url"],
         recipients=request.POST["recipients"],
         fields=request.POST["fields"]
-    )
+    ))
     return JsonResponse({"document_id": result["documentId"]})
 ```
 
@@ -585,24 +595,18 @@ except Exception as e:
 
 ## Type Hints
 
-Full type hint support for IDE autocompletion:
+The SDK includes type hints throughout for IDE autocompletion:
 
 ```python
-from turbodocx_sdk import TurboSign
-from turbodocx_sdk.types import (
-    PrepareForSigningOptions,
-    Recipient,
-    Field,
-    DocumentStatus
-)
+from turbodocx_sdk import TurboSign, TurboPartner, TurboDocxError
+from typing import Dict, List, Any
 
-recipients: list[Recipient] = [
-    {"name": "John", "email": "john@example.com", "order": 1}
-]
+# All methods have full type annotations
+result: Dict[str, Any] = await TurboSign.get_status("doc-uuid-here")
 
-fields: list[Field] = [
-    {"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientOrder": 1}
-]
+# Scope constants are typed strings
+from turbodocx_sdk import SCOPE_ORG_READ, SCOPE_AUDIT_READ
+scopes: List[str] = [SCOPE_ORG_READ, SCOPE_AUDIT_READ]
 ```
 
 ---
@@ -610,8 +614,8 @@ fields: list[Field] = [
 ## Requirements
 
 - Python 3.9+
-- aiohttp (for async)
-- requests (for sync)
+- httpx (async HTTP client)
+- pydantic (data validation)
 
 ---
 
