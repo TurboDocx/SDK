@@ -236,18 +236,15 @@ function apiKeyManagementExample(): void
 
         foreach ($auditLogsResult->results as $entry) {
             echo "  Action: {$entry->action}\n";
-            if ($entry->actorEmail !== null) {
-                echo "    Actor: {$entry->actorEmail}\n";
-            }
-            if ($entry->targetType !== null) {
-                echo "    Target: {$entry->targetType}";
-                if ($entry->targetId !== null) {
-                    echo " (ID: {$entry->targetId})";
+            if ($entry->resourceType !== null) {
+                echo "    Resource: {$entry->resourceType}";
+                if ($entry->resourceId !== null) {
+                    echo " (ID: {$entry->resourceId})";
                 }
                 echo "\n";
             }
-            if ($entry->createdAt !== null) {
-                echo "    Time: {$entry->createdAt}\n";
+            if ($entry->createdOn !== null) {
+                echo "    Time: {$entry->createdOn}\n";
             }
             echo "\n";
         }

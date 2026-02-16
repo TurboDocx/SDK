@@ -110,7 +110,7 @@ function userManagementExample(): void
         );
 
         echo "User role updated!\n";
-        echo "  User ID: {$updateOrgUserResult->data->userId}\n";
+        echo "  User ID: {$updateOrgUserResult->data->id}\n";
         echo "  New Role: {$updateOrgUserResult->data->role}\n\n";
 
         // 4. RESEND ORGANIZATION INVITATION
@@ -211,7 +211,7 @@ function userManagementExample(): void
         );
 
         echo "Partner user permissions updated!\n";
-        echo "  User ID: {$updatePartnerUserResult->data->userId}\n";
+        echo "  User ID: {$updatePartnerUserResult->data->id}\n";
         echo "  New Role: {$updatePartnerUserResult->data->role}\n\n";
 
         // 9. RESEND PARTNER PORTAL INVITATION
