@@ -29,10 +29,13 @@ import {
   OrgUserResponse,
   OrgUserListResponse,
   OrgApiKeyResponse,
+  OrgApiKeyUpdateResponse,
   OrgApiKeyListResponse,
   PartnerApiKeyResponse,
+  PartnerApiKeyUpdateResponse,
   PartnerApiKeyListResponse,
   PartnerUserResponse,
+  PartnerUserUpdateResponse,
   PartnerUserListResponse,
   AuditLogListResponse,
 } from '../types/partner';
@@ -387,10 +390,10 @@ export class TurboPartner {
    * });
    * ```
    */
-  static async updateOrganizationApiKey(organizationId: string, apiKeyId: string, request: UpdateOrgApiKeyRequest): Promise<OrgApiKeyResponse> {
+  static async updateOrganizationApiKey(organizationId: string, apiKeyId: string, request: UpdateOrgApiKeyRequest): Promise<OrgApiKeyUpdateResponse> {
     const client = this.getClient();
     const partnerId = this.getPartnerId();
-    return client.patch<OrgApiKeyResponse>(`/partner/${partnerId}/organizations/${organizationId}/apikeys/${apiKeyId}`, request);
+    return client.patch<OrgApiKeyUpdateResponse>(`/partner/${partnerId}/organizations/${organizationId}/apikeys/${apiKeyId}`, request);
   }
 
   /**
@@ -469,10 +472,10 @@ export class TurboPartner {
    * });
    * ```
    */
-  static async updatePartnerApiKey(keyId: string, request: UpdatePartnerApiKeyRequest): Promise<PartnerApiKeyResponse> {
+  static async updatePartnerApiKey(keyId: string, request: UpdatePartnerApiKeyRequest): Promise<PartnerApiKeyUpdateResponse> {
     const client = this.getClient();
     const partnerId = this.getPartnerId();
-    return client.patch<PartnerApiKeyResponse>(`/partner/${partnerId}/api-keys/${keyId}`, request);
+    return client.patch<PartnerApiKeyUpdateResponse>(`/partner/${partnerId}/api-keys/${keyId}`, request);
   }
 
   /**
@@ -557,10 +560,10 @@ export class TurboPartner {
    * });
    * ```
    */
-  static async updatePartnerUserPermissions(userId: string, request: UpdatePartnerUserRequest): Promise<PartnerUserResponse> {
+  static async updatePartnerUserPermissions(userId: string, request: UpdatePartnerUserRequest): Promise<PartnerUserUpdateResponse> {
     const client = this.getClient();
     const partnerId = this.getPartnerId();
-    return client.patch<PartnerUserResponse>(`/partner/${partnerId}/users/${userId}`, request);
+    return client.patch<PartnerUserUpdateResponse>(`/partner/${partnerId}/users/${userId}`, request);
   }
 
   /**

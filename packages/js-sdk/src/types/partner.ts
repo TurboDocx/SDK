@@ -330,6 +330,12 @@ export interface OrgApiKeyResponse {
   message?: string;
 }
 
+export interface OrgApiKeyUpdateResponse {
+  success: boolean;
+  message?: string;
+  apiKey: Pick<OrgApiKey, 'id' | 'name' | 'role' | 'updatedOn'>;
+}
+
 export interface OrgApiKeyListResponse {
   success: boolean;
   data: {
@@ -346,6 +352,12 @@ export interface PartnerApiKeyResponse {
   message?: string;
 }
 
+export interface PartnerApiKeyUpdateResponse {
+  success: boolean;
+  message?: string;
+  apiKey: Pick<PartnerApiKey, 'id' | 'name' | 'description' | 'scopes' | 'updatedOn'>;
+}
+
 export interface PartnerApiKeyListResponse {
   success: boolean;
   data: {
@@ -359,6 +371,15 @@ export interface PartnerApiKeyListResponse {
 export interface PartnerUserResponse {
   success: boolean;
   data: PartnerUser;
+}
+
+export interface PartnerUserUpdateResponse {
+  success: boolean;
+  data: {
+    userId: string;
+    role: PartnerUserRole;
+    permissions: PartnerPermissions;
+  };
 }
 
 export interface PartnerUserListResponse {

@@ -441,7 +441,8 @@ describe("TurboPartner Module", () => {
       it("should update an API key", async () => {
         const mockResponse = {
           success: true,
-          data: { id: "key-1", name: "Updated Key" },
+          message: "API key updated successfully",
+          apiKey: { id: "key-1", name: "Updated Key", role: "admin", updatedOn: "2025-06-01T00:00:00Z" },
         };
         MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue(mockResponse);
         setup();
@@ -450,7 +451,8 @@ describe("TurboPartner Module", () => {
           name: "Updated Key",
         });
 
-        expect(result.data.name).toBe("Updated Key");
+        expect(result.apiKey.name).toBe("Updated Key");
+        expect(result.message).toBe("API key updated successfully");
         expect(MockedHttpClient.prototype.patch).toHaveBeenCalledWith(
           `/partner/${PARTNER_ID}/organizations/org-1/apikeys/key-1`,
           { name: "Updated Key" }
@@ -555,7 +557,8 @@ describe("TurboPartner Module", () => {
       it("should update a partner API key", async () => {
         const mockResponse = {
           success: true,
-          data: { id: "pkey-1", name: "Updated Name", scopes: ["org:create"] },
+          message: "Partner API key updated successfully",
+          apiKey: { id: "pkey-1", name: "Updated Name", description: "Desc", scopes: ["org:create"], updatedOn: "2025-06-01T00:00:00Z" },
         };
         MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue(mockResponse);
         setup();
@@ -565,7 +568,8 @@ describe("TurboPartner Module", () => {
           scopes: ["org:create"],
         });
 
-        expect(result.data.name).toBe("Updated Name");
+        expect(result.apiKey.name).toBe("Updated Name");
+        expect(result.message).toBe("Partner API key updated successfully");
         expect(MockedHttpClient.prototype.patch).toHaveBeenCalledWith(
           `/partner/${PARTNER_ID}/api-keys/pkey-1`,
           { name: "Updated Name", scopes: ["org:create"] }
@@ -680,8 +684,7 @@ describe("TurboPartner Module", () => {
         const mockResponse = {
           success: true,
           data: {
-            id: "puser-1",
-            email: "admin@partner.com",
+            userId: "puser-1",
             role: "member",
             permissions: { ...mockPermissions, canManageOrgs: false },
           },
@@ -694,6 +697,7 @@ describe("TurboPartner Module", () => {
           permissions: { canManageOrgs: false },
         });
 
+        expect(result.data.userId).toBe("puser-1");
         expect(result.data.role).toBe("member");
         expect(MockedHttpClient.prototype.patch).toHaveBeenCalledWith(
           `/partner/${PARTNER_ID}/users/puser-1`,
