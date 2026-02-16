@@ -31,7 +31,6 @@ classifiers = [
 ]
 dependencies = [
     "httpx>=0.24.0",
-    "pydantic>=2.0.0",
 ]
 
 [project.optional-dependencies]

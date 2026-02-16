@@ -48,10 +48,9 @@ A modern, developer-first alternative to legacy e-signature platforms:
 ## Features
 
 - 🚀 **Production-Ready** — Battle-tested, processing thousands of documents daily
-- ⚡ **Async-First** — Native asyncio support with sync wrappers available
+- ⚡ **Async-First** — Native asyncio support with `httpx`
 - 🐍 **Pythonic API** — Idiomatic Python with type hints throughout
 - 📝 **Full Type Hints** — Complete type annotations for IDE support
-- 🛡️ **Pydantic Models** — Validated request/response models
 - 🤖 **100% n8n Parity** — Same operations as our n8n community nodes
 
 ---
@@ -164,14 +163,13 @@ TurboSign.configure(
     sender_name=os.environ["TURBODOCX_SENDER_NAME"]
 )
 
-# With custom options
+# With custom base URL
 TurboSign.configure(
     api_key=os.environ["TURBODOCX_API_KEY"],
     org_id=os.environ["TURBODOCX_ORG_ID"],
     sender_email=os.environ["TURBODOCX_SENDER_EMAIL"],
     sender_name=os.environ["TURBODOCX_SENDER_NAME"],
     base_url="https://custom-api.example.com",  # Optional
-    timeout=30.0,                                # Optional: seconds
 )
 ```
 
@@ -482,7 +480,11 @@ from turbodocx_sdk import TurboSign
 import os
 
 app = FastAPI()
-TurboSign.configure(api_key=os.environ["TURBODOCX_API_KEY"])
+TurboSign.configure(
+    api_key=os.environ["TURBODOCX_API_KEY"],
+    org_id=os.environ["TURBODOCX_ORG_ID"],
+    sender_email=os.environ["TURBODOCX_SENDER_EMAIL"],
+)
 
 @app.post("/api/send-contract")
 async def send_contract(pdf_url: str, recipients: list, fields: list):
@@ -575,7 +577,7 @@ try:
     await TurboSign.get_status("invalid-id")
 except TurboDocxError as e:
     print(f"Status: {e.status_code}")
-    print(f"Message: {e.message}")
+    print(f"Message: {e}")
     print(f"Code: {e.code}")
 except Exception as e:
     print(f"Unexpected error: {e}")
@@ -615,7 +617,6 @@ scopes: List[str] = [SCOPE_ORG_READ, SCOPE_AUDIT_READ]
 
 - Python 3.9+
 - httpx (async HTTP client)
-- pydantic (data validation)
 
 ---
 

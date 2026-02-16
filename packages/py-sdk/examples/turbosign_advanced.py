@@ -132,7 +132,7 @@ async def advanced_fields_example():
 
         print("\nNext steps:")
         print("1. Review the document at the preview URL")
-        print("2. Send to recipients: await TurboSign.send(document_id)")
+        print("2. Send to recipients: await TurboSign.send_signature(...)")
 
     except Exception as error:
         print(f"Error: {error}")

@@ -115,7 +115,7 @@ async def review_link_example():
 
         print("\nYou can now:")
         print("1. Review the document at the preview URL")
-        print("2. Send to recipients using: await TurboSign.send(document_id)")
+        print("2. Send to recipients using: await TurboSign.send_signature(...)")
 
     except Exception as error:
         print(f"Error: {error}")
