@@ -6,7 +6,7 @@
 
 **Official Go SDK for TurboDocx**
 
-The most developer-friendly **DocuSign & PandaDoc alternative** for **e-signatures** and **document generation**. Send documents for signature and automate document workflows programmatically.
+The most developer-friendly **DocuSign & PandaDoc alternative** for **e-signatures**, **document generation**, and **partner management**. Send documents for signature, automate document workflows, and manage partner organizations programmatically.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/turbodocx/sdk.svg)](https://pkg.go.dev/github.com/turbodocx/sdk)
 [![Go Report Card](https://goreportcard.com/badge/github.com/turbodocx/sdk)](https://goreportcard.com/report/github.com/turbodocx/sdk)
@@ -52,6 +52,7 @@ A modern, developer-first alternative to legacy e-signature platforms:
 - 🧵 **Concurrent Safe** — Safe for use across goroutines
 - 📦 **Zero Dependencies** — Only standard library
 - 🤖 **100% n8n Parity** — Same operations as our n8n community nodes
+- 🏢 **TurboPartner** — Full partner portal API for managing organizations, users, API keys, and entitlements
 
 ---
 
@@ -293,6 +294,217 @@ for _, entry := range audit.AuditTrail {
 
 The audit trail includes a cryptographic hash chain for tamper-evidence verification.
 
+### TurboPartner
+
+TurboPartner provides partner portal API access for managing organizations, users, API keys, and entitlements. It uses a separate client with partner-level authentication.
+
+#### Configuration
+
+```go
+partner, err := turbodocx.NewPartnerClient(turbodocx.PartnerConfig{
+    PartnerAPIKey: os.Getenv("TURBODOCX_PARTNER_API_KEY"), // REQUIRED (TDXP-* prefix)
+    PartnerID:     os.Getenv("TURBODOCX_PARTNER_ID"),      // REQUIRED
+})
+```
+
+**Environment Variables:**
+
+```bash
+export TURBODOCX_PARTNER_API_KEY=TDXP-your-partner-key
+export TURBODOCX_PARTNER_ID=your-partner-uuid
+```
+
+#### Organization Management
+
+```go
+// Create organization with entitlements
+org, err := partner.CreateOrganization(ctx, &turbodocx.CreateOrganizationRequest{
+    Name: "Acme Corp",
+    Features: &turbodocx.Features{
+        MaxUsers:    turbodocx.IntPtr(25),
+        MaxStorage:  turbodocx.Int64Ptr(5 * 1024 * 1024 * 1024), // 5 GB
+        HasTDAI:     turbodocx.BoolPtr(true),
+    },
+})
+
+// List organizations
+orgs, err := partner.ListOrganizations(ctx, &turbodocx.ListOrganizationsRequest{
+    Limit:  turbodocx.IntPtr(10),
+    Search: "acme",
+})
+
+// Get full details (includes features + usage tracking)
+details, err := partner.GetOrganizationDetails(ctx, orgID)
+
+// Update organization name
+updated, err := partner.UpdateOrganizationInfo(ctx, orgID, &turbodocx.UpdateOrganizationRequest{
+    Name: "Acme Corporation",
+})
+
+// Update entitlements
+entitlements, err := partner.UpdateOrganizationEntitlements(ctx, orgID, &turbodocx.UpdateEntitlementsRequest{
+    Features: &turbodocx.Features{
+        MaxUsers:      turbodocx.IntPtr(50),
+        MaxSignatures: turbodocx.IntPtr(1000),
+    },
+})
+
+// Delete organization
+_, err := partner.DeleteOrganization(ctx, orgID)
+```
+
+#### Organization User Management
+
+```go
+// Add user to organization
+user, err := partner.AddUserToOrganization(ctx, orgID, &turbodocx.AddOrgUserRequest{
+    Email: "admin@acme.com",
+    Role:  "admin",
+})
+
+// List users
+users, err := partner.ListOrganizationUsers(ctx, orgID, nil)
+
+// Update user role
+_, err := partner.UpdateOrganizationUserRole(ctx, orgID, userID, &turbodocx.UpdateOrgUserRequest{
+    Role: "member",
+})
+
+// Remove user
+_, err := partner.RemoveUserFromOrganization(ctx, orgID, userID)
+
+// Resend invitation
+_, err := partner.ResendOrganizationInvitationToUser(ctx, orgID, userID)
+```
+
+#### Organization API Key Management
+
+```go
+// Create API key
+key, err := partner.CreateOrganizationApiKey(ctx, orgID, &turbodocx.CreateOrgApiKeyRequest{
+    Name: "Production Key",
+    Role: "admin",
+})
+fmt.Printf("API Key: %s\n", key.Data.Key)
+
+// List API keys
+keys, err := partner.ListOrganizationApiKeys(ctx, orgID, nil)
+
+// Update API key
+_, err := partner.UpdateOrganizationApiKey(ctx, orgID, keyID, &turbodocx.UpdateOrgApiKeyRequest{
+    Name: "Updated Key Name",
+})
+
+// Revoke API key
+_, err := partner.RevokeOrganizationApiKey(ctx, orgID, keyID)
+```
+
+#### Partner API Key Management
+
+```go
+// Create scoped partner API key
+key, err := partner.CreatePartnerApiKey(ctx, &turbodocx.CreatePartnerApiKeyRequest{
+    Name:        "Monitoring Key",
+    Description: "Read-only access for dashboard",
+    Scopes:      []string{turbodocx.ScopeOrgRead, turbodocx.ScopeAuditRead},
+})
+
+// List partner API keys
+keys, err := partner.ListPartnerApiKeys(ctx, nil)
+
+// Update partner API key
+_, err := partner.UpdatePartnerApiKey(ctx, keyID, &turbodocx.UpdatePartnerApiKeyRequest{
+    Name:   "Updated Key",
+    Scopes: []string{turbodocx.ScopeOrgRead, turbodocx.ScopeOrgUpdate},
+})
+
+// Revoke partner API key
+_, err := partner.RevokePartnerApiKey(ctx, keyID)
+```
+
+#### Partner User Management
+
+```go
+// Add partner portal user
+user, err := partner.AddUserToPartnerPortal(ctx, &turbodocx.AddPartnerUserRequest{
+    Email: "ops@yourcompany.com",
+    Role:  "member",
+    Permissions: turbodocx.PartnerPermissions{
+        CanManageOrgs:     true,
+        CanManageOrgUsers: true,
+        CanViewAuditLogs:  true,
+    },
+})
+
+// List partner users
+users, err := partner.ListPartnerPortalUsers(ctx, nil)
+
+// Update permissions
+_, err := partner.UpdatePartnerUserPermissions(ctx, userID, &turbodocx.UpdatePartnerUserRequest{
+    Role: "admin",
+    Permissions: &turbodocx.PartnerPermissions{
+        CanManageOrgs:          true,
+        CanManageOrgUsers:      true,
+        CanManagePartnerUsers:  true,
+        CanManageOrgAPIKeys:    true,
+        CanManagePartnerAPIKeys: true,
+        CanUpdateEntitlements:  true,
+        CanViewAuditLogs:       true,
+    },
+})
+
+// Remove partner user
+_, err := partner.RemoveUserFromPartnerPortal(ctx, userID)
+
+// Resend invitation
+_, err := partner.ResendPartnerPortalInvitationToUser(ctx, userID)
+```
+
+#### Audit Logs
+
+```go
+// Get recent audit logs
+logs, err := partner.GetPartnerAuditLogs(ctx, &turbodocx.ListAuditLogsRequest{
+    Limit: turbodocx.IntPtr(50),
+})
+
+// Filter by action and date range
+logs, err := partner.GetPartnerAuditLogs(ctx, &turbodocx.ListAuditLogsRequest{
+    Action:       "org:create",
+    ResourceType: "organization",
+    StartDate:    "2024-01-01",
+    EndDate:      "2024-12-31",
+    Success:      turbodocx.BoolPtr(true),
+})
+```
+
+#### Available Scopes
+
+| Scope | Description |
+|:------|:------------|
+| `org:create` | Create organizations |
+| `org:read` | View organizations |
+| `org:update` | Update organizations |
+| `org:delete` | Delete organizations |
+| `entitlements:update` | Update organization entitlements |
+| `org-users:create` | Add users to organizations |
+| `org-users:read` | View organization users |
+| `org-users:update` | Update organization users |
+| `org-users:delete` | Remove organization users |
+| `org-apikeys:create` | Create organization API keys |
+| `org-apikeys:read` | View organization API keys |
+| `org-apikeys:update` | Update organization API keys |
+| `org-apikeys:delete` | Revoke organization API keys |
+| `partner-apikeys:create` | Create partner API keys |
+| `partner-apikeys:read` | View partner API keys |
+| `partner-apikeys:update` | Update partner API keys |
+| `partner-apikeys:delete` | Revoke partner API keys |
+| `partner-users:create` | Add partner portal users |
+| `partner-users:read` | View partner portal users |
+| `partner-users:update` | Update partner portal users |
+| `partner-users:delete` | Remove partner portal users |
+| `audit:read` | View audit logs |
+
 ---
 
 ## Field Types
@@ -458,11 +670,16 @@ type ResendEmailResponse struct {
 
 ## Examples
 
-For complete, working examples including template anchors, advanced field types, and various workflows, see the [`examples/`](./examples/) directory:
+For complete, working examples see the [`examples/`](./examples/) directory:
 
+**TurboSign:**
 - [`turbosign_send_simple.go`](./examples/turbosign_send_simple.go) - Send document directly with template anchors
 - [`turbosign_basic.go`](./examples/turbosign_basic.go) - Create review link first, then send manually
 - [`turbosign_advanced.go`](./examples/turbosign_advanced.go) - Advanced field types (checkbox, readonly, multiline text, etc.)
+
+**TurboPartner:**
+- [`turbopartner_basic.go`](./examples/turbopartner_basic.go) - Full organization lifecycle (create, users, API keys)
+- [`turbopartner_api_keys.go`](./examples/turbopartner_api_keys.go) - Partner API keys, portal users, and audit logs
 
 ### Sequential Signing
 
