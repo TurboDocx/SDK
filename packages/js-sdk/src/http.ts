@@ -11,10 +11,11 @@ import { TurboDocxError, AuthenticationError, ValidationError, NotFoundError, Ra
  *
  * @property apiKey - TurboDocx API key (required)
  * @property orgId - Organization ID (required)
- * @property senderEmail - Reply-to email address for signature requests (required). This email will be used as the reply-to address when sending signature request emails. If not provided, emails will default to "API Service User via TurboSign".
+ * @property senderEmail - Reply-to email address for signature requests (required for TurboSign). This email will be used as the reply-to address when sending signature request emails. If not provided, emails will default to "API Service User via TurboSign".
  * @property senderName - Sender name for signature requests (optional but strongly recommended). This name will appear in signature request emails. Without this, the sender will appear as "API Service User".
  * @property accessToken - OAuth access token (alternative to apiKey)
  * @property baseUrl - API base URL (optional, defaults to https://api.turbodocx.com)
+ * @property skipSenderValidation - Skip senderEmail validation (used internally by TurboPartner)
  */
 export interface HttpClientConfig {
   apiKey?: string;
@@ -23,6 +24,20 @@ export interface HttpClientConfig {
   orgId?: string;
   senderEmail?: string;
   senderName?: string;
+  skipSenderValidation?: boolean;
+}
+
+/**
+ * Configuration for the TurboPartner HTTP client
+ *
+ * @property partnerApiKey - Partner API key (must start with TDXP-)
+ * @property partnerId - Partner ID (UUID format)
+ * @property baseUrl - API base URL (optional, defaults to https://api.turbodocx.com)
+ */
+export interface PartnerClientConfig {
+  partnerApiKey: string;
+  partnerId: string;
+  baseUrl?: string;
 }
 
 /**
@@ -88,7 +103,7 @@ export class HttpClient {
       throw new AuthenticationError('API key or access token is required');
     }
 
-    if (!this.senderEmail) {
+    if (!this.senderEmail && !config.skipSenderValidation) {
       throw new ValidationError('senderEmail is required. This email will be used as the reply-to address for signature requests. Without it, emails will default to "API Service User via TurboSign".');
     }
   }
@@ -334,5 +349,13 @@ export class HttpClient {
 
   async post<T>(path: string, data?: any, options?: RequestInit): Promise<T> {
     return this.request<T>('POST', path, data, options);
+  }
+
+  async patch<T>(path: string, data?: any, options?: RequestInit): Promise<T> {
+    return this.request<T>('PATCH', path, data, options);
+  }
+
+  async delete<T>(path: string, options?: RequestInit): Promise<T> {
+    return this.request<T>('DELETE', path, undefined, options);
   }
 }
