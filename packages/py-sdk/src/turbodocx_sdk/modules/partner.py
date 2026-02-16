@@ -65,7 +65,7 @@ class TurboPartner:
         cls,
         partner_api_key: Optional[str] = None,
         partner_id: Optional[str] = None,
-        base_url: Optional[str] = None
+        base_url: str = "https://api.turbodocx.com"
     ) -> None:
         """
         Configure the TurboPartner module with partner API credentials
