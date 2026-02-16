@@ -107,10 +107,10 @@ func main() {
             {
                 Type:           "signature",
                 RecipientEmail: "john@example.com",
-                Template: &turbodocx.FieldTemplate{
+                Template: &turbodocx.TemplateAnchor{
                     Anchor:    "{signature1}",
                     Placement: "replace",
-                    Size:      &turbodocx.FieldSize{Width: 100, Height: 30},
+                    Size:      &turbodocx.Size{Width: 100, Height: 30},
                 },
             },
         },
@@ -151,7 +151,14 @@ client, err := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
     SenderEmail: os.Getenv("TURBODOCX_SENDER_EMAIL"),
     SenderName:  os.Getenv("TURBODOCX_SENDER_NAME"),
     BaseURL:     "https://custom-api.example.com",  // Optional
-    Timeout:     30 * time.Second,                   // Optional
+})
+
+// With OAuth2 access token (alternative to API key)
+client, err := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
+    AccessToken: os.Getenv("TURBODOCX_ACCESS_TOKEN"),  // Use instead of APIKey
+    OrgID:       os.Getenv("TURBODOCX_ORG_ID"),
+    SenderEmail: os.Getenv("TURBODOCX_SENDER_EMAIL"),
+    SenderName:  os.Getenv("TURBODOCX_SENDER_NAME"),
 })
 ```
 
@@ -173,18 +180,18 @@ export TURBODOCX_SENDER_NAME="Your Company Name"
 
 ### TurboSign
 
-#### `PrepareForReview`
+#### `CreateSignatureReviewLink`
 
 Upload a document for review without sending signature emails.
 
 ```go
-result, err := client.TurboSign.PrepareForReview(ctx, &turbodocx.PrepareForReviewRequest{
+result, err := client.TurboSign.CreateSignatureReviewLink(ctx, &turbodocx.CreateSignatureReviewLinkRequest{
     FileLink: "https://example.com/contract.pdf",
     Recipients: []turbodocx.Recipient{
-        {Name: "John Doe", Email: "john@example.com", Order: 1},
+        {Name: "John Doe", Email: "john@example.com", SigningOrder: 1},
     },
     Fields: []turbodocx.Field{
-        {Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 1},
+        {Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientEmail: "john@example.com"},
     },
     DocumentName: "Service Agreement",       // Optional
     SenderName:   "Acme Corp",               // Optional
@@ -195,26 +202,25 @@ fmt.Printf("Preview URL: %s\n", result.PreviewURL)
 fmt.Printf("Document ID: %s\n", result.DocumentID)
 ```
 
-#### `PrepareForSigningSingle`
+#### `SendSignature`
 
 Upload a document and immediately send signature request emails.
 
 ```go
-result, err := client.TurboSign.PrepareForSigningSingle(ctx, &turbodocx.PrepareForSigningRequest{
+result, err := client.TurboSign.SendSignature(ctx, &turbodocx.SendSignatureRequest{
     FileLink: "https://example.com/contract.pdf",
     Recipients: []turbodocx.Recipient{
-        {Name: "Alice", Email: "alice@example.com", Order: 1},
-        {Name: "Bob", Email: "bob@example.com", Order: 2},
+        {Name: "Alice", Email: "alice@example.com", SigningOrder: 1},
+        {Name: "Bob", Email: "bob@example.com", SigningOrder: 2},
     },
     Fields: []turbodocx.Field{
-        {Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 1},
-        {Type: "signature", Page: 1, X: 100, Y: 600, Width: 200, Height: 50, RecipientOrder: 2},
+        {Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientEmail: "alice@example.com"},
+        {Type: "signature", Page: 1, X: 100, Y: 600, Width: 200, Height: 50, RecipientEmail: "bob@example.com"},
     },
 })
 
-for _, r := range result.Recipients {
-    fmt.Printf("%s: %s\n", r.Name, r.SignURL)
-}
+fmt.Printf("Document ID: %s\n", result.DocumentID)
+fmt.Printf("Message: %s\n", result.Message)
 ```
 
 #### `GetStatus`
@@ -242,20 +248,24 @@ pdfBytes, err := client.TurboSign.Download(ctx, "doc-uuid-here")
 err = os.WriteFile("signed-contract.pdf", pdfBytes, 0644)
 ```
 
-#### `Void`
+#### `VoidDocument`
 
 Cancel a signature request.
 
 ```go
-err := client.TurboSign.Void(ctx, "doc-uuid-here", "Contract terms changed")
+result, err := client.TurboSign.VoidDocument(ctx, "doc-uuid-here", "Contract terms changed")
+
+fmt.Printf("Document %s voided at %s\n", result.ID, result.VoidedAt)
 ```
 
-#### `Resend`
+#### `ResendEmail`
 
 Resend signature request emails.
 
 ```go
-err := client.TurboSign.Resend(ctx, "doc-uuid-here", []string{"recipient-uuid-1"})
+result, err := client.TurboSign.ResendEmail(ctx, "doc-uuid-here", []string{"recipient-uuid-1"})
+
+fmt.Printf("Resent to %d recipients\n", result.RecipientCount)
 ```
 
 #### `GetAuditTrail`
@@ -287,13 +297,162 @@ The audit trail includes a cryptographic hash chain for tamper-evidence verifica
 
 ## Field Types
 
-| Type | Description | Required | Auto-filled |
-|:-----|:------------|:---------|:------------|
-| `signature` | Signature field (draw or type) | Yes | No |
-| `initials` | Initials field | Yes | No |
-| `text` | Free-form text input | No | No |
-| `date` | Date stamp | No | Yes (signing date) |
-| `checkbox` | Checkbox / agreement | No | No |
+| Type | Description |
+|:-----|:------------|
+| `signature` | Signature field (draw or type) |
+| `initials` | Initials field |
+| `text` | Free-form text input |
+| `date` | Date stamp |
+| `checkbox` | Checkbox / agreement |
+| `full_name` | Full name |
+| `first_name` | First name |
+| `last_name` | Last name |
+| `email` | Email address |
+| `title` | Job title |
+| `company` | Company name |
+
+---
+
+## Type Reference
+
+### Core Types
+
+#### `Recipient`
+
+```go
+type Recipient struct {
+    Name         string `json:"name"`
+    Email        string `json:"email"`
+    SigningOrder int    `json:"signingOrder"`
+}
+```
+
+#### `Field`
+
+```go
+type Field struct {
+    Type            string          `json:"type"`                      // signature, initials, text, date, checkbox
+    Page            int             `json:"page,omitempty"`            // Page number (1-indexed)
+    X               int             `json:"x,omitempty"`               // X coordinate
+    Y               int             `json:"y,omitempty"`               // Y coordinate
+    Width           int             `json:"width,omitempty"`           // Field width
+    Height          int             `json:"height,omitempty"`          // Field height
+    RecipientEmail  string          `json:"recipientEmail"`            // Email of the recipient who fills this field
+    DefaultValue    string          `json:"defaultValue,omitempty"`    // Pre-filled value (text fields)
+    IsMultiline     bool            `json:"isMultiline,omitempty"`     // Allow multiple lines (text fields)
+    IsReadonly      bool            `json:"isReadonly,omitempty"`      // Read-only field
+    Required        bool            `json:"required,omitempty"`        // Field is required
+    BackgroundColor string          `json:"backgroundColor,omitempty"` // Background color (hex)
+    Template        *TemplateAnchor `json:"template,omitempty"`        // Template anchor for dynamic positioning
+}
+```
+
+#### `TemplateAnchor`
+
+Use template anchors for dynamic field positioning based on text in the document:
+
+```go
+type TemplateAnchor struct {
+    Anchor        string `json:"anchor,omitempty"`        // Text to search for
+    SearchText    string `json:"searchText,omitempty"`    // Alternative to Anchor
+    Placement     string `json:"placement,omitempty"`     // replace, before, after, above, below
+    Size          *Size  `json:"size,omitempty"`          // Field dimensions
+    Offset        *Point `json:"offset,omitempty"`        // Offset from anchor position
+    CaseSensitive bool   `json:"caseSensitive,omitempty"` // Case-sensitive search
+    UseRegex      bool   `json:"useRegex,omitempty"`      // Use regex for search
+}
+```
+
+#### `Size` and `Point`
+
+```go
+type Size struct {
+    Width  int `json:"width"`
+    Height int `json:"height"`
+}
+
+type Point struct {
+    X int `json:"x"`
+    Y int `json:"y"`
+}
+```
+
+### Alternative File Sources
+
+Instead of providing `File` bytes, you can use these alternative file sources:
+
+```go
+// From URL
+request := &turbodocx.SendSignatureRequest{
+    FileLink: "https://example.com/contract.pdf",
+    // ...
+}
+
+// From TurboDocx Deliverable
+request := &turbodocx.SendSignatureRequest{
+    DeliverableID: "deliverable-uuid",
+    // ...
+}
+
+// From TurboDocx Template
+request := &turbodocx.SendSignatureRequest{
+    TemplateID: "template-uuid",
+    // ...
+}
+```
+
+### Response Types
+
+#### `SendSignatureResponse`
+
+```go
+type SendSignatureResponse struct {
+    Success    bool   `json:"success"`
+    DocumentID string `json:"documentId"`
+    Message    string `json:"message"`
+}
+```
+
+#### `CreateSignatureReviewLinkResponse`
+
+```go
+type CreateSignatureReviewLinkResponse struct {
+    Success    bool              `json:"success"`
+    DocumentID string            `json:"documentId"`
+    Status     string            `json:"status"`
+    PreviewURL string            `json:"previewUrl,omitempty"`
+    Message    string            `json:"message"`
+    Recipients []ReviewRecipient `json:"recipients,omitempty"`
+}
+
+type ReviewRecipient struct {
+    ID       string                 `json:"id"`
+    Name     string                 `json:"name"`
+    Email    string                 `json:"email"`
+    Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+```
+
+#### `VoidDocumentResponse`
+
+```go
+type VoidDocumentResponse struct {
+    ID         string `json:"id"`
+    Name       string `json:"name"`
+    Status     string `json:"status"`
+    VoidReason string `json:"voidReason,omitempty"`
+    VoidedAt   string `json:"voidedAt,omitempty"`
+}
+```
+
+#### `ResendEmailResponse`
+
+```go
+type ResendEmailResponse struct {
+    Success        bool `json:"success"`
+    RecipientCount int  `json:"recipientCount"`
+}
+```
 
 ---
 
@@ -308,18 +467,18 @@ For complete, working examples including template anchors, advanced field types,
 ### Sequential Signing
 
 ```go
-result, _ := client.TurboSign.PrepareForSigningSingle(ctx, &turbodocx.PrepareForSigningRequest{
+result, _ := client.TurboSign.SendSignature(ctx, &turbodocx.SendSignatureRequest{
     FileLink: "https://example.com/contract.pdf",
     Recipients: []turbodocx.Recipient{
-        {Name: "Employee", Email: "employee@company.com", Order: 1},
-        {Name: "Manager", Email: "manager@company.com", Order: 2},
-        {Name: "HR", Email: "hr@company.com", Order: 3},
+        {Name: "Employee", Email: "employee@company.com", SigningOrder: 1},
+        {Name: "Manager", Email: "manager@company.com", SigningOrder: 2},
+        {Name: "HR", Email: "hr@company.com", SigningOrder: 3},
     },
     Fields: []turbodocx.Field{
-        {Type: "signature", Page: 1, X: 100, Y: 400, Width: 200, Height: 50, RecipientOrder: 1},
-        {Type: "date", Page: 1, X: 320, Y: 400, Width: 100, Height: 30, RecipientOrder: 1},
-        {Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientOrder: 2},
-        {Type: "signature", Page: 1, X: 100, Y: 600, Width: 200, Height: 50, RecipientOrder: 3},
+        {Type: "signature", Page: 1, X: 100, Y: 400, Width: 200, Height: 50, RecipientEmail: "employee@company.com"},
+        {Type: "date", Page: 1, X: 320, Y: 400, Width: 100, Height: 30, RecipientEmail: "employee@company.com"},
+        {Type: "signature", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, RecipientEmail: "manager@company.com"},
+        {Type: "signature", Page: 1, X: 100, Y: 600, Width: 200, Height: 50, RecipientEmail: "hr@company.com"},
     },
 })
 ```
@@ -330,7 +489,7 @@ result, _ := client.TurboSign.PrepareForSigningSingle(ctx, &turbodocx.PrepareFor
 ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 defer cancel()
 
-result, err := client.TurboSign.PrepareForSigningSingle(ctx, request)
+result, err := client.TurboSign.SendSignature(ctx, request)
 if err != nil {
     if errors.Is(err, context.DeadlineExceeded) {
         log.Println("Request timed out")
@@ -370,7 +529,16 @@ func waitForCompletion(ctx context.Context, client *turbodocx.Client, documentID
 
 ```go
 func sendContractHandler(w http.ResponseWriter, r *http.Request) {
-    client := turbodocx.NewClient(os.Getenv("TURBODOCX_API_KEY"))
+    client, err := turbodocx.NewClientWithConfig(turbodocx.ClientConfig{
+        APIKey:      os.Getenv("TURBODOCX_API_KEY"),
+        OrgID:       os.Getenv("TURBODOCX_ORG_ID"),
+        SenderEmail: os.Getenv("TURBODOCX_SENDER_EMAIL"),
+        SenderName:  os.Getenv("TURBODOCX_SENDER_NAME"),
+    })
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
 
     var req struct {
         PDFUrl     string               `json:"pdfUrl"`
@@ -379,7 +547,7 @@ func sendContractHandler(w http.ResponseWriter, r *http.Request) {
     }
     json.NewDecoder(r.Body).Decode(&req)
 
-    result, err := client.TurboSign.PrepareForSigningSingle(r.Context(), &turbodocx.PrepareForSigningRequest{
+    result, err := client.TurboSign.SendSignature(r.Context(), &turbodocx.SendSignatureRequest{
         FileLink:   req.PDFUrl,
         Recipients: req.Recipients,
         Fields:     req.Fields,
@@ -414,12 +582,13 @@ go run cmd/manual/main.go
 ### What It Tests
 
 The `cmd/manual/main.go` program tests all SDK methods:
-- ✅ `PrepareForReview()` - Document upload for review
-- ✅ `PrepareForSigningSingle()` - Send for signature
+- ✅ `CreateSignatureReviewLink()` - Document upload for review
+- ✅ `SendSignature()` - Send for signature
 - ✅ `GetStatus()` - Check document status
 - ✅ `Download()` - Download signed document
-- ✅ `Void()` - Cancel signature request
-- ✅ `Resend()` - Resend signature emails
+- ✅ `VoidDocument()` - Cancel signature request
+- ✅ `ResendEmail()` - Resend signature emails
+- ✅ `GetAuditTrail()` - Get document audit trail
 
 ### Configuration
 
@@ -443,19 +612,53 @@ The test program will:
 
 ## Error Handling
 
+The SDK provides typed errors for different failure scenarios:
+
 ```go
 result, err := client.TurboSign.GetStatus(ctx, "invalid-id")
 if err != nil {
-    var apiErr *turbodocx.APIError
-    if errors.As(err, &apiErr) {
-        fmt.Printf("Status: %d\n", apiErr.StatusCode)
-        fmt.Printf("Message: %s\n", apiErr.Message)
-        fmt.Printf("Code: %s\n", apiErr.Code)
-    } else {
-        fmt.Printf("Unexpected error: %v\n", err)
+    // Check for specific error types
+    var validationErr *turbodocx.ValidationError
+    var authErr *turbodocx.AuthenticationError
+    var notFoundErr *turbodocx.NotFoundError
+    var rateLimitErr *turbodocx.RateLimitError
+    var networkErr *turbodocx.NetworkError
+
+    switch {
+    case errors.As(err, &validationErr):
+        fmt.Printf("Validation error: %s\n", validationErr.Message)
+    case errors.As(err, &authErr):
+        fmt.Printf("Authentication failed: %s\n", authErr.Message)
+    case errors.As(err, &notFoundErr):
+        fmt.Printf("Not found: %s\n", notFoundErr.Message)
+    case errors.As(err, &rateLimitErr):
+        fmt.Printf("Rate limited: %s\n", rateLimitErr.Message)
+    case errors.As(err, &networkErr):
+        fmt.Printf("Network error: %s\n", networkErr.Message)
+    default:
+        // Base error type
+        var apiErr *turbodocx.TurboDocxError
+        if errors.As(err, &apiErr) {
+            fmt.Printf("Status: %d\n", apiErr.StatusCode)
+            fmt.Printf("Message: %s\n", apiErr.Message)
+            fmt.Printf("Code: %s\n", apiErr.Code)
+        } else {
+            fmt.Printf("Unexpected error: %v\n", err)
+        }
     }
 }
 ```
+
+### Error Types
+
+| Type | HTTP Status | Description |
+|:-----|:------------|:------------|
+| `ValidationError` | 400 | Invalid request parameters |
+| `AuthenticationError` | 401 | Invalid API key or access token |
+| `NotFoundError` | 404 | Document or resource not found |
+| `RateLimitError` | 429 | Too many requests |
+| `NetworkError` | N/A | Network or connection failure |
+| `TurboDocxError` | Any | Base error type for other status codes |
 
 ### Common Error Codes
 

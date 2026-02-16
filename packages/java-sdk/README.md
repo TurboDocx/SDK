@@ -63,21 +63,21 @@ A modern, developer-first alternative to legacy e-signature platforms:
 <dependency>
     <groupId>com.turbodocx</groupId>
     <artifactId>turbodocx-sdk</artifactId>
-    <version>0.1.4</version>
+    <version>0.1.6</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'com.turbodocx:turbodocx-sdk:0.1.4'
+implementation 'com.turbodocx:turbodocx-sdk:0.1.6'
 ```
 
 <details>
 <summary>Gradle Kotlin DSL</summary>
 
 ```kotlin
-implementation("com.turbodocx:turbodocx-sdk:0.1.4")
+implementation("com.turbodocx:turbodocx-sdk:0.1.6")
 ```
 </details>
 
@@ -317,13 +317,19 @@ The audit trail includes a cryptographic hash chain for tamper-evidence verifica
 
 ## Field Types
 
-| Type | Description | Required | Auto-filled |
-|:-----|:------------|:---------|:------------|
-| `signature` | Signature field (draw or type) | Yes | No |
-| `initials` | Initials field | Yes | No |
-| `text` | Free-form text input | No | No |
-| `date` | Date stamp | No | Yes (signing date) |
-| `checkbox` | Checkbox / agreement | No | No |
+| Type | Description |
+|:-----|:------------|
+| `signature` | Signature field (draw or type) |
+| `initials` | Initials field |
+| `text` | Free-form text input |
+| `date` | Date stamp |
+| `checkbox` | Checkbox / agreement |
+| `full_name` | Full name |
+| `first_name` | First name |
+| `last_name` | Last name |
+| `email` | Email address |
+| `title` | Job title |
+| `company` | Company name |
 
 ---
 
