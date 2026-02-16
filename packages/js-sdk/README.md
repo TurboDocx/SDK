@@ -134,7 +134,6 @@ TurboSign.configure({
   senderEmail: 'you@company.com',
   senderName: 'Your Company',
   baseUrl: 'https://custom-api.example.com',  // Optional: custom API endpoint
-  timeout: 30000,                              // Optional: request timeout (ms)
 });
 ```
 

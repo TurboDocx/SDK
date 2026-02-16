@@ -628,9 +628,9 @@ Get full details including features and tracking for an organization.
 ```php
 $result = TurboPartner::getOrganizationDetails('org-uuid-here');
 
-echo "Name: {$result->data->name}\n";
-if ($result->data->features) {
-    echo "Max Users: {$result->data->features->maxUsers}\n";
+echo "Name: {$result->organization->name}\n";
+if ($result->features) {
+    echo "Max Users: {$result->features->maxUsers}\n";
 }
 ```
 
