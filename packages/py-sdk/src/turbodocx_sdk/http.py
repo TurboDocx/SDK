@@ -188,6 +188,7 @@ class HttpClient:
             error_message = error_data.get("message") or error_data.get("error") or error_message
             error_code = error_data.get("code")
         except Exception:
+            # Response body is not valid JSON; fall back to default error message
             pass
 
         if response.status_code == 400:
@@ -430,6 +431,7 @@ class PartnerHttpClient:
             error_message = error_data.get("message") or error_data.get("error") or error_message
             error_code = error_data.get("code")
         except Exception:
+            # Response body is not valid JSON; fall back to default error message
             pass
 
         if response.status_code == 400:

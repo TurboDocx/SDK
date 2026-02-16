@@ -15,7 +15,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from turbodocx_sdk import TurboPartner, AuthenticationError
 from turbodocx_sdk.modules.partner import (
     SCOPE_ORG_READ,
-    SCOPE_ORG_USERS_READ,
     SCOPE_AUDIT_READ,
 )
 
@@ -101,7 +100,7 @@ class TestCreateOrganization:
             TurboPartner._partner_id = PARTNER_ID
 
             features = {"maxUsers": 25, "hasTDAI": True}
-            result = await TurboPartner.create_organization(
+            await TurboPartner.create_organization(
                 "Acme Corp", features=features
             )
 
