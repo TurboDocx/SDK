@@ -266,6 +266,71 @@ class HttpClient:
             except Exception as e:
                 raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
 
+    async def patch(self, path: str, data: Optional[Dict[str, Any]] = None) -> Any:
+        """
+        Make PATCH request to API
+
+        Args:
+            path: API endpoint path
+            data: Request body data (will be sent as JSON)
+
+        Returns:
+            Response data
+        """
+        url = f"{self.base_url}{path}"
+        headers = self._get_headers()
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            try:
+                response = await client.patch(url, headers=headers, json=data)
+
+                if not response.is_success:
+                    await self._handle_error_response(response)
+
+                return self._smart_unwrap(response.json())
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}")
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+            except TurboDocxError:
+                raise
+            except Exception as e:
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+
+    async def delete(self, path: str) -> Any:
+        """
+        Make DELETE request to API
+
+        Args:
+            path: API endpoint path
+
+        Returns:
+            Response data
+        """
+        url = f"{self.base_url}{path}"
+        headers = self._get_headers()
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            try:
+                response = await client.delete(url, headers=headers)
+
+                if not response.is_success:
+                    await self._handle_error_response(response)
+
+                content_type = response.headers.get("content-type", "")
+                if "application/json" in content_type:
+                    return self._smart_unwrap(response.json())
+
+                return response.content
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}")
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+            except TurboDocxError:
+                raise
+            except Exception as e:
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+
     async def upload_file(
         self,
         path: str,
@@ -323,3 +388,150 @@ class HttpClient:
                 raise NetworkError(f"File upload failed: {str(e) or 'Connection error'}")
             except Exception as e:
                 raise NetworkError(f"File upload failed: {str(e) or 'Unknown error'}")
+
+
+class PartnerHttpClient:
+    """HTTP client for TurboDocx Partner API
+
+    Uses partner-specific authentication (Partner API Key + Partner ID)
+    instead of the standard API key + Org ID used by HttpClient.
+    """
+
+    def __init__(
+        self,
+        partner_api_key: Optional[str] = None,
+        partner_id: Optional[str] = None,
+        base_url: Optional[str] = None
+    ):
+        self.partner_api_key = partner_api_key or os.environ.get("TURBODOCX_PARTNER_API_KEY")
+        self.partner_id = partner_id or os.environ.get("TURBODOCX_PARTNER_ID")
+        self.base_url = base_url or os.environ.get("TURBODOCX_BASE_URL", "https://api.turbodocx.com")
+
+        if not self.partner_api_key:
+            raise AuthenticationError("Partner API key is required")
+
+        if not self.partner_id:
+            raise AuthenticationError("Partner ID is required")
+
+    def _get_headers(self) -> Dict[str, str]:
+        """Get default headers for partner requests"""
+        return {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.partner_api_key}",
+            "x-partner-id": self.partner_id,
+        }
+
+    async def _handle_error_response(self, response: httpx.Response) -> None:
+        """Handle error response from API"""
+        error_message = f"HTTP {response.status_code}: {response.reason_phrase}"
+        error_code: Optional[str] = None
+
+        try:
+            error_data = response.json()
+            error_message = error_data.get("message") or error_data.get("error") or error_message
+            error_code = error_data.get("code")
+        except Exception:
+            pass
+
+        if response.status_code == 400:
+            raise ValidationError(error_message, response.status_code, error_code)
+        if response.status_code == 401:
+            raise AuthenticationError(error_message, response.status_code, error_code)
+        if response.status_code == 404:
+            raise NotFoundError(error_message, response.status_code, error_code)
+        if response.status_code == 429:
+            raise RateLimitError(error_message, response.status_code, error_code)
+
+        raise TurboDocxError(error_message, response.status_code, error_code)
+
+    async def get(self, path: str) -> Any:
+        """Make GET request to Partner API"""
+        url = f"{self.base_url}{path}"
+        headers = self._get_headers()
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            try:
+                response = await client.get(url, headers=headers)
+
+                if not response.is_success:
+                    await self._handle_error_response(response)
+
+                return response.json()
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}")
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+            except TurboDocxError:
+                raise
+            except Exception as e:
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+
+    async def post(self, path: str, data: Optional[Dict[str, Any]] = None) -> Any:
+        """Make POST request to Partner API"""
+        url = f"{self.base_url}{path}"
+        headers = self._get_headers()
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            try:
+                response = await client.post(url, headers=headers, json=data)
+
+                if not response.is_success:
+                    await self._handle_error_response(response)
+
+                return response.json()
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}")
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+            except TurboDocxError:
+                raise
+            except Exception as e:
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+
+    async def patch(self, path: str, data: Optional[Dict[str, Any]] = None) -> Any:
+        """Make PATCH request to Partner API"""
+        url = f"{self.base_url}{path}"
+        headers = self._get_headers()
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            try:
+                response = await client.patch(url, headers=headers, json=data)
+
+                if not response.is_success:
+                    await self._handle_error_response(response)
+
+                return response.json()
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}")
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+            except TurboDocxError:
+                raise
+            except Exception as e:
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+
+    async def delete(self, path: str) -> Any:
+        """Make DELETE request to Partner API"""
+        url = f"{self.base_url}{path}"
+        headers = self._get_headers()
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            try:
+                response = await client.delete(url, headers=headers)
+
+                if not response.is_success:
+                    await self._handle_error_response(response)
+
+                content_type = response.headers.get("content-type", "")
+                if "application/json" in content_type:
+                    return response.json()
+
+                return response.content
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}")
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+            except TurboDocxError:
+                raise
+            except Exception as e:
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
