@@ -832,7 +832,7 @@ $result = TurboPartner::createPartnerApiKey(
             PartnerScope::ORG_READ,
             PartnerScope::ORG_UPDATE,
             PartnerScope::ENTITLEMENTS_UPDATE,
-            PartnerScope::AUDIT_LOG_READ,
+            PartnerScope::AUDIT_READ,
         ],
         description: 'For third-party integration',
     )
