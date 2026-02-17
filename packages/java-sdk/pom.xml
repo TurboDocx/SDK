@@ -6,7 +6,7 @@
 
     <groupId>com.turbodocx</groupId>
     <artifactId>turbodocx-sdk</artifactId>
-    <version>0.1.6</version>
+    <version>0.2.0</version>
     <packaging>jar</packaging>
 
     <name>TurboDocx SDK</name>
