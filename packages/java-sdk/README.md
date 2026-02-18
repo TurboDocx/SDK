@@ -63,21 +63,21 @@ A modern, developer-first alternative to legacy e-signature platforms:
 <dependency>
     <groupId>com.turbodocx</groupId>
     <artifactId>turbodocx-sdk</artifactId>
-    <version>0.1.6</version>
+    <version>0.2.0</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'com.turbodocx:turbodocx-sdk:0.1.6'
+implementation 'com.turbodocx:turbodocx-sdk:0.2.0'
 ```
 
 <details>
 <summary>Gradle Kotlin DSL</summary>
 
 ```kotlin
-implementation("com.turbodocx:turbodocx-sdk:0.1.6")
+implementation("com.turbodocx:turbodocx-sdk:0.2.0")
 ```
 </details>
 
@@ -442,7 +442,7 @@ client.turboPartner().resendPartnerPortalInvitationToUser(userId);
 // Get audit logs with filters
 JsonObject logs = client.turboPartner().getPartnerAuditLogs(
     100, null, null,           // limit, offset, search
-    "org.created", null, null, // action, resourceType, resourceId
+    "org.create", null, null,  // action, resourceType, resourceId
     null, "2025-01-01", "2025-12-31" // success, startDate, endDate
 );
 
