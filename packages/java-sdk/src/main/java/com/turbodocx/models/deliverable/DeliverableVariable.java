@@ -9,11 +9,11 @@ public class DeliverableVariable {
     private String placeholder;
     private String text;
     private String mimeType;
-    private Boolean isDisabled;
+    private Integer isDisabled;
     private List<DeliverableVariable> subvariables;
     private Object variableStack;
     private String aiPrompt;
-    private Boolean allowRichTextInjection;
+    private Integer allowRichTextInjection;
 
     public DeliverableVariable() {}
 
@@ -29,14 +29,14 @@ public class DeliverableVariable {
     public void setText(String text) { this.text = text; }
     public String getMimeType() { return mimeType; }
     public void setMimeType(String mimeType) { this.mimeType = mimeType; }
-    public Boolean getIsDisabled() { return isDisabled; }
-    public void setIsDisabled(Boolean isDisabled) { this.isDisabled = isDisabled; }
+    public boolean getIsDisabled() { return isDisabled != null && isDisabled == 1; }
+    public void setIsDisabled(Boolean isDisabled) { this.isDisabled = isDisabled != null && isDisabled ? 1 : 0; }
     public List<DeliverableVariable> getSubvariables() { return subvariables; }
     public void setSubvariables(List<DeliverableVariable> subvariables) { this.subvariables = subvariables; }
     public Object getVariableStack() { return variableStack; }
     public void setVariableStack(Object variableStack) { this.variableStack = variableStack; }
     public String getAiPrompt() { return aiPrompt; }
     public void setAiPrompt(String aiPrompt) { this.aiPrompt = aiPrompt; }
-    public Boolean getAllowRichTextInjection() { return allowRichTextInjection; }
-    public void setAllowRichTextInjection(Boolean allowRichTextInjection) { this.allowRichTextInjection = allowRichTextInjection; }
+    public boolean getAllowRichTextInjection() { return allowRichTextInjection != null && allowRichTextInjection == 1; }
+    public void setAllowRichTextInjection(Boolean allowRichTextInjection) { this.allowRichTextInjection = allowRichTextInjection != null && allowRichTextInjection ? 1 : 0; }
 }

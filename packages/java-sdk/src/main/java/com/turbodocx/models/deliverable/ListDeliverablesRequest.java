@@ -13,8 +13,6 @@ public class ListDeliverablesRequest {
     private Integer offset;
     private String query;
     private Boolean showTags;
-    private String column0;
-    private String order0;
 
     public ListDeliverablesRequest() {}
 
@@ -26,10 +24,6 @@ public class ListDeliverablesRequest {
     public void setQuery(String query) { this.query = query; }
     public Boolean getShowTags() { return showTags; }
     public void setShowTags(Boolean showTags) { this.showTags = showTags; }
-    public String getColumn0() { return column0; }
-    public void setColumn0(String column0) { this.column0 = column0; }
-    public String getOrder0() { return order0; }
-    public void setOrder0(String order0) { this.order0 = order0; }
 
     public String toQueryString() {
         Map<String, String> params = new LinkedHashMap<>();
@@ -37,8 +31,6 @@ public class ListDeliverablesRequest {
         if (offset != null) params.put("offset", offset.toString());
         if (query != null) params.put("query", query);
         if (showTags != null) params.put("showTags", showTags.toString());
-        if (column0 != null) params.put("column0", column0);
-        if (order0 != null) params.put("order0", order0);
 
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : params.entrySet()) {

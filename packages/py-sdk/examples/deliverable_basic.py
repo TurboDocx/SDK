@@ -44,8 +44,6 @@ async def main():
     listing = await Deliverable.list_deliverables(
         limit=5,
         show_tags=True,
-        column0="createdOn",
-        order0="desc",
     )
     print(f"Found {listing['totalRecords']} deliverables")
     for d in listing["results"]:

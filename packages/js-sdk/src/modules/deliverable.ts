@@ -102,8 +102,6 @@ export class Deliverable {
       if (options.offset !== undefined) params.offset = options.offset;
       if (options.query !== undefined) params.query = options.query;
       if (options.showTags !== undefined) params.showTags = options.showTags;
-      if (options.column0 !== undefined) params.column0 = options.column0;
-      if (options.order0 !== undefined) params.order0 = options.order0;
     }
 
     return client.get<DeliverableListResponse>('/v1/deliverable', params);

@@ -6,6 +6,29 @@ import (
 	"net/url"
 )
 
+// FlexBool is a bool that can unmarshal from both JSON booleans (true/false) and numbers (1/0).
+// MySQL returns tinyint(1) for boolean columns, which some APIs pass through as 0/1.
+type FlexBool bool
+
+func (b *FlexBool) UnmarshalJSON(data []byte) error {
+	switch string(data) {
+	case "true", "1":
+		*b = true
+	case "false", "0":
+		*b = false
+	default:
+		return fmt.Errorf("FlexBool: cannot unmarshal %s", string(data))
+	}
+	return nil
+}
+
+func (b FlexBool) MarshalJSON() ([]byte, error) {
+	if b {
+		return []byte("true"), nil
+	}
+	return []byte("false"), nil
+}
+
 // DeliverableClient provides document generation and management operations
 type DeliverableClient struct {
 	http *HTTPClient
@@ -35,7 +58,7 @@ type DeliverableVariable struct {
 	// Content type: text, html, image, or markdown
 	MimeType string `json:"mimeType"`
 	// Skip this variable during generation
-	IsDisabled bool `json:"isDisabled,omitempty"`
+	IsDisabled FlexBool `json:"isDisabled,omitempty"`
 	// Nested sub-variables for HTML content
 	Subvariables []DeliverableVariable `json:"subvariables,omitempty"`
 	// Multiple instances for repeating content
@@ -43,7 +66,7 @@ type DeliverableVariable struct {
 	// AI prompt for content generation (max 16,000 chars)
 	AIPrompt string `json:"aiPrompt,omitempty"`
 	// Whether to allow rich text injection
-	AllowRichTextInjection bool `json:"allowRichTextInjection,omitempty"`
+	AllowRichTextInjection FlexBool `json:"allowRichTextInjection,omitempty"`
 }
 
 // CreateDeliverableRequest is the request for GenerateDeliverable
@@ -76,8 +99,6 @@ type ListDeliverablesOptions struct {
 	Offset   int
 	Query    string
 	ShowTags bool
-	Column0  string
-	Order0   string
 }
 
 // ListDeliverableItemsOptions holds query parameters for listing deliverable items
@@ -102,35 +123,40 @@ type GetDeliverableOptions struct {
 
 // Tag represents a tag attached to a deliverable
 type Tag struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID        string   `json:"id"`
+	Label     string   `json:"label"`
+	IsActive  FlexBool `json:"isActive"`
+	UpdatedOn string   `json:"updatedOn"`
+	CreatedOn string   `json:"createdOn"`
+	CreatedBy string   `json:"createdBy"`
+	OrgID     string   `json:"orgId"`
 }
 
 // Font represents a font used in a deliverable
 type Font struct {
-	Name  string `json:"name"`
-	Usage string `json:"usage"`
+	Name  string      `json:"name"`
+	Usage interface{} `json:"usage"`
 }
 
 // DeliverableRecord represents a deliverable document
 type DeliverableRecord struct {
-	ID                string                `json:"id"`
-	Name              string                `json:"name"`
-	Description       string                `json:"description"`
-	TemplateID        string                `json:"templateId"`
-	TemplateName      string                `json:"templateName,omitempty"`
-	TemplateNotDeleted *bool                `json:"templateNotDeleted,omitempty"`
-	CreatedBy         string                `json:"createdBy"`
-	Email             string                `json:"email,omitempty"`
-	FileSize          int64                 `json:"fileSize,omitempty"`
-	FileType          string                `json:"fileType,omitempty"`
-	DefaultFont       string                `json:"defaultFont,omitempty"`
-	Fonts             []Font                `json:"fonts,omitempty"`
-	IsActive          bool                  `json:"isActive"`
-	CreatedOn         string                `json:"createdOn"`
-	UpdatedOn         string                `json:"updatedOn"`
-	Variables         []DeliverableVariable `json:"variables,omitempty"`
-	Tags              []Tag                 `json:"tags,omitempty"`
+	ID                 string                `json:"id"`
+	Name               string                `json:"name"`
+	Description        string                `json:"description"`
+	TemplateID         string                `json:"templateId"`
+	TemplateName       string                `json:"templateName"`
+	TemplateNotDeleted *FlexBool             `json:"templateNotDeleted"`
+	CreatedBy          string                `json:"createdBy"`
+	Email              string                `json:"email"`
+	FileSize           int64                 `json:"fileSize"`
+	FileType           string                `json:"fileType"`
+	DefaultFont        string                `json:"defaultFont"`
+	Fonts              []Font                `json:"fonts"`
+	IsActive           FlexBool              `json:"isActive"`
+	CreatedOn          string                `json:"createdOn"`
+	UpdatedOn          string                `json:"updatedOn"`
+	Variables          []DeliverableVariable `json:"variables"`
+	Tags               []Tag                 `json:"tags"`
 }
 
 // DeliverableListResponse is the response from ListDeliverables
@@ -165,20 +191,20 @@ type DeleteDeliverableResponse struct {
 
 // DeliverableItem represents an item in the deliverable library
 type DeliverableItem struct {
-	ID                string `json:"id"`
-	Name              string `json:"name"`
-	Description       string `json:"description,omitempty"`
-	Type              string `json:"type"`
-	CreatedOn         string `json:"createdOn"`
-	UpdatedOn         string `json:"updatedOn"`
-	IsActive          bool   `json:"isActive"`
-	CreatedBy         string `json:"createdBy"`
-	Email             string `json:"email,omitempty"`
-	FileSize          int64  `json:"fileSize,omitempty"`
-	FileType          string `json:"fileType,omitempty"`
-	DeliverableCount  int    `json:"deliverableCount,omitempty"`
-	TemplateNotDeleted *bool `json:"templateNotDeleted,omitempty"`
-	Tags              []Tag  `json:"tags,omitempty"`
+	ID                 string    `json:"id"`
+	Name               string    `json:"name"`
+	Description        string    `json:"description"`
+	Type               string    `json:"type"`
+	CreatedOn          string    `json:"createdOn"`
+	UpdatedOn          string    `json:"updatedOn"`
+	IsActive           FlexBool  `json:"isActive"`
+	CreatedBy          string    `json:"createdBy"`
+	Email              string    `json:"email"`
+	FileSize           int64     `json:"fileSize"`
+	FileType           string    `json:"fileType"`
+	DeliverableCount   int       `json:"deliverableCount"`
+	TemplateNotDeleted *FlexBool `json:"templateNotDeleted"`
+	Tags               []Tag     `json:"tags"`
 }
 
 // DeliverableItemListResponse is the response from ListDeliverableItems
@@ -237,7 +263,7 @@ func buildListParams(limit, offset int, query string, showTags bool, selectedTag
 func (c *DeliverableClient) ListDeliverables(ctx context.Context, opts *ListDeliverablesOptions) (*DeliverableListResponse, error) {
 	path := "/v1/deliverable"
 	if opts != nil {
-		path += buildListParams(opts.Limit, opts.Offset, opts.Query, opts.ShowTags, nil, opts.Column0, opts.Order0)
+		path += buildListParams(opts.Limit, opts.Offset, opts.Query, opts.ShowTags, nil, "", "")
 	}
 
 	var response DeliverableListResponse

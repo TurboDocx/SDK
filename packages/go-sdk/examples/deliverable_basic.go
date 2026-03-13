@@ -48,8 +48,6 @@ func main() {
 	list, err := client.ListDeliverables(ctx, &turbodocx.ListDeliverablesOptions{
 		Limit:    5,
 		ShowTags: true,
-		Column0:  "createdOn",
-		Order0:   "desc",
 	})
 	if err != nil {
 		log.Fatalf("Failed to list: %v", err)
