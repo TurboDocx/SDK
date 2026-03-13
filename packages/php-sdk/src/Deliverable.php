@@ -245,17 +245,29 @@ final class Deliverable
     private static function buildListParams(array $options): array
     {
         $params = [];
-        if (isset($options['limit'])) $params['limit'] = $options['limit'];
-        if (isset($options['offset'])) $params['offset'] = $options['offset'];
-        if (isset($options['query'])) $params['query'] = $options['query'];
-        if (isset($options['showTags'])) $params['showTags'] = $options['showTags'] ? 'true' : 'false';
+        if (isset($options['limit'])) {
+            $params['limit'] = $options['limit'];
+        }
+        if (isset($options['offset'])) {
+            $params['offset'] = $options['offset'];
+        }
+        if (isset($options['query'])) {
+            $params['query'] = $options['query'];
+        }
+        if (isset($options['showTags'])) {
+            $params['showTags'] = $options['showTags'] ? 'true' : 'false';
+        }
         if (isset($options['selectedTags'])) {
             $params['selectedTags'] = is_array($options['selectedTags'])
                 ? $options['selectedTags']
                 : [$options['selectedTags']];
         }
-        if (isset($options['column0'])) $params['column0'] = $options['column0'];
-        if (isset($options['order0'])) $params['order0'] = $options['order0'];
+        if (isset($options['column0'])) {
+            $params['column0'] = $options['column0'];
+        }
+        if (isset($options['order0'])) {
+            $params['order0'] = $options['order0'];
+        }
         return $params;
     }
 }
