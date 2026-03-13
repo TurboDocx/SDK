@@ -19,8 +19,18 @@ export type SortOrder = 'asc' | 'desc';
 export interface Tag {
   /** Tag unique identifier */
   id: string;
-  /** Tag name */
-  name: string;
+  /** Tag display name */
+  label: string;
+  /** Whether the tag is active */
+  isActive: boolean;
+  /** ISO 8601 last update timestamp */
+  updatedOn: string;
+  /** ISO 8601 creation timestamp */
+  createdOn: string;
+  /** User ID of the tag creator */
+  createdBy: string;
+  /** Organization ID the tag belongs to */
+  orgId: string;
 }
 
 export interface Font {
@@ -110,10 +120,6 @@ export interface ListDeliverablesOptions {
   query?: string;
   /** Include tags in the response */
   showTags?: boolean;
-  /** Sort column */
-  column0?: DeliverableSortColumn;
-  /** Sort direction */
-  order0?: SortOrder;
 }
 
 export interface GetDeliverableOptions {

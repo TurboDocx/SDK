@@ -143,7 +143,7 @@ func TestDeliverableClient_GetDeliverableDetails(t *testing.T) {
 					ID:           "d1",
 					Name:         "Contract A",
 					TemplateName: "Standard",
-					Tags:         []Tag{{ID: "t1", Name: "hr"}},
+					Tags:         []Tag{{ID: "t1", Label: "hr"}},
 				},
 			})
 		})

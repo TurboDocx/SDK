@@ -41,8 +41,6 @@ async function main() {
   const list = await Deliverable.listDeliverables({
     limit: 5,
     showTags: true,
-    column0: 'createdOn',
-    order0: 'desc',
   });
   console.log(`Found ${list.totalRecords} deliverables`);
   for (const d of list.results) {

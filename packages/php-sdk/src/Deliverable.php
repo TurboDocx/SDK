@@ -63,10 +63,7 @@ final class Deliverable
      *     limit?: int,
      *     offset?: int,
      *     query?: string,
-     *     showTags?: bool,
-     *     selectedTags?: string|string[],
-     *     column0?: string,
-     *     order0?: string
+     *     showTags?: bool
      * } $options Query options
      * @return array{results: array, totalRecords: int}
      *
@@ -80,6 +77,7 @@ final class Deliverable
     {
         $client = self::getClient();
         $params = self::buildListParams($options);
+        unset($params['column0'], $params['order0']);
         return $client->get('/v1/deliverable', $params);
     }
 

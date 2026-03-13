@@ -11,13 +11,13 @@ public class DeliverableRecord {
     private String description;
     private String templateId;
     private String templateName;
-    private Boolean templateNotDeleted;
+    private Integer templateNotDeleted;
     private String createdBy;
     private String email;
     private Long fileSize;
     private String fileType;
     private String defaultFont;
-    private boolean isActive;
+    private int isActive;
     private String createdOn;
     private String updatedOn;
     private List<DeliverableVariable> variables;
@@ -28,13 +28,13 @@ public class DeliverableRecord {
     public String getDescription() { return description; }
     public String getTemplateId() { return templateId; }
     public String getTemplateName() { return templateName; }
-    public Boolean getTemplateNotDeleted() { return templateNotDeleted; }
+    public boolean getTemplateNotDeleted() { return templateNotDeleted != null && templateNotDeleted == 1; }
     public String getCreatedBy() { return createdBy; }
     public String getEmail() { return email; }
     public Long getFileSize() { return fileSize; }
     public String getFileType() { return fileType; }
     public String getDefaultFont() { return defaultFont; }
-    public boolean isActive() { return isActive; }
+    public boolean isActive() { return isActive == 1; }
     public String getCreatedOn() { return createdOn; }
     public String getUpdatedOn() { return updatedOn; }
     public List<DeliverableVariable> getVariables() { return variables; }
@@ -42,9 +42,19 @@ public class DeliverableRecord {
 
     public static class Tag {
         private String id;
-        private String name;
+        private String label;
+        private int isActive;
+        private String updatedOn;
+        private String createdOn;
+        private String createdBy;
+        private String orgId;
 
         public String getId() { return id; }
-        public String getName() { return name; }
+        public String getLabel() { return label; }
+        public boolean isActive() { return isActive == 1; }
+        public String getUpdatedOn() { return updatedOn; }
+        public String getCreatedOn() { return createdOn; }
+        public String getCreatedBy() { return createdBy; }
+        public String getOrgId() { return orgId; }
     }
 }

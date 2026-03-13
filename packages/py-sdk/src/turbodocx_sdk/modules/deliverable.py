@@ -77,8 +77,6 @@ class Deliverable:
         offset: Optional[int] = None,
         query: Optional[str] = None,
         show_tags: Optional[bool] = None,
-        column0: Optional[str] = None,
-        order0: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         List deliverables with pagination, search, and filtering
@@ -88,8 +86,6 @@ class Deliverable:
             offset: Number of results to skip for pagination (default 0)
             query: Search query to filter by name
             show_tags: Include tags in the response
-            column0: Sort column (createdOn, email, name, updatedOn)
-            order0: Sort direction (asc, desc)
 
         Returns:
             Dict with 'results' (list of deliverables) and 'totalRecords' (int)
@@ -109,10 +105,6 @@ class Deliverable:
             params["query"] = query
         if show_tags is not None:
             params["showTags"] = show_tags
-        if column0 is not None:
-            params["column0"] = column0
-        if order0 is not None:
-            params["order0"] = order0
 
         path = "/v1/deliverable"
         if params:

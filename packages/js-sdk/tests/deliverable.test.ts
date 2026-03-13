@@ -114,8 +114,6 @@ describe("Deliverable Module", () => {
         offset: 20,
         query: "contract",
         showTags: true,
-        column0: "createdOn",
-        order0: "desc",
       });
 
       expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
@@ -125,8 +123,6 @@ describe("Deliverable Module", () => {
           offset: 20,
           query: "contract",
           showTags: true,
-          column0: "createdOn",
-          order0: "desc",
         }
       );
     });
