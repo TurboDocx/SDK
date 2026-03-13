@@ -85,6 +85,14 @@ public class DeliverableBasic {
         DeliverableItemListResponse items = deliverable.listDeliverableItems();
         System.out.println("Total items: " + items.getTotalRecords());
 
+        // --- Get a single deliverable item by ID ---
+        if (!items.getResults().isEmpty()) {
+            String itemId = items.getResults().get(0).getId();
+            System.out.println("Getting deliverable item: " + itemId);
+            DeliverableItemResponse item = deliverable.getDeliverableItem(itemId, true);
+            System.out.println("Item: " + item.getResults().getName() + " (" + item.getType() + ")");
+        }
+
         // --- Delete deliverable ---
         DeleteDeliverableResponse deleted = deliverable.deleteDeliverable(deliverableId);
         System.out.println("Deleted: " + deleted.getMessage());

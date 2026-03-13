@@ -80,7 +80,7 @@ final class HttpClient
      * @param array<string, mixed> $params
      * @return array<string, mixed>
      */
-    public function get(string $path, array $params = []): mixed
+    public function get(string $path, array $params = []): array
     {
         try {
             $response = $this->client->get($path, [
@@ -100,7 +100,7 @@ final class HttpClient
      * @param array<string, mixed>|null $data
      * @return array<string, mixed>
      */
-    public function post(string $path, ?array $data = null): mixed
+    public function post(string $path, ?array $data = null): array
     {
         try {
             $response = $this->client->post($path, [
@@ -120,7 +120,7 @@ final class HttpClient
      * @param array<string, mixed>|null $data
      * @return array<string, mixed>
      */
-    public function patch(string $path, ?array $data = null): mixed
+    public function patch(string $path, ?array $data = null): array
     {
         try {
             $response = $this->client->patch($path, [
@@ -155,7 +155,7 @@ final class HttpClient
      * @param string $path
      * @return array<string, mixed>
      */
-    public function delete(string $path): mixed
+    public function delete(string $path): array
     {
         try {
             $response = $this->client->delete($path);
@@ -180,7 +180,7 @@ final class HttpClient
         string $file,
         string $fieldName = 'file',
         array $additionalData = []
-    ): mixed {
+    ): array {
         // Detect file type using magic bytes
         $fileType = FileTypeDetector::detect($file);
         $fileName = $additionalData['fileName'] ?? "document.{$fileType['extension']}";
