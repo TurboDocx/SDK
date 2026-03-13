@@ -4,16 +4,16 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 
 ## Required TurboSign Operations
 
-| Operation | JS | Py | Go | PHP | Java |
-|---|---|---|---|---|---|
-| configure | `configure()` | `configure()` | `Configure()` | `configure()` | `configure()` |
-| createSignatureReviewLink | `createSignatureReviewLink()` | `create_signature_review_link()` | `CreateSignatureReviewLink()` | `createSignatureReviewLink()` | `createSignatureReviewLink()` |
-| sendSignature | `sendSignature()` | `send_signature()` | `SendSignature()` | `sendSignature()` | `sendSignature()` |
-| getStatus | `getStatus()` | `get_status()` | `GetStatus()` | `getStatus()` | `getStatus()` |
-| download | `download()` | `download()` | `Download()` | `download()` | `download()` |
-| void | `void()` | `void_document()` | `VoidDocument()` | `voidDocument()` | `voidDocument()` |
-| resend | `resend()` | `resend_email()` | `ResendEmail()` | `resend()` | `resendEmail()` |
-| getAuditTrail | `getAuditTrail()` | `get_audit_trail()` | `GetAuditTrail()` | `getAuditTrail()` | `getAuditTrail()` |
+| Operation | JS | Py | Go | PHP | Java | CLI |
+|---|---|---|---|---|---|---|
+| configure | `configure()` | `configure()` | `Configure()` | `configure()` | `configure()` | `login` / `config set` |
+| createSignatureReviewLink | `createSignatureReviewLink()` | `create_signature_review_link()` | `CreateSignatureReviewLink()` | `createSignatureReviewLink()` | `createSignatureReviewLink()` | `sign review` |
+| sendSignature | `sendSignature()` | `send_signature()` | `SendSignature()` | `sendSignature()` | `sendSignature()` | `sign send` |
+| getStatus | `getStatus()` | `get_status()` | `GetStatus()` | `getStatus()` | `getStatus()` | `sign status` |
+| download | `download()` | `download()` | `Download()` | `download()` | `download()` | `sign download` |
+| void | `void()` | `void_document()` | `VoidDocument()` | `voidDocument()` | `voidDocument()` | `sign void` |
+| resend | `resend()` | `resend_email()` | `ResendEmail()` | `resend()` | `resendEmail()` | `sign resend` |
+| getAuditTrail | `getAuditTrail()` | `get_audit_trail()` | `GetAuditTrail()` | `getAuditTrail()` | `getAuditTrail()` | `sign audit` |
 
 ## Required TurboPartner Operations
 
@@ -24,6 +24,34 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 - Partner API keys: list, create, update, revoke
 - Partner users: list, add, update permissions, remove, resend invitation
 - Audit logs: list with filtering
+
+| Operation | CLI |
+|---|---|
+| Organization create | `partner org create` |
+| Organization list | `partner org list` |
+| Organization get details | `partner org get` |
+| Organization update | `partner org update` |
+| Organization delete | `partner org delete` |
+| Organization entitlements | `partner org entitlements` |
+| Org user list | `partner org user list` |
+| Org user add | `partner org user add` |
+| Org user update role | `partner org user update` |
+| Org user remove | `partner org user remove` |
+| Org user resend invite | `partner org user resend-invite` |
+| Org API key list | `partner org apikey list` |
+| Org API key create | `partner org apikey create` |
+| Org API key update | `partner org apikey update` |
+| Org API key revoke | `partner org apikey revoke` |
+| Partner API key list | `partner apikey list` |
+| Partner API key create | `partner apikey create` |
+| Partner API key update | `partner apikey update` |
+| Partner API key revoke | `partner apikey revoke` |
+| Partner user list | `partner user list` |
+| Partner user add | `partner user add` |
+| Partner user update | `partner user update` |
+| Partner user remove | `partner user remove` |
+| Partner user resend invite | `partner user resend-invite` |
+| Audit logs | `partner audit list` |
 
 ## Naming Conventions by Language
 
