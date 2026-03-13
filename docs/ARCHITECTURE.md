@@ -85,6 +85,40 @@ Each SDK organizes types by module:
 - `types/sign` — TurboSign request/response types (recipients, fields, document status)
 - `types/partner` — TurboPartner request/response types (organizations, users, API keys, audit logs)
 
+## CLI (`packages/cli/`)
+
+The CLI is a Go + Cobra binary that wraps the Go SDK. It is **not** an SDK — it's a consumer of the Go SDK, providing a command-line interface for TurboSign (and eventually TurboPartner) operations.
+
+### Design
+
+- **Single binary, zero runtime deps** — CGO_ENABLED=0, cross-compiled for 6 platforms
+- **Lazy client creation** — each leaf command (`sign status`, `sign send`, etc.) creates its own SDK client. This avoids requiring TurboSign credentials for partner commands
+- **Config resolution** — flag > env var (`TURBODOCX_*`) > config file (`~/.turbodocx/config.json`)
+- **Output modes** — Human (colored tables), JSON (`--json` for scripting), plain (`--plain` for piping)
+- **`@file` syntax** — `--recipients @signers.json` reads JSON from file, like curl's `-d @file`
+
+### Package Layout
+
+```
+packages/cli/
+├── main.go                    # Entry point (ldflags: version/commit)
+├── cmd/
+│   ├── root.go                # Persistent flags, config resolution
+│   ├── cmdutil/cmdutil.go     # Shared state (avoids circular imports)
+│   ├── sign/                  # TurboSign commands (interface + mock injection)
+│   │   ├── sign.go            # SignClient interface, factory, @file parser
+│   │   ├── status.go, download.go, audit.go, send.go, review.go, void.go, resend.go
+│   │   └── *_test.go
+│   └── version.go, completion.go, config.go, login.go
+└── internal/
+    ├── config/                # Load/Save ~/.turbodocx/config.json (0600 perms)
+    └── output/                # JSON, table, key-value formatters + ANSI colors
+```
+
+### Testing
+
+SDK client calls are mocked via a `SignClient` interface that matches `TurboSignClient` methods. The `newSignClient` package var is swapped in tests. Sign subcommand tests use `executeSignCmd()` helper which creates a fresh Cobra command tree to avoid flag state leakage.
+
 ## CI/CD
 
 ### Test Workflows (`.github/workflows/ci.yml`)
@@ -94,6 +128,10 @@ Runs on push to `main`/`develop` and all PRs. Per-SDK jobs with language-specifi
 - Go: 1.21, `go mod tidy && go test -v ./...`
 - PHP: 8.1, `composer install && composer test && composer phpstan`
 - Java: JDK 11 (Temurin), `mvn test -B`
+- CLI: Go 1.21, `go build -v . && go test -v ./...`
 
 ### Publish Workflows
 Separate workflow per SDK (`publish-{js,py,go,php,java}.yml`). Triggered on release or manual dispatch. Each publishes to the language's package registry.
+
+### CLI Release (`release-cli.yml`)
+Triggered by GitHub release with `cli-v*` tag. Runs tests, then GoReleaser cross-compiles binaries for 6 platforms and publishes to GitHub Releases + Homebrew tap (`brew install turbodocx/tap/cli`).

@@ -61,6 +61,22 @@ Comprehensive SDKs, detailed documentation, and responsive support. Ship faster 
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg" width="20"/> **Go** | [turbodocx-sdk](./packages/go-sdk) | `go get github.com/TurboDocx/SDK/packages/go-sdk` | [![Go](https://img.shields.io/github/v/tag/TurboDocx/SDK?filter=packages/go-sdk/*&logo=go&logoColor=white&label=go)](./packages/go-sdk) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="20"/> **Java** | [com.turbodocx:turbodocx-sdk](./packages/java-sdk) | `implementation 'com.turbodocx:turbodocx-sdk:0.1.4'` | [![Maven Central](https://img.shields.io/maven-central/v/com.turbodocx/turbodocx-sdk?logo=apachemaven)](https://search.maven.org/artifact/com.turbodocx/turbodocx-sdk) |
 
+### CLI
+
+| Tool | Package | Install |
+|:-----|:--------|:--------|
+| **CLI** | [turbodocx](./packages/cli) | `brew install turbodocx/tap/cli` |
+
+Single binary, zero runtime deps. Wraps the Go SDK for terminal and CI/CD use:
+
+```bash
+turbodocx login --api-key KEY --org-id ORG --sender-email you@example.com
+turbodocx sign send --file-link https://example.com/doc.pdf --recipients @signers.json --fields @fields.json
+turbodocx sign status doc-abc123
+turbodocx sign download doc-abc123 -o signed.pdf
+turbodocx sign audit doc-abc123 --json
+```
+
 ### Coming Soon
 
 | Language | Status |
