@@ -34,6 +34,9 @@ type Client struct {
 	// TurboSign provides digital signature operations
 	TurboSign *TurboSignClient
 
+	// Deliverable provides document generation and management operations
+	Deliverable *DeliverableClient
+
 	httpClient *HTTPClient
 }
 
@@ -117,7 +120,42 @@ func NewClientWithConfig(config ClientConfig) (*Client, error) {
 	httpClient := NewHTTPClient(config)
 
 	return &Client{
-		TurboSign:  NewTurboSignClient(httpClient),
-		httpClient: httpClient,
+		TurboSign:   NewTurboSignClient(httpClient),
+		Deliverable: NewDeliverableClient(httpClient),
+		httpClient:  httpClient,
 	}, nil
+}
+
+// NewDeliverableClientOnly creates a client configured only for Deliverable operations.
+// Unlike NewClientWithConfig, this does NOT require SenderEmail (which is only needed for TurboSign).
+func NewDeliverableClientOnly(config ClientConfig) (*DeliverableClient, error) {
+	// Read from environment variables if not provided in config
+	if config.APIKey == "" {
+		config.APIKey = os.Getenv("TURBODOCX_API_KEY")
+	}
+	if config.AccessToken == "" {
+		config.AccessToken = os.Getenv("TURBODOCX_ACCESS_TOKEN")
+	}
+	if config.OrgID == "" {
+		config.OrgID = os.Getenv("TURBODOCX_ORG_ID")
+	}
+	if config.BaseURL == "" {
+		config.BaseURL = "https://api.turbodocx.com"
+	}
+
+	if config.APIKey == "" && config.AccessToken == "" {
+		return nil, errors.New("API key or access token is required")
+	}
+
+	if config.OrgID == "" {
+		return nil, &AuthenticationError{
+			TurboDocxError: TurboDocxError{
+				Message:    "Organization ID (OrgID) is required for authentication",
+				StatusCode: 401,
+			},
+		}
+	}
+
+	httpClient := NewHTTPClient(config)
+	return NewDeliverableClient(httpClient), nil
 }

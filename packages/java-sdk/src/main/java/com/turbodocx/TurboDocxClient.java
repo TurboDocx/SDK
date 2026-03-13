@@ -5,10 +5,12 @@ package com.turbodocx;
  */
 public class TurboDocxClient {
     private final TurboSign turboSign;
+    private final DeliverableClient deliverable;
 
     private TurboDocxClient(Builder builder) {
         HttpClient httpClient = new HttpClient(builder.baseUrl, builder.apiKey, builder.accessToken, builder.orgId, builder.senderEmail, builder.senderName);
         this.turboSign = new TurboSign(httpClient);
+        this.deliverable = new DeliverableClient(httpClient);
     }
 
     /**
@@ -16,6 +18,13 @@ public class TurboDocxClient {
      */
     public TurboSign turboSign() {
         return turboSign;
+    }
+
+    /**
+     * Get the Deliverable client for document generation and management
+     */
+    public DeliverableClient deliverable() {
+        return deliverable;
     }
 
     /**
@@ -89,6 +98,21 @@ public class TurboDocxClient {
                 throw new TurboDocxException.ValidationException("SenderEmail is required. This email will be used as the reply-to address for signature requests. Without it, emails will default to \"API Service User via TurboSign\".");
             }
             return new TurboDocxClient(this);
+        }
+
+        /**
+         * Build a client for Deliverable operations only.
+         * Does not require senderEmail/senderName (only needed for TurboSign).
+         */
+        public DeliverableClient buildDeliverableClient() {
+            if ((apiKey == null || apiKey.isEmpty()) && (accessToken == null || accessToken.isEmpty())) {
+                throw new IllegalArgumentException("API key or access token is required");
+            }
+            if (orgId == null || orgId.isEmpty()) {
+                throw new TurboDocxException.AuthenticationException("Organization ID (orgId) is required for authentication");
+            }
+            HttpClient httpClient = new HttpClient(baseUrl, apiKey, accessToken, orgId, senderEmail, senderName);
+            return new DeliverableClient(httpClient);
         }
     }
 }

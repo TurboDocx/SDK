@@ -336,7 +336,13 @@ export class HttpClient {
       const searchParams = new URLSearchParams();
       for (const [key, value] of Object.entries(params)) {
         if (value !== undefined && value !== null) {
-          searchParams.append(key, String(value));
+          if (Array.isArray(value)) {
+            for (const item of value) {
+              searchParams.append(key, String(item));
+            }
+          } else {
+            searchParams.append(key, String(value));
+          }
         }
       }
       const queryString = searchParams.toString();
@@ -357,5 +363,30 @@ export class HttpClient {
 
   async delete<T>(path: string, options?: RequestInit): Promise<T> {
     return this.request<T>('DELETE', path, undefined, options);
+  }
+
+  /**
+   * Perform a GET request and return raw binary response (for file downloads).
+   * Returns ArrayBuffer which can be converted to Buffer (Node) or Blob (browser).
+   */
+  async getRaw(path: string): Promise<ArrayBuffer> {
+    const url = `${this.baseUrl}${path}`;
+    const headers = this.getHeaders();
+    delete headers['Content-Type'];
+
+    try {
+      const response = await fetch(url, { method: 'GET', headers });
+
+      if (!response.ok) {
+        await this.handleErrorResponse(response);
+      }
+
+      return response.arrayBuffer();
+    } catch (error) {
+      if (error instanceof TurboDocxError) {
+        throw error;
+      }
+      throw new NetworkError(`Network request failed: ${error}`);
+    }
   }
 }
