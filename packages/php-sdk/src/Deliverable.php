@@ -65,7 +65,7 @@ final class Deliverable
      *     query?: string,
      *     showTags?: bool
      * } $options Query options
-     * @return array{results: array, totalRecords: int}
+     * @return array<string, mixed> Contains 'results' (array of deliverable records) and 'totalRecords' (int)
      *
      * @example
      * ```php
@@ -84,14 +84,8 @@ final class Deliverable
     /**
      * Generate a new deliverable document from a template with variable substitution
      *
-     * @param array{
-     *     name: string,
-     *     templateId: string,
-     *     variables: array,
-     *     description?: string,
-     *     tags?: string[]
-     * } $request
-     * @return array{results: array{deliverable: array}}
+     * @param array<string, mixed> $request Must include 'name', 'templateId', 'variables'; optional 'description', 'tags'
+     * @return array<string, mixed> Contains 'results' with nested 'deliverable' object
      *
      * @example
      * ```php
@@ -116,7 +110,7 @@ final class Deliverable
      *
      * @param string $id Deliverable UUID
      * @param bool $showTags Include tags in response
-     * @return array Full deliverable record (unwrapped from 'results')
+     * @return array<string, mixed> Full deliverable record (unwrapped from 'results')
      *
      * @example
      * ```php
@@ -138,8 +132,8 @@ final class Deliverable
      * Note: When providing tags, all existing tags are replaced.
      *
      * @param string $id Deliverable UUID
-     * @param array{name?: string, description?: string, tags?: string[]} $request
-     * @return array{message: string, deliverableId: string}
+     * @param array<string, mixed> $request Optional 'name', 'description', 'tags' fields
+     * @return array<string, mixed> Contains 'message' and 'deliverableId'
      *
      * @example
      * ```php
@@ -159,7 +153,7 @@ final class Deliverable
      * Soft-delete a deliverable
      *
      * @param string $id Deliverable UUID
-     * @return array{message: string, deliverableId: string}
+     * @return array<string, mixed> Contains 'message' and 'deliverableId'
      */
     public static function deleteDeliverable(string $id): array
     {
@@ -214,16 +208,8 @@ final class Deliverable
     /**
      * List all deliverable items with filtering and pagination
      *
-     * @param array{
-     *     limit?: int,
-     *     offset?: int,
-     *     query?: string,
-     *     showTags?: bool,
-     *     selectedTags?: string|string[],
-     *     column0?: string,
-     *     order0?: string
-     * } $options Query options
-     * @return array{results: array, totalRecords: int}
+     * @param array<string, mixed> $options Query options: limit, offset, query, showTags, selectedTags, column0, order0
+     * @return array<string, mixed> Contains 'results' (array of items) and 'totalRecords' (int)
      */
     public static function listDeliverableItems(array $options = []): array
     {
@@ -237,7 +223,7 @@ final class Deliverable
      *
      * @param string $id Deliverable item UUID
      * @param bool $showTags Include tags in response
-     * @return array{results: array, type: string}
+     * @return array<string, mixed> Contains 'results' (the item) and 'type' (string)
      */
     public static function getDeliverableItem(string $id, bool $showTags = false): array
     {

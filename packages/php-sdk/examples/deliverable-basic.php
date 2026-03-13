@@ -9,7 +9,8 @@
  * 3. List deliverables
  * 4. Get deliverable details
  * 5. Download the source file and PDF
- * 6. Update and delete a deliverable
+ * 6. Update a deliverable
+ * 7. Browse and get deliverable items
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -58,7 +59,7 @@ $details = Deliverable::getDeliverableDetails($deliverableId, showTags: true);
 echo "Name: {$details['name']}\n";
 echo "Template: {$details['templateName']}\n";
 echo "Variables: " . count($details['variables'] ?? []) . "\n";
-$tagNames = array_map(fn($t) => $t['name'], $details['tags'] ?? []);
+$tagNames = array_map(fn($t) => $t['label'], $details['tags'] ?? []);
 echo "Tags: " . implode(', ', $tagNames) . "\n";
 
 // 5. Download files
@@ -85,7 +86,15 @@ echo "\nBrowsing deliverable items...\n";
 $items = Deliverable::listDeliverableItems(['limit' => 10, 'showTags' => true]);
 echo "Found {$items['totalRecords']} items\n";
 
-// 8. Delete the deliverable (soft delete)
+// 8. Get a single deliverable item by ID
+if (!empty($items['results'])) {
+    $itemId = $items['results'][0]['id'];
+    echo "\nGetting deliverable item: {$itemId}\n";
+    $item = Deliverable::getDeliverableItem($itemId, showTags: true);
+    echo "Item: {$item['results']['name']} ({$item['type']})\n";
+}
+
+// 9. Delete the deliverable (soft delete)
 // $deleted = Deliverable::deleteDeliverable($deliverableId);
 // echo $deleted['message'] . "\n";
 

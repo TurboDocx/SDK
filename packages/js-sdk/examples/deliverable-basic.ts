@@ -7,7 +7,8 @@
  * 3. List deliverables
  * 4. Get deliverable details
  * 5. Download the source file and PDF
- * 6. Update and delete a deliverable
+ * 6. Update a deliverable
+ * 7. Browse and get deliverable items
  */
 
 import * as fs from 'fs';
@@ -55,7 +56,7 @@ async function main() {
   console.log(`Name: ${details.name}`);
   console.log(`Template: ${details.templateName}`);
   console.log(`Variables: ${details.variables?.length ?? 0}`);
-  console.log(`Tags: ${details.tags?.map(t => t.name).join(', ')}`);
+  console.log(`Tags: ${details.tags?.map(t => t.label).join(', ')}`);
 
   // 5. Download files
   console.log('\nDownloading source file...');
@@ -84,7 +85,17 @@ async function main() {
   });
   console.log(`Found ${items.totalRecords} items`);
 
-  // 8. Delete the deliverable (soft delete)
+  // 8. Get a single deliverable item by ID
+  if (items.results.length > 0) {
+    const itemId = items.results[0].id;
+    console.log(`\nGetting deliverable item: ${itemId}`);
+    const item = await Deliverable.getDeliverableItem(itemId, {
+      showTags: true,
+    });
+    console.log(`Item: ${item.results.name} (${item.type})`);
+  }
+
+  // 9. Delete the deliverable (soft delete)
   // const deleted = await Deliverable.deleteDeliverable(deliverableId);
   // console.log(deleted.message);
 
