@@ -25,7 +25,33 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 - Partner users: list, add, update permissions, remove, resend invitation
 - Audit logs: list with filtering
 
-**CLI status:** TurboPartner commands (`turbodocx partner ...`) not yet implemented — planned for follow-up PR.
+| Operation | CLI |
+|---|---|
+| Organization create | `partner org create` |
+| Organization list | `partner org list` |
+| Organization get details | `partner org get` |
+| Organization update | `partner org update` |
+| Organization delete | `partner org delete` |
+| Organization entitlements | `partner org entitlements` |
+| Org user list | `partner org user list` |
+| Org user add | `partner org user add` |
+| Org user update role | `partner org user update` |
+| Org user remove | `partner org user remove` |
+| Org user resend invite | `partner org user resend-invite` |
+| Org API key list | `partner org apikey list` |
+| Org API key create | `partner org apikey create` |
+| Org API key update | `partner org apikey update` |
+| Org API key revoke | `partner org apikey revoke` |
+| Partner API key list | `partner apikey list` |
+| Partner API key create | `partner apikey create` |
+| Partner API key update | `partner apikey update` |
+| Partner API key revoke | `partner apikey revoke` |
+| Partner user list | `partner user list` |
+| Partner user add | `partner user add` |
+| Partner user update | `partner user update` |
+| Partner user remove | `partner user remove` |
+| Partner user resend invite | `partner user resend-invite` |
+| Audit logs | `partner audit list` |
 
 ## Naming Conventions by Language
 

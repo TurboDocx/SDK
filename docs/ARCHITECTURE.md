@@ -87,7 +87,7 @@ Each SDK organizes types by module:
 
 ## CLI (`packages/cli/`)
 
-The CLI is a Go + Cobra binary that wraps the Go SDK. It is **not** an SDK — it's a consumer of the Go SDK, providing a command-line interface for TurboSign (and eventually TurboPartner) operations.
+The CLI is a Go + Cobra binary that wraps the Go SDK. It is **not** an SDK — it's a consumer of the Go SDK, providing a command-line interface for TurboSign and TurboPartner operations.
 
 ### Design
 
@@ -109,6 +109,15 @@ packages/cli/
 │   │   ├── sign.go            # SignClient interface, factory, @file parser
 │   │   ├── status.go, download.go, audit.go, send.go, review.go, void.go, resend.go
 │   │   └── *_test.go
+│   ├── partner/               # TurboPartner commands (interface + mock injection)
+│   │   ├── partner.go         # PartnerClient interface, factory, command tree
+│   │   ├── org_*.go           # Organization CRUD + entitlements
+│   │   ├── org_user_*.go      # Organization user management
+│   │   ├── org_apikey_*.go    # Organization API key management
+│   │   ├── apikey_*.go        # Partner API key management
+│   │   ├── user_*.go          # Partner portal user management
+│   │   ├── audit_list.go      # Partner audit logs
+│   │   └── *_test.go
 │   └── version.go, completion.go, config.go, login.go
 └── internal/
     ├── config/                # Load/Save ~/.turbodocx/config.json (0600 perms)
@@ -117,7 +126,7 @@ packages/cli/
 
 ### Testing
 
-SDK client calls are mocked via a `SignClient` interface that matches `TurboSignClient` methods. The `newSignClient` package var is swapped in tests. Sign subcommand tests use `executeSignCmd()` helper which creates a fresh Cobra command tree to avoid flag state leakage.
+SDK client calls are mocked via interfaces (`SignClient`, `PartnerClient`) that match SDK client methods. The `newSignClient`/`newPartnerClient` package vars are swapped in tests. Subcommand tests use `executeSignCmd()`/`executePartnerCmd()` helpers which create fresh Cobra command trees. Partner tests use `resetFlags()` to clear Cobra flag state between tests.
 
 ## CI/CD
 

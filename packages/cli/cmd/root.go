@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/TurboDocx/SDK/packages/cli/cmd/cmdutil"
+	"github.com/TurboDocx/SDK/packages/cli/cmd/partner"
 	"github.com/TurboDocx/SDK/packages/cli/cmd/sign"
 	"github.com/TurboDocx/SDK/packages/cli/internal/config"
 	"github.com/spf13/cobra"
@@ -76,6 +77,7 @@ func init() {
 	pf.BoolVar(&plainOutput, "plain", false, "Output without colors")
 
 	rootCmd.AddCommand(sign.SignCmd)
+	rootCmd.AddCommand(partner.PartnerCmd)
 }
 
 // Execute runs the root command

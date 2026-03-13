@@ -8,16 +8,17 @@ The CLI (`packages/cli/`) is a Go + Cobra wrapper around the Go SDK. It translat
 
 Top-level subcommands map to product brands:
 - `turbodocx sign ...` — TurboSign digital signatures
-- `turbodocx partner ...` — TurboPartner portal management (planned)
+- `turbodocx partner ...` — TurboPartner portal management (organizations, users, API keys, entitlements, audit logs)
 - `turbodocx config/login/version/completion` — CLI utilities
 
 ## Testability
 
-- SDK client calls mocked via **interface + injection**: define interface matching SDK client methods, `newSignClient` is a package var replaceable in tests
+- SDK client calls mocked via **interface + injection**: define interface matching SDK client methods, `newSignClient`/`newPartnerClient` is a package var replaceable in tests
 - Use `testify/assert` + `testify/require`
 - Capture stdout/stderr via `bytes.Buffer` for output assertions
 - Temp dirs for config file tests (`t.TempDir()`)
 - Sign subcommand tests use `executeSignCmd()` helper which creates a fresh Cobra command tree
+- Partner subcommand tests use `executePartnerCmd()` + `resetFlags()` to avoid Cobra flag state leakage between tests
 
 ## Key Patterns
 
