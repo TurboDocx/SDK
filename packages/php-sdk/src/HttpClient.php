@@ -134,6 +134,22 @@ final class HttpClient
     }
 
     /**
+     * GET request returning raw binary response (for file downloads)
+     *
+     * @param string $path
+     * @return string Raw response body as bytes
+     */
+    public function getRaw(string $path): string
+    {
+        try {
+            $response = $this->client->get($path);
+            return $response->getBody()->getContents();
+        } catch (GuzzleException $e) {
+            $this->handleException($e);
+        }
+    }
+
+    /**
      * Generic DELETE request
      *
      * @param string $path

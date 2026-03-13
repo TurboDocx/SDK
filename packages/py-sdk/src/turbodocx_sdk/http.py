@@ -99,7 +99,8 @@ class HttpClient:
         base_url: Optional[str] = None,
         org_id: Optional[str] = None,
         sender_email: Optional[str] = None,
-        sender_name: Optional[str] = None
+        sender_name: Optional[str] = None,
+        skip_sender_validation: bool = False
     ):
         """
         Initialize HTTP client
@@ -116,6 +117,8 @@ class HttpClient:
             sender_name: Sender name for signature requests (optional but strongly recommended).
                         This name will appear in signature request emails. Without this,
                         the sender will appear as "API Service User".
+            skip_sender_validation: Skip sender_email validation (used by modules
+                                   like Deliverable that don't need sender config)
         """
         self.api_key = api_key or os.environ.get("TURBODOCX_API_KEY")
         self.access_token = access_token
@@ -130,7 +133,7 @@ class HttpClient:
         if not self.org_id:
             raise AuthenticationError("Organization ID (org_id) is required for authentication")
 
-        if not self.sender_email:
+        if not self.sender_email and not skip_sender_validation:
             raise ValidationError(
                 "sender_email is required. This email will be used as the reply-to address "
                 "for signature requests. Without it, emails will default to "
@@ -225,6 +228,36 @@ class HttpClient:
                 content_type = response.headers.get("content-type", "")
                 if "application/json" in content_type:
                     return self._smart_unwrap(response.json())
+
+                return response.content
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}")
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+            except TurboDocxError:
+                raise
+            except Exception as e:
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+
+    async def get_raw(self, path: str) -> bytes:
+        """
+        Make GET request and return raw binary response (for file downloads)
+
+        Args:
+            path: API endpoint path
+
+        Returns:
+            Raw response content as bytes
+        """
+        url = f"{self.base_url}{path}"
+        headers = self._get_headers(include_content_type=False)
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            try:
+                response = await client.get(url, headers=headers)
+
+                if not response.is_success:
+                    await self._handle_error_response(response)
 
                 return response.content
             except httpx.TimeoutException as e:

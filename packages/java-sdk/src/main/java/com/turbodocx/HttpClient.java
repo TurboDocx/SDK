@@ -153,6 +153,28 @@ public class HttpClient {
         return execute(request, responseClass);
     }
 
+    public <T> T patch(String path, Object body, Class<T> responseClass) throws IOException {
+        RequestBody requestBody = RequestBody.create(gson.toJson(body), JSON);
+
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .headers(buildHeaders())
+                .patch(requestBody)
+                .build();
+
+        return execute(request, responseClass);
+    }
+
+    public <T> T delete(String path, Class<T> responseClass) throws IOException {
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .headers(buildHeaders())
+                .delete()
+                .build();
+
+        return execute(request, responseClass);
+    }
+
     /**
      * Upload file from bytes
      */
