@@ -135,9 +135,11 @@ type SendSignatureRequest struct {
 
 // SendSignatureResponse is the response from SendSignature
 type SendSignatureResponse struct {
-	Success    bool   `json:"success"`
-	DocumentID string `json:"documentId"`
-	Message    string `json:"message"`
+	Success    bool              `json:"success"`
+	DocumentID string            `json:"documentId"`
+	Status     string            `json:"status"`
+	Message    string            `json:"message"`
+	Recipients []ReviewRecipient `json:"recipients,omitempty"`
 }
 
 // RecipientResponse represents a recipient in the response

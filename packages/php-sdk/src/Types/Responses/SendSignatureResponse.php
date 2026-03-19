@@ -9,9 +9,18 @@ namespace TurboDocx\Types\Responses;
  */
 final class SendSignatureResponse
 {
+    /**
+     * @param bool $success
+     * @param string $documentId
+     * @param string $status
+     * @param array<mixed>|null $recipients
+     * @param string $message
+     */
     public function __construct(
         public bool $success,
         public string $documentId,
+        public string $status,
+        public ?array $recipients,
         public string $message,
     ) {}
 
@@ -26,6 +35,8 @@ final class SendSignatureResponse
         return new self(
             success: $data['success'] ?? false,
             documentId: $data['documentId'] ?? '',
+            status: $data['status'] ?? '',
+            recipients: $data['recipients'] ?? null,
             message: $data['message'] ?? '',
         );
     }
