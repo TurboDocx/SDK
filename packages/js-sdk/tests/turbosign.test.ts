@@ -302,6 +302,10 @@ describe("TurboSign Module", () => {
       const mockResponse = {
         success: true,
         documentId: "doc-123",
+        status: "UNDER_REVIEW",
+        recipients: [
+          { id: "r-1", name: "John Doe", email: "john@example.com", metadata: { color: "hsl(200, 75%, 50%)" } },
+        ],
         message: "Document sent for signing",
       };
 
@@ -318,6 +322,9 @@ describe("TurboSign Module", () => {
 
       expect(result.success).toBe(true);
       expect(result.documentId).toBe("doc-123");
+      expect(result.status).toBe("UNDER_REVIEW");
+      expect(result.recipients).toHaveLength(1);
+      expect(result.recipients![0].email).toBe("john@example.com");
       expect(result.message).toContain("signing");
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
         "/turbosign/single/prepare-for-signing",
@@ -330,6 +337,10 @@ describe("TurboSign Module", () => {
       const mockResponse = {
         success: true,
         documentId: "doc-upload",
+        status: "UNDER_REVIEW",
+        recipients: [
+          { id: "r-1", name: "John Doe", email: "john@example.com", metadata: {} },
+        ],
         message: "Document sent for signing",
       };
 
@@ -352,6 +363,10 @@ describe("TurboSign Module", () => {
       const mockResponse = {
         success: true,
         documentId: "doc-checkbox",
+        status: "UNDER_REVIEW",
+        recipients: [
+          { id: "r-1", name: "John Doe", email: "john@example.com", metadata: {} },
+        ],
         message: "Document sent for signing",
       };
 

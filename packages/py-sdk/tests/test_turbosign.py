@@ -239,6 +239,10 @@ class TestSendSignature:
         mock_response = {
             "success": True,
             "documentId": "doc-123",
+            "status": "UNDER_REVIEW",
+            "recipients": [
+                {"id": "r-1", "name": "John Doe", "email": "john@example.com", "metadata": {}}
+            ],
             "message": "Document sent for signing"
         }
 
@@ -256,6 +260,9 @@ class TestSendSignature:
 
             assert result["success"] is True
             assert result["documentId"] == "doc-123"
+            assert result["status"] == "UNDER_REVIEW"
+            assert len(result["recipients"]) == 1
+            assert result["recipients"][0]["email"] == "john@example.com"
             mock_client.post.assert_called_once()
             call_args = mock_client.post.call_args
             assert "/turbosign/single/prepare-for-signing" in call_args[0][0]
@@ -266,6 +273,10 @@ class TestSendSignature:
         mock_response = {
             "success": True,
             "documentId": "doc-upload",
+            "status": "UNDER_REVIEW",
+            "recipients": [
+                {"id": "r-1", "name": "John Doe", "email": "john@example.com", "metadata": {}}
+            ],
             "message": "Document sent for signing"
         }
 
@@ -283,6 +294,7 @@ class TestSendSignature:
             )
 
             assert result["documentId"] == "doc-upload"
+            assert result["status"] == "UNDER_REVIEW"
 
 
 class TestGetStatus:

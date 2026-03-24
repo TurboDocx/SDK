@@ -619,9 +619,11 @@ request := &turbodocx.SendSignatureRequest{
 
 ```go
 type SendSignatureResponse struct {
-    Success    bool   `json:"success"`
-    DocumentID string `json:"documentId"`
-    Message    string `json:"message"`
+    Success    bool              `json:"success"`
+    DocumentID string            `json:"documentId"`
+    Status     string            `json:"status"`
+    Message    string            `json:"message"`
+    Recipients []ReviewRecipient `json:"recipients,omitempty"`
 }
 ```
 

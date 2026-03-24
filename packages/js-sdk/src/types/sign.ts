@@ -32,6 +32,14 @@ export interface RecipientResponse {
   signedAt?: string;
 }
 
+/** Recipient in review/send signature responses (id, name, email, metadata) */
+export interface ReviewRecipient {
+  id: string;
+  name: string;
+  email: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface VoidDocumentResponse {
   /** Document ID */
   id: string;
@@ -212,12 +220,7 @@ export interface CreateSignatureReviewLinkResponse {
   /** Preview URL for reviewing the document */
   previewUrl?: string;
   /** Recipients with their metadata */
-  recipients?: Array<{
-    id: string;
-    name: string;
-    email: string;
-    metadata?: Record<string, any>;
-  }>;
+  recipients?: ReviewRecipient[];
   /** Response message */
   message: string;
 }
@@ -260,6 +263,10 @@ export interface SendSignatureResponse {
   success: boolean;
   /** Document ID */
   documentId: string;
+  /** Document status */
+  status: string;
+  /** Recipients with their metadata */
+  recipients?: ReviewRecipient[];
   /** Response message */
   message: string;
 }

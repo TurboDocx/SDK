@@ -234,7 +234,7 @@ class TurboSign:
             cc_emails: List of CC email addresses
 
         Returns:
-            Response with success, documentId, and message
+            Response with success, documentId, status, recipients, and message
 
         Example:
             >>> result = await TurboSign.send_signature(

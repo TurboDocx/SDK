@@ -205,7 +205,11 @@ func TestTurboSignClient_SendSignature(t *testing.T) {
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"success":    true,
 				"documentId": "doc-123",
-				"message":    "Document sent for signing",
+				"status":     "UNDER_REVIEW",
+				"recipients": []map[string]interface{}{
+					{"id": "r-1", "name": "John Doe", "email": "john@example.com", "metadata": map[string]interface{}{"color": "hsl(200, 75%, 50%)"}},
+				},
+				"message": "Document sent for signing",
 			})
 		}))
 		defer server.Close()
@@ -230,6 +234,9 @@ func TestTurboSignClient_SendSignature(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.Success)
 		assert.Equal(t, "doc-123", result.DocumentID)
+		assert.Equal(t, "UNDER_REVIEW", result.Status)
+		assert.Len(t, result.Recipients, 1)
+		assert.Equal(t, "john@example.com", result.Recipients[0].Email)
 	})
 
 	t.Run("with file upload", func(t *testing.T) {
@@ -239,7 +246,11 @@ func TestTurboSignClient_SendSignature(t *testing.T) {
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"success":    true,
 				"documentId": "doc-upload",
-				"message":    "Document sent for signing",
+				"status":     "UNDER_REVIEW",
+				"recipients": []map[string]interface{}{
+					{"id": "r-1", "name": "John Doe", "email": "john@example.com", "metadata": map[string]interface{}{"color": "hsl(200, 75%, 50%)"}},
+				},
+				"message": "Document sent for signing",
 			})
 		}))
 		defer server.Close()

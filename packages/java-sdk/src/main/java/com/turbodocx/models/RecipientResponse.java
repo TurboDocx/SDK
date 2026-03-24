@@ -1,6 +1,7 @@
 package com.turbodocx.models;
 
 import com.google.gson.annotations.SerializedName;
+import java.util.Map;
 
 /**
  * Represents a recipient in API responses
@@ -21,6 +22,9 @@ public class RecipientResponse {
     @SerializedName("signedAt")
     private String signedAt;
 
+    @SerializedName("metadata")
+    private Map<String, Object> metadata;
+
     public String getId() {
         return id;
     }
@@ -39,5 +43,9 @@ public class RecipientResponse {
 
     public String getSignedAt() {
         return signedAt;
+    }
+
+    public Map<String, Object> getMetadata() {
+        return metadata;
     }
 }
