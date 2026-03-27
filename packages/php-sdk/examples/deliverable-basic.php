@@ -10,7 +10,6 @@
  * 4. Get deliverable details
  * 5. Download the source file and PDF
  * 6. Update a deliverable
- * 7. Browse and get deliverable items
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -81,20 +80,7 @@ $updated = Deliverable::updateDeliverableInfo($deliverableId, [
 ]);
 echo $updated['message'] . "\n";
 
-// 7. Browse deliverable items
-echo "\nBrowsing deliverable items...\n";
-$items = Deliverable::listDeliverableItems(['limit' => 10, 'showTags' => true]);
-echo "Found {$items['totalRecords']} items\n";
-
-// 8. Get a single deliverable item by ID
-if (!empty($items['results'])) {
-    $itemId = $items['results'][0]['id'];
-    echo "\nGetting deliverable item: {$itemId}\n";
-    $item = Deliverable::getDeliverableItem($itemId, showTags: true);
-    echo "Item: {$item['results']['name']} ({$item['type']})\n";
-}
-
-// 9. Delete the deliverable (soft delete)
+// 7. Delete the deliverable (soft delete)
 // $deleted = Deliverable::deleteDeliverable($deliverableId);
 // echo $deleted['message'] . "\n";
 

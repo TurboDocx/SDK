@@ -8,7 +8,6 @@ This example demonstrates the complete deliverable workflow:
 4. Get deliverable details
 5. Download the source file and PDF
 6. Update a deliverable
-7. Browse and get deliverable items
 """
 
 import asyncio
@@ -81,19 +80,7 @@ async def main():
     )
     print(updated["message"])
 
-    # 7. Browse deliverable items
-    print("\nBrowsing deliverable items...")
-    items = await Deliverable.list_deliverable_items(limit=10, show_tags=True)
-    print(f"Found {items['totalRecords']} items")
-
-    # 8. Get a single deliverable item by ID
-    if items["results"]:
-        item_id = items["results"][0]["id"]
-        print(f"\nGetting deliverable item: {item_id}")
-        item = await Deliverable.get_deliverable_item(item_id, show_tags=True)
-        print(f"Item: {item['results']['name']} ({item['type']})")
-
-    # 9. Delete the deliverable (soft delete)
+    # 7. Delete the deliverable (soft delete)
     # deleted = await Deliverable.delete_deliverable(deliverable_id)
     # print(deleted["message"])
 

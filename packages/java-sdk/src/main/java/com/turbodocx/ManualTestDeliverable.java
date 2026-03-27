@@ -27,7 +27,6 @@ public class ManualTestDeliverable {
 
     private static final String TEMPLATE_ID = "your-template-id-here"; // Replace with a valid template UUID
     private static final String DELIVERABLE_ID = "your-deliverable-id-here"; // Replace with a valid deliverable UUID
-    private static final String DELIVERABLE_ITEM_ID = "your-deliverable-item-id-here"; // Replace with a valid deliverable item UUID
 
     private static DeliverableClient client;
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -67,12 +66,6 @@ public class ManualTestDeliverable {
 
             // Test 7: Download PDF (replace with actual deliverable ID)
             // testDownloadPDF(DELIVERABLE_ID);
-
-            // Test 8: List Deliverable Items
-            // testListDeliverableItems();
-
-            // Test 9: Get Deliverable Item (replace with actual deliverable item ID)
-            // testGetDeliverableItem(DELIVERABLE_ITEM_ID);
 
             System.out.println("\n==============================================");
             System.out.println("All tests completed successfully!");
@@ -184,24 +177,4 @@ public class ManualTestDeliverable {
         System.out.println("File saved to: " + outputPath);
     }
 
-    private static void testListDeliverableItems() throws IOException {
-        System.out.println("\n--- Test 8: listDeliverableItems ---");
-
-        ListDeliverableItemsRequest request = new ListDeliverableItemsRequest();
-        request.setLimit(10);
-        request.setShowTags(true);
-        request.setColumn0("createdOn");
-        request.setOrder0("desc");
-
-        DeliverableItemListResponse result = client.listDeliverableItems(request);
-        System.out.println("Total Records: " + result.getTotalRecords());
-        System.out.println("Result: " + gson.toJson(result));
-    }
-
-    private static void testGetDeliverableItem(String itemId) throws IOException {
-        System.out.println("\n--- Test 9: getDeliverableItem ---");
-
-        DeliverableItemResponse result = client.getDeliverableItem(itemId, true);
-        System.out.println("Result: " + gson.toJson(result));
-    }
 }

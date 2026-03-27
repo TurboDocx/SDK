@@ -9,8 +9,6 @@
  * - deleteDeliverable
  * - downloadSourceFile
  * - downloadPDF
- * - listDeliverableItems
- * - getDeliverableItem
  */
 
 import { Deliverable } from "../src/modules/deliverable";
@@ -349,76 +347,6 @@ describe("Deliverable Module", () => {
       expect(result).toBe(mockArrayBuffer);
       expect(MockedHttpClient.prototype.getRaw).toHaveBeenCalledWith(
         "/v1/deliverable/file/pdf/del-1"
-      );
-    });
-  });
-
-  describe("listDeliverableItems", () => {
-    it("should list deliverable items with options", async () => {
-      const mockResponse = {
-        results: [
-          {
-            id: "item-1",
-            name: "Contract",
-            type: "deliverable",
-            isActive: true,
-            createdBy: "user-1",
-            createdOn: "2024-01-15T14:12:10.721Z",
-            updatedOn: "2024-01-15T14:13:45.724Z",
-          },
-        ],
-        totalRecords: 1,
-      };
-
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
-      Deliverable.configure({ apiKey: "test-key", orgId: "org-1" });
-
-      const result = await Deliverable.listDeliverableItems({
-        limit: 20,
-        showTags: true,
-        column0: "createdOn",
-        order0: "desc",
-      });
-
-      expect(result.results).toHaveLength(1);
-      expect(result.totalRecords).toBe(1);
-      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
-        "/v1/deliverable-item",
-        {
-          limit: 20,
-          showTags: true,
-          column0: "createdOn",
-          order0: "desc",
-        }
-      );
-    });
-  });
-
-  describe("getDeliverableItem", () => {
-    it("should get a single deliverable item", async () => {
-      const mockResponse = {
-        results: {
-          id: "item-1",
-          name: "Contract",
-          type: "deliverable",
-          isActive: true,
-          createdBy: "user-1",
-          createdOn: "2024-01-15T14:12:10.721Z",
-          updatedOn: "2024-01-15T14:13:45.724Z",
-        },
-        type: "deliverable",
-      };
-
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
-      Deliverable.configure({ apiKey: "test-key", orgId: "org-1" });
-
-      const result = await Deliverable.getDeliverableItem("item-1", { showTags: true });
-
-      expect(result.results.id).toBe("item-1");
-      expect(result.type).toBe("deliverable");
-      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
-        "/v1/deliverable-item/item-1",
-        { showTags: true }
       );
     });
   });

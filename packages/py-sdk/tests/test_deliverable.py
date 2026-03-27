@@ -9,8 +9,6 @@ Tests for Deliverable operations:
 - delete_deliverable
 - download_source_file
 - download_pdf
-- list_deliverable_items
-- get_deliverable_item
 """
 
 import pytest
@@ -295,64 +293,6 @@ class TestDownloadPDF:
 
             assert result == mock_bytes
             mock_client.get_raw.assert_called_once_with("/v1/deliverable/file/pdf/d1")
-
-
-class TestListDeliverableItems:
-    """Test list_deliverable_items operation"""
-
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        Deliverable._client = None
-
-    @pytest.mark.asyncio
-    async def test_list_deliverable_items(self):
-        """Should list deliverable items with pagination"""
-        mock_response = {
-            "results": [{"id": "item1", "name": "Item A", "type": "deliverable"}],
-            "totalRecords": 1,
-        }
-
-        with patch.object(Deliverable, '_get_client') as mock_get_client:
-            mock_client = MagicMock()
-            mock_client.get = AsyncMock(return_value=mock_response)
-            mock_get_client.return_value = mock_client
-
-            Deliverable.configure(api_key="test-key", org_id="test-org")
-            result = await Deliverable.list_deliverable_items(limit=10, show_tags=True)
-
-            assert result["totalRecords"] == 1
-            call_args = mock_client.get.call_args[0][0]
-            assert "/v1/deliverable-item?" in call_args
-
-
-class TestGetDeliverableItem:
-    """Test get_deliverable_item operation"""
-
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        Deliverable._client = None
-
-    @pytest.mark.asyncio
-    async def test_get_deliverable_item(self):
-        """Should get a single deliverable item"""
-        mock_response = {
-            "results": {"id": "item1", "name": "Item A"},
-            "type": "deliverable",
-        }
-
-        with patch.object(Deliverable, '_get_client') as mock_get_client:
-            mock_client = MagicMock()
-            mock_client.get = AsyncMock(return_value=mock_response)
-            mock_get_client.return_value = mock_client
-
-            Deliverable.configure(api_key="test-key", org_id="test-org")
-            result = await Deliverable.get_deliverable_item("item1", show_tags=True)
-
-            assert result["results"]["id"] == "item1"
-            assert result["type"] == "deliverable"
-            call_args = mock_client.get.call_args[0][0]
-            assert "/v1/deliverable-item/item1?" in call_args
-            assert "showTags=True" in call_args
 
 
 class TestErrorHandling:

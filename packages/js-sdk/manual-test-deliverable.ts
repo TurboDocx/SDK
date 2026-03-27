@@ -18,7 +18,6 @@ const ORG_ID = "your-organization-id-here"; // Replace with your organization UU
 
 const TEMPLATE_ID = "your-template-id-here"; // Replace with a valid template UUID
 const DELIVERABLE_ID = "your-deliverable-id-here"; // Replace with a valid deliverable UUID
-const DELIVERABLE_ITEM_ID = "your-deliverable-item-id-here"; // Replace with a valid deliverable item UUID
 
 // Initialize client
 Deliverable.configure({
@@ -115,30 +114,6 @@ async function testDownloadPDF(deliverableId: string) {
   return buffer;
 }
 
-async function testListDeliverableItems() {
-  console.log("\n--- Test 8: listDeliverableItems ---");
-  const result = await Deliverable.listDeliverableItems({
-    limit: 10,
-    showTags: true,
-    column0: "createdOn",
-    order0: "desc",
-  });
-
-  console.log(`Total Records: ${result.totalRecords}`);
-  console.log("Results:", JSON.stringify(result.results, null, 2));
-  return result;
-}
-
-async function testGetDeliverableItem(itemId: string) {
-  console.log("\n--- Test 9: getDeliverableItem ---");
-  const result = await Deliverable.getDeliverableItem(itemId, {
-    showTags: true,
-  });
-
-  console.log("Result:", JSON.stringify(result, null, 2));
-  return result;
-}
-
 // =============================================
 // MAIN TEST RUNNER
 // =============================================
@@ -171,12 +146,6 @@ async function runAllTests() {
 
     // Test 7: Download PDF (replace with actual deliverable ID)
     // await testDownloadPDF(DELIVERABLE_ID);
-
-    // Test 8: List Deliverable Items
-    // await testListDeliverableItems();
-
-    // Test 9: Get Deliverable Item (replace with actual deliverable item ID)
-    // await testGetDeliverableItem(DELIVERABLE_ITEM_ID);
 
     console.log("\n==============================================");
     console.log("All tests completed successfully!");

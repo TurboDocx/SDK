@@ -202,37 +202,6 @@ final class Deliverable
     }
 
     // ============================================
-    // DELIVERABLE ITEMS
-    // ============================================
-
-    /**
-     * List all deliverable items with filtering and pagination
-     *
-     * @param array<string, mixed> $options Query options: limit, offset, query, showTags, selectedTags, column0, order0
-     * @return array<string, mixed> Contains 'results' (array of items) and 'totalRecords' (int)
-     */
-    public static function listDeliverableItems(array $options = []): array
-    {
-        $client = self::getClient();
-        $params = self::buildListParams($options);
-        return $client->get('/v1/deliverable-item', $params);
-    }
-
-    /**
-     * Get a single deliverable item by ID
-     *
-     * @param string $id Deliverable item UUID
-     * @param bool $showTags Include tags in response
-     * @return array<string, mixed> Contains 'results' (the item) and 'type' (string)
-     */
-    public static function getDeliverableItem(string $id, bool $showTags = false): array
-    {
-        $client = self::getClient();
-        $params = $showTags ? ['showTags' => 'true'] : [];
-        return $client->get("/v1/deliverable-item/{$id}", $params);
-    }
-
-    // ============================================
     // HELPERS
     // ============================================
 

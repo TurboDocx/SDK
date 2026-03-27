@@ -8,7 +8,6 @@
  * 4. Get deliverable details
  * 5. Download the source file and PDF
  * 6. Update a deliverable
- * 7. Browse and get deliverable items
  */
 
 import * as fs from 'fs';
@@ -77,25 +76,7 @@ async function main() {
   });
   console.log(updated.message);
 
-  // 7. Browse deliverable items
-  console.log('\nBrowsing deliverable items...');
-  const items = await Deliverable.listDeliverableItems({
-    limit: 10,
-    showTags: true,
-  });
-  console.log(`Found ${items.totalRecords} items`);
-
-  // 8. Get a single deliverable item by ID
-  if (items.results.length > 0) {
-    const itemId = items.results[0].id;
-    console.log(`\nGetting deliverable item: ${itemId}`);
-    const item = await Deliverable.getDeliverableItem(itemId, {
-      showTags: true,
-    });
-    console.log(`Item: ${item.results.name} (${item.type})`);
-  }
-
-  // 9. Delete the deliverable (soft delete)
+  // 7. Delete the deliverable (soft delete)
   // const deleted = await Deliverable.deleteDeliverable(deliverableId);
   // console.log(deleted.message);
 

@@ -251,67 +251,6 @@ class DeliverableClientTest {
     }
 
     // ============================================
-    // Deliverable Items Tests
-    // ============================================
-
-    @Test
-    @DisplayName("should list deliverable items")
-    void listDeliverableItems() throws Exception {
-        enqueueWrapped(Map.of("results", List.of(), "totalRecords", 0));
-
-        DeliverableItemListResponse response = client.listDeliverableItems();
-
-        assertNotNull(response);
-        assertEquals(0, response.getTotalRecords());
-
-        RecordedRequest request = server.takeRequest();
-        assertEquals("GET", request.getMethod());
-        assertEquals("/v1/deliverable-item", request.getPath());
-    }
-
-    @Test
-    @DisplayName("should list deliverable items with params")
-    void listDeliverableItemsWithParams() throws Exception {
-        enqueueWrapped(Map.of("results", List.of(), "totalRecords", 0));
-
-        ListDeliverableItemsRequest req = new ListDeliverableItemsRequest();
-        req.setLimit(20);
-        req.setQuery("proposal");
-        client.listDeliverableItems(req);
-
-        RecordedRequest request = server.takeRequest();
-        String path = request.getPath();
-        assertTrue(path.contains("limit=20"));
-        assertTrue(path.contains("query=proposal"));
-    }
-
-    @Test
-    @DisplayName("should get deliverable item by ID")
-    void getDeliverableItem() throws Exception {
-        enqueueWrapped(Map.of("results", Map.of("id", "item-1", "name", "Item"), "type", "deliverable"));
-
-        DeliverableItemResponse response = client.getDeliverableItem("item-1");
-
-        assertNotNull(response);
-        assertEquals("deliverable", response.getType());
-
-        RecordedRequest request = server.takeRequest();
-        assertEquals("GET", request.getMethod());
-        assertEquals("/v1/deliverable-item/item-1", request.getPath());
-    }
-
-    @Test
-    @DisplayName("should get deliverable item with showTags")
-    void getDeliverableItemWithTags() throws Exception {
-        enqueueWrapped(Map.of("results", Map.of("id", "item-1", "name", "Item"), "type", "deliverable"));
-
-        client.getDeliverableItem("item-1", true);
-
-        RecordedRequest request = server.takeRequest();
-        assertTrue(request.getPath().contains("showTags=true"));
-    }
-
-    // ============================================
     // Error Handling Tests
     // ============================================
 

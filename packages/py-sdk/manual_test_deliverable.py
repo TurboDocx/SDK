@@ -22,7 +22,6 @@ ORG_ID = "your-organization-id-here"  # Replace with your organization UUID
 
 TEMPLATE_ID = "your-template-id-here"  # Replace with a valid template UUID
 DELIVERABLE_ID = "your-deliverable-id-here"  # Replace with a valid deliverable UUID
-DELIVERABLE_ITEM_ID = "your-deliverable-item-id-here"  # Replace with a valid deliverable item UUID
 
 # Configure Deliverable
 Deliverable.configure(
@@ -135,35 +134,6 @@ async def test_download_pdf(deliverable_id: str):
     return result
 
 
-async def test_list_deliverable_items():
-    """Test 8: List deliverable items"""
-    print("\n--- Test 8: list_deliverable_items ---")
-
-    result = await Deliverable.list_deliverable_items(
-        limit=10,
-        show_tags=True,
-        column0="createdOn",
-        order0="desc",
-    )
-
-    print(f"Total Records: {result.get('totalRecords')}")
-    print("Result:", json.dumps(result, indent=2))
-    return result
-
-
-async def test_get_deliverable_item(item_id: str):
-    """Test 9: Get a single deliverable item"""
-    print("\n--- Test 9: get_deliverable_item ---")
-
-    result = await Deliverable.get_deliverable_item(
-        item_id,
-        show_tags=True,
-    )
-
-    print("Result:", json.dumps(result, indent=2))
-    return result
-
-
 # =============================================
 # MAIN TEST RUNNER
 # =============================================
@@ -196,12 +166,6 @@ async def run_all_tests():
 
         # Test 7: Download PDF (replace with actual deliverable ID)
         # await test_download_pdf(DELIVERABLE_ID)
-
-        # Test 8: List Deliverable Items
-        # await test_list_deliverable_items()
-
-        # Test 9: Get Deliverable Item (replace with actual deliverable item ID)
-        # await test_get_deliverable_item(DELIVERABLE_ITEM_ID)
 
         print("\n==============================================")
         print("All tests completed successfully!")

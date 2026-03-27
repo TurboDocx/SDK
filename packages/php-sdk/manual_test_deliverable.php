@@ -25,7 +25,6 @@ const ORG_ID = 'your-organization-id-here';        // Replace with your organiza
 
 const TEMPLATE_ID = 'your-template-id-here';              // Replace with a valid template UUID
 const DELIVERABLE_ID = 'your-deliverable-id-here';        // Replace with a valid deliverable UUID
-const DELIVERABLE_ITEM_ID = 'your-deliverable-item-id-here'; // Replace with a valid deliverable item UUID
 
 // Initialize client (no senderEmail needed for Deliverable)
 Deliverable::configure(new DeliverableConfig(
@@ -143,35 +142,6 @@ function testDownloadPDF(string $deliverableId): void
     echo "File saved to: $outputPath\n";
 }
 
-/**
- * Test 8: List deliverable items
- */
-function testListDeliverableItems(): void
-{
-    echo "\n--- Test 8: listDeliverableItems ---\n";
-
-    $result = Deliverable::listDeliverableItems([
-        'limit' => 10,
-        'showTags' => true,
-        'column0' => 'createdOn',
-        'order0' => 'desc',
-    ]);
-
-    echo "Total Records: " . $result['totalRecords'] . "\n";
-    echo "Result: " . json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
-}
-
-/**
- * Test 9: Get a single deliverable item
- */
-function testGetDeliverableItem(string $itemId): void
-{
-    echo "\n--- Test 9: getDeliverableItem ---\n";
-
-    $result = Deliverable::getDeliverableItem($itemId, showTags: true);
-    echo "Result: " . json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
-}
-
 // =============================================
 // MAIN TEST RUNNER
 // =============================================
@@ -205,12 +175,6 @@ function main(): void
 
         // Test 7: Download PDF (replace with actual deliverable ID)
         // testDownloadPDF(DELIVERABLE_ID);
-
-        // Test 8: List Deliverable Items
-        // testListDeliverableItems();
-
-        // Test 9: Get Deliverable Item (replace with actual deliverable item ID)
-        // testGetDeliverableItem(DELIVERABLE_ITEM_ID);
 
         echo "\n==============================================\n";
         echo "All tests completed successfully!\n";

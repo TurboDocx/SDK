@@ -14,7 +14,6 @@ import java.util.List;
  * - Generating a document from a template with variables
  * - Listing, getting, updating, and deleting deliverables
  * - Downloading source files and PDFs
- * - Working with deliverable items
  */
 public class DeliverableBasic {
 
@@ -80,18 +79,6 @@ public class DeliverableBasic {
         byte[] pdfFile = deliverable.downloadPDF(deliverableId);
         Files.write(Paths.get("report.pdf"), pdfFile);
         System.out.println("Downloaded PDF: " + pdfFile.length + " bytes");
-
-        // --- List deliverable items ---
-        DeliverableItemListResponse items = deliverable.listDeliverableItems();
-        System.out.println("Total items: " + items.getTotalRecords());
-
-        // --- Get a single deliverable item by ID ---
-        if (!items.getResults().isEmpty()) {
-            String itemId = items.getResults().get(0).getId();
-            System.out.println("Getting deliverable item: " + itemId);
-            DeliverableItemResponse item = deliverable.getDeliverableItem(itemId, true);
-            System.out.println("Item: " + item.getResults().getName() + " (" + item.getType() + ")");
-        }
 
         // --- Delete deliverable ---
         DeleteDeliverableResponse deleted = deliverable.deleteDeliverable(deliverableId);

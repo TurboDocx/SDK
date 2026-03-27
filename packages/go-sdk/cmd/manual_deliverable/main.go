@@ -29,7 +29,6 @@ const (
 
 	templateID        = "your-template-id-here"        // Replace with a valid template UUID
 	deliverableID     = "your-deliverable-id-here"     // Replace with a valid deliverable UUID
-	deliverableItemID = "your-deliverable-item-id-here" // Replace with a valid deliverable item UUID
 )
 
 var client *turbodocx.DeliverableClient
@@ -176,38 +175,6 @@ func testDownloadPDF(ctx context.Context, id string) error {
 	return nil
 }
 
-func testListDeliverableItems(ctx context.Context) error {
-	fmt.Println("\n--- Test 8: ListDeliverableItems ---")
-
-	result, err := client.ListDeliverableItems(ctx, &turbodocx.ListDeliverableItemsOptions{
-		Limit:    10,
-		ShowTags: true,
-		Column0:  "createdOn",
-		Order0:   "desc",
-	})
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Total Records: %d\n", result.TotalRecords)
-	prettyPrint(result)
-	return nil
-}
-
-func testGetDeliverableItem(ctx context.Context, id string) error {
-	fmt.Println("\n--- Test 9: GetDeliverableItem ---")
-
-	result, err := client.GetDeliverableItem(ctx, id, &turbodocx.GetDeliverableOptions{
-		ShowTags: true,
-	})
-	if err != nil {
-		return err
-	}
-
-	prettyPrint(result)
-	return nil
-}
-
 // =============================================
 // MAIN TEST RUNNER
 // =============================================
@@ -248,14 +215,6 @@ func main() {
 
 	// Test 7: Download PDF (replace deliverableID above)
 	// err = testDownloadPDF(ctx, deliverableID)
-	// if err != nil { handleError(err); return }
-
-	// Test 8: List Deliverable Items
-	// err = testListDeliverableItems(ctx)
-	// if err != nil { handleError(err); return }
-
-	// Test 9: Get Deliverable Item (replace deliverableItemID above)
-	// err = testGetDeliverableItem(ctx, deliverableItemID)
 	// if err != nil { handleError(err); return }
 
 	_ = ctx // Suppress unused variable warning

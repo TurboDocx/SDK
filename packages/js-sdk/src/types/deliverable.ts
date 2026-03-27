@@ -127,23 +127,6 @@ export interface GetDeliverableOptions {
   showTags?: boolean;
 }
 
-export interface ListDeliverableItemsOptions {
-  /** Number of results per page (1–100, default 6) */
-  limit?: number;
-  /** Number of results to skip for pagination (default 0) */
-  offset?: number;
-  /** Search query to filter by name */
-  query?: string;
-  /** Include tags in the response */
-  showTags?: boolean;
-  /** Filter by tag IDs (all must match — AND logic) */
-  selectedTags?: string | string[];
-  /** Sort column */
-  column0?: DeliverableSortColumn;
-  /** Sort direction */
-  order0?: SortOrder;
-}
-
 // ============================================
 // RESPONSE TYPES
 // ============================================
@@ -212,51 +195,3 @@ export interface DeleteDeliverableResponse {
   deliverableId: string;
 }
 
-// ============================================
-// DELIVERABLE ITEM TYPES
-// ============================================
-
-export interface DeliverableItem {
-  /** Item identifier (UUID) */
-  id: string;
-  /** Item name */
-  name: string;
-  /** Item description */
-  description?: string;
-  /** Item type: "deliverable" */
-  type: string;
-  /** ISO 8601 creation timestamp */
-  createdOn: string;
-  /** ISO 8601 last update timestamp */
-  updatedOn: string;
-  /** Active status */
-  isActive: boolean;
-  /** Creator user ID */
-  createdBy: string;
-  /** Creator email */
-  email?: string;
-  /** File size (deliverables only) */
-  fileSize?: number;
-  /** MIME type (deliverables only) */
-  fileType?: string;
-  /** Number of deliverables */
-  deliverableCount?: number;
-  /** Source template exists (deliverables only) */
-  templateNotDeleted?: boolean;
-  /** Tags (only when showTags=true) */
-  tags?: Tag[];
-}
-
-export interface DeliverableItemListResponse {
-  /** Array of deliverable item objects */
-  results: DeliverableItem[];
-  /** Total matching items */
-  totalRecords: number;
-}
-
-export interface DeliverableItemResponse {
-  /** The deliverable item object */
-  results: DeliverableItem;
-  /** Item type */
-  type: string;
-}

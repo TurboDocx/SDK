@@ -96,27 +96,5 @@ func main() {
 	}
 	fmt.Println(updated.Message)
 
-	// 7. Browse deliverable items
-	fmt.Println("\nBrowsing deliverable items...")
-	items, err := client.ListDeliverableItems(ctx, &turbodocx.ListDeliverableItemsOptions{
-		Limit:    10,
-		ShowTags: true,
-	})
-	if err != nil {
-		log.Fatalf("Failed to list items: %v", err)
-	}
-	fmt.Printf("Found %d items\n", items.TotalRecords)
-
-	// 8. Get a single deliverable item by ID
-	if len(items.Results) > 0 {
-		itemID := items.Results[0].ID
-		fmt.Printf("\nGetting deliverable item: %s\n", itemID)
-		item, err := client.GetDeliverableItem(ctx, itemID, &turbodocx.GetDeliverableOptions{ShowTags: true})
-		if err != nil {
-			log.Fatalf("Failed to get item: %v", err)
-		}
-		fmt.Printf("Item: %s (%s)\n", item.Results.Name, item.Type)
-	}
-
 	fmt.Println("\nDone!")
 }

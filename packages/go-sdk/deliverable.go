@@ -101,17 +101,6 @@ type ListDeliverablesOptions struct {
 	ShowTags bool
 }
 
-// ListDeliverableItemsOptions holds query parameters for listing deliverable items
-type ListDeliverableItemsOptions struct {
-	Limit        int
-	Offset       int
-	Query        string
-	ShowTags     bool
-	SelectedTags []string
-	Column0      string
-	Order0       string
-}
-
 // GetDeliverableOptions holds query parameters for getting a single deliverable
 type GetDeliverableOptions struct {
 	ShowTags bool
@@ -187,36 +176,6 @@ type UpdateDeliverableResponse struct {
 type DeleteDeliverableResponse struct {
 	Message       string `json:"message"`
 	DeliverableID string `json:"deliverableId"`
-}
-
-// DeliverableItem represents an item in the deliverable library
-type DeliverableItem struct {
-	ID                 string    `json:"id"`
-	Name               string    `json:"name"`
-	Description        string    `json:"description"`
-	Type               string    `json:"type"`
-	CreatedOn          string    `json:"createdOn"`
-	UpdatedOn          string    `json:"updatedOn"`
-	IsActive           FlexBool  `json:"isActive"`
-	CreatedBy          string    `json:"createdBy"`
-	Email              string    `json:"email"`
-	FileSize           int64     `json:"fileSize"`
-	FileType           string    `json:"fileType"`
-	DeliverableCount   int       `json:"deliverableCount"`
-	TemplateNotDeleted *FlexBool `json:"templateNotDeleted"`
-	Tags               []Tag     `json:"tags"`
-}
-
-// DeliverableItemListResponse is the response from ListDeliverableItems
-type DeliverableItemListResponse struct {
-	Results      []DeliverableItem `json:"results"`
-	TotalRecords int               `json:"totalRecords"`
-}
-
-// DeliverableItemResponse is the response from GetDeliverableItem
-type DeliverableItemResponse struct {
-	Results DeliverableItem `json:"results"`
-	Type    string          `json:"type"`
 }
 
 // ============================================
@@ -328,34 +287,3 @@ func (c *DeliverableClient) DownloadPDF(ctx context.Context, deliverableID strin
 	return c.http.GetRaw(ctx, "/v1/deliverable/file/pdf/"+deliverableID)
 }
 
-// ============================================
-// Deliverable Items
-// ============================================
-
-// ListDeliverableItems lists all deliverable items with filtering and pagination
-func (c *DeliverableClient) ListDeliverableItems(ctx context.Context, opts *ListDeliverableItemsOptions) (*DeliverableItemListResponse, error) {
-	path := "/v1/deliverable-item"
-	if opts != nil {
-		path += buildListParams(opts.Limit, opts.Offset, opts.Query, opts.ShowTags, opts.SelectedTags, opts.Column0, opts.Order0)
-	}
-
-	var response DeliverableItemListResponse
-	if err := c.http.Get(ctx, path, &response); err != nil {
-		return nil, err
-	}
-	return &response, nil
-}
-
-// GetDeliverableItem gets a single deliverable item by ID
-func (c *DeliverableClient) GetDeliverableItem(ctx context.Context, id string, opts *GetDeliverableOptions) (*DeliverableItemResponse, error) {
-	path := "/v1/deliverable-item/" + id
-	if opts != nil && opts.ShowTags {
-		path += "?showTags=true"
-	}
-
-	var response DeliverableItemResponse
-	if err := c.http.Get(ctx, path, &response); err != nil {
-		return nil, err
-	}
-	return &response, nil
-}

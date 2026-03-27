@@ -10,8 +10,6 @@
  * - deleteDeliverable
  * - downloadSourceFile
  * - downloadPDF
- * - listDeliverableItems
- * - getDeliverableItem
  */
 
 import { HttpClient } from '../http';
@@ -26,9 +24,6 @@ import {
   GetDeliverableOptions,
   DeliverableListResponse,
   DeliverableRecord,
-  ListDeliverableItemsOptions,
-  DeliverableItemListResponse,
-  DeliverableItemResponse,
 } from '../types/deliverable';
 
 export class Deliverable {
@@ -252,66 +247,4 @@ export class Deliverable {
     return client.getRaw(`/v1/deliverable/file/pdf/${deliverableId}`);
   }
 
-  // ============================================
-  // DELIVERABLE ITEMS
-  // ============================================
-
-  /**
-   * List all deliverable items in your library with filtering and pagination
-   *
-   * @param options - Query options for filtering, sorting, and pagination
-   * @returns Paginated list of deliverable items with total count
-   *
-   * @example
-   * ```typescript
-   * const { results, totalRecords } = await Deliverable.listDeliverableItems({
-   *   limit: 20,
-   *   showTags: true,
-   *   column0: 'createdOn',
-   *   order0: 'desc',
-   * });
-   * ```
-   */
-  static async listDeliverableItems(options?: ListDeliverableItemsOptions): Promise<DeliverableItemListResponse> {
-    const client = this.getClient();
-    const params: Record<string, any> = {};
-
-    if (options) {
-      if (options.limit !== undefined) params.limit = options.limit;
-      if (options.offset !== undefined) params.offset = options.offset;
-      if (options.query !== undefined) params.query = options.query;
-      if (options.showTags !== undefined) params.showTags = options.showTags;
-      if (options.selectedTags !== undefined) {
-        params.selectedTags = Array.isArray(options.selectedTags)
-          ? options.selectedTags
-          : options.selectedTags;
-      }
-      if (options.column0 !== undefined) params.column0 = options.column0;
-      if (options.order0 !== undefined) params.order0 = options.order0;
-    }
-
-    return client.get<DeliverableItemListResponse>('/v1/deliverable-item', params);
-  }
-
-  /**
-   * Get a single deliverable item by ID
-   *
-   * @param id - Deliverable item UUID
-   * @param options - Optional query parameters
-   * @returns The deliverable item with its type
-   *
-   * @example
-   * ```typescript
-   * const item = await Deliverable.getDeliverableItem('item-uuid', { showTags: true });
-   * console.log(item.type); // "deliverable"
-   * console.log(item.results.name);
-   * ```
-   */
-  static async getDeliverableItem(id: string, options?: GetDeliverableOptions): Promise<DeliverableItemResponse> {
-    const client = this.getClient();
-    const params: Record<string, any> = {};
-    if (options?.showTags !== undefined) params.showTags = options.showTags;
-
-    return client.get<DeliverableItemResponse>(`/v1/deliverable-item/${id}`, params);
-  }
 }

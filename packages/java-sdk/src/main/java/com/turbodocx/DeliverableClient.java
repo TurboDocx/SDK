@@ -105,46 +105,4 @@ public class DeliverableClient {
         return httpClient.getRaw("/v1/deliverable/file/pdf/" + deliverableId);
     }
 
-    // ============================================
-    // DELIVERABLE ITEMS
-    // ============================================
-
-    /**
-     * List all deliverable items with filtering and pagination
-     */
-    public DeliverableItemListResponse listDeliverableItems(ListDeliverableItemsRequest request) throws IOException {
-        String path = "/v1/deliverable-item";
-        if (request != null) {
-            String query = request.toQueryString();
-            if (!query.isEmpty()) {
-                path += "?" + query;
-            }
-        }
-        return httpClient.get(path, DeliverableItemListResponse.class);
-    }
-
-    /**
-     * List all deliverable items with default options
-     */
-    public DeliverableItemListResponse listDeliverableItems() throws IOException {
-        return listDeliverableItems(null);
-    }
-
-    /**
-     * Get a single deliverable item by ID
-     */
-    public DeliverableItemResponse getDeliverableItem(String id, boolean showTags) throws IOException {
-        String path = "/v1/deliverable-item/" + id;
-        if (showTags) {
-            path += "?showTags=true";
-        }
-        return httpClient.get(path, DeliverableItemResponse.class);
-    }
-
-    /**
-     * Get a single deliverable item by ID
-     */
-    public DeliverableItemResponse getDeliverableItem(String id) throws IOException {
-        return getDeliverableItem(id, false);
-    }
 }
