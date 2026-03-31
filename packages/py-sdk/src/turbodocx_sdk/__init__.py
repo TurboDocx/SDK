@@ -11,6 +11,7 @@ from typing import Optional
 
 from .modules.sign import TurboSign
 from .modules.partner import TurboPartner
+from .modules.deliverable import Deliverable
 from .modules.partner import (
     SCOPE_ORG_CREATE,
     SCOPE_ORG_READ,
@@ -81,6 +82,7 @@ __all__ = [
     "TurboDocxClient",
     "TurboSign",
     "TurboPartner",
+    "Deliverable",
     "HttpClient",
     "PartnerHttpClient",
     "TurboDocxError",

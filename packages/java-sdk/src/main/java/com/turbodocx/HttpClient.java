@@ -1,7 +1,12 @@
 package com.turbodocx;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import com.google.gson.TypeAdapter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
+import com.google.gson.stream.JsonWriter;
 import okhttp3.*;
 
 import java.io.IOException;
@@ -99,7 +104,10 @@ public class HttpClient {
         this.orgId = orgId;
         this.senderEmail = senderEmail;
         this.senderName = senderName;
-        this.gson = new Gson();
+        this.gson = new GsonBuilder()
+                .registerTypeAdapter(int.class, new FlexIntAdapter())
+                .registerTypeAdapter(Integer.class, new FlexIntAdapter())
+                .create();
     }
 
     /**
@@ -148,6 +156,28 @@ public class HttpClient {
                 .url(baseUrl + path)
                 .headers(buildHeaders())
                 .post(requestBody)
+                .build();
+
+        return execute(request, responseClass);
+    }
+
+    public <T> T patch(String path, Object body, Class<T> responseClass) throws IOException {
+        RequestBody requestBody = RequestBody.create(gson.toJson(body), JSON);
+
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .headers(buildHeaders())
+                .patch(requestBody)
+                .build();
+
+        return execute(request, responseClass);
+    }
+
+    public <T> T delete(String path, Class<T> responseClass) throws IOException {
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .headers(buildHeaders())
+                .delete()
                 .build();
 
         return execute(request, responseClass);
@@ -254,6 +284,38 @@ public class HttpClient {
                 throw new TurboDocxException.RateLimitException(message, code);
             default:
                 throw new TurboDocxException(message, response.code(), code);
+        }
+    }
+
+    /**
+     * Gson TypeAdapter that handles both numeric (0/1) and boolean (true/false)
+     * values for int fields. MySQL returns tinyint(1) as 0/1 but some contexts
+     * may send true/false booleans.
+     */
+    private static class FlexIntAdapter extends TypeAdapter<Integer> {
+        @Override
+        public void write(JsonWriter out, Integer value) throws IOException {
+            if (value == null) {
+                out.nullValue();
+            } else {
+                out.value(value);
+            }
+        }
+
+        @Override
+        public Integer read(JsonReader in) throws IOException {
+            JsonToken token = in.peek();
+            switch (token) {
+                case NUMBER:
+                    return in.nextInt();
+                case BOOLEAN:
+                    return in.nextBoolean() ? 1 : 0;
+                case NULL:
+                    in.nextNull();
+                    return 0;
+                default:
+                    throw new IOException("Expected NUMBER or BOOLEAN but was " + token);
+            }
         }
     }
 
