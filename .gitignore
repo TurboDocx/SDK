@@ -90,3 +90,4 @@ Gemfile.lock
 convert-template.js
 generate-all-pdfs.js
 test-php-sdk/
+packages/cli/cli
