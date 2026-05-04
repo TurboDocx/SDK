@@ -156,7 +156,6 @@ export interface CreateAndSendResponse {
 export interface QuoteListStats {
   total: number;
   draft: number;
-  pendingApproval: number;
   sent: number;
   accepted: number;
   declined: number;

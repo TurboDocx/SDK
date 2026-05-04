@@ -83,16 +83,7 @@ import type {
   ListTypesOptions,
   QuoteTypeListResponse,
 } from '../types/quote-type';
-import type {
-  Workflow,
-  CreateWorkflowRequest,
-  UpdateWorkflowRequest,
-  WorkflowListResponse,
-  ApproveQuoteRequest,
-  ApprovalResponse,
-  ApprovalActivityResponse,
-  ApprovalRequestListResponse,
-} from '../types/quote-workflow';
+
 
 function toQueryParams(request?: Record<string, any>): Record<string, string | string[]> | undefined {
   if (!request) return undefined;
@@ -525,60 +516,6 @@ export class TurboQuote {
   static async deleteType(id: string): Promise<SuccessResponse> {
     const client = this.getClient();
     return client.delete<SuccessResponse>(`/v1/types/${id}`);
-  }
-
-  // ============================================
-  // APPROVALS & WORKFLOWS
-  // ============================================
-
-  static async approveQuote(id: string, request: ApproveQuoteRequest): Promise<ApprovalResponse> {
-    const client = this.getClient();
-    return this.unwrap(await client.post<{ result: ApprovalResponse }>(`/v1/quotes/${id}/approve`, request));
-  }
-
-  static async listApprovalRequests(): Promise<ApprovalRequestListResponse> {
-    const client = this.getClient();
-    return client.get<ApprovalRequestListResponse>('/v1/quotes/approval-requests');
-  }
-
-  static async getApprovalActivity(id: string): Promise<ApprovalActivityResponse> {
-    const client = this.getClient();
-    return client.get<ApprovalActivityResponse>(`/v1/quotes/${id}/approval-activity`);
-  }
-
-  static async listWorkflows(): Promise<WorkflowListResponse> {
-    const client = this.getClient();
-    return client.get<WorkflowListResponse>('/v1/quotes/workflows');
-  }
-
-  static async createWorkflow(request: CreateWorkflowRequest): Promise<Workflow> {
-    const client = this.getClient();
-    return this.unwrap(await client.post<{ result: Workflow }>('/v1/quotes/workflows', request));
-  }
-
-  static async getWorkflow(id: string): Promise<Workflow> {
-    const client = this.getClient();
-    return client.get<Workflow>(`/v1/quotes/workflows/${id}`);
-  }
-
-  static async updateWorkflow(id: string, request: UpdateWorkflowRequest): Promise<Workflow> {
-    const client = this.getClient();
-    return this.unwrap(await client.patch<{ result: Workflow }>(`/v1/quotes/workflows/${id}`, request));
-  }
-
-  static async deleteWorkflow(id: string): Promise<SuccessResponse> {
-    const client = this.getClient();
-    return client.delete<SuccessResponse>(`/v1/quotes/workflows/${id}`);
-  }
-
-  static async activateWorkflow(id: string): Promise<Workflow> {
-    const client = this.getClient();
-    return this.unwrap(await client.post<{ result: Workflow }>(`/v1/quotes/workflows/${id}/activate`));
-  }
-
-  static async deactivateWorkflow(id: string): Promise<Workflow> {
-    const client = this.getClient();
-    return this.unwrap(await client.post<{ result: Workflow }>(`/v1/quotes/workflows/${id}/deactivate`));
   }
 
   // ============================================
