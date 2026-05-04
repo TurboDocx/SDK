@@ -262,7 +262,7 @@ async function advancedExample(): Promise<void> {
       console.log(`  Approved: ${approvalResult.message}`);
     }
 
-    const declined = await TurboQuote.declineQuote(quote1.id, 'Budget not approved');
+    const declined = await TurboQuote.declineQuote(quote1.id, { reason: 'Budget not approved' });
     console.log(`  Declined: ${declined.status}`);
 
     // --- Void flow ---
@@ -274,7 +274,7 @@ async function advancedExample(): Promise<void> {
     });
 
     await TurboQuote.sendQuote(quote2.id);
-    const voided = await TurboQuote.voidQuote(quote2.id, 'Replaced by updated pricing');
+    const voided = await TurboQuote.voidQuote(quote2.id, { reason: 'Replaced by updated pricing' });
     console.log(`  Voided: ${voided.status}`);
 
     // Handle expired quote (may fail if quote isn't in expired state)

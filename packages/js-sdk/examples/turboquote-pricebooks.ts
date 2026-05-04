@@ -161,8 +161,9 @@ async function priceBookExample(): Promise<void> {
     });
     console.log(`  Quote: ${quote.quoteNumber}`);
 
-    const quotePB = await TurboQuote.applyPriceBook(quote.id, priceBook.id);
-    console.log(`  Applied price book: ${quotePB.priceBookId}\n`);
+    const applyResult = await TurboQuote.applyPriceBook(quote.id, priceBook.id);
+    console.log(`  Applied price book: ${applyResult.quote.priceBookId}`);
+    console.log(`  Updated: ${applyResult.updatedCount}, Skipped: ${applyResult.skippedCount}\n`);
 
     // =============================================
     // 9. SEND QUOTE WITH DELIVERABLE (optional)
@@ -177,8 +178,8 @@ async function priceBookExample(): Promise<void> {
         mergePosition: 'beginning',
       });
       console.log(`  ✅ ${sendResult.message}`);
-      if (sendResult.signatureDocumentId) {
-        console.log(`  Signature Doc: ${sendResult.signatureDocumentId}`);
+      if (sendResult.documentId) {
+        console.log(`  Document ID: ${sendResult.documentId}`);
       }
       console.log();
     } else {

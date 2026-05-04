@@ -129,9 +129,21 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should create a quote with required fields", async () => {
+    it("should pass array statuses as string array (not comma-joined)", async () => {
+      const mockResponse = { results: [], totalRecords: 0 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      await TurboQuote.listQuotes({ statuses: ["draft", "sent"] });
+
+      expect(mockClient.get).toHaveBeenCalledWith(
+        "/v1/quotes",
+        expect.objectContaining({ statuses: ["draft", "sent"] })
+      );
+    });
+
+    it("should create a quote and unwrap result", async () => {
       const mockQuote = { id: "q-1", name: "My Quote", status: "draft", quoteNumber: "Q-2026-00001" };
-      mockClient.post.mockResolvedValue(mockQuote);
+      mockClient.post.mockResolvedValue({ result: mockQuote, message: "Quote created successfully" });
 
       const result = await TurboQuote.createQuote({ name: "My Quote", companyId: "c-1", contactId: "ct-1" });
 
@@ -145,7 +157,7 @@ describe("TurboQuote Module", () => {
 
     it("should create a quote with all optional fields", async () => {
       const mockQuote = { id: "q-2", name: "Full Quote", status: "draft" };
-      mockClient.post.mockResolvedValue(mockQuote);
+      mockClient.post.mockResolvedValue({ result: mockQuote, message: "Quote created successfully" });
 
       await TurboQuote.createQuote({
         name: "Full Quote",
@@ -170,9 +182,9 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should get a quote by ID", async () => {
+    it("should get a quote by ID and unwrap result", async () => {
       const mockQuote = { id: "q-1", name: "Test Quote", status: "sent", lineItems: [] };
-      mockClient.get.mockResolvedValue(mockQuote);
+      mockClient.get.mockResolvedValue({ result: mockQuote, statusInfo: { isExpired: false } });
 
       const result = await TurboQuote.getQuote("q-1");
 
@@ -180,9 +192,9 @@ describe("TurboQuote Module", () => {
       expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/q-1");
     });
 
-    it("should update a quote", async () => {
+    it("should update a quote and unwrap result", async () => {
       const mockQuote = { id: "q-1", name: "Updated Name", taxRate: 10 };
-      mockClient.patch.mockResolvedValue(mockQuote);
+      mockClient.patch.mockResolvedValue({ result: mockQuote, message: "Quote updated successfully" });
 
       const result = await TurboQuote.updateQuote("q-1", { name: "Updated Name", taxRate: 10 });
 
@@ -194,18 +206,18 @@ describe("TurboQuote Module", () => {
     });
 
     it("should delete a quote", async () => {
-      const mockResponse = { success: true, message: "Quote deleted" };
+      const mockResponse = { message: "Quote deleted successfully" };
       mockClient.delete.mockResolvedValue(mockResponse);
 
       const result = await TurboQuote.deleteQuote("q-1");
 
-      expect(result.success).toBe(true);
+      expect(result.message).toBe("Quote deleted successfully");
       expect(mockClient.delete).toHaveBeenCalledWith("/v1/quotes/q-1");
     });
 
-    it("should duplicate a quote", async () => {
+    it("should duplicate a quote and unwrap result", async () => {
       const mockQuote = { id: "q-2", name: "Test Quote (Copy)", status: "draft", quoteNumber: "Q-2026-00002" };
-      mockClient.post.mockResolvedValue(mockQuote);
+      mockClient.post.mockResolvedValue({ result: mockQuote, message: "Quote duplicated successfully" });
 
       const result = await TurboQuote.duplicateQuote("q-1");
 
@@ -214,22 +226,25 @@ describe("TurboQuote Module", () => {
       expect(mockClient.post).toHaveBeenCalledWith("/v1/quotes/q-1/duplicate");
     });
 
-    it("should apply a price book to a quote", async () => {
+    it("should apply a price book and return full response with counts", async () => {
       const mockQuote = { id: "q-1", priceBookId: "pb-1" };
-      mockClient.post.mockResolvedValue(mockQuote);
+      mockClient.post.mockResolvedValue({ result: mockQuote, updatedCount: 3, skippedCount: 1, message: "Pricebook applied: 3 product(s) updated, 1 skipped" });
 
       const result = await TurboQuote.applyPriceBook("q-1", "pb-1");
 
-      expect(result.priceBookId).toBe("pb-1");
+      expect(result.quote.priceBookId).toBe("pb-1");
+      expect(result.updatedCount).toBe(3);
+      expect(result.skippedCount).toBe(1);
+      expect(result.message).toBe("Pricebook applied: 3 product(s) updated, 1 skipped");
       expect(mockClient.post).toHaveBeenCalledWith(
         "/v1/quotes/q-1/apply-pricebook",
         { priceBookId: "pb-1" }
       );
     });
 
-    it("should remove a price book from a quote", async () => {
+    it("should remove a price book and unwrap result", async () => {
       const mockQuote = { id: "q-1", priceBookId: null };
-      mockClient.post.mockResolvedValue(mockQuote);
+      mockClient.post.mockResolvedValue({ result: mockQuote, message: "Pricebook removed from quote" });
 
       const result = await TurboQuote.removePriceBook("q-1");
 
@@ -257,15 +272,16 @@ describe("TurboQuote Module", () => {
       TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
     });
 
-    it("should send a quote", async () => {
-      const mockResponse = { result: { id: "q-1", status: "sent" }, message: "Quote sent", signatureDocumentId: "sig-1" };
+    it("should send a quote and remap result to quote", async () => {
+      const mockResponse = { result: { id: "q-1", status: "sent" }, message: "Quote sent" };
       mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await TurboQuote.sendQuote("q-1", {
         ccEmails: ["admin@example.com"],
       });
 
-      expect(result.signatureDocumentId).toBe("sig-1");
+      expect(result.quote.status).toBe("sent");
+      expect(result.message).toBe("Quote sent");
       expect(mockClient.post).toHaveBeenCalledWith(
         "/v1/quotes/q-1/send",
         { ccEmails: ["admin@example.com"] }
@@ -276,13 +292,14 @@ describe("TurboQuote Module", () => {
       const mockResponse = { result: { id: "q-1", status: "sent" }, message: "Quote sent" };
       mockClient.post.mockResolvedValue(mockResponse);
 
-      await TurboQuote.sendQuote("q-1");
+      const result = await TurboQuote.sendQuote("q-1");
 
+      expect(result.quote.id).toBe("q-1");
       expect(mockClient.post).toHaveBeenCalledWith("/v1/quotes/q-1/send", undefined);
     });
 
-    it("should send a quote with a deliverable", async () => {
-      const mockResponse = { result: { id: "q-1", status: "sent" }, message: "Quote sent with deliverable", signatureDocumentId: "sig-2" };
+    it("should send a quote with a deliverable and return documentId", async () => {
+      const mockResponse = { result: { id: "q-1", status: "sent" }, message: "Quote sent with deliverable", documentId: "doc-2" };
       mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await TurboQuote.sendQuoteWithDeliverable("q-1", {
@@ -290,18 +307,20 @@ describe("TurboQuote Module", () => {
         mergePosition: "end",
       });
 
-      expect(result.signatureDocumentId).toBe("sig-2");
+      expect(result.quote.status).toBe("sent");
+      expect(result.documentId).toBe("doc-2");
+      expect(result.message).toBe("Quote sent with deliverable");
       expect(mockClient.post).toHaveBeenCalledWith(
         "/v1/quotes/q-1/send-with-deliverable",
         { deliverableId: "del-1", mergePosition: "end" }
       );
     });
 
-    it("should decline a quote with reason as direct parameter", async () => {
+    it("should decline a quote with object param and unwrap result", async () => {
       const mockQuote = { id: "q-1", status: "declined" };
-      mockClient.post.mockResolvedValue(mockQuote);
+      mockClient.post.mockResolvedValue({ result: mockQuote, message: "Quote declined" });
 
-      const result = await TurboQuote.declineQuote("q-1", "Budget not approved");
+      const result = await TurboQuote.declineQuote("q-1", { reason: "Budget not approved" });
 
       expect(result.status).toBe("declined");
       expect(mockClient.post).toHaveBeenCalledWith(
@@ -310,11 +329,11 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should void a quote with reason as direct parameter", async () => {
+    it("should void a quote with object param and unwrap result", async () => {
       const mockQuote = { id: "q-1", status: "voided" };
-      mockClient.post.mockResolvedValue(mockQuote);
+      mockClient.post.mockResolvedValue({ result: mockQuote, message: "Quote voided successfully" });
 
-      const result = await TurboQuote.voidQuote("q-1", "Replaced by new quote");
+      const result = await TurboQuote.voidQuote("q-1", { reason: "Replaced by new quote" });
 
       expect(result.status).toBe("voided");
       expect(mockClient.post).toHaveBeenCalledWith(
@@ -323,9 +342,9 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should handle an expired sent quote", async () => {
+    it("should handle an expired sent quote and unwrap result", async () => {
       const mockQuote = { id: "q-2", status: "draft", quoteNumber: "Q-2026-00003" };
-      mockClient.post.mockResolvedValue(mockQuote);
+      mockClient.post.mockResolvedValue({ result: mockQuote, message: "Expired quote processed" });
 
       const result = await TurboQuote.handleExpiredQuote("q-1", {
         action: "void",
@@ -360,9 +379,9 @@ describe("TurboQuote Module", () => {
       expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/q-1/items", undefined);
     });
 
-    it("should add a single product line item (auto-wraps to array)", async () => {
+    it("should add a single product line item and unwrap results", async () => {
       const mockItems = [{ id: "li-1", productId: "prod-1", quantity: 2 }];
-      mockClient.post.mockResolvedValue(mockItems);
+      mockClient.post.mockResolvedValue({ results: mockItems, message: "1 line item(s) added successfully" });
 
       const item = { productId: "prod-1" as string | null, productName: "Widget", unitPrice: 50, billingFrequency: "monthly" as const, quantity: 2 };
       const result = await TurboQuote.addLineItems("q-1", item);
@@ -376,7 +395,7 @@ describe("TurboQuote Module", () => {
 
     it("should add multiple product line items as batch", async () => {
       const mockItems = [{ id: "li-1" }, { id: "li-2" }];
-      mockClient.post.mockResolvedValue(mockItems);
+      mockClient.post.mockResolvedValue({ results: mockItems, message: "2 line item(s) added successfully" });
 
       const items = [
         { productId: "prod-1" as string | null, productName: "Widget A", unitPrice: 50, billingFrequency: "monthly" as const, quantity: 5 },
@@ -391,9 +410,9 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should add a single bundle line item", async () => {
+    it("should add a single bundle line item and unwrap results", async () => {
       const mockItems = [{ id: "li-3", bundleId: "bun-1", lineItemType: "bundle" }];
-      mockClient.post.mockResolvedValue(mockItems);
+      mockClient.post.mockResolvedValue({ results: mockItems, message: "1 bundle(s) added successfully" });
 
       const result = await TurboQuote.addBundleLineItems("q-1", { bundleId: "bun-1", bundleName: "Starter Pack" });
 
@@ -404,9 +423,9 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should update a line item", async () => {
+    it("should update a line item and unwrap result", async () => {
       const mockItem = { id: "li-1", quantity: 10, unitPrice: 50 };
-      mockClient.patch.mockResolvedValue(mockItem);
+      mockClient.patch.mockResolvedValue({ result: mockItem, message: "Line item updated successfully" });
 
       const result = await TurboQuote.updateLineItem("q-1", "li-1", { quantity: 10, unitPrice: 50 });
 
@@ -418,12 +437,12 @@ describe("TurboQuote Module", () => {
     });
 
     it("should remove a line item", async () => {
-      const mockResponse = { success: true };
+      const mockResponse = { message: "Line item removed successfully" };
       mockClient.delete.mockResolvedValue(mockResponse);
 
       const result = await TurboQuote.removeLineItem("q-1", "li-1");
 
-      expect(result.success).toBe(true);
+      expect(result.message).toBe("Line item removed successfully");
       expect(mockClient.delete).toHaveBeenCalledWith("/v1/quotes/q-1/items/li-1");
     });
   });
@@ -450,9 +469,9 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should create a product without images (JSON POST)", async () => {
+    it("should create a product without images and unwrap result", async () => {
       const mockProduct = { id: "p-1", name: "Widget Pro", listPrice: 99.99 };
-      mockClient.post.mockResolvedValue(mockProduct);
+      mockClient.post.mockResolvedValue({ result: mockProduct, message: "Product created successfully" });
 
       const result = await TurboQuote.createProduct({
         name: "Widget Pro",
@@ -468,9 +487,9 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should get a product by ID", async () => {
+    it("should get a product by ID and unwrap result", async () => {
       const mockProduct = { id: "p-1", name: "Widget", images: [] };
-      mockClient.get.mockResolvedValue(mockProduct);
+      mockClient.get.mockResolvedValue({ result: mockProduct });
 
       const result = await TurboQuote.getProduct("p-1");
 
@@ -478,9 +497,9 @@ describe("TurboQuote Module", () => {
       expect(mockClient.get).toHaveBeenCalledWith("/v1/products/p-1");
     });
 
-    it("should update a product without images (JSON PATCH)", async () => {
+    it("should update a product without images and unwrap result", async () => {
       const mockProduct = { id: "p-1", name: "Updated Widget", listPrice: 149.99 };
-      mockClient.patch.mockResolvedValue(mockProduct);
+      mockClient.patch.mockResolvedValue({ result: mockProduct, message: "Product updated successfully" });
 
       const result = await TurboQuote.updateProduct("p-1", { name: "Updated Widget", listPrice: 149.99 });
 
@@ -492,18 +511,18 @@ describe("TurboQuote Module", () => {
     });
 
     it("should delete a product", async () => {
-      const mockResponse = { success: true };
+      const mockResponse = { message: "Product deleted successfully" };
       mockClient.delete.mockResolvedValue(mockResponse);
 
       const result = await TurboQuote.deleteProduct("p-1");
 
-      expect(result.success).toBe(true);
+      expect(result.message).toBe("Product deleted successfully");
       expect(mockClient.delete).toHaveBeenCalledWith("/v1/products/p-1");
     });
 
-    it("should duplicate a product", async () => {
+    it("should duplicate a product and unwrap result", async () => {
       const mockProduct = { id: "p-2", name: "Widget Pro (Copy)" };
-      mockClient.post.mockResolvedValue(mockProduct);
+      mockClient.post.mockResolvedValue({ result: mockProduct, message: "Product duplicated successfully" });
 
       const result = await TurboQuote.duplicateProduct("p-1");
 
@@ -511,13 +530,14 @@ describe("TurboQuote Module", () => {
       expect(mockClient.post).toHaveBeenCalledWith("/v1/products/p-1/duplicate");
     });
 
-    it("should get primary images for multiple products", async () => {
-      const mockResponse = { "p-1": "https://img.com/1.jpg", "p-2": null };
-      mockClient.post.mockResolvedValue(mockResponse);
+    it("should get primary images and unwrap results", async () => {
+      const mockImageMap = { "p-1": { id: "img-1", productId: "p-1" }, "p-2": null };
+      mockClient.post.mockResolvedValue({ results: mockImageMap });
 
       const result = await TurboQuote.getProductPrimaryImages(["p-1", "p-2"]);
 
-      expect(result["p-1"]).toBe("https://img.com/1.jpg");
+      expect(result["p-1"]).toEqual({ id: "img-1", productId: "p-1" });
+      expect(result["p-2"]).toBeNull();
       expect(mockClient.post).toHaveBeenCalledWith(
         "/v1/products/primary-images",
         { productIds: ["p-1", "p-2"] }
@@ -544,9 +564,9 @@ describe("TurboQuote Module", () => {
       expect(mockClient.get).toHaveBeenCalledWith("/v1/pricebooks", undefined);
     });
 
-    it("should create a price book", async () => {
+    it("should create a price book and unwrap result", async () => {
       const mockPriceBook = { id: "pb-1", name: "Partner Pricing", discountPercent: 15 };
-      mockClient.post.mockResolvedValue(mockPriceBook);
+      mockClient.post.mockResolvedValue({ result: mockPriceBook, message: "PriceBook created successfully" });
 
       const result = await TurboQuote.createPriceBook({
         name: "Partner Pricing",
@@ -562,9 +582,9 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should get a price book by ID", async () => {
+    it("should get a price book by ID and unwrap result", async () => {
       const mockPriceBook = { id: "pb-1", name: "Standard" };
-      mockClient.get.mockResolvedValue(mockPriceBook);
+      mockClient.get.mockResolvedValue({ result: mockPriceBook });
 
       const result = await TurboQuote.getPriceBook("pb-1");
 
@@ -572,9 +592,9 @@ describe("TurboQuote Module", () => {
       expect(mockClient.get).toHaveBeenCalledWith("/v1/pricebooks/pb-1");
     });
 
-    it("should update a price book", async () => {
+    it("should update a price book and unwrap result", async () => {
       const mockPriceBook = { id: "pb-1", name: "Updated", discountPercent: 20 };
-      mockClient.patch.mockResolvedValue(mockPriceBook);
+      mockClient.patch.mockResolvedValue({ result: mockPriceBook, message: "PriceBook updated successfully" });
 
       const result = await TurboQuote.updatePriceBook("pb-1", { discountPercent: 20 });
 
@@ -582,15 +602,15 @@ describe("TurboQuote Module", () => {
     });
 
     it("should delete a price book", async () => {
-      mockClient.delete.mockResolvedValue({ success: true });
+      mockClient.delete.mockResolvedValue({ message: "PriceBook deleted successfully" });
 
       const result = await TurboQuote.deletePriceBook("pb-1");
 
-      expect(result.success).toBe(true);
+      expect(result.message).toBe("PriceBook deleted successfully");
     });
 
-    it("should duplicate a price book", async () => {
-      mockClient.post.mockResolvedValue({ id: "pb-2", name: "Standard (Copy)" });
+    it("should duplicate a price book and unwrap result", async () => {
+      mockClient.post.mockResolvedValue({ result: { id: "pb-2", name: "Standard (Copy)" }, message: "Pricebook duplicated successfully" });
 
       const result = await TurboQuote.duplicatePriceBook("pb-1");
 
@@ -627,9 +647,9 @@ describe("TurboQuote Module", () => {
       expect(result.results).toHaveLength(1);
     });
 
-    it("should create a bundle with items", async () => {
+    it("should create a bundle and unwrap result", async () => {
       const mockBundle = { id: "b-1", name: "Starter Pack", items: [] };
-      mockClient.post.mockResolvedValue(mockBundle);
+      mockClient.post.mockResolvedValue({ result: mockBundle, message: "Bundle created successfully" });
 
       const result = await TurboQuote.createBundle({
         name: "Starter Pack",
@@ -644,8 +664,8 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should get a bundle by ID", async () => {
-      mockClient.get.mockResolvedValue({ id: "b-1", items: [] });
+    it("should get a bundle by ID and unwrap result", async () => {
+      mockClient.get.mockResolvedValue({ result: { id: "b-1", items: [] } });
 
       const result = await TurboQuote.getBundle("b-1");
 
@@ -653,8 +673,8 @@ describe("TurboQuote Module", () => {
       expect(mockClient.get).toHaveBeenCalledWith("/v1/bundles/b-1");
     });
 
-    it("should update a bundle", async () => {
-      mockClient.patch.mockResolvedValue({ id: "b-1", name: "Pro Pack" });
+    it("should update a bundle and unwrap result", async () => {
+      mockClient.patch.mockResolvedValue({ result: { id: "b-1", name: "Pro Pack" }, message: "Bundle updated successfully" });
 
       const result = await TurboQuote.updateBundle("b-1", { name: "Pro Pack" });
 
@@ -662,15 +682,15 @@ describe("TurboQuote Module", () => {
     });
 
     it("should delete a bundle", async () => {
-      mockClient.delete.mockResolvedValue({ success: true });
+      mockClient.delete.mockResolvedValue({ message: "Bundle deleted successfully" });
 
       const result = await TurboQuote.deleteBundle("b-1");
 
-      expect(result.success).toBe(true);
+      expect(result.message).toBe("Bundle deleted successfully");
     });
 
-    it("should duplicate a bundle", async () => {
-      mockClient.post.mockResolvedValue({ id: "b-2" });
+    it("should duplicate a bundle and unwrap result", async () => {
+      mockClient.post.mockResolvedValue({ result: { id: "b-2" }, message: "Bundle duplicated successfully" });
 
       const result = await TurboQuote.duplicateBundle("b-1");
 
@@ -701,9 +721,9 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should create a company with contacts", async () => {
+    it("should create a company and unwrap result", async () => {
       const mockCompany = { id: "c-1", name: "Acme Corp" };
-      mockClient.post.mockResolvedValue(mockCompany);
+      mockClient.post.mockResolvedValue({ result: mockCompany, message: "Company created successfully" });
 
       const result = await TurboQuote.createCompany({
         name: "Acme Corp",
@@ -719,8 +739,8 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should get a company by ID", async () => {
-      mockClient.get.mockResolvedValue({ id: "c-1", name: "Acme" });
+    it("should get a company by ID and unwrap result", async () => {
+      mockClient.get.mockResolvedValue({ result: { id: "c-1", name: "Acme" } });
 
       const result = await TurboQuote.getCompany("c-1");
 
@@ -728,8 +748,8 @@ describe("TurboQuote Module", () => {
       expect(mockClient.get).toHaveBeenCalledWith("/v1/companies/c-1");
     });
 
-    it("should update a company", async () => {
-      mockClient.patch.mockResolvedValue({ id: "c-1", name: "Acme Inc" });
+    it("should update a company and unwrap result", async () => {
+      mockClient.patch.mockResolvedValue({ result: { id: "c-1", name: "Acme Inc" }, message: "Company updated successfully" });
 
       const result = await TurboQuote.updateCompany("c-1", { name: "Acme Inc" });
 
@@ -737,11 +757,11 @@ describe("TurboQuote Module", () => {
     });
 
     it("should delete a company", async () => {
-      mockClient.delete.mockResolvedValue({ success: true });
+      mockClient.delete.mockResolvedValue({ message: "Company deleted successfully" });
 
       const result = await TurboQuote.deleteCompany("c-1");
 
-      expect(result.success).toBe(true);
+      expect(result.message).toBe("Company deleted successfully");
     });
 
     it("should list contacts for a company", async () => {
@@ -777,9 +797,9 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should create a contact", async () => {
+    it("should create a contact and unwrap result", async () => {
       const mockContact = { id: "ct-1", name: "John Doe", email: "john@example.com" };
-      mockClient.post.mockResolvedValue(mockContact);
+      mockClient.post.mockResolvedValue({ result: mockContact, message: "Contact created successfully" });
 
       const result = await TurboQuote.createContact({
         name: "John Doe",
@@ -794,8 +814,8 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should update a contact", async () => {
-      mockClient.patch.mockResolvedValue({ id: "ct-1", name: "Jane Doe" });
+    it("should update a contact and unwrap result", async () => {
+      mockClient.patch.mockResolvedValue({ result: { id: "ct-1", name: "Jane Doe" }, message: "Contact updated successfully" });
 
       const result = await TurboQuote.updateContact("ct-1", { name: "Jane Doe" });
 
@@ -803,11 +823,11 @@ describe("TurboQuote Module", () => {
     });
 
     it("should delete a contact", async () => {
-      mockClient.delete.mockResolvedValue({ success: true });
+      mockClient.delete.mockResolvedValue({ message: "Contact deleted successfully" });
 
       const result = await TurboQuote.deleteContact("ct-1");
 
-      expect(result.success).toBe(true);
+      expect(result.message).toBe("Contact deleted successfully");
     });
   });
 
@@ -820,9 +840,9 @@ describe("TurboQuote Module", () => {
       TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
     });
 
-    it("should get the org template (singular endpoint)", async () => {
+    it("should get the org template and unwrap result", async () => {
       const mockTemplate = { id: "t-1", primaryColor: "#0066FF" };
-      mockClient.get.mockResolvedValue(mockTemplate);
+      mockClient.get.mockResolvedValue({ result: mockTemplate, message: "Template found" });
 
       const result = await TurboQuote.getTemplate();
 
@@ -830,9 +850,9 @@ describe("TurboQuote Module", () => {
       expect(mockClient.get).toHaveBeenCalledWith("/v1/quote-template");
     });
 
-    it("should create a template (plural endpoint)", async () => {
+    it("should create a template and unwrap result", async () => {
       const mockTemplate = { id: "t-1", primaryColor: "#0066FF" };
-      mockClient.post.mockResolvedValue(mockTemplate);
+      mockClient.post.mockResolvedValue({ result: mockTemplate, message: "Template created successfully" });
 
       const result = await TurboQuote.createTemplate({ primaryColor: "#0066FF", senderName: "Sales" });
 
@@ -843,8 +863,8 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should update a template", async () => {
-      mockClient.patch.mockResolvedValue({ id: "t-1", primaryColor: "#FF0000" });
+    it("should update a template and unwrap result", async () => {
+      mockClient.patch.mockResolvedValue({ result: { id: "t-1", primaryColor: "#FF0000" }, message: "Template updated successfully" });
 
       const result = await TurboQuote.updateTemplate("t-1", { primaryColor: "#FF0000" });
 
@@ -856,11 +876,11 @@ describe("TurboQuote Module", () => {
     });
 
     it("should delete a template", async () => {
-      mockClient.delete.mockResolvedValue({ success: true });
+      mockClient.delete.mockResolvedValue({ message: "Template deleted successfully" });
 
       const result = await TurboQuote.deleteTemplate("t-1");
 
-      expect(result.success).toBe(true);
+      expect(result.message).toBe("Template deleted successfully");
       expect(mockClient.delete).toHaveBeenCalledWith("/v1/quote-templates/t-1");
     });
   });
@@ -887,17 +907,27 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should create a type", async () => {
+    it("should list types without options", async () => {
+      const mockResponse = { results: [], totalRecords: 0 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listTypes();
+
+      expect(result.results).toHaveLength(0);
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/types", undefined);
+    });
+
+    it("should create a type and unwrap result", async () => {
       const mockType = { id: "type-1", name: "SaaS", categoryType: "product_category" };
-      mockClient.post.mockResolvedValue(mockType);
+      mockClient.post.mockResolvedValue({ result: mockType, message: "Type created successfully" });
 
       const result = await TurboQuote.createType({ name: "SaaS", categoryType: "product_category" });
 
       expect(result.name).toBe("SaaS");
     });
 
-    it("should update a type", async () => {
-      mockClient.patch.mockResolvedValue({ id: "type-1", name: "Software" });
+    it("should update a type and unwrap result", async () => {
+      mockClient.patch.mockResolvedValue({ result: { id: "type-1", name: "Software" }, message: "Type updated successfully" });
 
       const result = await TurboQuote.updateType("type-1", { name: "Software" });
 
@@ -905,11 +935,11 @@ describe("TurboQuote Module", () => {
     });
 
     it("should delete a type", async () => {
-      mockClient.delete.mockResolvedValue({ success: true });
+      mockClient.delete.mockResolvedValue({ message: "Type deleted successfully" });
 
       const result = await TurboQuote.deleteType("type-1");
 
-      expect(result.success).toBe(true);
+      expect(result.message).toBe("Type deleted successfully");
     });
   });
 
@@ -922,13 +952,13 @@ describe("TurboQuote Module", () => {
       TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
     });
 
-    it("should approve a quote", async () => {
-      const mockResponse = { success: true, message: "Quote approved" };
-      mockClient.post.mockResolvedValue(mockResponse);
+    it("should approve a quote and unwrap result", async () => {
+      const mockAction = { id: "act-1", action: "approved", quoteId: "q-1", comments: "Looks good" };
+      mockClient.post.mockResolvedValue({ result: mockAction, message: "Quote approved successfully" });
 
       const result = await TurboQuote.approveQuote("q-1", { action: "approved", comments: "Looks good" });
 
-      expect(result.success).toBe(true);
+      expect(result.action).toBe("approved");
       expect(mockClient.post).toHaveBeenCalledWith(
         "/v1/quotes/q-1/approve",
         { action: "approved", comments: "Looks good" }
@@ -936,38 +966,38 @@ describe("TurboQuote Module", () => {
     });
 
     it("should list pending approval requests", async () => {
-      const mockResponse = { results: [{ id: "as-1", status: "pending" }], totalRecords: 1 };
+      const mockResponse = [{ id: "as-1", status: "pending" }];
       mockClient.get.mockResolvedValue(mockResponse);
 
       const result = await TurboQuote.listApprovalRequests();
 
-      expect(result.results).toHaveLength(1);
-      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/approval-requests", undefined);
+      expect(result).toHaveLength(1);
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/approval-requests");
     });
 
     it("should get approval activity for a quote", async () => {
-      const mockResponse = { approvalState: { status: "approved" }, actions: [] };
+      const mockResponse = [{ id: "act-1", action: "approved" }];
       mockClient.get.mockResolvedValue(mockResponse);
 
       const result = await TurboQuote.getApprovalActivity("q-1");
 
-      expect(result.approvalState?.status).toBe("approved");
+      expect(result).toHaveLength(1);
       expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/q-1/approval-activity");
     });
 
-    it("should list workflows", async () => {
-      const mockResponse = { results: [{ id: "wf-1", name: "Default Approval" }], totalRecords: 1 };
+    it("should list workflows as flat array", async () => {
+      const mockResponse = [{ id: "wf-1", name: "Default Approval" }];
       mockClient.get.mockResolvedValue(mockResponse);
 
       const result = await TurboQuote.listWorkflows();
 
-      expect(result.results).toHaveLength(1);
-      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/workflows", undefined);
+      expect(result).toHaveLength(1);
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/workflows");
     });
 
-    it("should create a workflow", async () => {
+    it("should create a workflow and unwrap result", async () => {
       const mockWorkflow = { id: "wf-1", name: "Discount Approval" };
-      mockClient.post.mockResolvedValue(mockWorkflow);
+      mockClient.post.mockResolvedValue({ result: mockWorkflow, message: "Workflow created successfully" });
 
       const result = await TurboQuote.createWorkflow({
         name: "Discount Approval",
@@ -978,7 +1008,7 @@ describe("TurboQuote Module", () => {
       expect(result.name).toBe("Discount Approval");
     });
 
-    it("should get a workflow by ID", async () => {
+    it("should get a workflow by ID (no unwrap needed)", async () => {
       mockClient.get.mockResolvedValue({ id: "wf-1", nodes: [], edges: [] });
 
       const result = await TurboQuote.getWorkflow("wf-1");
@@ -987,8 +1017,8 @@ describe("TurboQuote Module", () => {
       expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/workflows/wf-1");
     });
 
-    it("should update a workflow", async () => {
-      mockClient.patch.mockResolvedValue({ id: "wf-1", name: "Updated" });
+    it("should update a workflow and unwrap result", async () => {
+      mockClient.patch.mockResolvedValue({ result: { id: "wf-1", name: "Updated" }, message: "Workflow updated successfully" });
 
       const result = await TurboQuote.updateWorkflow("wf-1", { name: "Updated" });
 
@@ -996,15 +1026,15 @@ describe("TurboQuote Module", () => {
     });
 
     it("should delete a workflow", async () => {
-      mockClient.delete.mockResolvedValue({ success: true });
+      mockClient.delete.mockResolvedValue({ message: "Workflow deleted successfully" });
 
       const result = await TurboQuote.deleteWorkflow("wf-1");
 
-      expect(result.success).toBe(true);
+      expect(result.message).toBe("Workflow deleted successfully");
     });
 
-    it("should activate a workflow", async () => {
-      mockClient.post.mockResolvedValue({ id: "wf-1", isActive: true });
+    it("should activate a workflow and unwrap result", async () => {
+      mockClient.post.mockResolvedValue({ result: { id: "wf-1", isActive: true }, message: "Workflow activated successfully" });
 
       const result = await TurboQuote.activateWorkflow("wf-1");
 
@@ -1012,8 +1042,8 @@ describe("TurboQuote Module", () => {
       expect(mockClient.post).toHaveBeenCalledWith("/v1/quotes/workflows/wf-1/activate");
     });
 
-    it("should deactivate a workflow", async () => {
-      mockClient.post.mockResolvedValue({ id: "wf-1", isActive: false });
+    it("should deactivate a workflow and unwrap result", async () => {
+      mockClient.post.mockResolvedValue({ result: { id: "wf-1", isActive: false }, message: "Workflow deactivated successfully" });
 
       const result = await TurboQuote.deactivateWorkflow("wf-1");
 
@@ -1033,11 +1063,11 @@ describe("TurboQuote Module", () => {
 
     it("should create a quote, add items, and send in one call", async () => {
       const mockQuote = { id: "q-1", name: "Enterprise License", status: "draft" };
-      const mockItems = [{ id: "li-1" }];
-      const mockSendResponse = { result: { ...mockQuote, status: "sent" }, signatureDocumentId: "sig-1", message: "Sent" };
+      const mockItems = { results: [{ id: "li-1" }], message: "1 line item(s) added successfully" };
+      const mockSendResponse = { result: { ...mockQuote, status: "sent" }, message: "Sent" };
 
       mockClient.post
-        .mockResolvedValueOnce(mockQuote)
+        .mockResolvedValueOnce({ result: mockQuote, message: "Quote created successfully" })
         .mockResolvedValueOnce(mockItems)
         .mockResolvedValueOnce(mockSendResponse);
 
@@ -1050,7 +1080,7 @@ describe("TurboQuote Module", () => {
       });
 
       expect(result.quote.status).toBe("sent");
-      expect(result.signatureDocumentId).toBe("sig-1");
+      expect((result as any).documentId).toBeUndefined();
 
       const postCalls = mockClient.post.mock.calls;
       expect(postCalls[0][0]).toBe("/v1/quotes");
@@ -1063,7 +1093,7 @@ describe("TurboQuote Module", () => {
       const mockSendResponse = { result: { ...mockQuote, status: "sent" }, message: "Sent" };
 
       mockClient.post
-        .mockResolvedValueOnce(mockQuote)
+        .mockResolvedValueOnce({ result: mockQuote, message: "Quote created successfully" })
         .mockResolvedValueOnce(mockSendResponse);
 
       const result = await TurboQuote.createAndSend({
@@ -1081,11 +1111,11 @@ describe("TurboQuote Module", () => {
 
     it("should create and send with bundle items", async () => {
       const mockQuote = { id: "q-1", name: "Bundle Quote", status: "draft" };
-      const mockBundleItems = [{ id: "li-1", lineItemType: "bundle" }];
+      const mockBundleItems = { results: [{ id: "li-1", lineItemType: "bundle" }], message: "1 bundle(s) added successfully" };
       const mockSendResponse = { result: { ...mockQuote, status: "sent" }, message: "Sent" };
 
       mockClient.post
-        .mockResolvedValueOnce(mockQuote)
+        .mockResolvedValueOnce({ result: mockQuote, message: "Quote created successfully" })
         .mockResolvedValueOnce(mockBundleItems)
         .mockResolvedValueOnce(mockSendResponse);
 

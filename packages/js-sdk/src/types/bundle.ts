@@ -3,12 +3,13 @@
  */
 
 import type { BillingFrequency, Currency, PaginationParams, PaginatedResponse } from './quote-shared';
+import type { Product } from './product';
 
 // ============================================
 // DOMAIN TYPES
 // ============================================
 
-export type BundleItemStatus = 'active' | 'discontinued' | 'unavailable';
+export type BundleItemStatus = 'active' | 'product_deleted' | 'product_unavailable' | 'currency_mismatch';
 
 export interface BundleItem {
   id: string;
@@ -26,6 +27,7 @@ export interface BundleItem {
   createdBy: string | null;
   createdOn: string;
   updatedOn: string;
+  product?: Product;
 }
 
 export interface Bundle {
@@ -48,6 +50,7 @@ export interface Bundle {
   createdOn: string;
   updatedOn: string;
   items?: BundleItem[];
+  category?: { id: string; name: string; categoryType: string };
 }
 
 // ============================================
@@ -68,8 +71,8 @@ export interface CreateBundleRequest {
   name: string;
   categoryId: string;
   items?: BundleItemInput[];
-  description?: string;
-  sku?: string;
+  description?: string | null;
+  sku?: string | null;
   bundleDiscountPercent?: number;
   currency?: Currency;
   showItemsToEndUser?: boolean;
@@ -80,8 +83,8 @@ export interface CreateBundleRequest {
 export interface UpdateBundleRequest {
   name?: string;
   items?: BundleItemInput[];
-  description?: string;
-  sku?: string;
+  description?: string | null;
+  sku?: string | null;
   categoryId?: string;
   bundleDiscountPercent?: number;
   currency?: Currency;

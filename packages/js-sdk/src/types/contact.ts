@@ -3,6 +3,7 @@
  */
 
 import type { PaginationParams, PaginatedResponse } from './quote-shared';
+import type { Company } from './company';
 
 // ============================================
 // DOMAIN TYPES
@@ -20,6 +21,7 @@ export interface Contact {
   createdBy: string | null;
   createdOn: string;
   updatedOn: string;
+  company?: Company;
 }
 
 // ============================================
@@ -29,16 +31,16 @@ export interface Contact {
 export interface CreateContactRequest {
   name: string;
   companyId: string;
-  email?: string;
-  phone?: string;
-  title?: string;
+  email?: string | null;
+  phone?: string | null;
+  title?: string | null;
 }
 
 export interface UpdateContactRequest {
   name?: string;
-  email?: string;
-  phone?: string;
-  title?: string;
+  email?: string | null;
+  phone?: string | null;
+  title?: string | null;
 }
 
 export interface ListContactsOptions extends PaginationParams {

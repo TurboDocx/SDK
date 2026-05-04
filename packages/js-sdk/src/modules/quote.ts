@@ -15,9 +15,13 @@ import type {
   SendQuoteRequest,
   SendQuoteWithDeliverableRequest,
   SendQuoteResponse,
+  SendQuoteWithDeliverableResponse,
   HandleExpiredQuoteRequest,
   CreateAndSendRequest,
   CreateAndSendResponse,
+  DeclineQuoteRequest,
+  VoidQuoteRequest,
+  ApplyPriceBookResponse,
 } from '../types/quote';
 import type {
   LineItem,
@@ -88,16 +92,16 @@ import type {
   ApprovalRequestListResponse,
 } from '../types/quote-workflow';
 
-function toQueryParams(request?: Record<string, any>): Record<string, string> | undefined {
+function toQueryParams(request?: Record<string, any>): Record<string, string | string[]> | undefined {
   if (!request) return undefined;
 
-  const params: Record<string, string> = {};
+  const params: Record<string, string | string[]> = {};
   for (const [key, value] of Object.entries(request)) {
     if (value !== undefined && value !== null) {
       if (typeof value === 'boolean') {
         params[key] = value ? 'true' : 'false';
       } else if (Array.isArray(value)) {
-        params[key] = value.join(',');
+        params[key] = value.map(String);
       } else {
         params[key] = String(value);
       }
@@ -158,6 +162,12 @@ export class TurboQuote {
     return this.client;
   }
 
+  // Backend single-entity responses come as { result: T, message?: string }
+  // after smartUnwrap strips the outer { data: ... } wrapper.
+  private static unwrap<T>(response: { result: T }): T {
+    return response.result;
+  }
+
   // ============================================
   // QUOTES — CRUD
   // ============================================
@@ -169,17 +179,17 @@ export class TurboQuote {
 
   static async createQuote(request: CreateQuoteRequest): Promise<Quote> {
     const client = this.getClient();
-    return client.post<Quote>('/v1/quotes', request);
+    return this.unwrap(await client.post<{ result: Quote }>('/v1/quotes', request));
   }
 
   static async getQuote(id: string): Promise<Quote> {
     const client = this.getClient();
-    return client.get<Quote>(`/v1/quotes/${id}`);
+    return this.unwrap(await client.get<{ result: Quote }>(`/v1/quotes/${id}`));
   }
 
   static async updateQuote(id: string, request: UpdateQuoteRequest): Promise<Quote> {
     const client = this.getClient();
-    return client.patch<Quote>(`/v1/quotes/${id}`, request);
+    return this.unwrap(await client.patch<{ result: Quote }>(`/v1/quotes/${id}`, request));
   }
 
   static async deleteQuote(id: string): Promise<SuccessResponse> {
@@ -189,17 +199,23 @@ export class TurboQuote {
 
   static async duplicateQuote(id: string): Promise<Quote> {
     const client = this.getClient();
-    return client.post<Quote>(`/v1/quotes/${id}/duplicate`);
+    return this.unwrap(await client.post<{ result: Quote }>(`/v1/quotes/${id}/duplicate`));
   }
 
-  static async applyPriceBook(quoteId: string, priceBookId: string): Promise<Quote> {
+  static async applyPriceBook(quoteId: string, priceBookId: string): Promise<ApplyPriceBookResponse> {
     const client = this.getClient();
-    return client.post<Quote>(`/v1/quotes/${quoteId}/apply-pricebook`, { priceBookId });
+    const response = await client.post<{ result: Quote; message: string; updatedCount: number; skippedCount: number }>(`/v1/quotes/${quoteId}/apply-pricebook`, { priceBookId });
+    return {
+      quote: response.result,
+      message: response.message,
+      updatedCount: response.updatedCount,
+      skippedCount: response.skippedCount,
+    };
   }
 
   static async removePriceBook(quoteId: string): Promise<Quote> {
     const client = this.getClient();
-    return client.post<Quote>(`/v1/quotes/${quoteId}/remove-pricebook`);
+    return this.unwrap(await client.post<{ result: Quote }>(`/v1/quotes/${quoteId}/remove-pricebook`));
   }
 
   static async downloadQuotePdf(id: string): Promise<ArrayBuffer> {
@@ -213,27 +229,36 @@ export class TurboQuote {
 
   static async sendQuote(id: string, request?: SendQuoteRequest): Promise<SendQuoteResponse> {
     const client = this.getClient();
-    return client.post<SendQuoteResponse>(`/v1/quotes/${id}/send`, request);
+    const response = await client.post<{ result: Quote; message: string }>(`/v1/quotes/${id}/send`, request);
+    return {
+      quote: response.result,
+      message: response.message,
+    };
   }
 
-  static async sendQuoteWithDeliverable(id: string, request: SendQuoteWithDeliverableRequest): Promise<SendQuoteResponse> {
+  static async sendQuoteWithDeliverable(id: string, request: SendQuoteWithDeliverableRequest): Promise<SendQuoteWithDeliverableResponse> {
     const client = this.getClient();
-    return client.post<SendQuoteResponse>(`/v1/quotes/${id}/send-with-deliverable`, request);
+    const response = await client.post<{ result: Quote; message: string; documentId: string }>(`/v1/quotes/${id}/send-with-deliverable`, request);
+    return {
+      quote: response.result,
+      message: response.message,
+      documentId: response.documentId,
+    };
   }
 
-  static async declineQuote(id: string, reason: string): Promise<Quote> {
+  static async declineQuote(id: string, request: DeclineQuoteRequest): Promise<Quote> {
     const client = this.getClient();
-    return client.post<Quote>(`/v1/quotes/${id}/decline`, { reason });
+    return this.unwrap(await client.post<{ result: Quote }>(`/v1/quotes/${id}/decline`, request));
   }
 
-  static async voidQuote(id: string, reason: string): Promise<Quote> {
+  static async voidQuote(id: string, request: VoidQuoteRequest): Promise<Quote> {
     const client = this.getClient();
-    return client.post<Quote>(`/v1/quotes/${id}/void`, { reason });
+    return this.unwrap(await client.post<{ result: Quote }>(`/v1/quotes/${id}/void`, request));
   }
 
   static async handleExpiredQuote(id: string, request: HandleExpiredQuoteRequest): Promise<Quote> {
     const client = this.getClient();
-    return client.post<Quote>(`/v1/quotes/${id}/handle-expired-sent`, request);
+    return this.unwrap(await client.post<{ result: Quote }>(`/v1/quotes/${id}/handle-expired-sent`, request));
   }
 
   // ============================================
@@ -248,18 +273,20 @@ export class TurboQuote {
   static async addLineItems(quoteId: string, items: AddLineItemRequest | AddLineItemRequest[]): Promise<LineItem[]> {
     const client = this.getClient();
     const payload = Array.isArray(items) ? items : [items];
-    return client.post<LineItem[]>(`/v1/quotes/${quoteId}/items`, payload);
+    const response = await client.post<{ results: LineItem[] }>(`/v1/quotes/${quoteId}/items`, payload);
+    return response.results;
   }
 
   static async addBundleLineItems(quoteId: string, items: AddBundleLineItemRequest | AddBundleLineItemRequest[]): Promise<LineItem[]> {
     const client = this.getClient();
     const payload = Array.isArray(items) ? items : [items];
-    return client.post<LineItem[]>(`/v1/quotes/${quoteId}/items/bundle`, payload);
+    const response = await client.post<{ results: LineItem[] }>(`/v1/quotes/${quoteId}/items/bundle`, payload);
+    return response.results;
   }
 
   static async updateLineItem(quoteId: string, itemId: string, request: UpdateLineItemRequest): Promise<LineItem> {
     const client = this.getClient();
-    return client.patch<LineItem>(`/v1/quotes/${quoteId}/items/${itemId}`, request);
+    return this.unwrap(await client.patch<{ result: LineItem }>(`/v1/quotes/${quoteId}/items/${itemId}`, request));
   }
 
   static async removeLineItem(quoteId: string, itemId: string): Promise<SuccessResponse> {
@@ -280,23 +307,23 @@ export class TurboQuote {
     const client = this.getClient();
     if (request.images && request.images.length > 0) {
       const formData = buildProductFormData(request);
-      return client.postFormData<Product>('/v1/products', formData);
+      return this.unwrap(await client.postFormData<{ result: Product }>('/v1/products', formData));
     }
-    return client.post<Product>('/v1/products', request);
+    return this.unwrap(await client.post<{ result: Product }>('/v1/products', request));
   }
 
   static async getProduct(id: string): Promise<Product> {
     const client = this.getClient();
-    return client.get<Product>(`/v1/products/${id}`);
+    return this.unwrap(await client.get<{ result: Product }>(`/v1/products/${id}`));
   }
 
   static async updateProduct(id: string, request: UpdateProductRequest): Promise<Product> {
     const client = this.getClient();
     if (request.images && request.images.length > 0) {
       const formData = buildProductFormData(request);
-      return client.patchFormData<Product>(`/v1/products/${id}`, formData);
+      return this.unwrap(await client.patchFormData<{ result: Product }>(`/v1/products/${id}`, formData));
     }
-    return client.patch<Product>(`/v1/products/${id}`, request);
+    return this.unwrap(await client.patch<{ result: Product }>(`/v1/products/${id}`, request));
   }
 
   static async deleteProduct(id: string): Promise<SuccessResponse> {
@@ -306,12 +333,13 @@ export class TurboQuote {
 
   static async duplicateProduct(id: string): Promise<Product> {
     const client = this.getClient();
-    return client.post<Product>(`/v1/products/${id}/duplicate`);
+    return this.unwrap(await client.post<{ result: Product }>(`/v1/products/${id}/duplicate`));
   }
 
   static async getProductPrimaryImages(productIds: string[]): Promise<ProductPrimaryImagesResponse> {
     const client = this.getClient();
-    return client.post<ProductPrimaryImagesResponse>('/v1/products/primary-images', { productIds });
+    const response = await client.post<{ results: ProductPrimaryImagesResponse }>('/v1/products/primary-images', { productIds });
+    return response.results;
   }
 
   // ============================================
@@ -325,17 +353,17 @@ export class TurboQuote {
 
   static async createPriceBook(request: CreatePriceBookRequest): Promise<PriceBook> {
     const client = this.getClient();
-    return client.post<PriceBook>('/v1/pricebooks', request);
+    return this.unwrap(await client.post<{ result: PriceBook }>('/v1/pricebooks', request));
   }
 
   static async getPriceBook(id: string): Promise<PriceBook> {
     const client = this.getClient();
-    return client.get<PriceBook>(`/v1/pricebooks/${id}`);
+    return this.unwrap(await client.get<{ result: PriceBook }>(`/v1/pricebooks/${id}`));
   }
 
   static async updatePriceBook(id: string, request: UpdatePriceBookRequest): Promise<PriceBook> {
     const client = this.getClient();
-    return client.patch<PriceBook>(`/v1/pricebooks/${id}`, request);
+    return this.unwrap(await client.patch<{ result: PriceBook }>(`/v1/pricebooks/${id}`, request));
   }
 
   static async deletePriceBook(id: string): Promise<SuccessResponse> {
@@ -345,7 +373,7 @@ export class TurboQuote {
 
   static async duplicatePriceBook(id: string): Promise<PriceBook> {
     const client = this.getClient();
-    return client.post<PriceBook>(`/v1/pricebooks/${id}/duplicate`);
+    return this.unwrap(await client.post<{ result: PriceBook }>(`/v1/pricebooks/${id}/duplicate`));
   }
 
   static async listPriceBookProducts(id: string, options?: ListPriceBookProductsOptions): Promise<PriceBookProductListResponse> {
@@ -364,17 +392,17 @@ export class TurboQuote {
 
   static async createBundle(request: CreateBundleRequest): Promise<Bundle> {
     const client = this.getClient();
-    return client.post<Bundle>('/v1/bundles', request);
+    return this.unwrap(await client.post<{ result: Bundle }>('/v1/bundles', request));
   }
 
   static async getBundle(id: string): Promise<Bundle> {
     const client = this.getClient();
-    return client.get<Bundle>(`/v1/bundles/${id}`);
+    return this.unwrap(await client.get<{ result: Bundle }>(`/v1/bundles/${id}`));
   }
 
   static async updateBundle(id: string, request: UpdateBundleRequest): Promise<Bundle> {
     const client = this.getClient();
-    return client.patch<Bundle>(`/v1/bundles/${id}`, request);
+    return this.unwrap(await client.patch<{ result: Bundle }>(`/v1/bundles/${id}`, request));
   }
 
   static async deleteBundle(id: string): Promise<SuccessResponse> {
@@ -384,7 +412,7 @@ export class TurboQuote {
 
   static async duplicateBundle(id: string): Promise<Bundle> {
     const client = this.getClient();
-    return client.post<Bundle>(`/v1/bundles/${id}/duplicate`);
+    return this.unwrap(await client.post<{ result: Bundle }>(`/v1/bundles/${id}/duplicate`));
   }
 
   // ============================================
@@ -398,17 +426,17 @@ export class TurboQuote {
 
   static async createCompany(request: CreateCompanyRequest): Promise<Company> {
     const client = this.getClient();
-    return client.post<Company>('/v1/companies', request);
+    return this.unwrap(await client.post<{ result: Company }>('/v1/companies', request));
   }
 
   static async getCompany(id: string): Promise<Company> {
     const client = this.getClient();
-    return client.get<Company>(`/v1/companies/${id}`);
+    return this.unwrap(await client.get<{ result: Company }>(`/v1/companies/${id}`));
   }
 
   static async updateCompany(id: string, request: UpdateCompanyRequest): Promise<Company> {
     const client = this.getClient();
-    return client.patch<Company>(`/v1/companies/${id}`, request);
+    return this.unwrap(await client.patch<{ result: Company }>(`/v1/companies/${id}`, request));
   }
 
   static async deleteCompany(id: string): Promise<SuccessResponse> {
@@ -432,12 +460,12 @@ export class TurboQuote {
 
   static async createContact(request: CreateContactRequest): Promise<Contact> {
     const client = this.getClient();
-    return client.post<Contact>('/v1/contacts', request);
+    return this.unwrap(await client.post<{ result: Contact }>('/v1/contacts', request));
   }
 
   static async updateContact(id: string, request: UpdateContactRequest): Promise<Contact> {
     const client = this.getClient();
-    return client.patch<Contact>(`/v1/contacts/${id}`, request);
+    return this.unwrap(await client.patch<{ result: Contact }>(`/v1/contacts/${id}`, request));
   }
 
   static async deleteContact(id: string): Promise<SuccessResponse> {
@@ -451,17 +479,17 @@ export class TurboQuote {
 
   static async getTemplate(): Promise<QuoteTemplate> {
     const client = this.getClient();
-    return client.get<QuoteTemplate>('/v1/quote-template');
+    return this.unwrap(await client.get<{ result: QuoteTemplate }>('/v1/quote-template'));
   }
 
   static async createTemplate(request: CreateQuoteTemplateRequest): Promise<QuoteTemplate> {
     const client = this.getClient();
-    return client.post<QuoteTemplate>('/v1/quote-templates', request);
+    return this.unwrap(await client.post<{ result: QuoteTemplate }>('/v1/quote-templates', request));
   }
 
   static async updateTemplate(id: string, request: UpdateQuoteTemplateRequest): Promise<QuoteTemplate> {
     const client = this.getClient();
-    return client.patch<QuoteTemplate>(`/v1/quote-templates/${id}`, request);
+    return this.unwrap(await client.patch<{ result: QuoteTemplate }>(`/v1/quote-templates/${id}`, request));
   }
 
   static async deleteTemplate(id: string): Promise<SuccessResponse> {
@@ -473,19 +501,19 @@ export class TurboQuote {
   // TYPES / CATEGORIES
   // ============================================
 
-  static async listTypes(options: ListTypesOptions): Promise<QuoteTypeListResponse> {
+  static async listTypes(options?: ListTypesOptions): Promise<QuoteTypeListResponse> {
     const client = this.getClient();
     return client.get<QuoteTypeListResponse>('/v1/types', toQueryParams(options));
   }
 
   static async createType(request: CreateQuoteTypeRequest): Promise<QuoteType> {
     const client = this.getClient();
-    return client.post<QuoteType>('/v1/types', request);
+    return this.unwrap(await client.post<{ result: QuoteType }>('/v1/types', request));
   }
 
   static async updateType(id: string, request: UpdateQuoteTypeRequest): Promise<QuoteType> {
     const client = this.getClient();
-    return client.patch<QuoteType>(`/v1/types/${id}`, request);
+    return this.unwrap(await client.patch<{ result: QuoteType }>(`/v1/types/${id}`, request));
   }
 
   static async deleteType(id: string): Promise<SuccessResponse> {
@@ -499,12 +527,12 @@ export class TurboQuote {
 
   static async approveQuote(id: string, request: ApproveQuoteRequest): Promise<ApprovalResponse> {
     const client = this.getClient();
-    return client.post<ApprovalResponse>(`/v1/quotes/${id}/approve`, request);
+    return this.unwrap(await client.post<{ result: ApprovalResponse }>(`/v1/quotes/${id}/approve`, request));
   }
 
-  static async listApprovalRequests(options?: PaginationParams): Promise<ApprovalRequestListResponse> {
+  static async listApprovalRequests(): Promise<ApprovalRequestListResponse> {
     const client = this.getClient();
-    return client.get<ApprovalRequestListResponse>('/v1/quotes/approval-requests', toQueryParams(options));
+    return client.get<ApprovalRequestListResponse>('/v1/quotes/approval-requests');
   }
 
   static async getApprovalActivity(id: string): Promise<ApprovalActivityResponse> {
@@ -512,14 +540,14 @@ export class TurboQuote {
     return client.get<ApprovalActivityResponse>(`/v1/quotes/${id}/approval-activity`);
   }
 
-  static async listWorkflows(options?: PaginationParams): Promise<WorkflowListResponse> {
+  static async listWorkflows(): Promise<WorkflowListResponse> {
     const client = this.getClient();
-    return client.get<WorkflowListResponse>('/v1/quotes/workflows', toQueryParams(options));
+    return client.get<WorkflowListResponse>('/v1/quotes/workflows');
   }
 
   static async createWorkflow(request: CreateWorkflowRequest): Promise<Workflow> {
     const client = this.getClient();
-    return client.post<Workflow>('/v1/quotes/workflows', request);
+    return this.unwrap(await client.post<{ result: Workflow }>('/v1/quotes/workflows', request));
   }
 
   static async getWorkflow(id: string): Promise<Workflow> {
@@ -529,7 +557,7 @@ export class TurboQuote {
 
   static async updateWorkflow(id: string, request: UpdateWorkflowRequest): Promise<Workflow> {
     const client = this.getClient();
-    return client.patch<Workflow>(`/v1/quotes/workflows/${id}`, request);
+    return this.unwrap(await client.patch<{ result: Workflow }>(`/v1/quotes/workflows/${id}`, request));
   }
 
   static async deleteWorkflow(id: string): Promise<SuccessResponse> {
@@ -539,12 +567,12 @@ export class TurboQuote {
 
   static async activateWorkflow(id: string): Promise<Workflow> {
     const client = this.getClient();
-    return client.post<Workflow>(`/v1/quotes/workflows/${id}/activate`);
+    return this.unwrap(await client.post<{ result: Workflow }>(`/v1/quotes/workflows/${id}/activate`));
   }
 
   static async deactivateWorkflow(id: string): Promise<Workflow> {
     const client = this.getClient();
-    return client.post<Workflow>(`/v1/quotes/workflows/${id}/deactivate`);
+    return this.unwrap(await client.post<{ result: Workflow }>(`/v1/quotes/workflows/${id}/deactivate`));
   }
 
   // ============================================
@@ -555,21 +583,20 @@ export class TurboQuote {
     const client = this.getClient();
     const { items, bundleItems, send, ...quoteFields } = request;
 
-    const quote = await client.post<Quote>('/v1/quotes', quoteFields);
+    const quote = this.unwrap(await client.post<{ result: Quote }>('/v1/quotes', quoteFields));
 
     if (items && items.length > 0) {
-      await client.post<LineItem[]>(`/v1/quotes/${quote.id}/items`, items);
+      await client.post<{ results: LineItem[] }>(`/v1/quotes/${quote.id}/items`, items);
     }
 
     if (bundleItems && bundleItems.length > 0) {
-      await client.post<LineItem[]>(`/v1/quotes/${quote.id}/items/bundle`, bundleItems);
+      await client.post<{ results: LineItem[] }>(`/v1/quotes/${quote.id}/items/bundle`, bundleItems);
     }
 
-    const sendResponse = await client.post<SendQuoteResponse>(`/v1/quotes/${quote.id}/send`, send);
+    const sendResponse = await client.post<{ result: Quote; message: string }>(`/v1/quotes/${quote.id}/send`, send);
 
     return {
-      quote: sendResponse.result || quote,
-      signatureDocumentId: sendResponse.signatureDocumentId,
+      quote: sendResponse.result,
     };
   }
 }

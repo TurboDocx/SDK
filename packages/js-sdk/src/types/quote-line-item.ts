@@ -5,9 +5,9 @@
 import type {
   BillingFrequency,
   LineItemType,
-  PaginationParams,
   PaginatedResponse,
 } from './quote-shared';
+import type { Product } from './product';
 
 // ============================================
 // DOMAIN TYPES
@@ -40,6 +40,8 @@ export interface LineItem {
   createdBy: string | null;
   createdOn: string;
   updatedOn: string;
+  product?: Product;
+  childLineItems?: LineItem[];
 }
 
 // ============================================
@@ -53,11 +55,11 @@ export interface AddLineItemRequest {
   billingFrequency: BillingFrequency;
   quantity?: number;
   discountPercent?: number;
-  categoryId?: string;
-  categoryName?: string;
-  cost?: number;
-  productSku?: string;
-  productDescription?: string;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  cost?: number | null;
+  productSku?: string | null;
+  productDescription?: string | null;
 }
 
 export interface AddBundleLineItemRequest {
@@ -65,7 +67,7 @@ export interface AddBundleLineItemRequest {
   bundleName: string;
   quantity?: number;
   discountPercent?: number;
-  bundleDescription?: string;
+  bundleDescription?: string | null;
   showItemsToEndUser?: boolean;
 }
 
@@ -74,16 +76,18 @@ export interface UpdateLineItemRequest {
   unitPrice?: number;
   discountPercent?: number;
   billingFrequency?: BillingFrequency;
-  categoryId?: string;
-  categoryName?: string;
-  cost?: number;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  cost?: number | null;
   showItemsToEndUser?: boolean;
   productName?: string;
-  productSku?: string;
-  productDescription?: string;
+  productSku?: string | null;
+  productDescription?: string | null;
 }
 
-export interface ListLineItemsOptions extends PaginationParams {
+export interface ListLineItemsOptions {
+  limit?: number;
+  offset?: number;
   lineItemType?: LineItemType;
   billingFrequency?: BillingFrequency;
   parentLineItemId?: string;

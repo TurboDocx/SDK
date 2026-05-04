@@ -26,6 +26,5 @@ export interface PaginatedResponse<T> {
 }
 
 export interface SuccessResponse {
-  success: boolean;
-  message?: string;
+  message: string;
 }

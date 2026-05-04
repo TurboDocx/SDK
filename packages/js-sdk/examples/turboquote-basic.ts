@@ -218,9 +218,7 @@ async function quoteLifecycleExample(): Promise<void> {
 
     const sendResult = await TurboQuote.sendQuote(quote.id);
     console.log(`  ✅ ${sendResult.message}`);
-    if (sendResult.signatureDocumentId) {
-      console.log(`  Signature Doc: ${sendResult.signatureDocumentId}`);
-    }
+    console.log(`  Quote status: ${sendResult.quote.status}`);
     console.log();
 
     // =============================================
