@@ -12,7 +12,6 @@
  * - Contacts
  * - Templates
  * - Types/Categories
- * - Approvals & Workflows
  * - Convenience methods (createAndSend)
  */
 
@@ -1016,115 +1015,6 @@ describe("TurboQuote Module", () => {
       const result = await TurboQuote.deleteType("type-1");
 
       expect(result.message).toBe("Type deleted successfully");
-    });
-  });
-
-  // ============================================
-  // APPROVALS & WORKFLOWS
-  // ============================================
-
-  describe("Approvals & Workflows", () => {
-    beforeEach(() => {
-      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
-    });
-
-    it("should approve a quote and unwrap result", async () => {
-      const mockAction = { id: "act-1", action: "approved", quoteId: "q-1", comments: "Looks good" };
-      mockClient.post.mockResolvedValue({ result: mockAction, message: "Quote approved successfully" });
-
-      const result = await TurboQuote.approveQuote("q-1", { action: "approved", comments: "Looks good" });
-
-      expect(result.action).toBe("approved");
-      expect(mockClient.post).toHaveBeenCalledWith(
-        "/v1/quotes/q-1/approve",
-        { action: "approved", comments: "Looks good" }
-      );
-    });
-
-    it("should list pending approval requests", async () => {
-      const mockResponse = [{ id: "as-1", status: "pending" }];
-      mockClient.get.mockResolvedValue(mockResponse);
-
-      const result = await TurboQuote.listApprovalRequests();
-
-      expect(result).toHaveLength(1);
-      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/approval-requests");
-    });
-
-    it("should get approval activity for a quote", async () => {
-      const mockResponse = [{ id: "act-1", action: "approved" }];
-      mockClient.get.mockResolvedValue(mockResponse);
-
-      const result = await TurboQuote.getApprovalActivity("q-1");
-
-      expect(result).toHaveLength(1);
-      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/q-1/approval-activity");
-    });
-
-    it("should list workflows as flat array", async () => {
-      const mockResponse = [{ id: "wf-1", name: "Default Approval" }];
-      mockClient.get.mockResolvedValue(mockResponse);
-
-      const result = await TurboQuote.listWorkflows();
-
-      expect(result).toHaveLength(1);
-      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/workflows");
-    });
-
-    it("should create a workflow and unwrap result", async () => {
-      const mockWorkflow = { id: "wf-1", name: "Discount Approval" };
-      mockClient.post.mockResolvedValue({ result: mockWorkflow, message: "Workflow created successfully" });
-
-      const result = await TurboQuote.createWorkflow({
-        name: "Discount Approval",
-        nodes: [{ id: "n1", type: "start", data: { label: "Start" }, position: { x: 0, y: 0 } }],
-        edges: [],
-      });
-
-      expect(result.name).toBe("Discount Approval");
-    });
-
-    it("should get a workflow by ID (no unwrap needed)", async () => {
-      mockClient.get.mockResolvedValue({ id: "wf-1", nodes: [], edges: [] });
-
-      const result = await TurboQuote.getWorkflow("wf-1");
-
-      expect(result.id).toBe("wf-1");
-      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/workflows/wf-1");
-    });
-
-    it("should update a workflow and unwrap result", async () => {
-      mockClient.patch.mockResolvedValue({ result: { id: "wf-1", name: "Updated" }, message: "Workflow updated successfully" });
-
-      const result = await TurboQuote.updateWorkflow("wf-1", { name: "Updated" });
-
-      expect(result.name).toBe("Updated");
-    });
-
-    it("should delete a workflow", async () => {
-      mockClient.delete.mockResolvedValue({ message: "Workflow deleted successfully" });
-
-      const result = await TurboQuote.deleteWorkflow("wf-1");
-
-      expect(result.message).toBe("Workflow deleted successfully");
-    });
-
-    it("should activate a workflow and unwrap result", async () => {
-      mockClient.post.mockResolvedValue({ result: { id: "wf-1", isActive: true }, message: "Workflow activated successfully" });
-
-      const result = await TurboQuote.activateWorkflow("wf-1");
-
-      expect(result.isActive).toBe(true);
-      expect(mockClient.post).toHaveBeenCalledWith("/v1/quotes/workflows/wf-1/activate");
-    });
-
-    it("should deactivate a workflow and unwrap result", async () => {
-      mockClient.post.mockResolvedValue({ result: { id: "wf-1", isActive: false }, message: "Workflow deactivated successfully" });
-
-      const result = await TurboQuote.deactivateWorkflow("wf-1");
-
-      expect(result.isActive).toBe(false);
-      expect(mockClient.post).toHaveBeenCalledWith("/v1/quotes/workflows/wf-1/deactivate");
     });
   });
 

@@ -34,7 +34,6 @@ export * from './types/company';
 export * from './types/contact';
 export * from './types/quote-template';
 export * from './types/quote-type';
-export * from './types/quote-workflow';
 
 // Export errors
 export * from './utils/errors';
