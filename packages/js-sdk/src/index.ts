@@ -23,6 +23,7 @@ export {
   type CategoryType,
   type PaginationParams,
   type PaginatedResponse,
+  type SuccessResponse,
 } from './types/quote-shared';
 export * from './types/quote';
 export * from './types/quote-line-item';

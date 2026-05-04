@@ -8,14 +8,24 @@ import type { BillingFrequency, Currency, PaginationParams, PaginatedResponse } 
 // DOMAIN TYPES
 // ============================================
 
+export type BundleItemStatus = 'active' | 'discontinued' | 'unavailable';
+
 export interface BundleItem {
+  id: string;
+  orgId: string;
+  bundleId: string;
   productId: string;
   quantity: number;
   unitPrice: number;
   discountPercent: number;
-  finalPrice?: number;
+  finalPrice: number;
   cost: number | null;
   billingFrequency: BillingFrequency;
+  itemStatus: BundleItemStatus;
+  isActive: boolean;
+  createdBy: string | null;
+  createdOn: string;
+  updatedOn: string;
 }
 
 export interface Bundle {
@@ -46,19 +56,20 @@ export interface Bundle {
 
 export interface BundleItemInput {
   productId: string;
-  quantity?: number;
   unitPrice: number;
-  discountPercent?: number;
-  cost?: number | null;
   billingFrequency: BillingFrequency;
+  quantity?: number;
+  discountPercent?: number;
+  finalPrice?: number;
+  cost?: number | null;
 }
 
 export interface CreateBundleRequest {
   name: string;
-  items: BundleItemInput[];
+  categoryId: string;
+  items?: BundleItemInput[];
   description?: string;
   sku?: string;
-  categoryId?: string;
   bundleDiscountPercent?: number;
   currency?: Currency;
   showItemsToEndUser?: boolean;
@@ -80,12 +91,18 @@ export interface UpdateBundleRequest {
 }
 
 export interface ListBundlesOptions extends PaginationParams {
-  categoryId?: string;
+  categoryIds?: string | string[];
   currency?: Currency;
+  showInCatalog?: boolean;
 }
 
 // ============================================
 // RESPONSE TYPES
 // ============================================
 
-export type BundleListResponse = PaginatedResponse<Bundle>;
+export interface BundleListResponse extends PaginatedResponse<Bundle> {
+  totalBundles: number;
+  activeBundles: number;
+  totalCategories: number;
+  catalogValue: number;
+}

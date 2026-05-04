@@ -9,9 +9,16 @@ import type { PaginationParams, PaginatedResponse } from './quote-shared';
 // ============================================
 
 export interface PriceBookProductPricing {
+  id?: string;
+  priceBookId?: string;
   productId: string;
-  discountPercent?: number;
-  finalPrice?: number;
+  discountPercent: number;
+  finalPrice: number;
+  orgId?: string;
+  isActive?: boolean;
+  createdBy?: string | null;
+  createdOn?: string;
+  updatedOn?: string;
 }
 
 export interface PriceBook {
@@ -36,16 +43,22 @@ export interface PriceBook {
 // REQUEST TYPES
 // ============================================
 
+export interface PriceBookProductPricingInput {
+  productId: string;
+  discountPercent?: number;
+  finalPrice?: number;
+}
+
 export interface CreatePriceBookRequest {
   name: string;
-  priceBookTypeId?: string;
-  description?: string;
+  priceBookTypeId: string;
+  validFrom: string;
   discountPercent?: number;
-  validFrom?: string;
+  description?: string;
   validTo?: string;
   isDefault?: boolean;
   showInQuoteBuilder?: boolean;
-  productPricing?: PriceBookProductPricing[];
+  productPricing?: PriceBookProductPricingInput[];
 }
 
 export interface UpdatePriceBookRequest {
@@ -57,21 +70,27 @@ export interface UpdatePriceBookRequest {
   validTo?: string;
   isDefault?: boolean;
   showInQuoteBuilder?: boolean;
-  productPricing?: PriceBookProductPricing[];
+  productPricing?: PriceBookProductPricingInput[];
 }
 
 export interface ListPriceBooksOptions extends PaginationParams {
+  priceBookTypeIds?: string | string[];
   showInQuoteBuilder?: boolean;
 }
 
 export interface ListPriceBookProductsOptions extends PaginationParams {
-  categoryIds?: string[];
+  categoryIds?: string | string[];
 }
 
 // ============================================
 // RESPONSE TYPES
 // ============================================
 
-export type PriceBookListResponse = PaginatedResponse<PriceBook>;
+export interface PriceBookListResponse extends PaginatedResponse<PriceBook> {
+  totalPriceBooks: number;
+  activeInBuilder: number;
+  totalProducts: number;
+  defaultPriceBookName: string | null;
+}
 
 export type PriceBookProductListResponse = PaginatedResponse<PriceBookProductPricing>;

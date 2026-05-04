@@ -11,9 +11,11 @@ import type { BillingFrequency, Currency, PaginationParams, PaginatedResponse } 
 export interface ProductImage {
   id: string;
   productId: string;
-  url: string;
+  fileId: string;
+  fileName: string;
+  fileType: string;
   displayOrder: number;
-  isActive: boolean;
+  imageData?: string;
 }
 
 export interface Product {
@@ -46,11 +48,11 @@ export interface CreateProductRequest {
   name: string;
   listPrice: number;
   billingFrequency: BillingFrequency;
+  categoryId: string;
   sku?: string;
   description?: string;
   detailedSpecification?: string;
   internalNotes?: string;
-  categoryId?: string;
   cost?: number;
   minimumOrderQuantity?: number;
   currency?: Currency;
@@ -87,8 +89,13 @@ export interface ListProductsOptions extends PaginationParams {
 // RESPONSE TYPES
 // ============================================
 
-export type ProductListResponse = PaginatedResponse<Product>;
+export interface ProductListResponse extends PaginatedResponse<Product> {
+  totalProducts: number;
+  activeProducts: number;
+  totalCategories: number;
+  catalogValue: number;
+}
 
 export interface ProductPrimaryImagesResponse {
-  [productId: string]: string | null;
+  [productId: string]: ProductImage | null;
 }

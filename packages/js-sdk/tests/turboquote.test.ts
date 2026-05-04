@@ -119,27 +119,27 @@ describe("TurboQuote Module", () => {
       };
       mockClient.get.mockResolvedValue(mockResponse);
 
-      const result = await TurboQuote.listQuotes({ limit: 10, status: "draft", search: "test" });
+      const result = await TurboQuote.listQuotes({ limit: 10, statuses: "draft", query: "test" });
 
       expect(result.results).toHaveLength(1);
       expect(result.totalRecords).toBe(1);
       expect(mockClient.get).toHaveBeenCalledWith(
         "/v1/quotes",
-        expect.objectContaining({ limit: "10", status: "draft", search: "test" })
+        expect.objectContaining({ limit: "10", statuses: "draft", query: "test" })
       );
     });
 
-    it("should create a quote with minimal fields", async () => {
+    it("should create a quote with required fields", async () => {
       const mockQuote = { id: "q-1", name: "My Quote", status: "draft", quoteNumber: "Q-2026-00001" };
       mockClient.post.mockResolvedValue(mockQuote);
 
-      const result = await TurboQuote.createQuote({ name: "My Quote" });
+      const result = await TurboQuote.createQuote({ name: "My Quote", companyId: "c-1", contactId: "ct-1" });
 
       expect(result.id).toBe("q-1");
       expect(result.status).toBe("draft");
       expect(mockClient.post).toHaveBeenCalledWith(
         "/v1/quotes",
-        { name: "My Quote" }
+        { name: "My Quote", companyId: "c-1", contactId: "ct-1" }
       );
     });
 
@@ -258,23 +258,22 @@ describe("TurboQuote Module", () => {
     });
 
     it("should send a quote", async () => {
-      const mockResponse = { message: "Quote sent", signatureDocumentId: "sig-1" };
+      const mockResponse = { result: { id: "q-1", status: "sent" }, message: "Quote sent", signatureDocumentId: "sig-1" };
       mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await TurboQuote.sendQuote("q-1", {
-        recipients: ["john@example.com"],
         ccEmails: ["admin@example.com"],
       });
 
       expect(result.signatureDocumentId).toBe("sig-1");
       expect(mockClient.post).toHaveBeenCalledWith(
         "/v1/quotes/q-1/send",
-        { recipients: ["john@example.com"], ccEmails: ["admin@example.com"] }
+        { ccEmails: ["admin@example.com"] }
       );
     });
 
     it("should send a quote without options", async () => {
-      const mockResponse = { message: "Quote sent" };
+      const mockResponse = { result: { id: "q-1", status: "sent" }, message: "Quote sent" };
       mockClient.post.mockResolvedValue(mockResponse);
 
       await TurboQuote.sendQuote("q-1");
@@ -283,7 +282,7 @@ describe("TurboQuote Module", () => {
     });
 
     it("should send a quote with a deliverable", async () => {
-      const mockResponse = { message: "Quote sent with deliverable", signatureDocumentId: "sig-2" };
+      const mockResponse = { result: { id: "q-1", status: "sent" }, message: "Quote sent with deliverable", signatureDocumentId: "sig-2" };
       mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await TurboQuote.sendQuoteWithDeliverable("q-1", {
@@ -365,12 +364,13 @@ describe("TurboQuote Module", () => {
       const mockItems = [{ id: "li-1", productId: "prod-1", quantity: 2 }];
       mockClient.post.mockResolvedValue(mockItems);
 
-      const result = await TurboQuote.addLineItems("q-1", { productId: "prod-1", quantity: 2 });
+      const item = { productId: "prod-1" as string | null, productName: "Widget", unitPrice: 50, billingFrequency: "monthly" as const, quantity: 2 };
+      const result = await TurboQuote.addLineItems("q-1", item);
 
       expect(result).toHaveLength(1);
       expect(mockClient.post).toHaveBeenCalledWith(
         "/v1/quotes/q-1/items",
-        [{ productId: "prod-1", quantity: 2 }]
+        [item]
       );
     });
 
@@ -378,18 +378,16 @@ describe("TurboQuote Module", () => {
       const mockItems = [{ id: "li-1" }, { id: "li-2" }];
       mockClient.post.mockResolvedValue(mockItems);
 
-      const result = await TurboQuote.addLineItems("q-1", [
-        { productId: "prod-1", quantity: 5 },
-        { productId: "prod-2", quantity: 1, discountPercent: 10 },
-      ]);
+      const items = [
+        { productId: "prod-1" as string | null, productName: "Widget A", unitPrice: 50, billingFrequency: "monthly" as const, quantity: 5 },
+        { productId: "prod-2" as string | null, productName: "Widget B", unitPrice: 75, billingFrequency: "monthly" as const, quantity: 1, discountPercent: 10 },
+      ];
+      const result = await TurboQuote.addLineItems("q-1", items);
 
       expect(result).toHaveLength(2);
       expect(mockClient.post).toHaveBeenCalledWith(
         "/v1/quotes/q-1/items",
-        [
-          { productId: "prod-1", quantity: 5 },
-          { productId: "prod-2", quantity: 1, discountPercent: 10 },
-        ]
+        items
       );
     });
 
@@ -397,12 +395,12 @@ describe("TurboQuote Module", () => {
       const mockItems = [{ id: "li-3", bundleId: "bun-1", lineItemType: "bundle" }];
       mockClient.post.mockResolvedValue(mockItems);
 
-      const result = await TurboQuote.addBundleLineItems("q-1", { bundleId: "bun-1" });
+      const result = await TurboQuote.addBundleLineItems("q-1", { bundleId: "bun-1", bundleName: "Starter Pack" });
 
       expect(result).toHaveLength(1);
       expect(mockClient.post).toHaveBeenCalledWith(
         "/v1/quotes/q-1/items/bundle",
-        [{ bundleId: "bun-1" }]
+        [{ bundleId: "bun-1", bundleName: "Starter Pack" }]
       );
     });
 
@@ -460,12 +458,13 @@ describe("TurboQuote Module", () => {
         name: "Widget Pro",
         listPrice: 99.99,
         billingFrequency: "monthly",
+        categoryId: "cat-1",
       });
 
       expect(result.name).toBe("Widget Pro");
       expect(mockClient.post).toHaveBeenCalledWith(
         "/v1/products",
-        { name: "Widget Pro", listPrice: 99.99, billingFrequency: "monthly" }
+        { name: "Widget Pro", listPrice: 99.99, billingFrequency: "monthly", categoryId: "cat-1" }
       );
     });
 
@@ -549,12 +548,17 @@ describe("TurboQuote Module", () => {
       const mockPriceBook = { id: "pb-1", name: "Partner Pricing", discountPercent: 15 };
       mockClient.post.mockResolvedValue(mockPriceBook);
 
-      const result = await TurboQuote.createPriceBook({ name: "Partner Pricing", discountPercent: 15 });
+      const result = await TurboQuote.createPriceBook({
+        name: "Partner Pricing",
+        priceBookTypeId: "pbt-1",
+        validFrom: "2026-01-01",
+        discountPercent: 15,
+      });
 
       expect(result.name).toBe("Partner Pricing");
       expect(mockClient.post).toHaveBeenCalledWith(
         "/v1/pricebooks",
-        { name: "Partner Pricing", discountPercent: 15 }
+        { name: "Partner Pricing", priceBookTypeId: "pbt-1", validFrom: "2026-01-01", discountPercent: 15 }
       );
     });
 
@@ -629,13 +633,14 @@ describe("TurboQuote Module", () => {
 
       const result = await TurboQuote.createBundle({
         name: "Starter Pack",
+        categoryId: "cat-1",
         items: [{ productId: "p-1", unitPrice: 50, billingFrequency: "monthly" }],
       });
 
       expect(result.name).toBe("Starter Pack");
       expect(mockClient.post).toHaveBeenCalledWith(
         "/v1/bundles",
-        expect.objectContaining({ name: "Starter Pack" })
+        expect.objectContaining({ name: "Starter Pack", categoryId: "cat-1" })
       );
     });
 
@@ -687,25 +692,30 @@ describe("TurboQuote Module", () => {
       const mockResponse = { results: [{ id: "c-1", name: "Acme Corp" }], totalRecords: 1 };
       mockClient.get.mockResolvedValue(mockResponse);
 
-      const result = await TurboQuote.listCompanies({ search: "acme" });
+      const result = await TurboQuote.listCompanies({ query: "acme" });
 
       expect(result.results).toHaveLength(1);
       expect(mockClient.get).toHaveBeenCalledWith(
         "/v1/companies",
-        expect.objectContaining({ search: "acme" })
+        expect.objectContaining({ query: "acme" })
       );
     });
 
-    it("should create a company", async () => {
+    it("should create a company with contacts", async () => {
       const mockCompany = { id: "c-1", name: "Acme Corp" };
       mockClient.post.mockResolvedValue(mockCompany);
 
-      const result = await TurboQuote.createCompany({ name: "Acme Corp", city: "Austin", state: "TX" });
+      const result = await TurboQuote.createCompany({
+        name: "Acme Corp",
+        contacts: [{ name: "John Doe", email: "john@acme.com" }],
+        city: "Austin",
+        state: "TX",
+      });
 
       expect(result.name).toBe("Acme Corp");
       expect(mockClient.post).toHaveBeenCalledWith(
         "/v1/companies",
-        { name: "Acme Corp", city: "Austin", state: "TX" }
+        { name: "Acme Corp", contacts: [{ name: "John Doe", email: "john@acme.com" }], city: "Austin", state: "TX" }
       );
     });
 
@@ -1024,7 +1034,7 @@ describe("TurboQuote Module", () => {
     it("should create a quote, add items, and send in one call", async () => {
       const mockQuote = { id: "q-1", name: "Enterprise License", status: "draft" };
       const mockItems = [{ id: "li-1" }];
-      const mockSendResponse = { quote: { ...mockQuote, status: "sent" }, signatureDocumentId: "sig-1", message: "Sent" };
+      const mockSendResponse = { result: { ...mockQuote, status: "sent" }, signatureDocumentId: "sig-1", message: "Sent" };
 
       mockClient.post
         .mockResolvedValueOnce(mockQuote)
@@ -1035,8 +1045,8 @@ describe("TurboQuote Module", () => {
         name: "Enterprise License",
         companyId: "c-1",
         contactId: "ct-1",
-        items: [{ productId: "p-1", quantity: 10 }],
-        send: { recipients: ["john@example.com"] },
+        items: [{ productId: "p-1", productName: "Widget", unitPrice: 99, billingFrequency: "monthly", quantity: 10 }],
+        send: { ccEmails: ["admin@example.com"] },
       });
 
       expect(result.quote.status).toBe("sent");
@@ -1050,7 +1060,7 @@ describe("TurboQuote Module", () => {
 
     it("should create and send without items", async () => {
       const mockQuote = { id: "q-1", name: "Simple Quote", status: "draft" };
-      const mockSendResponse = { quote: { ...mockQuote, status: "sent" }, message: "Sent" };
+      const mockSendResponse = { result: { ...mockQuote, status: "sent" }, message: "Sent" };
 
       mockClient.post
         .mockResolvedValueOnce(mockQuote)
@@ -1058,6 +1068,8 @@ describe("TurboQuote Module", () => {
 
       const result = await TurboQuote.createAndSend({
         name: "Simple Quote",
+        companyId: "c-1",
+        contactId: "ct-1",
       });
 
       expect(result.quote.status).toBe("sent");
@@ -1070,7 +1082,7 @@ describe("TurboQuote Module", () => {
     it("should create and send with bundle items", async () => {
       const mockQuote = { id: "q-1", name: "Bundle Quote", status: "draft" };
       const mockBundleItems = [{ id: "li-1", lineItemType: "bundle" }];
-      const mockSendResponse = { quote: { ...mockQuote, status: "sent" }, message: "Sent" };
+      const mockSendResponse = { result: { ...mockQuote, status: "sent" }, message: "Sent" };
 
       mockClient.post
         .mockResolvedValueOnce(mockQuote)
@@ -1079,7 +1091,9 @@ describe("TurboQuote Module", () => {
 
       const result = await TurboQuote.createAndSend({
         name: "Bundle Quote",
-        bundleItems: [{ bundleId: "b-1" }],
+        companyId: "c-1",
+        contactId: "ct-1",
+        bundleItems: [{ bundleId: "b-1", bundleName: "Starter Pack" }],
       });
 
       expect(result.quote.status).toBe("sent");
@@ -1106,7 +1120,7 @@ describe("TurboQuote Module", () => {
       mockClient.post.mockRejectedValue(validationError);
       TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
 
-      await expect(TurboQuote.createQuote({ name: "" })).rejects.toEqual(validationError);
+      await expect(TurboQuote.createQuote({ name: "", companyId: "c-1", contactId: "ct-1" })).rejects.toEqual(validationError);
     });
   });
 });

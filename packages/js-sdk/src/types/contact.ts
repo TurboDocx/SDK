@@ -39,7 +39,6 @@ export interface UpdateContactRequest {
   email?: string;
   phone?: string;
   title?: string;
-  companyId?: string;
 }
 
 export interface ListContactsOptions extends PaginationParams {

@@ -47,19 +47,26 @@ export interface LineItem {
 // ============================================
 
 export interface AddLineItemRequest {
-  productId: string;
+  productId: string | null;
+  productName: string;
+  unitPrice: number;
+  billingFrequency: BillingFrequency;
   quantity?: number;
-  unitPrice?: number;
   discountPercent?: number;
-  billingFrequency?: BillingFrequency;
   categoryId?: string;
+  categoryName?: string;
   cost?: number;
+  productSku?: string;
+  productDescription?: string;
 }
 
 export interface AddBundleLineItemRequest {
   bundleId: string;
+  bundleName: string;
   quantity?: number;
   discountPercent?: number;
+  bundleDescription?: string;
+  showItemsToEndUser?: boolean;
 }
 
 export interface UpdateLineItemRequest {
@@ -68,15 +75,18 @@ export interface UpdateLineItemRequest {
   discountPercent?: number;
   billingFrequency?: BillingFrequency;
   categoryId?: string;
+  categoryName?: string;
   cost?: number;
+  showItemsToEndUser?: boolean;
   productName?: string;
+  productSku?: string;
   productDescription?: string;
 }
 
 export interface ListLineItemsOptions extends PaginationParams {
   lineItemType?: LineItemType;
   billingFrequency?: BillingFrequency;
-  parentId?: string;
+  parentLineItemId?: string;
 }
 
 // ============================================

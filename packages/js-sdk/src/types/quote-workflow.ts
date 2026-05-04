@@ -112,6 +112,9 @@ export interface ApprovalState {
   status: 'pending' | 'approved' | 'rejected';
   startedAt: string;
   completedAt: string | null;
+  isActive: boolean;
+  createdOn: string;
+  updatedOn: string;
 }
 
 export interface ApprovalResponse {

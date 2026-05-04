@@ -568,7 +568,7 @@ export class TurboQuote {
     const sendResponse = await client.post<SendQuoteResponse>(`/v1/quotes/${quote.id}/send`, send);
 
     return {
-      quote: sendResponse.quote || quote,
+      quote: sendResponse.result || quote,
       signatureDocumentId: sendResponse.signatureDocumentId,
     };
   }

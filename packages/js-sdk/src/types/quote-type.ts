@@ -39,7 +39,7 @@ export interface UpdateQuoteTypeRequest {
 }
 
 export interface ListTypesOptions extends PaginationParams {
-  categoryType: CategoryType;
+  categoryType?: CategoryType;
   includeUsage?: boolean;
 }
 
