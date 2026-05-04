@@ -1,27 +1,22 @@
 /**
  * TurboQuote Example: Templates, Workflows, Approvals & Status Transitions
  *
- * This example demonstrates advanced TurboQuote operations:
+ * Fully self-contained — creates all data it needs, then cleans up.
+ * Just add your API key and run.
  *
- * Templates:
+ * Methods demonstrated:
+ * - configure()
  * - getTemplate(), createTemplate(), updateTemplate(), deleteTemplate()
- *
- * Types & Categories:
  * - createType(), listTypes(), updateType(), deleteType()
- *
- * Approval Workflows:
+ * - createCompany(), getCompany(), updateCompany(), listCompanyContacts(), deleteCompany()
+ * - createContact(), updateContact(), deleteContact()
  * - createWorkflow(), listWorkflows(), getWorkflow(), updateWorkflow()
  * - activateWorkflow(), deactivateWorkflow(), deleteWorkflow()
  * - approveQuote(), listApprovalRequests(), getApprovalActivity()
- *
- * Quote Status Transitions:
+ * - createProduct(), deleteProduct()
+ * - createQuote(), addLineItems(), removeLineItem()
  * - sendQuote(), declineQuote(), voidQuote(), handleExpiredQuote()
- *
- * CRM & Quote Operations:
- * - createCompany(), getCompany(), updateCompany()
- * - createContact(), updateContact(), listCompanyContacts()
- * - createQuote(), duplicateQuote(), deleteQuote()
- * - addLineItems(), removeLineItem()
+ * - duplicateQuote(), deleteQuote()
  *
  * Run: npx tsx examples/turboquote-advanced.ts
  */
@@ -44,42 +39,30 @@ async function advancedExample(): Promise<void> {
     // =============================================
     console.log('2. Managing quote template...');
 
-    // Check if a template already exists
     try {
       const existingTemplate = await TurboQuote.getTemplate();
       console.log(`  Existing template found: ${existingTemplate.id}`);
-      console.log(`  Primary color: ${existingTemplate.primaryColor}`);
     } catch {
-      console.log('  No existing template found.');
+      console.log('  No existing template.');
     }
 
-    // Create a new template
     const template = await TurboQuote.createTemplate({
       primaryColor: '#1a73e8',
       primaryTextColor: '#ffffff',
       disclaimer: 'Prices valid for 30 days from issue date.',
-      termsAndConditions: 'Payment due within 30 days of acceptance. All prices are in USD unless otherwise specified. This quote is subject to our standard service agreement.',
-      closingMessage: 'Thank you for your business! We look forward to working with you.',
+      termsAndConditions: 'Payment due within 30 days of acceptance.',
+      closingMessage: 'Thank you for your business!',
       senderName: 'Sales Team',
       senderEmail: 'sales@yourcompany.com',
       senderPhone: '+1-555-0100',
       contactEmail: 'support@yourcompany.com',
     });
+    console.log(`  Created template: ${template.id}`);
 
-    console.log('Template created!');
-    console.log(`  ID: ${template.id}`);
-    console.log(`  Primary Color: ${template.primaryColor}`);
-    console.log(`  Sender: ${template.senderName} (${template.senderEmail})\n`);
-
-    // Update the template
     const updatedTemplate = await TurboQuote.updateTemplate(template.id, {
-      closingMessage: 'Thank you for choosing us! Questions? Contact support@yourcompany.com.',
-      logoUrl: 'https://yourcompany.com/logo.png',
+      closingMessage: 'Thank you for choosing us!',
     });
-
-    console.log('Template updated!');
-    console.log(`  Closing Message: ${updatedTemplate.closingMessage}`);
-    console.log(`  Logo URL: ${updatedTemplate.logoUrl}\n`);
+    console.log(`  Updated closing message: ${updatedTemplate.closingMessage}\n`);
 
     // =============================================
     // 3. TYPES & CATEGORIES
@@ -90,28 +73,23 @@ async function advancedExample(): Promise<void> {
       name: 'Technology',
       categoryType: 'company_industry',
     });
-    console.log(`  Industry type created: ${industryType.name} (${industryType.id})`);
+    console.log(`  Industry: ${industryType.name} (${industryType.id})`);
 
-    // List types with usage data
     const industries = await TurboQuote.listTypes({
       categoryType: 'company_industry',
       includeUsage: true,
     });
-    console.log(`  Found ${industries.totalRecords} industry type(s):`);
-    for (const t of industries.results) {
-      console.log(`    - ${t.name} (default: ${t.isDefault})`);
-    }
+    console.log(`  ${industries.totalRecords} industry type(s) in org`);
 
-    // Update a type
     const updatedType = await TurboQuote.updateType(industryType.id, {
       name: 'Technology & SaaS',
     });
-    console.log(`  Type renamed to: ${updatedType.name}\n`);
+    console.log(`  Renamed to: ${updatedType.name}\n`);
 
     // =============================================
-    // 4. CRM SETUP — company, contact, update, list
+    // 4. CRM SETUP — company, contact, product
     // =============================================
-    console.log('4. Setting up CRM records...');
+    console.log('4. Setting up CRM and catalog...');
 
     const company = await TurboQuote.createCompany({
       name: 'TechStart Inc',
@@ -121,16 +99,12 @@ async function advancedExample(): Promise<void> {
       country: 'US',
       industryId: industryType.id,
     });
-    console.log(`  Company created: ${company.name} (${company.id})`);
 
-    // Get and update company
     const companyDetail = await TurboQuote.getCompany(company.id);
-    console.log(`  Company detail: ${companyDetail.name}, ${companyDetail.city}, ${companyDetail.state}`);
+    console.log(`  Company: ${companyDetail.name}, ${companyDetail.city}, ${companyDetail.state}`);
 
-    const updatedCompany = await TurboQuote.updateCompany(company.id, {
-      phone: '+1-555-0300',
-    });
-    console.log(`  Company phone updated: ${updatedCompany.phone}`);
+    const updatedCompany = await TurboQuote.updateCompany(company.id, { phone: '+1-555-0300' });
+    console.log(`  Phone updated: ${updatedCompany.phone}`);
 
     const contact = await TurboQuote.createContact({
       name: 'Alex Johnson',
@@ -138,22 +112,30 @@ async function advancedExample(): Promise<void> {
       email: 'alex@techstart.com',
       title: 'CTO',
     });
-    console.log(`  Contact created: ${contact.name} (${contact.id})`);
+    console.log(`  Contact: ${contact.name}`);
 
-    // Update contact
     const updatedContact = await TurboQuote.updateContact(contact.id, {
       title: 'VP of Engineering',
       phone: '+1-555-0200',
     });
-    console.log(`  Contact updated: ${updatedContact.name}, ${updatedContact.title}`);
+    console.log(`  Title updated: ${updatedContact.title}`);
 
-    // List company contacts
     const companyContacts = await TurboQuote.listCompanyContacts(company.id);
-    console.log(`  ${company.name} has ${companyContacts.totalRecords} contact(s):`);
-    for (const c of companyContacts.results) {
-      console.log(`    - ${c.name} (${c.title || 'no title'})`);
-    }
-    console.log();
+    console.log(`  ${companyContacts.totalRecords} contact(s) for ${company.name}`);
+
+    const productCategory = await TurboQuote.createType({
+      name: 'Consulting',
+      categoryType: 'product_category',
+    });
+
+    const product = await TurboQuote.createProduct({
+      name: 'Consulting Service',
+      listPrice: 500.00,
+      billingFrequency: 'monthly',
+      categoryId: productCategory.id,
+      currency: 'USD',
+    });
+    console.log(`  Product: ${product.name} — $${product.listPrice}/mo\n`);
 
     // =============================================
     // 5. APPROVAL WORKFLOWS
@@ -162,7 +144,7 @@ async function advancedExample(): Promise<void> {
 
     const workflow = await TurboQuote.createWorkflow({
       name: 'High-Value Quote Approval',
-      description: 'Requires manager approval for quotes with discounts over 20% or totals over $10,000',
+      description: 'Requires manager approval for quotes over $10,000',
       nodes: [
         {
           id: 'start-1',
@@ -198,133 +180,104 @@ async function advancedExample(): Promise<void> {
       viewport: { x: 0, y: 0, zoom: 1 },
     });
 
-    console.log('Workflow created!');
-    console.log(`  ID: ${workflow.id}`);
-    console.log(`  Name: ${workflow.name}`);
-    console.log(`  Nodes: ${workflow.nodes.length}`);
-    console.log(`  Edges: ${workflow.edges.length}`);
-    console.log(`  Active: ${workflow.isActive}\n`);
+    console.log(`  ${workflow.name}: ${workflow.nodes.length} nodes, ${workflow.edges.length} edges\n`);
 
     // =============================================
-    // 6. ACTIVATE WORKFLOW
+    // 6. ACTIVATE & INSPECT WORKFLOW
     // =============================================
-    console.log('6. Activating workflow...');
+    console.log('6. Activating and inspecting workflow...');
 
     const activeWorkflow = await TurboQuote.activateWorkflow(workflow.id);
-    console.log(`  Workflow "${activeWorkflow.name}" is now active: ${activeWorkflow.isActive}\n`);
-
-    // =============================================
-    // 7. LIST & INSPECT WORKFLOWS
-    // =============================================
-    console.log('7. Listing workflows...');
+    console.log(`  Active: ${activeWorkflow.isActive}`);
 
     const workflows = await TurboQuote.listWorkflows({ limit: 10 });
-    console.log(`Found ${workflows.totalRecords} workflow(s):`);
-    for (const wf of workflows.results) {
-      console.log(`  - ${wf.name} (active: ${wf.isActive}, nodes: ${wf.nodes.length})`);
-    }
+    console.log(`  ${workflows.totalRecords} workflow(s) in org`);
 
     const wfDetail = await TurboQuote.getWorkflow(workflow.id);
-    console.log(`\nWorkflow detail: ${wfDetail.name}`);
-    console.log(`  Description: ${wfDetail.description}`);
     for (const node of wfDetail.nodes) {
-      console.log(`  Node "${node.data.label}" (${node.type})`);
+      console.log(`    Node: "${node.data.label}" (${node.type})`);
     }
 
-    // Update workflow
     const updatedWorkflow = await TurboQuote.updateWorkflow(workflow.id, {
-      description: 'Requires manager approval for high-value quotes — updated threshold',
+      description: 'Updated threshold — requires approval for high-value quotes',
     });
-    console.log(`\n  Workflow description updated: ${updatedWorkflow.description}\n`);
+    console.log(`  Description updated: ${updatedWorkflow.description}\n`);
 
     // =============================================
-    // 8. APPROVAL REQUESTS
+    // 7. APPROVAL REQUESTS
     // =============================================
-    console.log('8. Checking approval requests...');
+    console.log('7. Checking approval requests...');
 
     const approvalRequests = await TurboQuote.listApprovalRequests({ limit: 10 });
-    console.log(`Found ${approvalRequests.totalRecords} pending approval request(s)`);
-    for (const req of approvalRequests.results) {
-      console.log(`  - Quote ${req.quoteId}: status=${req.status}, node=${req.currentNodeId}`);
-    }
-    console.log();
+    console.log(`  ${approvalRequests.totalRecords} pending approval request(s)\n`);
 
     // =============================================
-    // 9. QUOTE STATUS TRANSITIONS
+    // 8. QUOTE STATUS TRANSITIONS
     // =============================================
-    console.log('9. Demonstrating quote status transitions...');
+    console.log('8. Demonstrating quote status transitions...');
 
-    // Create a quote, add items, send, then decline
+    // --- Decline flow ---
     const quote1 = await TurboQuote.createQuote({
       name: 'Status Demo — Decline Flow',
       companyId: company.id,
       contactId: contact.id,
       currency: 'USD',
     });
-    console.log(`  Created quote: ${quote1.quoteNumber} (${quote1.status})`);
+    console.log(`  Created: ${quote1.quoteNumber} (${quote1.status})`);
 
-    // Add a line item
+    // Add a line item, then remove it (demonstrating removeLineItem)
     const lineItems = await TurboQuote.addLineItems(quote1.id, {
-      productId: process.env.PRODUCT_ID_1 || 'your-product-id-here',
-      productName: 'Consulting Service',
+      productId: product.id,
+      productName: product.name,
       quantity: 1,
-      unitPrice: 500.00,
+      unitPrice: product.listPrice,
       billingFrequency: 'monthly',
     });
-    console.log(`  Added ${lineItems.length} line item(s)`);
+    console.log(`  Added line item: ${lineItems[0].id}`);
 
-    // Remove the line item (demonstrating removeLineItem)
     await TurboQuote.removeLineItem(quote1.id, lineItems[0].id);
     console.log(`  Removed line item: ${lineItems[0].id}`);
 
     // Re-add for sending
     await TurboQuote.addLineItems(quote1.id, {
-      productId: process.env.PRODUCT_ID_1 || 'your-product-id-here',
-      productName: 'Consulting Service',
+      productId: product.id,
+      productName: product.name,
       quantity: 1,
-      unitPrice: 500.00,
+      unitPrice: product.listPrice,
       billingFrequency: 'monthly',
     });
 
     const sent1 = await TurboQuote.sendQuote(quote1.id);
-    console.log(`  Sent quote: ${sent1.message ?? 'sent'}`);
-
+    console.log(`  Sent: ${sent1.message}`);
 
     // Check approval activity
     const activity = await TurboQuote.getApprovalActivity(quote1.id);
     console.log(`  Approval state: ${activity.approvalState?.status || 'none'}`);
-    console.log(`  Approval actions: ${activity.actions.length}`);
 
-    // Approve the quote (if it requires approval)
     if (activity.approvalState?.status === 'pending') {
       const approvalResult = await TurboQuote.approveQuote(quote1.id, {
         action: 'approved',
-        comments: 'Looks good, approved for sending.',
+        comments: 'Looks good, approved.',
       });
-      console.log(`  Approval result: ${approvalResult.message}`);
+      console.log(`  Approved: ${approvalResult.message}`);
     }
 
-    // Decline
-    const declined = await TurboQuote.declineQuote(quote1.id, 'Budget not approved for this quarter');
-    console.log(`  Declined quote: ${declined.status}\n`);
+    const declined = await TurboQuote.declineQuote(quote1.id, 'Budget not approved');
+    console.log(`  Declined: ${declined.status}`);
 
-    // Create another quote, send, then void
+    // --- Void flow ---
     const quote2 = await TurboQuote.createQuote({
       name: 'Status Demo — Void Flow',
       companyId: company.id,
       contactId: contact.id,
       currency: 'USD',
     });
-    console.log(`  Created quote: ${quote2.quoteNumber} (${quote2.status})`);
 
     await TurboQuote.sendQuote(quote2.id);
-    console.log('  Sent quote');
-
     const voided = await TurboQuote.voidQuote(quote2.id, 'Replaced by updated pricing');
-    console.log(`  Voided quote: ${voided.status}\n`);
+    console.log(`  Voided: ${voided.status}`);
 
-    // Handle expired quote
-    console.log('  Handling expired quote...');
+    // Handle expired quote (may fail if quote isn't in expired state)
     try {
       await TurboQuote.handleExpiredQuote(quote1.id, {
         action: 'void',
@@ -332,57 +285,47 @@ async function advancedExample(): Promise<void> {
         newValidUntil: '2026-12-31',
       });
       console.log('  Expired quote handled');
-    } catch (expiredError: any) {
-      console.log(`  (Expected — quote may not be in expired state: ${expiredError.message})`);
+    } catch {
+      console.log('  (handleExpiredQuote skipped — quote not in expired state)');
     }
     console.log();
 
     // =============================================
-    // 10. DUPLICATE A QUOTE
+    // 9. DUPLICATE A QUOTE
     // =============================================
-    console.log('10. Duplicating voided quote for re-quoting...');
+    console.log('9. Duplicating voided quote...');
 
     const duplicated = await TurboQuote.duplicateQuote(quote2.id);
     console.log(`  Original: ${quote2.quoteNumber} (${voided.status})`);
-    console.log(`  Duplicate: ${duplicated.quoteNumber} (${duplicated.status})\n`);
+    console.log(`  Copy: ${duplicated.quoteNumber} (${duplicated.status})\n`);
 
     // =============================================
-    // 11. DEACTIVATE & DELETE WORKFLOW
+    // 10. DEACTIVATE & DELETE WORKFLOW
     // =============================================
-    console.log('11. Deactivating and deleting workflow...');
+    console.log('10. Deactivating and deleting workflow...');
 
     const deactivated = await TurboQuote.deactivateWorkflow(workflow.id);
-    console.log(`  Workflow deactivated: ${deactivated.isActive}`);
+    console.log(`  Active: ${deactivated.isActive}`);
 
     await TurboQuote.deleteWorkflow(workflow.id);
     console.log('  Workflow deleted\n');
 
     // =============================================
-    // 12. CLEANUP
+    // 11. CLEANUP
     // =============================================
-    console.log('12. Cleaning up...');
+    console.log('11. Cleaning up...');
 
     await TurboQuote.deleteQuote(duplicated.id);
-    console.log(`  Deleted quote: ${duplicated.quoteNumber}`);
-
     await TurboQuote.deleteQuote(quote2.id);
-    console.log(`  Deleted quote: ${quote2.quoteNumber}`);
-
     await TurboQuote.deleteQuote(quote1.id);
-    console.log(`  Deleted quote: ${quote1.quoteNumber}`);
-
     await TurboQuote.deleteTemplate(template.id);
-    console.log(`  Deleted template: ${template.id}`);
-
+    await TurboQuote.deleteProduct(product.id);
     await TurboQuote.deleteContact(contact.id);
-    console.log(`  Deleted contact: ${contact.name}`);
-
     await TurboQuote.deleteCompany(company.id);
-    console.log(`  Deleted company: ${company.name}`);
-
+    await TurboQuote.deleteType(productCategory.id);
     await TurboQuote.deleteType(industryType.id);
-    console.log(`  Deleted type: ${updatedType.name}`);
 
+    console.log('  ✅ All test data removed');
     console.log('\n=== Advanced example completed successfully! ===');
   } catch (error: any) {
     console.error(`Error: ${error.message}`);
@@ -392,5 +335,4 @@ async function advancedExample(): Promise<void> {
   }
 }
 
-// Run the example
 advancedExample();

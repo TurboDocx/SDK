@@ -1,21 +1,16 @@
 /**
  * TurboQuote Example: Product & Bundle Catalog Management
  *
- * This example demonstrates the full product catalog lifecycle:
- * - createType() — create product_category and bundle_category types
- * - listTypes() — list categories
- * - createProduct() — with and without images
- * - listProducts(), getProduct() — browse catalog
- * - updateProduct() — change price, manage images
- * - duplicateProduct() — quick copy
- * - getProductPrimaryImages() — batch fetch thumbnail URLs
- * - deleteProduct() — remove from catalog
- * - createBundle() — combine products into bundles
- * - listBundles(), getBundle() — browse bundles
- * - updateBundle() — adjust items and discount
- * - duplicateBundle() — quick copy
- * - deleteBundle() — remove bundle
- * - deleteType() — cleanup categories
+ * Fully self-contained — creates all data it needs, then cleans up.
+ * Just add your API key and run.
+ *
+ * Methods demonstrated:
+ * - configure()
+ * - createType(), listTypes(), deleteType()
+ * - createProduct(), listProducts(), getProduct(), updateProduct()
+ * - duplicateProduct(), getProductPrimaryImages(), deleteProduct()
+ * - createBundle(), listBundles(), getBundle(), updateBundle()
+ * - duplicateBundle(), deleteBundle()
  *
  * Run: npx tsx examples/turboquote-products.ts
  */
@@ -42,32 +37,25 @@ async function productCatalogExample(): Promise<void> {
       name: 'Software Licenses',
       categoryType: 'product_category',
     });
-    console.log(`  Product category created: ${productCategory.name} (${productCategory.id})`);
+    console.log(`  Product category: ${productCategory.name} (${productCategory.id})`);
 
     const bundleCategory = await TurboQuote.createType({
       name: 'Starter Kits',
       categoryType: 'bundle_category',
     });
-    console.log(`  Bundle category created: ${bundleCategory.name} (${bundleCategory.id})`);
+    console.log(`  Bundle category: ${bundleCategory.name} (${bundleCategory.id})`);
 
-    // List categories
     const prodCategories = await TurboQuote.listTypes({
       categoryType: 'product_category',
       includeUsage: true,
     });
-    console.log(`\nFound ${prodCategories.totalRecords} product categories:`);
-    for (const cat of prodCategories.results) {
-      const usage = cat.usage ? ` (used by ${cat.usage.usageCount} products)` : '';
-      console.log(`  - ${cat.name}${usage}`);
-    }
-    console.log();
+    console.log(`  ${prodCategories.totalRecords} product categories in org\n`);
 
     // =============================================
     // 3. CREATE PRODUCTS
     // =============================================
     console.log('3. Creating products...');
 
-    // Simple product (no images)
     const product1 = await TurboQuote.createProduct({
       name: 'Widget Pro',
       listPrice: 149.99,
@@ -80,26 +68,7 @@ async function productCatalogExample(): Promise<void> {
       minimumOrderQuantity: 1,
       showInCatalog: true,
     });
-
-    console.log('Product 1 created!');
-    console.log(`  ID: ${product1.id}`);
-    console.log(`  Name: ${product1.name}`);
-    console.log(`  SKU: ${product1.sku}`);
-    console.log(`  Price: $${product1.listPrice}/${product1.billingFrequency}\n`);
-
-    // Product with image file path
-    // Uncomment and provide a real image path to test image uploads:
-    // const product2 = await TurboQuote.createProduct({
-    //   name: 'Widget Basic',
-    //   listPrice: 49.99,
-    //   billingFrequency: 'monthly',
-    //   sku: 'WGT-BAS-001',
-    //   description: 'Entry-level widget for small teams',
-    //   cost: 15.00,
-    //   categoryId: productCategory.id,
-    //   currency: 'USD',
-    //   images: ['./product-photo.jpg'],  // accepts file paths, Buffers, or File objects
-    // });
+    console.log(`  ${product1.name} — $${product1.listPrice}/mo (SKU: ${product1.sku})`);
 
     const product2 = await TurboQuote.createProduct({
       name: 'Widget Basic',
@@ -111,14 +80,8 @@ async function productCatalogExample(): Promise<void> {
       categoryId: productCategory.id,
       currency: 'USD',
     });
+    console.log(`  ${product2.name} — $${product2.listPrice}/mo (SKU: ${product2.sku})`);
 
-    console.log('Product 2 created!');
-    console.log(`  ID: ${product2.id}`);
-    console.log(`  Name: ${product2.name}`);
-    console.log(`  SKU: ${product2.sku}`);
-    console.log(`  Price: $${product2.listPrice}/${product2.billingFrequency}\n`);
-
-    // One-time setup fee product
     const product3 = await TurboQuote.createProduct({
       name: 'Implementation Fee',
       listPrice: 2500.00,
@@ -129,37 +92,26 @@ async function productCatalogExample(): Promise<void> {
       categoryId: productCategory.id,
       currency: 'USD',
     });
-
-    console.log('Product 3 created!');
-    console.log(`  ID: ${product3.id}`);
-    console.log(`  Name: ${product3.name}`);
-    console.log(`  Price: $${product3.listPrice} (${product3.billingFrequency})\n`);
+    console.log(`  ${product3.name} — $${product3.listPrice} one-time\n`);
 
     // =============================================
     // 4. LIST & GET PRODUCTS
     // =============================================
-    console.log('4. Listing products...');
+    console.log('4. Browsing products...');
 
     const allProducts = await TurboQuote.listProducts({ limit: 10 });
-    console.log(`Found ${allProducts.totalRecords} product(s):`);
-    for (const p of allProducts.results) {
-      console.log(`  - ${p.sku || 'N/A'}: ${p.name} — $${p.listPrice}/${p.billingFrequency}`);
-    }
-    console.log();
+    console.log(`  ${allProducts.totalRecords} product(s) in catalog`);
 
-    // Filter by category
     const categoryProducts = await TurboQuote.listProducts({
       categoryIds: [productCategory.id],
-      currency: 'USD',
     });
-    console.log(`Products in "Software Licenses" category: ${categoryProducts.totalRecords}`);
+    console.log(`  ${categoryProducts.totalRecords} in "Software Licenses"`);
 
-    // Get single product
     const productDetail = await TurboQuote.getProduct(product1.id);
-    console.log(`\nProduct detail: ${productDetail.name}`);
-    console.log(`  Description: ${productDetail.description}`);
-    console.log(`  Cost: $${productDetail.cost}`);
-    console.log(`  Margin: ${productDetail.cost ? Math.round((1 - productDetail.cost / productDetail.listPrice) * 100) : 'N/A'}%\n`);
+    const margin = productDetail.cost
+      ? Math.round((1 - productDetail.cost / productDetail.listPrice) * 100)
+      : 0;
+    console.log(`  ${productDetail.name}: $${productDetail.listPrice}, cost $${productDetail.cost}, ${margin}% margin\n`);
 
     // =============================================
     // 5. UPDATE A PRODUCT
@@ -169,12 +121,8 @@ async function productCatalogExample(): Promise<void> {
     const updatedProduct = await TurboQuote.updateProduct(product1.id, {
       listPrice: 169.99,
       description: 'Professional-grade widget with advanced features and priority support',
-      internalNotes: 'Price increased for Q3 — includes new support tier',
     });
-
-    console.log('Product updated!');
-    console.log(`  New Price: $${updatedProduct.listPrice}`);
-    console.log(`  Description: ${updatedProduct.description}\n`);
+    console.log(`  New price: $${updatedProduct.listPrice}\n`);
 
     // =============================================
     // 6. GET PRIMARY IMAGES
@@ -182,9 +130,8 @@ async function productCatalogExample(): Promise<void> {
     console.log('6. Fetching primary images...');
 
     const primaryImages = await TurboQuote.getProductPrimaryImages([product1.id, product2.id]);
-
-    for (const [productId, imageUrl] of Object.entries(primaryImages)) {
-      console.log(`  Product ${productId}: ${imageUrl || '(no image)'}`);
+    for (const [productId, image] of Object.entries(primaryImages)) {
+      console.log(`  ${productId}: ${image ? image.fileName : '(no image)'}`);
     }
     console.log();
 
@@ -194,8 +141,6 @@ async function productCatalogExample(): Promise<void> {
     console.log('7. Duplicating product...');
 
     const duplicatedProduct = await TurboQuote.duplicateProduct(product1.id);
-
-    console.log('Product duplicated!');
     console.log(`  Original: ${product1.name} (${product1.id})`);
     console.log(`  Copy: ${duplicatedProduct.name} (${duplicatedProduct.id})\n`);
 
@@ -210,48 +155,29 @@ async function productCatalogExample(): Promise<void> {
       sku: 'BDL-START-001',
       categoryId: bundleCategory.id,
       items: [
-        {
-          productId: product1.id,
-          unitPrice: 169.99,
-          billingFrequency: 'monthly',
-          quantity: 1,
-        },
-        {
-          productId: product2.id,
-          unitPrice: 49.99,
-          billingFrequency: 'monthly',
-          quantity: 2,
-        },
+        { productId: product1.id, unitPrice: 169.99, billingFrequency: 'monthly', quantity: 1 },
+        { productId: product2.id, unitPrice: 49.99, billingFrequency: 'monthly', quantity: 2 },
       ],
       bundleDiscountPercent: 10,
       currency: 'USD',
       showItemsToEndUser: true,
       showInCatalog: true,
     });
-
-    console.log('Bundle created!');
-    console.log(`  ID: ${bundle.id}`);
-    console.log(`  Name: ${bundle.name}`);
-    console.log(`  Total List Price: $${bundle.totalListPrice}`);
-    console.log(`  Total Final Price: $${bundle.totalFinalPrice} (${bundle.bundleDiscountPercent}% off)`);
-    console.log(`  Items: ${bundle.items?.length || 0}\n`);
+    console.log(`  ${bundle.name}: $${bundle.totalFinalPrice} (${bundle.bundleDiscountPercent}% off)\n`);
 
     // =============================================
     // 9. LIST & GET BUNDLES
     // =============================================
-    console.log('9. Listing bundles...');
+    console.log('9. Browsing bundles...');
 
     const bundles = await TurboQuote.listBundles({ limit: 10 });
-    console.log(`Found ${bundles.totalRecords} bundle(s):`);
-    for (const b of bundles.results) {
-      console.log(`  - ${b.sku || 'N/A'}: ${b.name} — $${b.totalFinalPrice}`);
-    }
+    console.log(`  ${bundles.totalRecords} bundle(s) in catalog`);
 
     const bundleDetail = await TurboQuote.getBundle(bundle.id);
-    console.log(`\nBundle detail: ${bundleDetail.name}`);
+    console.log(`  ${bundleDetail.name}: ${bundleDetail.items?.length || 0} items`);
     if (bundleDetail.items) {
       for (const item of bundleDetail.items) {
-        console.log(`  - ${item.quantity}x @ $${item.unitPrice}/${item.billingFrequency}`);
+        console.log(`    - ${item.quantity}x @ $${item.unitPrice}/${item.billingFrequency}`);
       }
     }
     console.log();
@@ -265,10 +191,7 @@ async function productCatalogExample(): Promise<void> {
       bundleDiscountPercent: 15,
       description: 'Everything you need to get started — holiday special!',
     });
-
-    console.log('Bundle updated!');
-    console.log(`  New Discount: ${updatedBundle.bundleDiscountPercent}%`);
-    console.log(`  New Final Price: $${updatedBundle.totalFinalPrice}\n`);
+    console.log(`  New discount: ${updatedBundle.bundleDiscountPercent}%\n`);
 
     // =============================================
     // 11. DUPLICATE BUNDLE
@@ -276,9 +199,6 @@ async function productCatalogExample(): Promise<void> {
     console.log('11. Duplicating bundle...');
 
     const duplicatedBundle = await TurboQuote.duplicateBundle(bundle.id);
-
-    console.log('Bundle duplicated!');
-    console.log(`  Original: ${bundle.name} (${bundle.id})`);
     console.log(`  Copy: ${duplicatedBundle.name} (${duplicatedBundle.id})\n`);
 
     // =============================================
@@ -287,29 +207,15 @@ async function productCatalogExample(): Promise<void> {
     console.log('12. Cleaning up...');
 
     await TurboQuote.deleteBundle(duplicatedBundle.id);
-    console.log(`  Deleted bundle: ${duplicatedBundle.name}`);
-
     await TurboQuote.deleteBundle(bundle.id);
-    console.log(`  Deleted bundle: ${bundle.name}`);
-
     await TurboQuote.deleteProduct(duplicatedProduct.id);
-    console.log(`  Deleted product: ${duplicatedProduct.name}`);
-
     await TurboQuote.deleteProduct(product3.id);
-    console.log(`  Deleted product: ${product3.name}`);
-
     await TurboQuote.deleteProduct(product2.id);
-    console.log(`  Deleted product: ${product2.name}`);
-
     await TurboQuote.deleteProduct(product1.id);
-    console.log(`  Deleted product: ${product1.name}`);
-
     await TurboQuote.deleteType(bundleCategory.id);
-    console.log(`  Deleted category: ${bundleCategory.name}`);
-
     await TurboQuote.deleteType(productCategory.id);
-    console.log(`  Deleted category: ${productCategory.name}`);
 
+    console.log('  ✅ All test data removed');
     console.log('\n=== Product catalog example completed successfully! ===');
   } catch (error: any) {
     console.error(`Error: ${error.message}`);
@@ -319,5 +225,4 @@ async function productCatalogExample(): Promise<void> {
   }
 }
 
-// Run the example
 productCatalogExample();

@@ -1,14 +1,20 @@
 /**
  * TurboQuote Example: Quote Lifecycle + createAndSend Shortcut
  *
- * This example demonstrates the most common quoting workflow:
- * - createCompany(), createContact() — set up CRM records
- * - createQuote(), getQuote(), updateQuote(), listQuotes() — quote CRUD
- * - addLineItems() (single + batch), addBundleLineItems(), listLineItems(), updateLineItem() — line items
- * - sendQuote() — send quote to recipients
- * - downloadQuotePdf() — download as PDF
- * - createAndSend() — convenience method (create + add items + send in one call)
- * - deleteQuote(), deleteContact(), deleteCompany() — cleanup
+ * Fully self-contained — creates all data it needs, then cleans up.
+ * Just add your API key and run.
+ *
+ * Methods demonstrated:
+ * - configure()
+ * - createCompany(), listCompanies(), deleteCompany()
+ * - createContact(), listContacts(), deleteContact()
+ * - createType(), deleteType()
+ * - createProduct(), deleteProduct()
+ * - createBundle(), deleteBundle()
+ * - createQuote(), getQuote(), updateQuote(), listQuotes(), deleteQuote()
+ * - addLineItems() (single + batch), addBundleLineItems(), listLineItems(), updateLineItem()
+ * - sendQuote(), downloadQuotePdf()
+ * - createAndSend()
  *
  * Run: npx tsx examples/turboquote-basic.ts
  */
@@ -28,9 +34,62 @@ async function quoteLifecycleExample(): Promise<void> {
 
   try {
     // =============================================
-    // 2. SET UP CRM — create company + contact
+    // 2. SET UP CATALOG — category, products, bundle
     // =============================================
-    console.log('2. Creating company...');
+    console.log('2. Setting up product catalog...');
+
+    const category = await TurboQuote.createType({
+      name: 'Example Products',
+      categoryType: 'product_category',
+    });
+
+    const bundleCategory = await TurboQuote.createType({
+      name: 'Example Bundles',
+      categoryType: 'bundle_category',
+    });
+
+    const product1 = await TurboQuote.createProduct({
+      name: 'Widget Pro',
+      listPrice: 99.99,
+      billingFrequency: 'monthly',
+      categoryId: category.id,
+      currency: 'USD',
+    });
+
+    const product2 = await TurboQuote.createProduct({
+      name: 'Widget Basic',
+      listPrice: 49.99,
+      billingFrequency: 'monthly',
+      categoryId: category.id,
+      currency: 'USD',
+    });
+
+    const product3 = await TurboQuote.createProduct({
+      name: 'Implementation Fee',
+      listPrice: 2500.00,
+      billingFrequency: 'one-time',
+      categoryId: category.id,
+      currency: 'USD',
+    });
+
+    const bundle = await TurboQuote.createBundle({
+      name: 'Starter Pack',
+      categoryId: bundleCategory.id,
+      items: [
+        { productId: product1.id, unitPrice: 99.99, billingFrequency: 'monthly', quantity: 1 },
+        { productId: product2.id, unitPrice: 49.99, billingFrequency: 'monthly', quantity: 1 },
+      ],
+      currency: 'USD',
+    });
+
+    console.log(`  Created category: ${category.name}`);
+    console.log(`  Created products: ${product1.name}, ${product2.name}, ${product3.name}`);
+    console.log(`  Created bundle: ${bundle.name}\n`);
+
+    // =============================================
+    // 3. SET UP CRM — company + contact
+    // =============================================
+    console.log('3. Creating company and contact...');
 
     const company = await TurboQuote.createCompany({
       name: 'Acme Corporation',
@@ -40,12 +99,7 @@ async function quoteLifecycleExample(): Promise<void> {
       country: 'US',
       phone: '+1-555-0100',
     });
-
-    console.log('Company created!');
-    console.log(`  ID: ${company.id}`);
-    console.log(`  Name: ${company.name}\n`);
-
-    console.log('Creating contact...');
+    console.log(`  Company: ${company.name} (${company.id})`);
 
     const contact = await TurboQuote.createContact({
       name: 'Jane Smith',
@@ -53,23 +107,19 @@ async function quoteLifecycleExample(): Promise<void> {
       email: 'jane@acme.com',
       title: 'VP of Engineering',
     });
-
-    console.log('Contact created!');
-    console.log(`  ID: ${contact.id}`);
-    console.log(`  Name: ${contact.name}`);
-    console.log(`  Email: ${contact.email}\n`);
+    console.log(`  Contact: ${contact.name} (${contact.email})`);
 
     // Verify CRM records
     const companies = await TurboQuote.listCompanies({ query: 'Acme', limit: 5 });
-    console.log(`Found ${companies.totalRecords} company(ies) matching "Acme"`);
+    console.log(`  Found ${companies.totalRecords} company(ies) matching "Acme"`);
 
     const contacts = await TurboQuote.listContacts({ companyId: company.id });
-    console.log(`Found ${contacts.totalRecords} contact(s) for Acme Corporation\n`);
+    console.log(`  Found ${contacts.totalRecords} contact(s) for ${company.name}\n`);
 
     // =============================================
-    // 3. CREATE A QUOTE
+    // 4. CREATE A QUOTE
     // =============================================
-    console.log('3. Creating quote...');
+    console.log('4. Creating quote...');
 
     const quote = await TurboQuote.createQuote({
       name: 'Acme Corp - Q3 Enterprise License',
@@ -80,143 +130,113 @@ async function quoteLifecycleExample(): Promise<void> {
       renewalPeriod: 'annually',
     });
 
-    console.log('Quote created!');
-    console.log(`  ID: ${quote.id}`);
     console.log(`  Number: ${quote.quoteNumber}`);
     console.log(`  Status: ${quote.status}`);
-    console.log(`  Currency: ${quote.currency}\n`);
 
-    // Get full quote details
     const quoteDetails = await TurboQuote.getQuote(quote.id);
-    console.log(`Quote "${quoteDetails.name}" valid for ${quoteDetails.termDays} days`);
+    console.log(`  Term: ${quoteDetails.termDays} days`);
 
-    // Update the quote name
     const updatedQuote = await TurboQuote.updateQuote(quote.id, {
       name: 'Acme Corp - Q3 Enterprise License (Revised)',
       taxRate: 8.5,
     });
-    console.log(`Updated quote name: ${updatedQuote.name}\n`);
+    console.log(`  Updated: ${updatedQuote.name}`);
 
-    // List quotes
     const quoteList = await TurboQuote.listQuotes({ statuses: 'draft', limit: 5 });
-    console.log(`Found ${quoteList.totalRecords} draft quote(s)`);
-    for (const q of quoteList.results) {
-      console.log(`  - ${q.quoteNumber}: ${q.name}`);
-    }
-    console.log();
+    console.log(`  ${quoteList.totalRecords} draft quote(s) in org\n`);
 
     // =============================================
-    // 4. ADD LINE ITEMS — single, then batch
+    // 5. ADD LINE ITEMS — single, batch, bundle
     // =============================================
-    console.log('4. Adding line items...');
+    console.log('5. Adding line items...');
 
     // Single item
     const singleItems = await TurboQuote.addLineItems(quote.id, {
-      productId: process.env.PRODUCT_ID_1 || 'your-product-id-here',
-      productName: 'Widget Pro',
+      productId: product1.id,
+      productName: product1.name,
       quantity: 10,
-      unitPrice: 99.99,
+      unitPrice: product1.listPrice,
       billingFrequency: 'monthly',
     });
-
-    console.log('Single line item added!');
-    console.log(`  Product: ${singleItems[0].productName}`);
-    console.log(`  Subtotal: $${singleItems[0].subtotal}\n`);
+    console.log(`  Added: ${singleItems[0].productName} x${singleItems[0].quantity}`);
 
     // Batch of 2 items
     const batchItems = await TurboQuote.addLineItems(quote.id, [
       {
-        productId: process.env.PRODUCT_ID_2 || 'your-product-id-2-here',
-        productName: 'Widget Basic',
+        productId: product2.id,
+        productName: product2.name,
         quantity: 5,
-        unitPrice: 49.99,
+        unitPrice: product2.listPrice,
         billingFrequency: 'monthly',
       },
       {
-        productId: process.env.PRODUCT_ID_3 || 'your-product-id-3-here',
-        productName: 'Implementation Fee',
+        productId: product3.id,
+        productName: product3.name,
         quantity: 1,
-        unitPrice: 2500.00,
+        unitPrice: product3.listPrice,
         billingFrequency: 'one-time',
         discountPercent: 10,
       },
     ]);
+    console.log(`  Batch added ${batchItems.length} items`);
 
-    console.log(`Batch added ${batchItems.length} line items`);
-    for (const item of batchItems) {
-      console.log(`  - ${item.productName}: ${item.quantity} x $${item.unitPrice} = $${item.subtotal}`);
-    }
-
-    // Add a bundle line item (single or batch, same pattern as addLineItems)
+    // Bundle line item
     const bundleItems = await TurboQuote.addBundleLineItems(quote.id, {
-      bundleId: process.env.BUNDLE_ID || 'your-bundle-id-here',
-      bundleName: 'Starter Pack',
+      bundleId: bundle.id,
+      bundleName: bundle.name,
       quantity: 1,
     });
-
-    console.log(`\nBundle line item added: ${bundleItems[0].bundleName}`);
-    console.log(`  Subtotal: $${bundleItems[0].subtotal}\n`);
+    console.log(`  Bundle added: ${bundleItems[0].bundleName}\n`);
 
     // =============================================
-    // 5. UPDATE A LINE ITEM
+    // 6. UPDATE A LINE ITEM
     // =============================================
-    console.log('5. Updating first line item...');
+    console.log('6. Updating first line item...');
 
     const updatedItem = await TurboQuote.updateLineItem(quote.id, singleItems[0].id, {
       quantity: 15,
       discountPercent: 5,
     });
-
-    console.log('Line item updated!');
-    console.log(`  Quantity: ${updatedItem.quantity}`);
-    console.log(`  Discount: ${updatedItem.discountPercent}%`);
-    console.log(`  New Subtotal: $${updatedItem.subtotal}\n`);
+    console.log(`  Quantity: ${updatedItem.quantity}, Discount: ${updatedItem.discountPercent}%\n`);
 
     // =============================================
-    // 6. LIST LINE ITEMS
+    // 7. LIST LINE ITEMS
     // =============================================
-    console.log('6. Listing all line items...');
+    console.log('7. Listing all line items...');
 
     const lineItems = await TurboQuote.listLineItems(quote.id);
-
-    console.log(`Quote has ${lineItems.totalRecords} line item(s):`);
+    console.log(`  ${lineItems.totalRecords} line item(s):`);
     for (const item of lineItems.results) {
-      const freq = item.billingFrequency || 'n/a';
-      console.log(`  - ${item.productName}: ${item.quantity} x $${item.unitPrice} (${freq}) = $${item.subtotal}`);
+      console.log(`    - ${item.productName}: ${item.quantity} x $${item.unitPrice}`);
     }
     console.log();
 
     // =============================================
-    // 7. SEND THE QUOTE
+    // 8. SEND THE QUOTE
     // =============================================
-    console.log('7. Sending quote...');
+    console.log('8. Sending quote...');
 
-    const sendResult = await TurboQuote.sendQuote(quote.id, {
-      ccEmails: ['sales-archive@yourcompany.com'],
-    });
-
-    console.log('✅ Quote sent!');
-    console.log(`  Message: ${sendResult.message}`);
+    const sendResult = await TurboQuote.sendQuote(quote.id);
+    console.log(`  ✅ ${sendResult.message}`);
     if (sendResult.signatureDocumentId) {
-      console.log(`  Signature Document ID: ${sendResult.signatureDocumentId}`);
+      console.log(`  Signature Doc: ${sendResult.signatureDocumentId}`);
     }
     console.log();
 
     // =============================================
-    // 8. DOWNLOAD QUOTE PDF
+    // 9. DOWNLOAD QUOTE PDF
     // =============================================
-    console.log('8. Downloading quote PDF...');
+    console.log('9. Downloading quote PDF...');
 
     const pdfBuffer = await TurboQuote.downloadQuotePdf(quote.id);
     const outputPath = `quote-${quote.quoteNumber}.pdf`;
     fs.writeFileSync(outputPath, Buffer.from(pdfBuffer));
-
-    console.log(`✅ PDF saved to ${outputPath}\n`);
+    console.log(`  ✅ Saved to ${outputPath}\n`);
 
     // =============================================
-    // 9. SHORTCUT: createAndSend()
+    // 10. SHORTCUT: createAndSend()
     // =============================================
-    console.log('9. Using createAndSend() shortcut...');
+    console.log('10. Using createAndSend() shortcut...');
 
     const quickResult = await TurboQuote.createAndSend({
       name: 'Acme Corp - Quick Quote',
@@ -226,40 +246,35 @@ async function quoteLifecycleExample(): Promise<void> {
       termDays: 14,
       items: [
         {
-          productId: process.env.PRODUCT_ID_1 || 'your-product-id-here',
-          productName: 'Widget Pro',
-          unitPrice: 99.99,
+          productId: product1.id,
+          productName: product1.name,
+          unitPrice: product1.listPrice,
           billingFrequency: 'monthly',
           quantity: 5,
         },
       ],
     });
 
-    console.log('✅ Quote created and sent in one call!');
-    console.log(`  Quote Number: ${quickResult.quote.quoteNumber}`);
-    console.log(`  Status: ${quickResult.quote.status}`);
-    if (quickResult.signatureDocumentId) {
-      console.log(`  Signature Document ID: ${quickResult.signatureDocumentId}`);
-    }
+    console.log(`  ✅ ${quickResult.quote.quoteNumber} created and sent!`);
     console.log();
 
     // =============================================
-    // 10. CLEANUP
+    // 11. CLEANUP
     // =============================================
-    console.log('10. Cleaning up...');
+    console.log('11. Cleaning up...');
 
     await TurboQuote.deleteQuote(quote.id);
-    console.log(`  Deleted quote: ${quote.quoteNumber}`);
-
     await TurboQuote.deleteQuote(quickResult.quote.id);
-    console.log(`  Deleted quote: ${quickResult.quote.quoteNumber}`);
-
     await TurboQuote.deleteContact(contact.id);
-    console.log(`  Deleted contact: ${contact.name}`);
-
     await TurboQuote.deleteCompany(company.id);
-    console.log(`  Deleted company: ${company.name}`);
+    await TurboQuote.deleteBundle(bundle.id);
+    await TurboQuote.deleteProduct(product3.id);
+    await TurboQuote.deleteProduct(product2.id);
+    await TurboQuote.deleteProduct(product1.id);
+    await TurboQuote.deleteType(bundleCategory.id);
+    await TurboQuote.deleteType(category.id);
 
+    console.log('  ✅ All test data removed');
     console.log('\n=== Quote lifecycle example completed successfully! ===');
   } catch (error: any) {
     console.error(`Error: ${error.message}`);
@@ -269,5 +284,4 @@ async function quoteLifecycleExample(): Promise<void> {
   }
 }
 
-// Run the example
 quoteLifecycleExample();
