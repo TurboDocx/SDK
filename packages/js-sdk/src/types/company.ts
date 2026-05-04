@@ -28,8 +28,16 @@ export interface Company {
 // REQUEST TYPES
 // ============================================
 
+export interface CreateCompanyContactInput {
+  name: string;
+  email: string;
+  phone?: string;
+  title?: string;
+}
+
 export interface CreateCompanyRequest {
   name: string;
+  contacts: CreateCompanyContactInput[];
   phone?: string;
   city?: string;
   state?: string;
@@ -47,7 +55,7 @@ export interface UpdateCompanyRequest {
 }
 
 export interface ListCompaniesOptions extends PaginationParams {
-  industryId?: string;
+  industryIds?: string | string[];
 }
 
 // ============================================

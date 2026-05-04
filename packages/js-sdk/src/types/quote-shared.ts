@@ -8,7 +8,7 @@ export type BillingFrequency = 'monthly' | 'quarterly' | 'annual' | 'one-time';
 
 export type LineItemType = 'product' | 'bundle';
 
-export type RenewalPeriod = 'monthly' | 'quarterly' | 'annually';
+export type RenewalPeriod = 'weekly' | 'monthly' | 'quarterly' | 'annually';
 
 export type Currency = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'INR' | (string & {});
 
@@ -17,7 +17,7 @@ export type CategoryType = 'product_category' | 'pricebook_type' | 'company_indu
 export interface PaginationParams {
   limit?: number;
   offset?: number;
-  search?: string;
+  query?: string;
 }
 
 export interface PaginatedResponse<T> {

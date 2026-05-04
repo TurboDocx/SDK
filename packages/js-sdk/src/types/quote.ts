@@ -52,8 +52,8 @@ export interface Quote {
 
 export interface CreateQuoteRequest {
   name: string;
-  companyId?: string;
-  contactId?: string;
+  companyId: string;
+  contactId: string;
   currency?: Currency;
   termDays?: number;
   renewalPeriod?: RenewalPeriod;
@@ -74,12 +74,13 @@ export interface UpdateQuoteRequest {
 }
 
 export interface ListQuotesOptions extends PaginationParams {
-  status?: QuoteStatus;
+  statuses?: QuoteStatus | QuoteStatus[];
+  companyId?: string;
+  contactId?: string;
   currency?: Currency;
 }
 
 export interface SendQuoteRequest {
-  recipients?: string[];
   ccEmails?: string[];
   validUntil?: string;
 }
@@ -90,9 +91,9 @@ export interface SendQuoteWithDeliverableRequest extends SendQuoteRequest {
 }
 
 export interface SendQuoteResponse {
-  quote?: Quote;
-  signatureDocumentId?: string;
+  result: Quote;
   message: string;
+  signatureDocumentId?: string;
 }
 
 export interface HandleExpiredQuoteRequest {
@@ -116,14 +117,22 @@ export interface CreateAndSendResponse {
 // RESPONSE TYPES
 // ============================================
 
+export interface QuoteListStats {
+  total: number;
+  draft: number;
+  sent: number;
+  accepted: number;
+  declined: number;
+  voided: number;
+  totalPipeline: Array<{ currency: string; total: number }>;
+  activeQuotes: number;
+  monthlyRecurringRevenue: Array<{ currency: string; total: number }>;
+  winRate: number;
+  avgMargin: number;
+  quotesThisMonth: number;
+}
+
 export interface QuoteListResponse extends PaginatedResponse<Quote> {
-  stats?: {
-    totalPipeline?: Record<string, number>;
-    activeQuotes?: number;
-    monthlyRecurringRevenue?: Record<string, number>;
-    winRate?: number;
-    averageMargin?: number;
-    quotesCreatedThisMonth?: number;
-  };
+  stats: QuoteListStats;
 }
 
