@@ -182,13 +182,15 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should get a quote by ID and unwrap result", async () => {
+    it("should get a quote by ID, unwrap result, and include statusInfo", async () => {
       const mockQuote = { id: "q-1", name: "Test Quote", status: "sent", lineItems: [] };
-      mockClient.get.mockResolvedValue({ result: mockQuote, statusInfo: { isExpired: false } });
+      const mockStatusInfo = { currentStatus: "sent", canSend: false, canAccept: true, canDecline: true, canVoid: true, isTerminal: false };
+      mockClient.get.mockResolvedValue({ result: mockQuote, statusInfo: mockStatusInfo });
 
       const result = await TurboQuote.getQuote("q-1");
 
       expect(result.id).toBe("q-1");
+      expect(result.statusInfo).toEqual(mockStatusInfo);
       expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/q-1");
     });
 
@@ -530,6 +532,60 @@ describe("TurboQuote Module", () => {
       expect(mockClient.post).toHaveBeenCalledWith("/v1/products/p-1/duplicate");
     });
 
+    it("should pack product fields into a 'data' JSON field when creating with images", async () => {
+      const mockProduct = { id: "p-1", name: "Widget", listPrice: 99 };
+      mockClient.postFormData.mockResolvedValue({ result: mockProduct, message: "Product created successfully" });
+
+      const fakeImage = Buffer.from("fake-image");
+      await TurboQuote.createProduct({
+        name: "Widget",
+        listPrice: 99,
+        billingFrequency: "monthly",
+        categoryId: "cat-1",
+        images: [fakeImage],
+      });
+
+      expect(mockClient.postFormData).toHaveBeenCalledWith(
+        "/v1/products",
+        expect.any(FormData)
+      );
+
+      const formData = mockClient.postFormData.mock.calls[0][1] as FormData;
+      const dataField = formData.get("data");
+      expect(dataField).toBeTruthy();
+
+      const parsed = JSON.parse(dataField as string);
+      expect(parsed.name).toBe("Widget");
+      expect(parsed.listPrice).toBe(99);
+      expect(parsed.billingFrequency).toBe("monthly");
+      expect(parsed.categoryId).toBe("cat-1");
+    });
+
+    it("should pack product fields into 'data' JSON field on update with images", async () => {
+      const mockProduct = { id: "p-1", name: "Updated Widget" };
+      mockClient.patchFormData.mockResolvedValue({ result: mockProduct, message: "Product updated successfully" });
+
+      const fakeImage = Buffer.from("fake-image");
+      await TurboQuote.updateProduct("p-1", {
+        name: "Updated Widget",
+        images: [fakeImage],
+        imageIdsToKeep: ["img-id-1"],
+      });
+
+      expect(mockClient.patchFormData).toHaveBeenCalledWith(
+        "/v1/products/p-1",
+        expect.any(FormData)
+      );
+
+      const formData = mockClient.patchFormData.mock.calls[0][1] as FormData;
+      const dataField = formData.get("data");
+      expect(dataField).toBeTruthy();
+
+      const parsed = JSON.parse(dataField as string);
+      expect(parsed.name).toBe("Updated Widget");
+      expect(parsed.imageIdsToKeep).toEqual(["img-id-1"]);
+    });
+
     it("should get primary images and unwrap results", async () => {
       const mockImageMap = { "p-1": { id: "img-1", productId: "p-1" }, "p-2": null };
       mockClient.post.mockResolvedValue({ results: mockImageMap });
@@ -838,6 +894,26 @@ describe("TurboQuote Module", () => {
   describe("Templates", () => {
     beforeEach(() => {
       TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+    });
+
+    it("should list all templates", async () => {
+      const mockResponse = { results: [{ id: "t-1", primaryColor: "#0066FF" }, { id: "t-2", primaryColor: "#FF0000" }], totalRecords: 2 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listTemplates();
+
+      expect(result.results).toHaveLength(2);
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/quote-templates");
+    });
+
+    it("should get a template by ID and unwrap result", async () => {
+      const mockTemplate = { id: "t-1", primaryColor: "#0066FF" };
+      mockClient.get.mockResolvedValue({ result: mockTemplate });
+
+      const result = await TurboQuote.getTemplateById("t-1");
+
+      expect(result.id).toBe("t-1");
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/quote-templates/t-1");
     });
 
     it("should get the org template and unwrap result", async () => {

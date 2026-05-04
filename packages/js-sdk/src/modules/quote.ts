@@ -8,6 +8,7 @@ import { HttpClient, QuoteClientConfig } from '../http';
 import type { PaginationParams, SuccessResponse } from '../types/quote-shared';
 import type {
   Quote,
+  QuoteStatusInfo,
   CreateQuoteRequest,
   UpdateQuoteRequest,
   ListQuotesOptions,
@@ -71,6 +72,7 @@ import type {
 } from '../types/contact';
 import type {
   QuoteTemplate,
+  QuoteTemplateListResponse,
   CreateQuoteTemplateRequest,
   UpdateQuoteTemplateRequest,
 } from '../types/quote-template';
@@ -112,20 +114,9 @@ function toQueryParams(request?: Record<string, any>): Record<string, string | s
 
 function buildProductFormData(request: Record<string, any>): FormData {
   const formData = new FormData();
-  const { images, imageIdsToKeep, imageOrder, ...fields } = request;
+  const { images, ...dataFields } = request;
 
-  for (const [key, value] of Object.entries(fields)) {
-    if (value !== undefined && value !== null) {
-      formData.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
-    }
-  }
-
-  if (imageIdsToKeep) {
-    formData.append('imageIdsToKeep', JSON.stringify(imageIdsToKeep));
-  }
-  if (imageOrder) {
-    formData.append('imageOrder', JSON.stringify(imageOrder));
-  }
+  formData.append('data', JSON.stringify(dataFields));
 
   if (images) {
     for (const image of images as Array<string | File | Buffer>) {
@@ -184,7 +175,12 @@ export class TurboQuote {
 
   static async getQuote(id: string): Promise<Quote> {
     const client = this.getClient();
-    return this.unwrap(await client.get<{ result: Quote }>(`/v1/quotes/${id}`));
+    const response = await client.get<{ result: Quote; statusInfo?: QuoteStatusInfo }>(`/v1/quotes/${id}`);
+    const quote = response.result;
+    if (response.statusInfo) {
+      quote.statusInfo = response.statusInfo;
+    }
+    return quote;
   }
 
   static async updateQuote(id: string, request: UpdateQuoteRequest): Promise<Quote> {
@@ -477,9 +473,19 @@ export class TurboQuote {
   // TEMPLATES
   // ============================================
 
+  static async listTemplates(): Promise<QuoteTemplateListResponse> {
+    const client = this.getClient();
+    return client.get<QuoteTemplateListResponse>('/v1/quote-templates');
+  }
+
   static async getTemplate(): Promise<QuoteTemplate> {
     const client = this.getClient();
     return this.unwrap(await client.get<{ result: QuoteTemplate }>('/v1/quote-template'));
+  }
+
+  static async getTemplateById(id: string): Promise<QuoteTemplate> {
+    const client = this.getClient();
+    return this.unwrap(await client.get<{ result: QuoteTemplate }>(`/v1/quote-templates/${id}`));
   }
 
   static async createTemplate(request: CreateQuoteTemplateRequest): Promise<QuoteTemplate> {

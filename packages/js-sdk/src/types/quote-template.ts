@@ -43,3 +43,8 @@ export interface CreateQuoteTemplateRequest {
 }
 
 export type UpdateQuoteTemplateRequest = CreateQuoteTemplateRequest;
+
+export interface QuoteTemplateListResponse {
+  results: QuoteTemplate[];
+  totalRecords: number;
+}
