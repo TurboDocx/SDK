@@ -10,7 +10,7 @@ export type LineItemType = 'product' | 'bundle';
 
 export type RenewalPeriod = 'weekly' | 'monthly' | 'quarterly' | 'annually';
 
-export type Currency = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'INR' | (string & {});
+export type Currency = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'INR';
 
 export type CategoryType = 'product_category' | 'pricebook_type' | 'company_industry' | 'bundle_category';
 
