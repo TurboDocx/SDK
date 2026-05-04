@@ -1,0 +1,1112 @@
+/**
+ * TurboQuote Module Tests
+ *
+ * Tests for all TurboQuote SDK operations organized by entity:
+ * - Configuration
+ * - Quotes (CRUD + status + PDF)
+ * - Line Items
+ * - Products
+ * - Bundles
+ * - Price Books
+ * - Companies
+ * - Contacts
+ * - Templates
+ * - Types/Categories
+ * - Approvals & Workflows
+ * - Convenience methods (createAndSend)
+ */
+
+import { TurboQuote } from "../src/modules/quote";
+import { HttpClient } from "../src/http";
+
+jest.mock("../src/http");
+
+const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
+
+describe("TurboQuote Module", () => {
+  let mockClient: {
+    get: jest.Mock;
+    post: jest.Mock;
+    patch: jest.Mock;
+    delete: jest.Mock;
+    getRaw: jest.Mock;
+    postFormData: jest.Mock;
+    patchFormData: jest.Mock;
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (TurboQuote as any).client = undefined;
+
+    mockClient = {
+      get: jest.fn(),
+      post: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+      getRaw: jest.fn(),
+      postFormData: jest.fn(),
+      patchFormData: jest.fn(),
+    };
+
+    MockedHttpClient.mockImplementation(() => mockClient as any);
+  });
+
+  // ============================================
+  // CONFIGURATION
+  // ============================================
+
+  describe("configure", () => {
+    it("should configure the client with API key and org ID", () => {
+      TurboQuote.configure({
+        apiKey: "test-api-key",
+        orgId: "test-org-id",
+      });
+      expect(MockedHttpClient).toHaveBeenCalledWith({
+        apiKey: "test-api-key",
+        orgId: "test-org-id",
+        skipSenderValidation: true,
+      });
+    });
+
+    it("should configure with custom base URL", () => {
+      TurboQuote.configure({
+        apiKey: "test-key",
+        orgId: "org-1",
+        baseUrl: "https://custom.api.com",
+      });
+      expect(MockedHttpClient).toHaveBeenCalledWith({
+        apiKey: "test-key",
+        orgId: "org-1",
+        baseUrl: "https://custom.api.com",
+        skipSenderValidation: true,
+      });
+    });
+
+    it("should configure with access token instead of API key", () => {
+      TurboQuote.configure({
+        accessToken: "oauth-token",
+        orgId: "org-1",
+      });
+      expect(MockedHttpClient).toHaveBeenCalledWith({
+        accessToken: "oauth-token",
+        orgId: "org-1",
+        skipSenderValidation: true,
+      });
+    });
+
+    it("should auto-initialize from env vars when not configured", async () => {
+      const mockResponse = { results: [], totalRecords: 0 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      await TurboQuote.listQuotes();
+      expect(MockedHttpClient).toHaveBeenCalledWith({ skipSenderValidation: true });
+    });
+  });
+
+  // ============================================
+  // QUOTES — CRUD
+  // ============================================
+
+  describe("Quotes CRUD", () => {
+    beforeEach(() => {
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+    });
+
+    it("should list quotes with pagination and filters", async () => {
+      const mockResponse = {
+        results: [{ id: "q-1", name: "Test Quote", status: "draft" }],
+        totalRecords: 1,
+      };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listQuotes({ limit: 10, status: "draft", search: "test" });
+
+      expect(result.results).toHaveLength(1);
+      expect(result.totalRecords).toBe(1);
+      expect(mockClient.get).toHaveBeenCalledWith(
+        "/v1/quotes",
+        expect.objectContaining({ limit: "10", status: "draft", search: "test" })
+      );
+    });
+
+    it("should create a quote with minimal fields", async () => {
+      const mockQuote = { id: "q-1", name: "My Quote", status: "draft", quoteNumber: "Q-2026-00001" };
+      mockClient.post.mockResolvedValue(mockQuote);
+
+      const result = await TurboQuote.createQuote({ name: "My Quote" });
+
+      expect(result.id).toBe("q-1");
+      expect(result.status).toBe("draft");
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/quotes",
+        { name: "My Quote" }
+      );
+    });
+
+    it("should create a quote with all optional fields", async () => {
+      const mockQuote = { id: "q-2", name: "Full Quote", status: "draft" };
+      mockClient.post.mockResolvedValue(mockQuote);
+
+      await TurboQuote.createQuote({
+        name: "Full Quote",
+        companyId: "comp-1",
+        contactId: "cont-1",
+        currency: "EUR",
+        termDays: 60,
+        taxRate: 8.25,
+        validUntil: "2026-12-31",
+        priceBookId: "pb-1",
+      });
+
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/quotes",
+        expect.objectContaining({
+          name: "Full Quote",
+          companyId: "comp-1",
+          currency: "EUR",
+          termDays: 60,
+          taxRate: 8.25,
+        })
+      );
+    });
+
+    it("should get a quote by ID", async () => {
+      const mockQuote = { id: "q-1", name: "Test Quote", status: "sent", lineItems: [] };
+      mockClient.get.mockResolvedValue(mockQuote);
+
+      const result = await TurboQuote.getQuote("q-1");
+
+      expect(result.id).toBe("q-1");
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/q-1");
+    });
+
+    it("should update a quote", async () => {
+      const mockQuote = { id: "q-1", name: "Updated Name", taxRate: 10 };
+      mockClient.patch.mockResolvedValue(mockQuote);
+
+      const result = await TurboQuote.updateQuote("q-1", { name: "Updated Name", taxRate: 10 });
+
+      expect(result.name).toBe("Updated Name");
+      expect(mockClient.patch).toHaveBeenCalledWith(
+        "/v1/quotes/q-1",
+        { name: "Updated Name", taxRate: 10 }
+      );
+    });
+
+    it("should delete a quote", async () => {
+      const mockResponse = { success: true, message: "Quote deleted" };
+      mockClient.delete.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.deleteQuote("q-1");
+
+      expect(result.success).toBe(true);
+      expect(mockClient.delete).toHaveBeenCalledWith("/v1/quotes/q-1");
+    });
+
+    it("should duplicate a quote", async () => {
+      const mockQuote = { id: "q-2", name: "Test Quote (Copy)", status: "draft", quoteNumber: "Q-2026-00002" };
+      mockClient.post.mockResolvedValue(mockQuote);
+
+      const result = await TurboQuote.duplicateQuote("q-1");
+
+      expect(result.id).toBe("q-2");
+      expect(result.status).toBe("draft");
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/quotes/q-1/duplicate");
+    });
+
+    it("should apply a price book to a quote", async () => {
+      const mockQuote = { id: "q-1", priceBookId: "pb-1" };
+      mockClient.post.mockResolvedValue(mockQuote);
+
+      const result = await TurboQuote.applyPriceBook("q-1", "pb-1");
+
+      expect(result.priceBookId).toBe("pb-1");
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/quotes/q-1/apply-pricebook",
+        { priceBookId: "pb-1" }
+      );
+    });
+
+    it("should remove a price book from a quote", async () => {
+      const mockQuote = { id: "q-1", priceBookId: null };
+      mockClient.post.mockResolvedValue(mockQuote);
+
+      const result = await TurboQuote.removePriceBook("q-1");
+
+      expect(result.priceBookId).toBeNull();
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/quotes/q-1/remove-pricebook");
+    });
+
+    it("should download a quote PDF", async () => {
+      const mockPdf = new ArrayBuffer(1024);
+      mockClient.getRaw.mockResolvedValue(mockPdf);
+
+      const result = await TurboQuote.downloadQuotePdf("q-1");
+
+      expect(result).toBe(mockPdf);
+      expect(mockClient.getRaw).toHaveBeenCalledWith("/v1/quotes/q-1/pdf");
+    });
+  });
+
+  // ============================================
+  // QUOTES — STATUS TRANSITIONS
+  // ============================================
+
+  describe("Quote Status", () => {
+    beforeEach(() => {
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+    });
+
+    it("should send a quote", async () => {
+      const mockResponse = { message: "Quote sent", signatureDocumentId: "sig-1" };
+      mockClient.post.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.sendQuote("q-1", {
+        recipients: ["john@example.com"],
+        ccEmails: ["admin@example.com"],
+      });
+
+      expect(result.signatureDocumentId).toBe("sig-1");
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/quotes/q-1/send",
+        { recipients: ["john@example.com"], ccEmails: ["admin@example.com"] }
+      );
+    });
+
+    it("should send a quote without options", async () => {
+      const mockResponse = { message: "Quote sent" };
+      mockClient.post.mockResolvedValue(mockResponse);
+
+      await TurboQuote.sendQuote("q-1");
+
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/quotes/q-1/send", undefined);
+    });
+
+    it("should send a quote with a deliverable", async () => {
+      const mockResponse = { message: "Quote sent with deliverable", signatureDocumentId: "sig-2" };
+      mockClient.post.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.sendQuoteWithDeliverable("q-1", {
+        deliverableId: "del-1",
+        mergePosition: "end",
+      });
+
+      expect(result.signatureDocumentId).toBe("sig-2");
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/quotes/q-1/send-with-deliverable",
+        { deliverableId: "del-1", mergePosition: "end" }
+      );
+    });
+
+    it("should decline a quote with reason as direct parameter", async () => {
+      const mockQuote = { id: "q-1", status: "declined" };
+      mockClient.post.mockResolvedValue(mockQuote);
+
+      const result = await TurboQuote.declineQuote("q-1", "Budget not approved");
+
+      expect(result.status).toBe("declined");
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/quotes/q-1/decline",
+        { reason: "Budget not approved" }
+      );
+    });
+
+    it("should void a quote with reason as direct parameter", async () => {
+      const mockQuote = { id: "q-1", status: "voided" };
+      mockClient.post.mockResolvedValue(mockQuote);
+
+      const result = await TurboQuote.voidQuote("q-1", "Replaced by new quote");
+
+      expect(result.status).toBe("voided");
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/quotes/q-1/void",
+        { reason: "Replaced by new quote" }
+      );
+    });
+
+    it("should handle an expired sent quote", async () => {
+      const mockQuote = { id: "q-2", status: "draft", quoteNumber: "Q-2026-00003" };
+      mockClient.post.mockResolvedValue(mockQuote);
+
+      const result = await TurboQuote.handleExpiredQuote("q-1", {
+        action: "void",
+        reason: "Expired",
+        newValidUntil: "2026-12-31",
+      });
+
+      expect(result.status).toBe("draft");
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/quotes/q-1/handle-expired-sent",
+        { action: "void", reason: "Expired", newValidUntil: "2026-12-31" }
+      );
+    });
+  });
+
+  // ============================================
+  // LINE ITEMS
+  // ============================================
+
+  describe("Line Items", () => {
+    beforeEach(() => {
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+    });
+
+    it("should list line items for a quote", async () => {
+      const mockResponse = { results: [{ id: "li-1", productName: "Widget" }], totalRecords: 1 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listLineItems("q-1");
+
+      expect(result.results).toHaveLength(1);
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/q-1/items", undefined);
+    });
+
+    it("should add a single product line item (auto-wraps to array)", async () => {
+      const mockItems = [{ id: "li-1", productId: "prod-1", quantity: 2 }];
+      mockClient.post.mockResolvedValue(mockItems);
+
+      const result = await TurboQuote.addLineItems("q-1", { productId: "prod-1", quantity: 2 });
+
+      expect(result).toHaveLength(1);
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/quotes/q-1/items",
+        [{ productId: "prod-1", quantity: 2 }]
+      );
+    });
+
+    it("should add multiple product line items as batch", async () => {
+      const mockItems = [{ id: "li-1" }, { id: "li-2" }];
+      mockClient.post.mockResolvedValue(mockItems);
+
+      const result = await TurboQuote.addLineItems("q-1", [
+        { productId: "prod-1", quantity: 5 },
+        { productId: "prod-2", quantity: 1, discountPercent: 10 },
+      ]);
+
+      expect(result).toHaveLength(2);
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/quotes/q-1/items",
+        [
+          { productId: "prod-1", quantity: 5 },
+          { productId: "prod-2", quantity: 1, discountPercent: 10 },
+        ]
+      );
+    });
+
+    it("should add a single bundle line item", async () => {
+      const mockItems = [{ id: "li-3", bundleId: "bun-1", lineItemType: "bundle" }];
+      mockClient.post.mockResolvedValue(mockItems);
+
+      const result = await TurboQuote.addBundleLineItems("q-1", { bundleId: "bun-1" });
+
+      expect(result).toHaveLength(1);
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/quotes/q-1/items/bundle",
+        [{ bundleId: "bun-1" }]
+      );
+    });
+
+    it("should update a line item", async () => {
+      const mockItem = { id: "li-1", quantity: 10, unitPrice: 50 };
+      mockClient.patch.mockResolvedValue(mockItem);
+
+      const result = await TurboQuote.updateLineItem("q-1", "li-1", { quantity: 10, unitPrice: 50 });
+
+      expect(result.quantity).toBe(10);
+      expect(mockClient.patch).toHaveBeenCalledWith(
+        "/v1/quotes/q-1/items/li-1",
+        { quantity: 10, unitPrice: 50 }
+      );
+    });
+
+    it("should remove a line item", async () => {
+      const mockResponse = { success: true };
+      mockClient.delete.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.removeLineItem("q-1", "li-1");
+
+      expect(result.success).toBe(true);
+      expect(mockClient.delete).toHaveBeenCalledWith("/v1/quotes/q-1/items/li-1");
+    });
+  });
+
+  // ============================================
+  // PRODUCTS
+  // ============================================
+
+  describe("Products", () => {
+    beforeEach(() => {
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+    });
+
+    it("should list products with filters", async () => {
+      const mockResponse = { results: [{ id: "p-1", name: "Widget" }], totalRecords: 1 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listProducts({ billingFrequency: "monthly", limit: 25 });
+
+      expect(result.results).toHaveLength(1);
+      expect(mockClient.get).toHaveBeenCalledWith(
+        "/v1/products",
+        expect.objectContaining({ billingFrequency: "monthly", limit: "25" })
+      );
+    });
+
+    it("should create a product without images (JSON POST)", async () => {
+      const mockProduct = { id: "p-1", name: "Widget Pro", listPrice: 99.99 };
+      mockClient.post.mockResolvedValue(mockProduct);
+
+      const result = await TurboQuote.createProduct({
+        name: "Widget Pro",
+        listPrice: 99.99,
+        billingFrequency: "monthly",
+      });
+
+      expect(result.name).toBe("Widget Pro");
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/products",
+        { name: "Widget Pro", listPrice: 99.99, billingFrequency: "monthly" }
+      );
+    });
+
+    it("should get a product by ID", async () => {
+      const mockProduct = { id: "p-1", name: "Widget", images: [] };
+      mockClient.get.mockResolvedValue(mockProduct);
+
+      const result = await TurboQuote.getProduct("p-1");
+
+      expect(result.id).toBe("p-1");
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/products/p-1");
+    });
+
+    it("should update a product without images (JSON PATCH)", async () => {
+      const mockProduct = { id: "p-1", name: "Updated Widget", listPrice: 149.99 };
+      mockClient.patch.mockResolvedValue(mockProduct);
+
+      const result = await TurboQuote.updateProduct("p-1", { name: "Updated Widget", listPrice: 149.99 });
+
+      expect(result.name).toBe("Updated Widget");
+      expect(mockClient.patch).toHaveBeenCalledWith(
+        "/v1/products/p-1",
+        { name: "Updated Widget", listPrice: 149.99 }
+      );
+    });
+
+    it("should delete a product", async () => {
+      const mockResponse = { success: true };
+      mockClient.delete.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.deleteProduct("p-1");
+
+      expect(result.success).toBe(true);
+      expect(mockClient.delete).toHaveBeenCalledWith("/v1/products/p-1");
+    });
+
+    it("should duplicate a product", async () => {
+      const mockProduct = { id: "p-2", name: "Widget Pro (Copy)" };
+      mockClient.post.mockResolvedValue(mockProduct);
+
+      const result = await TurboQuote.duplicateProduct("p-1");
+
+      expect(result.id).toBe("p-2");
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/products/p-1/duplicate");
+    });
+
+    it("should get primary images for multiple products", async () => {
+      const mockResponse = { "p-1": "https://img.com/1.jpg", "p-2": null };
+      mockClient.post.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.getProductPrimaryImages(["p-1", "p-2"]);
+
+      expect(result["p-1"]).toBe("https://img.com/1.jpg");
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/products/primary-images",
+        { productIds: ["p-1", "p-2"] }
+      );
+    });
+  });
+
+  // ============================================
+  // PRICE BOOKS
+  // ============================================
+
+  describe("Price Books", () => {
+    beforeEach(() => {
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+    });
+
+    it("should list price books", async () => {
+      const mockResponse = { results: [{ id: "pb-1", name: "Standard" }], totalRecords: 1 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listPriceBooks();
+
+      expect(result.results).toHaveLength(1);
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/pricebooks", undefined);
+    });
+
+    it("should create a price book", async () => {
+      const mockPriceBook = { id: "pb-1", name: "Partner Pricing", discountPercent: 15 };
+      mockClient.post.mockResolvedValue(mockPriceBook);
+
+      const result = await TurboQuote.createPriceBook({ name: "Partner Pricing", discountPercent: 15 });
+
+      expect(result.name).toBe("Partner Pricing");
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/pricebooks",
+        { name: "Partner Pricing", discountPercent: 15 }
+      );
+    });
+
+    it("should get a price book by ID", async () => {
+      const mockPriceBook = { id: "pb-1", name: "Standard" };
+      mockClient.get.mockResolvedValue(mockPriceBook);
+
+      const result = await TurboQuote.getPriceBook("pb-1");
+
+      expect(result.id).toBe("pb-1");
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/pricebooks/pb-1");
+    });
+
+    it("should update a price book", async () => {
+      const mockPriceBook = { id: "pb-1", name: "Updated", discountPercent: 20 };
+      mockClient.patch.mockResolvedValue(mockPriceBook);
+
+      const result = await TurboQuote.updatePriceBook("pb-1", { discountPercent: 20 });
+
+      expect(result.discountPercent).toBe(20);
+    });
+
+    it("should delete a price book", async () => {
+      mockClient.delete.mockResolvedValue({ success: true });
+
+      const result = await TurboQuote.deletePriceBook("pb-1");
+
+      expect(result.success).toBe(true);
+    });
+
+    it("should duplicate a price book", async () => {
+      mockClient.post.mockResolvedValue({ id: "pb-2", name: "Standard (Copy)" });
+
+      const result = await TurboQuote.duplicatePriceBook("pb-1");
+
+      expect(result.id).toBe("pb-2");
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/pricebooks/pb-1/duplicate");
+    });
+
+    it("should list products in a price book", async () => {
+      const mockResponse = { results: [{ productId: "p-1", discountPercent: 10 }], totalRecords: 1 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listPriceBookProducts("pb-1");
+
+      expect(result.results).toHaveLength(1);
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/pricebooks/pb-1/products", undefined);
+    });
+  });
+
+  // ============================================
+  // BUNDLES
+  // ============================================
+
+  describe("Bundles", () => {
+    beforeEach(() => {
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+    });
+
+    it("should list bundles", async () => {
+      const mockResponse = { results: [{ id: "b-1", name: "Starter Pack" }], totalRecords: 1 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listBundles();
+
+      expect(result.results).toHaveLength(1);
+    });
+
+    it("should create a bundle with items", async () => {
+      const mockBundle = { id: "b-1", name: "Starter Pack", items: [] };
+      mockClient.post.mockResolvedValue(mockBundle);
+
+      const result = await TurboQuote.createBundle({
+        name: "Starter Pack",
+        items: [{ productId: "p-1", unitPrice: 50, billingFrequency: "monthly" }],
+      });
+
+      expect(result.name).toBe("Starter Pack");
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/bundles",
+        expect.objectContaining({ name: "Starter Pack" })
+      );
+    });
+
+    it("should get a bundle by ID", async () => {
+      mockClient.get.mockResolvedValue({ id: "b-1", items: [] });
+
+      const result = await TurboQuote.getBundle("b-1");
+
+      expect(result.id).toBe("b-1");
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/bundles/b-1");
+    });
+
+    it("should update a bundle", async () => {
+      mockClient.patch.mockResolvedValue({ id: "b-1", name: "Pro Pack" });
+
+      const result = await TurboQuote.updateBundle("b-1", { name: "Pro Pack" });
+
+      expect(result.name).toBe("Pro Pack");
+    });
+
+    it("should delete a bundle", async () => {
+      mockClient.delete.mockResolvedValue({ success: true });
+
+      const result = await TurboQuote.deleteBundle("b-1");
+
+      expect(result.success).toBe(true);
+    });
+
+    it("should duplicate a bundle", async () => {
+      mockClient.post.mockResolvedValue({ id: "b-2" });
+
+      const result = await TurboQuote.duplicateBundle("b-1");
+
+      expect(result.id).toBe("b-2");
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/bundles/b-1/duplicate");
+    });
+  });
+
+  // ============================================
+  // COMPANIES
+  // ============================================
+
+  describe("Companies", () => {
+    beforeEach(() => {
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+    });
+
+    it("should list companies", async () => {
+      const mockResponse = { results: [{ id: "c-1", name: "Acme Corp" }], totalRecords: 1 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listCompanies({ search: "acme" });
+
+      expect(result.results).toHaveLength(1);
+      expect(mockClient.get).toHaveBeenCalledWith(
+        "/v1/companies",
+        expect.objectContaining({ search: "acme" })
+      );
+    });
+
+    it("should create a company", async () => {
+      const mockCompany = { id: "c-1", name: "Acme Corp" };
+      mockClient.post.mockResolvedValue(mockCompany);
+
+      const result = await TurboQuote.createCompany({ name: "Acme Corp", city: "Austin", state: "TX" });
+
+      expect(result.name).toBe("Acme Corp");
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/companies",
+        { name: "Acme Corp", city: "Austin", state: "TX" }
+      );
+    });
+
+    it("should get a company by ID", async () => {
+      mockClient.get.mockResolvedValue({ id: "c-1", name: "Acme" });
+
+      const result = await TurboQuote.getCompany("c-1");
+
+      expect(result.id).toBe("c-1");
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/companies/c-1");
+    });
+
+    it("should update a company", async () => {
+      mockClient.patch.mockResolvedValue({ id: "c-1", name: "Acme Inc" });
+
+      const result = await TurboQuote.updateCompany("c-1", { name: "Acme Inc" });
+
+      expect(result.name).toBe("Acme Inc");
+    });
+
+    it("should delete a company", async () => {
+      mockClient.delete.mockResolvedValue({ success: true });
+
+      const result = await TurboQuote.deleteCompany("c-1");
+
+      expect(result.success).toBe(true);
+    });
+
+    it("should list contacts for a company", async () => {
+      const mockResponse = { results: [{ id: "ct-1", name: "John Doe" }], totalRecords: 1 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listCompanyContacts("c-1");
+
+      expect(result.results).toHaveLength(1);
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/companies/c-1/contacts", undefined);
+    });
+  });
+
+  // ============================================
+  // CONTACTS
+  // ============================================
+
+  describe("Contacts", () => {
+    beforeEach(() => {
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+    });
+
+    it("should list contacts with optional company filter", async () => {
+      const mockResponse = { results: [{ id: "ct-1", name: "Jane" }], totalRecords: 1 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listContacts({ companyId: "c-1" });
+
+      expect(result.results).toHaveLength(1);
+      expect(mockClient.get).toHaveBeenCalledWith(
+        "/v1/contacts",
+        expect.objectContaining({ companyId: "c-1" })
+      );
+    });
+
+    it("should create a contact", async () => {
+      const mockContact = { id: "ct-1", name: "John Doe", email: "john@example.com" };
+      mockClient.post.mockResolvedValue(mockContact);
+
+      const result = await TurboQuote.createContact({
+        name: "John Doe",
+        companyId: "c-1",
+        email: "john@example.com",
+      });
+
+      expect(result.name).toBe("John Doe");
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/contacts",
+        { name: "John Doe", companyId: "c-1", email: "john@example.com" }
+      );
+    });
+
+    it("should update a contact", async () => {
+      mockClient.patch.mockResolvedValue({ id: "ct-1", name: "Jane Doe" });
+
+      const result = await TurboQuote.updateContact("ct-1", { name: "Jane Doe" });
+
+      expect(result.name).toBe("Jane Doe");
+    });
+
+    it("should delete a contact", async () => {
+      mockClient.delete.mockResolvedValue({ success: true });
+
+      const result = await TurboQuote.deleteContact("ct-1");
+
+      expect(result.success).toBe(true);
+    });
+  });
+
+  // ============================================
+  // TEMPLATES
+  // ============================================
+
+  describe("Templates", () => {
+    beforeEach(() => {
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+    });
+
+    it("should get the org template (singular endpoint)", async () => {
+      const mockTemplate = { id: "t-1", primaryColor: "#0066FF" };
+      mockClient.get.mockResolvedValue(mockTemplate);
+
+      const result = await TurboQuote.getTemplate();
+
+      expect(result.id).toBe("t-1");
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/quote-template");
+    });
+
+    it("should create a template (plural endpoint)", async () => {
+      const mockTemplate = { id: "t-1", primaryColor: "#0066FF" };
+      mockClient.post.mockResolvedValue(mockTemplate);
+
+      const result = await TurboQuote.createTemplate({ primaryColor: "#0066FF", senderName: "Sales" });
+
+      expect(result.id).toBe("t-1");
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/quote-templates",
+        { primaryColor: "#0066FF", senderName: "Sales" }
+      );
+    });
+
+    it("should update a template", async () => {
+      mockClient.patch.mockResolvedValue({ id: "t-1", primaryColor: "#FF0000" });
+
+      const result = await TurboQuote.updateTemplate("t-1", { primaryColor: "#FF0000" });
+
+      expect(result.primaryColor).toBe("#FF0000");
+      expect(mockClient.patch).toHaveBeenCalledWith(
+        "/v1/quote-templates/t-1",
+        { primaryColor: "#FF0000" }
+      );
+    });
+
+    it("should delete a template", async () => {
+      mockClient.delete.mockResolvedValue({ success: true });
+
+      const result = await TurboQuote.deleteTemplate("t-1");
+
+      expect(result.success).toBe(true);
+      expect(mockClient.delete).toHaveBeenCalledWith("/v1/quote-templates/t-1");
+    });
+  });
+
+  // ============================================
+  // TYPES / CATEGORIES
+  // ============================================
+
+  describe("Types / Categories", () => {
+    beforeEach(() => {
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+    });
+
+    it("should list types by category", async () => {
+      const mockResponse = { results: [{ id: "type-1", name: "Technology" }], totalRecords: 1 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listTypes({ categoryType: "company_industry" });
+
+      expect(result.results).toHaveLength(1);
+      expect(mockClient.get).toHaveBeenCalledWith(
+        "/v1/types",
+        expect.objectContaining({ categoryType: "company_industry" })
+      );
+    });
+
+    it("should create a type", async () => {
+      const mockType = { id: "type-1", name: "SaaS", categoryType: "product_category" };
+      mockClient.post.mockResolvedValue(mockType);
+
+      const result = await TurboQuote.createType({ name: "SaaS", categoryType: "product_category" });
+
+      expect(result.name).toBe("SaaS");
+    });
+
+    it("should update a type", async () => {
+      mockClient.patch.mockResolvedValue({ id: "type-1", name: "Software" });
+
+      const result = await TurboQuote.updateType("type-1", { name: "Software" });
+
+      expect(result.name).toBe("Software");
+    });
+
+    it("should delete a type", async () => {
+      mockClient.delete.mockResolvedValue({ success: true });
+
+      const result = await TurboQuote.deleteType("type-1");
+
+      expect(result.success).toBe(true);
+    });
+  });
+
+  // ============================================
+  // APPROVALS & WORKFLOWS
+  // ============================================
+
+  describe("Approvals & Workflows", () => {
+    beforeEach(() => {
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+    });
+
+    it("should approve a quote", async () => {
+      const mockResponse = { success: true, message: "Quote approved" };
+      mockClient.post.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.approveQuote("q-1", { action: "approved", comments: "Looks good" });
+
+      expect(result.success).toBe(true);
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/quotes/q-1/approve",
+        { action: "approved", comments: "Looks good" }
+      );
+    });
+
+    it("should list pending approval requests", async () => {
+      const mockResponse = { results: [{ id: "as-1", status: "pending" }], totalRecords: 1 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listApprovalRequests();
+
+      expect(result.results).toHaveLength(1);
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/approval-requests", undefined);
+    });
+
+    it("should get approval activity for a quote", async () => {
+      const mockResponse = { approvalState: { status: "approved" }, actions: [] };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.getApprovalActivity("q-1");
+
+      expect(result.approvalState?.status).toBe("approved");
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/q-1/approval-activity");
+    });
+
+    it("should list workflows", async () => {
+      const mockResponse = { results: [{ id: "wf-1", name: "Default Approval" }], totalRecords: 1 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listWorkflows();
+
+      expect(result.results).toHaveLength(1);
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/workflows", undefined);
+    });
+
+    it("should create a workflow", async () => {
+      const mockWorkflow = { id: "wf-1", name: "Discount Approval" };
+      mockClient.post.mockResolvedValue(mockWorkflow);
+
+      const result = await TurboQuote.createWorkflow({
+        name: "Discount Approval",
+        nodes: [{ id: "n1", type: "start", data: { label: "Start" }, position: { x: 0, y: 0 } }],
+        edges: [],
+      });
+
+      expect(result.name).toBe("Discount Approval");
+    });
+
+    it("should get a workflow by ID", async () => {
+      mockClient.get.mockResolvedValue({ id: "wf-1", nodes: [], edges: [] });
+
+      const result = await TurboQuote.getWorkflow("wf-1");
+
+      expect(result.id).toBe("wf-1");
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/workflows/wf-1");
+    });
+
+    it("should update a workflow", async () => {
+      mockClient.patch.mockResolvedValue({ id: "wf-1", name: "Updated" });
+
+      const result = await TurboQuote.updateWorkflow("wf-1", { name: "Updated" });
+
+      expect(result.name).toBe("Updated");
+    });
+
+    it("should delete a workflow", async () => {
+      mockClient.delete.mockResolvedValue({ success: true });
+
+      const result = await TurboQuote.deleteWorkflow("wf-1");
+
+      expect(result.success).toBe(true);
+    });
+
+    it("should activate a workflow", async () => {
+      mockClient.post.mockResolvedValue({ id: "wf-1", isActive: true });
+
+      const result = await TurboQuote.activateWorkflow("wf-1");
+
+      expect(result.isActive).toBe(true);
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/quotes/workflows/wf-1/activate");
+    });
+
+    it("should deactivate a workflow", async () => {
+      mockClient.post.mockResolvedValue({ id: "wf-1", isActive: false });
+
+      const result = await TurboQuote.deactivateWorkflow("wf-1");
+
+      expect(result.isActive).toBe(false);
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/quotes/workflows/wf-1/deactivate");
+    });
+  });
+
+  // ============================================
+  // CONVENIENCE — createAndSend
+  // ============================================
+
+  describe("createAndSend", () => {
+    beforeEach(() => {
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+    });
+
+    it("should create a quote, add items, and send in one call", async () => {
+      const mockQuote = { id: "q-1", name: "Enterprise License", status: "draft" };
+      const mockItems = [{ id: "li-1" }];
+      const mockSendResponse = { quote: { ...mockQuote, status: "sent" }, signatureDocumentId: "sig-1", message: "Sent" };
+
+      mockClient.post
+        .mockResolvedValueOnce(mockQuote)
+        .mockResolvedValueOnce(mockItems)
+        .mockResolvedValueOnce(mockSendResponse);
+
+      const result = await TurboQuote.createAndSend({
+        name: "Enterprise License",
+        companyId: "c-1",
+        contactId: "ct-1",
+        items: [{ productId: "p-1", quantity: 10 }],
+        send: { recipients: ["john@example.com"] },
+      });
+
+      expect(result.quote.status).toBe("sent");
+      expect(result.signatureDocumentId).toBe("sig-1");
+
+      const postCalls = mockClient.post.mock.calls;
+      expect(postCalls[0][0]).toBe("/v1/quotes");
+      expect(postCalls[1][0]).toBe("/v1/quotes/q-1/items");
+      expect(postCalls[2][0]).toBe("/v1/quotes/q-1/send");
+    });
+
+    it("should create and send without items", async () => {
+      const mockQuote = { id: "q-1", name: "Simple Quote", status: "draft" };
+      const mockSendResponse = { quote: { ...mockQuote, status: "sent" }, message: "Sent" };
+
+      mockClient.post
+        .mockResolvedValueOnce(mockQuote)
+        .mockResolvedValueOnce(mockSendResponse);
+
+      const result = await TurboQuote.createAndSend({
+        name: "Simple Quote",
+      });
+
+      expect(result.quote.status).toBe("sent");
+      const postCalls = mockClient.post.mock.calls;
+      expect(postCalls).toHaveLength(2);
+      expect(postCalls[0][0]).toBe("/v1/quotes");
+      expect(postCalls[1][0]).toBe("/v1/quotes/q-1/send");
+    });
+
+    it("should create and send with bundle items", async () => {
+      const mockQuote = { id: "q-1", name: "Bundle Quote", status: "draft" };
+      const mockBundleItems = [{ id: "li-1", lineItemType: "bundle" }];
+      const mockSendResponse = { quote: { ...mockQuote, status: "sent" }, message: "Sent" };
+
+      mockClient.post
+        .mockResolvedValueOnce(mockQuote)
+        .mockResolvedValueOnce(mockBundleItems)
+        .mockResolvedValueOnce(mockSendResponse);
+
+      const result = await TurboQuote.createAndSend({
+        name: "Bundle Quote",
+        bundleItems: [{ bundleId: "b-1" }],
+      });
+
+      expect(result.quote.status).toBe("sent");
+      const postCalls = mockClient.post.mock.calls;
+      expect(postCalls[1][0]).toBe("/v1/quotes/q-1/items/bundle");
+    });
+  });
+
+  // ============================================
+  // ERROR HANDLING
+  // ============================================
+
+  describe("Error Handling", () => {
+    it("should propagate API errors from HttpClient", async () => {
+      const apiError = { statusCode: 404, message: "Quote not found" };
+      mockClient.get.mockRejectedValue(apiError);
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+
+      await expect(TurboQuote.getQuote("invalid")).rejects.toEqual(apiError);
+    });
+
+    it("should propagate validation errors", async () => {
+      const validationError = { statusCode: 400, message: "Name is required" };
+      mockClient.post.mockRejectedValue(validationError);
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+
+      await expect(TurboQuote.createQuote({ name: "" })).rejects.toEqual(validationError);
+    });
+  });
+});
