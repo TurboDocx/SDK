@@ -38,6 +38,7 @@ export interface Product {
   createdOn: string;
   updatedOn: string;
   images?: ProductImage[];
+  category?: { id: string; name: string; categoryType: string };
 }
 
 // ============================================

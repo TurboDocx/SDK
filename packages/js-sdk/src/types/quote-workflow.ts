@@ -2,8 +2,6 @@
  * TypeScript types for TurboQuote — Approval Workflow entity and request/response types
  */
 
-import type { PaginationParams, PaginatedResponse } from './quote-shared';
-
 // ============================================
 // DOMAIN TYPES
 // ============================================
@@ -88,7 +86,7 @@ export interface ApproveQuoteRequest {
 // RESPONSE TYPES
 // ============================================
 
-export type WorkflowListResponse = PaginatedResponse<Workflow>;
+export type WorkflowListResponse = Workflow[];
 
 export interface ApprovalAction {
   id: string;
@@ -117,15 +115,8 @@ export interface ApprovalState {
   updatedOn: string;
 }
 
-export interface ApprovalResponse {
-  success: boolean;
-  approvalState?: ApprovalState;
-  message?: string;
-}
+export type ApprovalResponse = ApprovalAction;
 
-export interface ApprovalActivityResponse {
-  approvalState: ApprovalState | null;
-  actions: ApprovalAction[];
-}
+export type ApprovalActivityResponse = ApprovalAction[];
 
-export type ApprovalRequestListResponse = PaginatedResponse<ApprovalState>;
+export type ApprovalRequestListResponse = ApprovalState[];

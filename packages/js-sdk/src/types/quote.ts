@@ -10,11 +10,23 @@ import type {
   PaginationParams,
   PaginatedResponse,
 } from './quote-shared';
-import type { AddLineItemRequest, AddBundleLineItemRequest } from './quote-line-item';
+import type { AddLineItemRequest, AddBundleLineItemRequest, LineItem } from './quote-line-item';
+import type { Company } from './company';
+import type { Contact } from './contact';
+import type { PriceBook } from './pricebook';
 
 // ============================================
 // DOMAIN TYPES
 // ============================================
+
+export interface QuoteStatusInfo {
+  currentStatus: string;
+  canSend: boolean;
+  canAccept: boolean;
+  canDecline: boolean;
+  canVoid: boolean;
+  isTerminal: boolean;
+}
 
 export interface Quote {
   id: string;
@@ -41,9 +53,12 @@ export interface Quote {
   createdBy: string | null;
   createdOn: string;
   updatedOn: string;
-  company?: Record<string, unknown>;
-  contact?: Record<string, unknown>;
-  lineItems?: Record<string, unknown>[];
+  company?: Company;
+  contact?: Contact;
+  lineItems?: LineItem[];
+  priceBook?: PriceBook;
+  creator?: { id: string; firstName: string; lastName: string };
+  statusInfo?: QuoteStatusInfo;
 }
 
 // ============================================
@@ -56,10 +71,10 @@ export interface CreateQuoteRequest {
   contactId: string;
   currency?: Currency;
   termDays?: number;
-  renewalPeriod?: RenewalPeriod;
-  validUntil?: string;
-  taxRate?: number;
-  priceBookId?: string;
+  renewalPeriod?: RenewalPeriod | null;
+  validUntil?: string | null;
+  taxRate?: number | null;
+  priceBookId?: string | null;
 }
 
 export interface UpdateQuoteRequest {
@@ -68,8 +83,9 @@ export interface UpdateQuoteRequest {
   contactId?: string;
   termDays?: number;
   renewalPeriod?: RenewalPeriod | null;
-  validUntil?: string;
-  taxRate?: number;
+  validUntil?: string | null;
+  taxRate?: number | null;
+  currency?: Currency;
   priceBookId?: string | null;
 }
 
@@ -85,15 +101,36 @@ export interface SendQuoteRequest {
   validUntil?: string;
 }
 
-export interface SendQuoteWithDeliverableRequest extends SendQuoteRequest {
+export interface SendQuoteWithDeliverableRequest {
   deliverableId: string;
-  mergePosition?: 'beginning' | 'end';
+  mergePosition: 'beginning' | 'end';
+  ccEmails?: string[];
 }
 
 export interface SendQuoteResponse {
-  result: Quote;
+  quote: Quote;
   message: string;
-  signatureDocumentId?: string;
+}
+
+export interface SendQuoteWithDeliverableResponse {
+  quote: Quote;
+  message: string;
+  documentId: string;
+}
+
+export interface DeclineQuoteRequest {
+  reason: string;
+}
+
+export interface VoidQuoteRequest {
+  reason: string;
+}
+
+export interface ApplyPriceBookResponse {
+  quote: Quote;
+  message: string;
+  updatedCount: number;
+  skippedCount: number;
 }
 
 export interface HandleExpiredQuoteRequest {
@@ -110,7 +147,6 @@ export interface CreateAndSendRequest extends CreateQuoteRequest {
 
 export interface CreateAndSendResponse {
   quote: Quote;
-  signatureDocumentId?: string;
 }
 
 // ============================================

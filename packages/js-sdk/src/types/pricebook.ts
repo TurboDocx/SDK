@@ -3,6 +3,7 @@
  */
 
 import type { PaginationParams, PaginatedResponse } from './quote-shared';
+import type { Product } from './product';
 
 // ============================================
 // DOMAIN TYPES
@@ -19,6 +20,7 @@ export interface PriceBookProductPricing {
   createdBy?: string | null;
   createdOn?: string;
   updatedOn?: string;
+  product?: Product;
 }
 
 export interface PriceBook {
@@ -37,6 +39,8 @@ export interface PriceBook {
   createdOn: string;
   updatedOn: string;
   productPricing?: PriceBookProductPricing[];
+  priceBookType?: { id: string; name: string; categoryType: string };
+  productCount?: number;
 }
 
 // ============================================
