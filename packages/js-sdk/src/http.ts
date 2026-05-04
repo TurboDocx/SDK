@@ -41,6 +41,16 @@ export interface PartnerClientConfig {
 }
 
 /**
+ * Configuration for the TurboQuote HTTP client
+ */
+export interface QuoteClientConfig {
+  apiKey?: string;
+  accessToken?: string;
+  orgId?: string;
+  baseUrl?: string;
+}
+
+/**
  * Detect file type from buffer content using magic bytes
  * - PDF: starts with %PDF (0x25 0x50 0x44 0x46)
  * - DOCX/PPTX: starts with PK (ZIP), differentiate by internal content
@@ -375,24 +385,71 @@ export class HttpClient {
    * Perform a GET request and return raw binary response (for file downloads).
    * Returns ArrayBuffer which can be converted to Buffer (Node) or Blob (browser).
    */
-  async getRaw(path: string): Promise<ArrayBuffer> {
-    const url = `${this.baseUrl}${path}`;
+  async getRaw(path: string, params?: Record<string, any>): Promise<ArrayBuffer> {
+    let url = path;
+    if (params) {
+      const searchParams = new URLSearchParams();
+      for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      }
+      const queryString = searchParams.toString();
+      if (queryString) {
+        url += '?' + queryString;
+      }
+    }
+
+    const fullUrl = `${this.baseUrl}${url}`;
     const headers = this.getHeaders();
     delete headers['Content-Type'];
 
     try {
-      const response = await fetch(url, { method: 'GET', headers });
-
+      const response = await fetch(fullUrl, { method: 'GET', headers });
       if (!response.ok) {
         await this.handleErrorResponse(response);
       }
-
       return response.arrayBuffer();
     } catch (error) {
       if (error instanceof TurboDocxError) {
         throw error;
       }
       throw new NetworkError(`Network request failed: ${error}`);
+    }
+  }
+
+  async postFormData<T>(path: string, formData: FormData): Promise<T> {
+    return this.requestFormData<T>('POST', path, formData);
+  }
+
+  async patchFormData<T>(path: string, formData: FormData): Promise<T> {
+    return this.requestFormData<T>('PATCH', path, formData);
+  }
+
+  private async requestFormData<T>(method: string, path: string, formData: FormData): Promise<T> {
+    const url = `${this.baseUrl}${path}`;
+    const headers: Record<string, string> = {};
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    } else if (this.apiKey) {
+      headers['Authorization'] = `Bearer ${this.apiKey}`;
+    }
+    if (this.orgId) {
+      headers['x-rapiddocx-org-id'] = this.orgId;
+    }
+
+    try {
+      const response = await fetch(url, { method, headers, body: formData });
+      if (!response.ok) {
+        await this.handleErrorResponse(response);
+      }
+      const jsonData = await response.json();
+      return this.smartUnwrap<T>(jsonData);
+    } catch (error) {
+      if (error instanceof TurboDocxError) {
+        throw error;
+      }
+      throw new NetworkError(`Form data request failed: ${error}`);
     }
   }
 }
