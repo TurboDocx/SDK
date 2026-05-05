@@ -231,22 +231,33 @@ func (c *HTTPClient) handleResponse(resp *http.Response, result interface{}) err
 		}
 	}
 
-	if result != nil {
-		// Smart unwrapping: if response has ONLY "data" key, extract it
+	if result != nil && len(body) > 0 {
+		// Decode with UseNumber so integers stay as json.Number (not float64)
+		// This lets the normalizer distinguish 0/1 integers from other numbers.
+		var decoded interface{}
+		dec := json.NewDecoder(bytes.NewReader(body))
+		dec.UseNumber()
+		if err := dec.Decode(&decoded); err != nil {
+			return fmt.Errorf("failed to decode response: %w", err)
+		}
+
+		// Smart unwrapping: if response has ONLY "data" key, extract it.
 		// This handles backend responses that wrap data in { "data": { ... } }
-		var wrapper map[string]json.RawMessage
-		if err := json.Unmarshal(body, &wrapper); err == nil {
-			// If only "data" key exists, unwrap it
-			if data, ok := wrapper["data"]; ok && len(wrapper) == 1 {
-				if err := json.Unmarshal(data, result); err != nil {
-					return fmt.Errorf("failed to decode unwrapped response: %w", err)
-				}
-				return nil
+		if m, ok := decoded.(map[string]interface{}); ok {
+			if data, exists := m["data"]; exists && len(m) == 1 {
+				decoded = data
 			}
 		}
 
-		// Otherwise unmarshal directly
-		if err := json.Unmarshal(body, result); err != nil {
+		// Normalize MySQL type coercion (tinyint booleans, decimal strings)
+		normalized := normalizeValue(decoded)
+
+		// Re-marshal the normalized tree and unmarshal into the typed result
+		normalizedBytes, err := json.Marshal(normalized)
+		if err != nil {
+			return fmt.Errorf("failed to re-marshal normalized response: %w", err)
+		}
+		if err := json.Unmarshal(normalizedBytes, result); err != nil {
 			return fmt.Errorf("failed to decode response: %w", err)
 		}
 	}
@@ -490,4 +501,68 @@ func (c *HTTPClient) UploadFileBytes(ctx context.Context, path string, fileBytes
 // UploadFilePath is a convenience method for uploading a file from disk
 func (c *HTTPClient) UploadFilePath(ctx context.Context, path string, filePath string, additionalData map[string]string, result interface{}) error {
 	return c.UploadFile(ctx, path, filePath, "", additionalData, result)
+}
+
+// ProductImageFile represents an image to attach in a multipart product request
+type ProductImageFile struct {
+	Data     []byte
+	FileName string
+}
+
+// PostProductMultipart performs a POST multipart request with a "data" JSON field and "images" file parts
+func (c *HTTPClient) PostProductMultipart(ctx context.Context, path string, dataJSON []byte, images []ProductImageFile, result interface{}) error {
+	return c.doProductMultipart(ctx, "POST", path, dataJSON, images, result)
+}
+
+// PatchProductMultipart performs a PATCH multipart request with a "data" JSON field and "images" file parts
+func (c *HTTPClient) PatchProductMultipart(ctx context.Context, path string, dataJSON []byte, images []ProductImageFile, result interface{}) error {
+	return c.doProductMultipart(ctx, "PATCH", path, dataJSON, images, result)
+}
+
+func (c *HTTPClient) doProductMultipart(ctx context.Context, method, path string, dataJSON []byte, images []ProductImageFile, result interface{}) error {
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+
+	// Add the "data" field containing the JSON-encoded product fields
+	if err := writer.WriteField("data", string(dataJSON)); err != nil {
+		return fmt.Errorf("failed to write data field: %w", err)
+	}
+
+	// Add each image as a multipart file part named "images"
+	for _, img := range images {
+		h := make(textproto.MIMEHeader)
+		h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="images"; filename="%s"`, img.FileName))
+		h.Set("Content-Type", "application/octet-stream")
+
+		part, err := writer.CreatePart(h)
+		if err != nil {
+			return fmt.Errorf("failed to create image part: %w", err)
+		}
+		if _, err := part.Write(img.Data); err != nil {
+			return fmt.Errorf("failed to write image data: %w", err)
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("failed to close multipart writer: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, &buf)
+	if err != nil {
+		return &NetworkError{TurboDocxError: TurboDocxError{
+			Message: fmt.Sprintf("failed to create request: %v", err),
+		}}
+	}
+
+	c.setHeaders(req, "")
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return &NetworkError{TurboDocxError: TurboDocxError{
+			Message: fmt.Sprintf("request failed: %v", err),
+		}}
+	}
+
+	return c.handleResponse(resp, result)
 }

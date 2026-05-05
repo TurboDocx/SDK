@@ -2,6 +2,7 @@ package com.turbodocx;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
@@ -10,11 +11,13 @@ import com.google.gson.stream.JsonWriter;
 import okhttp3.*;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -149,8 +152,42 @@ public class HttpClient {
         }
     }
 
+    public <T> T get(String path, Map<String, Object> queryParams, Class<T> responseClass) throws IOException {
+        String url = buildUrl(path, queryParams);
+        Request request = new Request.Builder()
+                .url(url)
+                .headers(buildHeaders())
+                .get()
+                .build();
+
+        return execute(request, responseClass);
+    }
+
+    public <T> T get(String path, Map<String, Object> queryParams, Type responseType) throws IOException {
+        String url = buildUrl(path, queryParams);
+        Request request = new Request.Builder()
+                .url(url)
+                .headers(buildHeaders())
+                .get()
+                .build();
+
+        return execute(request, responseType);
+    }
+
+    public <T> T get(String path, Type responseType) throws IOException {
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .headers(buildHeaders())
+                .get()
+                .build();
+
+        return execute(request, responseType);
+    }
+
     public <T> T post(String path, Object body, Class<T> responseClass) throws IOException {
-        RequestBody requestBody = RequestBody.create(gson.toJson(body), JSON);
+        RequestBody requestBody = body != null
+                ? RequestBody.create(gson.toJson(body), JSON)
+                : RequestBody.create("{}", JSON);
 
         Request request = new Request.Builder()
                 .url(baseUrl + path)
@@ -161,8 +198,24 @@ public class HttpClient {
         return execute(request, responseClass);
     }
 
+    public <T> T post(String path, Object body, Type responseType) throws IOException {
+        RequestBody requestBody = body != null
+                ? RequestBody.create(gson.toJson(body), JSON)
+                : RequestBody.create("{}", JSON);
+
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .headers(buildHeaders())
+                .post(requestBody)
+                .build();
+
+        return execute(request, responseType);
+    }
+
     public <T> T patch(String path, Object body, Class<T> responseClass) throws IOException {
-        RequestBody requestBody = RequestBody.create(gson.toJson(body), JSON);
+        RequestBody requestBody = body != null
+                ? RequestBody.create(gson.toJson(body), JSON)
+                : RequestBody.create("{}", JSON);
 
         Request request = new Request.Builder()
                 .url(baseUrl + path)
@@ -173,6 +226,20 @@ public class HttpClient {
         return execute(request, responseClass);
     }
 
+    public <T> T patch(String path, Object body, Type responseType) throws IOException {
+        RequestBody requestBody = body != null
+                ? RequestBody.create(gson.toJson(body), JSON)
+                : RequestBody.create("{}", JSON);
+
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .headers(buildHeaders())
+                .patch(requestBody)
+                .build();
+
+        return execute(request, responseType);
+    }
+
     public <T> T delete(String path, Class<T> responseClass) throws IOException {
         Request request = new Request.Builder()
                 .url(baseUrl + path)
@@ -181,6 +248,46 @@ public class HttpClient {
                 .build();
 
         return execute(request, responseClass);
+    }
+
+    public <T> T postFormData(String path, MultipartBody body, Class<T> responseClass) throws IOException {
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .headers(buildHeaders())
+                .post(body)
+                .build();
+
+        return execute(request, responseClass);
+    }
+
+    public <T> T postFormData(String path, MultipartBody body, Type responseType) throws IOException {
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .headers(buildHeaders())
+                .post(body)
+                .build();
+
+        return execute(request, responseType);
+    }
+
+    public <T> T patchFormData(String path, MultipartBody body, Class<T> responseClass) throws IOException {
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .headers(buildHeaders())
+                .patch(body)
+                .build();
+
+        return execute(request, responseClass);
+    }
+
+    public <T> T patchFormData(String path, MultipartBody body, Type responseType) throws IOException {
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .headers(buildHeaders())
+                .patch(body)
+                .build();
+
+        return execute(request, responseType);
     }
 
     /**
@@ -231,6 +338,11 @@ public class HttpClient {
     }
 
     private <T> T execute(Request request, Class<T> responseClass) throws IOException {
+        return execute(request, (Type) responseClass);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T execute(Request request, Type responseType) throws IOException {
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 handleError(response);
@@ -238,15 +350,23 @@ public class HttpClient {
 
             String responseBody = response.body() != null ? response.body().string() : "";
 
+            // Parse to JsonElement for smart unwrap + normalization
+            JsonElement parsed = gson.fromJson(responseBody, JsonElement.class);
+
             // Smart unwrapping: if response has ONLY "data" key, extract it
             // This handles backend responses that wrap data in { "data": { ... } }
-            JsonObject json = gson.fromJson(responseBody, JsonObject.class);
-            if (json != null && json.has("data") && json.size() == 1) {
-                return gson.fromJson(json.get("data"), responseClass);
+            if (parsed != null && parsed.isJsonObject()) {
+                JsonObject jsonObj = parsed.getAsJsonObject();
+                if (jsonObj.has("data") && jsonObj.size() == 1) {
+                    parsed = jsonObj.get("data");
+                }
             }
 
-            // Otherwise return as-is (for direct responses)
-            return gson.fromJson(responseBody, responseClass);
+            // Normalize MySQL type coercion (tinyint booleans, decimal strings)
+            parsed = ResponseNormalizer.normalize(parsed);
+
+            // Deserialize to target type
+            return gson.fromJson(parsed, responseType);
         }
     }
 
@@ -321,6 +441,33 @@ public class HttpClient {
                     throw new IOException("Expected NUMBER or BOOLEAN but was " + token);
             }
         }
+    }
+
+    /**
+     * Build a URL with query parameters.
+     * Supports String values, List&lt;String&gt; values (repeated keys), and null values (skipped).
+     */
+    private String buildUrl(String path, Map<String, Object> queryParams) {
+        if (queryParams == null || queryParams.isEmpty()) {
+            return baseUrl + path;
+        }
+
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(baseUrl + path).newBuilder();
+        for (Map.Entry<String, Object> entry : queryParams.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+            if (value == null) continue;
+            if (value instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<String> list = (List<String>) value;
+                for (String item : list) {
+                    urlBuilder.addQueryParameter(key, item);
+                }
+            } else {
+                urlBuilder.addQueryParameter(key, value.toString());
+            }
+        }
+        return urlBuilder.build().toString();
     }
 
     private Headers buildHeaders() {
