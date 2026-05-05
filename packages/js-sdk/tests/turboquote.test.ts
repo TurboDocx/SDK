@@ -902,7 +902,17 @@ describe("TurboQuote Module", () => {
       const result = await TurboQuote.listTemplates();
 
       expect(result.results).toHaveLength(2);
-      expect(mockClient.get).toHaveBeenCalledWith("/v1/quote-templates");
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/quote-templates", undefined);
+    });
+
+    it("should list templates with pagination and query params", async () => {
+      const mockResponse = { results: [{ id: "t-1", primaryColor: "#0066FF" }], totalRecords: 1 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      const result = await TurboQuote.listTemplates({ query: "sales", limit: 10, offset: 0 });
+
+      expect(result.results).toHaveLength(1);
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/quote-templates", { query: "sales", limit: "10", offset: "0" });
     });
 
     it("should get a template by ID and unwrap result", async () => {

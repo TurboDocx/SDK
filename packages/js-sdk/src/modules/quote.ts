@@ -464,9 +464,9 @@ export class TurboQuote {
   // TEMPLATES
   // ============================================
 
-  static async listTemplates(): Promise<QuoteTemplateListResponse> {
+  static async listTemplates(options?: PaginationParams): Promise<QuoteTemplateListResponse> {
     const client = this.getClient();
-    return client.get<QuoteTemplateListResponse>('/v1/quote-templates');
+    return client.get<QuoteTemplateListResponse>('/v1/quote-templates', toQueryParams(options));
   }
 
   static async getTemplate(): Promise<QuoteTemplate> {
