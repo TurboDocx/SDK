@@ -2,6 +2,8 @@
 TypedDict definitions for TurboQuote -- Type/Category entity.
 """
 
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
 from typing_extensions import TypedDict
 
@@ -43,5 +45,5 @@ class ListTypesOptions(TypedDict, total=False):
 
 
 class QuoteTypeListResponse(TypedDict):
-    results: List[Dict[str, Any]]
+    results: List[QuoteType]
     totalRecords: int

@@ -2,8 +2,12 @@
 TypedDict definitions for TurboQuote -- PriceBook entity.
 """
 
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
 from typing_extensions import TypedDict
+
+from .product import Product
 
 
 class PriceBookProductPricing(TypedDict, total=False):
@@ -17,7 +21,7 @@ class PriceBookProductPricing(TypedDict, total=False):
     createdBy: Optional[str]
     createdOn: str
     updatedOn: str
-    product: Dict[str, Any]  # Product
+    product: Product
 
 
 class PriceBook(TypedDict, total=False):
@@ -35,7 +39,7 @@ class PriceBook(TypedDict, total=False):
     createdBy: Optional[str]
     createdOn: str
     updatedOn: str
-    productPricing: List[Dict[str, Any]]  # PriceBookProductPricing[]
+    productPricing: List[PriceBookProductPricing]
     priceBookType: Dict[str, Any]
     productCount: int
 
@@ -55,7 +59,7 @@ class CreatePriceBookRequest(TypedDict, total=False):
     validTo: str
     isDefault: bool
     showInQuoteBuilder: bool
-    productPricing: List[Dict[str, Any]]  # PriceBookProductPricingInput[]
+    productPricing: List[PriceBookProductPricingInput]
 
 
 class UpdatePriceBookRequest(TypedDict, total=False):
@@ -67,7 +71,7 @@ class UpdatePriceBookRequest(TypedDict, total=False):
     validTo: str
     isDefault: bool
     showInQuoteBuilder: bool
-    productPricing: List[Dict[str, Any]]  # PriceBookProductPricingInput[]
+    productPricing: List[PriceBookProductPricingInput]
 
 
 class ListPriceBooksOptions(TypedDict, total=False):
@@ -86,7 +90,7 @@ class ListPriceBookProductsOptions(TypedDict, total=False):
 
 
 class PriceBookListResponse(TypedDict, total=False):
-    results: List[Dict[str, Any]]
+    results: List[PriceBook]
     totalRecords: int
     totalPriceBooks: int
     activeInBuilder: int
@@ -95,5 +99,5 @@ class PriceBookListResponse(TypedDict, total=False):
 
 
 class PriceBookProductListResponse(TypedDict):
-    results: List[Dict[str, Any]]
+    results: List[PriceBookProductPricing]
     totalRecords: int

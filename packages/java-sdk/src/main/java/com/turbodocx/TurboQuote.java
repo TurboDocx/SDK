@@ -722,20 +722,18 @@ public class TurboQuote {
      * Strips items/bundleItems/send fields before posting to /v1/quotes.
      */
     public CreateAndSendResponse createAndSend(CreateAndSendRequest request) throws IOException {
-        // Build the quote create request (without items/bundleItems/send)
-        CreateQuoteRequest quoteRequest = new CreateQuoteRequest();
-        quoteRequest.setName(request.getName());
-        quoteRequest.setCompanyId(request.getCompanyId());
-        quoteRequest.setContactId(request.getContactId());
-        quoteRequest.setCurrency(request.getCurrency());
-        quoteRequest.setTermDays(request.getTermDays());
-        quoteRequest.setRenewalPeriod(request.getRenewalPeriod());
-        quoteRequest.setValidUntil(request.getValidUntil());
-        quoteRequest.setTaxRate(request.getTaxRate());
-        quoteRequest.setPriceBookId(request.getPriceBookId());
+        // Serialize the full request and strip convenience fields (items, bundleItems, send).
+        // Everything else passes through to POST /v1/quotes, so future quote fields
+        // added to CreateAndSendRequest will automatically flow through.
+        JsonObject quoteFields = gson.toJsonTree(request).getAsJsonObject();
+        quoteFields.remove("items");
+        quoteFields.remove("bundleItems");
+        quoteFields.remove("send");
 
         // Step 1: Create the quote
-        Quote quote = createQuote(quoteRequest);
+        Type quoteEnvelopeType = new TypeToken<ResultEnvelope<Quote>>(){}.getType();
+        ResultEnvelope<Quote> envelope = httpClient.post("/v1/quotes", quoteFields, quoteEnvelopeType);
+        Quote quote = envelope.getResult();
 
         // Step 2: Add line items if provided
         if (request.getItems() != null && !request.getItems().isEmpty()) {

@@ -2,8 +2,12 @@
 TypedDict definitions for TurboQuote -- Contact entity.
 """
 
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
 from typing_extensions import TypedDict
+
+from .company import Company
 
 
 class Contact(TypedDict, total=False):
@@ -18,7 +22,7 @@ class Contact(TypedDict, total=False):
     createdBy: Optional[str]
     createdOn: str
     updatedOn: str
-    company: Dict[str, Any]  # Company
+    company: Company
 
 
 class CreateContactRequest(TypedDict, total=False):
@@ -44,5 +48,5 @@ class ListContactsOptions(TypedDict, total=False):
 
 
 class ContactListResponse(TypedDict):
-    results: List[Dict[str, Any]]
+    results: List[Contact]
     totalRecords: int

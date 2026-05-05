@@ -269,12 +269,13 @@ module TurboDocxSdk
       # @return [Hash] the created product
       def create_product(request)
         client = get_client
-        images = request.delete("images") || request.delete(:images)
+        data = request.dup
+        images = data.delete("images") || data.delete(:images)
         if images && !images.empty?
-          form_data = build_product_form_data(request, images)
+          form_data = build_product_form_data(data, images)
           unwrap(client.post_form_data("/v1/products", form_data))
         else
-          unwrap(client.post("/v1/products", request))
+          unwrap(client.post("/v1/products", data))
         end
       end
 
@@ -294,12 +295,13 @@ module TurboDocxSdk
       # @return [Hash] the updated product
       def update_product(id, request)
         client = get_client
-        images = request.delete("images") || request.delete(:images)
+        data = request.dup
+        images = data.delete("images") || data.delete(:images)
         if images && !images.empty?
-          form_data = build_product_form_data(request, images)
+          form_data = build_product_form_data(data, images)
           unwrap(client.patch_form_data("/v1/products/#{id}", form_data))
         else
-          unwrap(client.patch("/v1/products/#{id}", request))
+          unwrap(client.patch("/v1/products/#{id}", data))
         end
       end
 
@@ -671,10 +673,11 @@ module TurboDocxSdk
         client = get_client
 
         # Separate convenience keys from core quote fields
-        items = request.delete("items") || request.delete(:items)
-        bundle_items = request.delete("bundleItems") || request.delete(:bundleItems)
-        send_opts = request.delete("send") || request.delete(:send)
-        quote_fields = request
+        data = request.dup
+        items = data.delete("items") || data.delete(:items)
+        bundle_items = data.delete("bundleItems") || data.delete(:bundleItems)
+        send_opts = data.delete("send") || data.delete(:send)
+        quote_fields = data
 
         quote = unwrap(client.post("/v1/quotes", quote_fields))
 

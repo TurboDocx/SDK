@@ -2,6 +2,8 @@
 TypedDict definitions for TurboQuote -- Product entity.
 """
 
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional, Union
 from typing_extensions import TypedDict
 
@@ -35,7 +37,7 @@ class Product(TypedDict, total=False):
     createdBy: Optional[str]
     createdOn: str
     updatedOn: str
-    images: List[Dict[str, Any]]  # ProductImage[]
+    images: List[ProductImage]
     category: Dict[str, Any]
 
 
@@ -84,7 +86,7 @@ class ListProductsOptions(TypedDict, total=False):
 
 
 class ProductListResponse(TypedDict, total=False):
-    results: List[Dict[str, Any]]
+    results: List[Product]
     totalRecords: int
     totalProducts: int
     activeProducts: int

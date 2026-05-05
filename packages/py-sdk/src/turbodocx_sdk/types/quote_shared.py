@@ -4,6 +4,8 @@ Shared types for the TurboQuote module.
 Literal types and base TypedDicts used across all quote-related types.
 """
 
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
 from typing_extensions import Literal, TypedDict
 

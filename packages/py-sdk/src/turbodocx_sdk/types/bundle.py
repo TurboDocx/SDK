@@ -2,8 +2,12 @@
 TypedDict definitions for TurboQuote -- Bundle entity.
 """
 
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
 from typing_extensions import Literal, TypedDict
+
+from .product import Product
 
 BundleItemStatus = Literal["active", "product_deleted", "product_unavailable", "currency_mismatch"]
 
@@ -24,7 +28,7 @@ class BundleItem(TypedDict, total=False):
     createdBy: Optional[str]
     createdOn: str
     updatedOn: str
-    product: Dict[str, Any]  # Product
+    product: Product
 
 
 class Bundle(TypedDict, total=False):
@@ -46,7 +50,7 @@ class Bundle(TypedDict, total=False):
     createdBy: Optional[str]
     createdOn: str
     updatedOn: str
-    items: List[Dict[str, Any]]  # BundleItem[]
+    items: List[BundleItem]
     category: Dict[str, Any]
 
 
@@ -63,7 +67,7 @@ class BundleItemInput(TypedDict, total=False):
 class CreateBundleRequest(TypedDict, total=False):
     name: str
     categoryId: str
-    items: List[Dict[str, Any]]  # BundleItemInput[]
+    items: List[BundleItemInput]
     description: Optional[str]
     sku: Optional[str]
     bundleDiscountPercent: float
@@ -75,7 +79,7 @@ class CreateBundleRequest(TypedDict, total=False):
 
 class UpdateBundleRequest(TypedDict, total=False):
     name: str
-    items: List[Dict[str, Any]]  # BundleItemInput[]
+    items: List[BundleItemInput]
     description: Optional[str]
     sku: Optional[str]
     categoryId: str
@@ -96,7 +100,7 @@ class ListBundlesOptions(TypedDict, total=False):
 
 
 class BundleListResponse(TypedDict, total=False):
-    results: List[Dict[str, Any]]
+    results: List[Bundle]
     totalRecords: int
     totalBundles: int
     activeBundles: int

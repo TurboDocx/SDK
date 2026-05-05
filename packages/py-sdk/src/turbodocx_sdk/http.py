@@ -144,9 +144,6 @@ class HttpClient:
         if not self.api_key and not self.access_token:
             raise AuthenticationError("API key or access token is required")
 
-        if not self.org_id:
-            raise AuthenticationError("Organization ID (org_id) is required for authentication")
-
         if not self.sender_email and not skip_sender_validation:
             raise ValidationError(
                 "sender_email is required. This email will be used as the reply-to address "

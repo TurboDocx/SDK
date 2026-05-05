@@ -154,14 +154,15 @@ class TestExistingValidation:
         )
         assert client is not None
 
-    def test_should_raise_when_org_id_missing(self):
-        """Should raise when org_id is missing"""
-        with pytest.raises(AuthenticationError):
-            HttpClient(
-                api_key="test-api-key",
-                sender_email="support@company.com",
-                # org_id intentionally missing
-            )
+    def test_http_client_without_org_id_does_not_raise(self):
+        """Should NOT raise when org_id is missing — orgId is optional, backend returns 401 if needed"""
+        client = HttpClient(
+            api_key="test-api-key",
+            sender_email="support@company.com",
+            # org_id intentionally missing — should be fine
+        )
+        assert client is not None
+        assert client.org_id is None
 
 
 class TestGetSenderConfig:
