@@ -8,7 +8,7 @@ public class AddLineItemRequest {
     private String productName;
     private Double unitPrice;
     private String billingFrequency;
-    private Integer quantity;
+    private Double quantity;
     private Double discountPercent;
     private String categoryId;
     private String categoryName;
@@ -24,8 +24,8 @@ public class AddLineItemRequest {
     public void setUnitPrice(Double unitPrice) { this.unitPrice = unitPrice; }
     public String getBillingFrequency() { return billingFrequency; }
     public void setBillingFrequency(String billingFrequency) { this.billingFrequency = billingFrequency; }
-    public Integer getQuantity() { return quantity; }
-    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+    public Double getQuantity() { return quantity; }
+    public void setQuantity(Double quantity) { this.quantity = quantity; }
     public Double getDiscountPercent() { return discountPercent; }
     public void setDiscountPercent(Double discountPercent) { this.discountPercent = discountPercent; }
     public String getCategoryId() { return categoryId; }

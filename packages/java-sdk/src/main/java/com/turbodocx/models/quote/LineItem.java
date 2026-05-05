@@ -18,7 +18,7 @@ public class LineItem {
     private String bundleId;
     private String bundleName;
     private String bundleDescription;
-    private Integer quantity;
+    private Double quantity;
     private Double unitPrice;
     private Double discountPercent;
     private Double subtotal;
@@ -47,7 +47,7 @@ public class LineItem {
     public String getBundleId() { return bundleId; }
     public String getBundleName() { return bundleName; }
     public String getBundleDescription() { return bundleDescription; }
-    public Integer getQuantity() { return quantity; }
+    public Double getQuantity() { return quantity; }
     public Double getUnitPrice() { return unitPrice; }
     public Double getDiscountPercent() { return discountPercent; }
     public Double getSubtotal() { return subtotal; }

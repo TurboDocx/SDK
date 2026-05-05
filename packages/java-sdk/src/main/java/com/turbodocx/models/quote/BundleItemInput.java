@@ -7,7 +7,7 @@ public class BundleItemInput {
     private String productId;
     private Double unitPrice;
     private String billingFrequency;
-    private Integer quantity;
+    private Double quantity;
     private Double discountPercent;
     private Double finalPrice;
     private Double cost;
@@ -18,8 +18,8 @@ public class BundleItemInput {
     public void setUnitPrice(Double unitPrice) { this.unitPrice = unitPrice; }
     public String getBillingFrequency() { return billingFrequency; }
     public void setBillingFrequency(String billingFrequency) { this.billingFrequency = billingFrequency; }
-    public Integer getQuantity() { return quantity; }
-    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+    public Double getQuantity() { return quantity; }
+    public void setQuantity(Double quantity) { this.quantity = quantity; }
     public Double getDiscountPercent() { return discountPercent; }
     public void setDiscountPercent(Double discountPercent) { this.discountPercent = discountPercent; }
     public Double getFinalPrice() { return finalPrice; }

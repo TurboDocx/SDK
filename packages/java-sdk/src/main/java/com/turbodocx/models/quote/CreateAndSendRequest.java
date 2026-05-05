@@ -17,7 +17,6 @@ public class CreateAndSendRequest {
     private String validUntil;
     private Double taxRate;
     private String priceBookId;
-    private String notes;
 
     // Additional fields for createAndSend
     private List<AddLineItemRequest> items;
@@ -42,8 +41,6 @@ public class CreateAndSendRequest {
     public void setTaxRate(Double taxRate) { this.taxRate = taxRate; }
     public String getPriceBookId() { return priceBookId; }
     public void setPriceBookId(String priceBookId) { this.priceBookId = priceBookId; }
-    public String getNotes() { return notes; }
-    public void setNotes(String notes) { this.notes = notes; }
     public List<AddLineItemRequest> getItems() { return items; }
     public void setItems(List<AddLineItemRequest> items) { this.items = items; }
     public List<AddBundleLineItemRequest> getBundleItems() { return bundleItems; }
