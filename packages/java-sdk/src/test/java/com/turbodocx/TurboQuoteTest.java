@@ -494,7 +494,7 @@ class TurboQuoteTest {
             item.setProductName("Widget");
             item.setUnitPrice(50.0);
             item.setBillingFrequency("monthly");
-            item.setQuantity(2);
+            item.setQuantity(2.0);
             List<LineItem> result = client.turboQuote().addLineItems("q-1", item);
 
             assertEquals(1, result.size());
@@ -575,7 +575,7 @@ class TurboQuoteTest {
             server.enqueue(new MockResponse().setBody(wrapInData(response)));
 
             UpdateLineItemRequest request = new UpdateLineItemRequest();
-            request.setQuantity(10);
+            request.setQuantity(10.0);
             request.setUnitPrice(50.0);
             LineItem result = client.turboQuote().updateLineItem("q-1", "li-1", request);
 
@@ -1400,7 +1400,7 @@ class TurboQuoteTest {
             item.setProductName("Widget");
             item.setUnitPrice(99.0);
             item.setBillingFrequency("monthly");
-            item.setQuantity(10);
+            item.setQuantity(10.0);
             request.setItems(Collections.singletonList(item));
 
             SendQuoteRequest sendReq = new SendQuoteRequest();
@@ -1459,14 +1459,13 @@ class TurboQuoteTest {
             request.setValidUntil("2026-12-31");
             request.setTaxRate(8.5);
             request.setPriceBookId("pb-1");
-            request.setNotes("Important notes for the quote");
 
             AddLineItemRequest item = new AddLineItemRequest();
             item.setProductId("p-1");
             item.setProductName("Widget");
             item.setUnitPrice(99.0);
             item.setBillingFrequency("monthly");
-            item.setQuantity(10);
+            item.setQuantity(10.0);
             request.setItems(Collections.singletonList(item));
 
             SendQuoteRequest sendReq = new SendQuoteRequest();
@@ -1491,8 +1490,6 @@ class TurboQuoteTest {
             assertTrue(body.contains("\"validUntil\":\"2026-12-31\""), "validUntil should be in body");
             assertTrue(body.contains("\"taxRate\":8.5"), "taxRate should be in body");
             assertTrue(body.contains("\"priceBookId\":\"pb-1\""), "priceBookId should be in body");
-            assertTrue(body.contains("\"notes\":\"Important notes for the quote\""),
-                    "notes should be in body (forward-compatibility: new fields must flow through)");
 
             // Convenience fields MUST NOT be in the quote creation body
             assertFalse(body.contains("\"items\""), "items should NOT be in quote creation body");

@@ -4,7 +4,7 @@ package com.turbodocx.models.quote;
  * Request to update an existing line item.
  */
 public class UpdateLineItemRequest {
-    private Integer quantity;
+    private Double quantity;
     private Double unitPrice;
     private Double discountPercent;
     private String billingFrequency;
@@ -16,8 +16,8 @@ public class UpdateLineItemRequest {
     private String productSku;
     private String productDescription;
 
-    public Integer getQuantity() { return quantity; }
-    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+    public Double getQuantity() { return quantity; }
+    public void setQuantity(Double quantity) { this.quantity = quantity; }
     public Double getUnitPrice() { return unitPrice; }
     public void setUnitPrice(Double unitPrice) { this.unitPrice = unitPrice; }
     public Double getDiscountPercent() { return discountPercent; }

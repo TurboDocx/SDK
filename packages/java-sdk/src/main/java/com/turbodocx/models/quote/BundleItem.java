@@ -8,7 +8,7 @@ public class BundleItem {
     private String orgId;
     private String bundleId;
     private String productId;
-    private Integer quantity;
+    private Double quantity;
     private Double unitPrice;
     private Double discountPercent;
     private Double finalPrice;
@@ -25,7 +25,7 @@ public class BundleItem {
     public String getOrgId() { return orgId; }
     public String getBundleId() { return bundleId; }
     public String getProductId() { return productId; }
-    public Integer getQuantity() { return quantity; }
+    public Double getQuantity() { return quantity; }
     public Double getUnitPrice() { return unitPrice; }
     public Double getDiscountPercent() { return discountPercent; }
     public Double getFinalPrice() { return finalPrice; }
