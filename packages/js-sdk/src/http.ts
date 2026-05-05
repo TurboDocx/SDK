@@ -5,6 +5,7 @@
 import * as fs from 'fs';
 import * as nodePath from 'path';
 import { TurboDocxError, AuthenticationError, AuthorizationError, ValidationError, NotFoundError, ConflictError, RateLimitError, NetworkError } from './utils/errors';
+import { normalizeResponse } from './utils/response-normalizer';
 
 /**
  * Configuration for the TurboDocx HTTP client
@@ -187,7 +188,7 @@ export class HttpClient {
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         const jsonData = await response.json();
-        return this.smartUnwrap<T>(jsonData);
+        return normalizeResponse(this.smartUnwrap<T>(jsonData));
       }
 
       return response as any;
@@ -260,7 +261,7 @@ export class HttpClient {
         }
 
         const jsonData = await response.json();
-        return this.smartUnwrap<T>(jsonData);
+        return normalizeResponse(this.smartUnwrap<T>(jsonData));
       } catch (error) {
         if (error instanceof TurboDocxError) {
           throw error;
@@ -305,7 +306,7 @@ export class HttpClient {
       }
 
       const jsonData = await response.json();
-      return this.smartUnwrap<T>(jsonData);
+      return normalizeResponse(this.smartUnwrap<T>(jsonData));
     } catch (error) {
       if (error instanceof TurboDocxError) {
         throw error;
@@ -450,7 +451,7 @@ export class HttpClient {
         await this.handleErrorResponse(response);
       }
       const jsonData = await response.json();
-      return this.smartUnwrap<T>(jsonData);
+      return normalizeResponse(this.smartUnwrap<T>(jsonData));
     } catch (error) {
       if (error instanceof TurboDocxError) {
         throw error;
