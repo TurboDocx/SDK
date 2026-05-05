@@ -2,10 +2,13 @@
 HTTP client for TurboDocx API
 """
 
+import json
 import os
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import httpx
+
+from .utils.response_normalizer import normalize_response
 
 
 def detect_file_type(file_bytes: bytes) -> Tuple[str, str]:
@@ -127,8 +130,9 @@ class HttpClient:
             sender_name: Sender name for signature requests (optional but strongly recommended).
                         This name will appear in signature request emails. Without this,
                         the sender will appear as "API Service User".
-            skip_sender_validation: Skip sender_email validation (used by modules
-                                   like Deliverable that don't need sender config)
+            skip_sender_validation: Skip sender_email validation (used internally by
+                                   modules like Deliverable, TurboQuote, and TurboPartner
+                                   that don't send signature emails)
         """
         self.api_key = api_key or os.environ.get("TURBODOCX_API_KEY")
         self.access_token = access_token
@@ -219,17 +223,32 @@ class HttpClient:
 
         raise TurboDocxError(error_message, response.status_code, error_code)
 
-    async def get(self, path: str) -> Any:
+    async def get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Any:
         """
         Make GET request to API
 
         Args:
             path: API endpoint path
+            params: Optional query parameters dict. Values can be strings,
+                    numbers, or lists of strings. None/undefined values are skipped.
 
         Returns:
             Response data
         """
         url = f"{self.base_url}{path}"
+        if params:
+            query_parts: List[str] = []
+            for key, value in params.items():
+                if value is None:
+                    continue
+                if isinstance(value, list):
+                    for item in value:
+                        query_parts.append(f"{key}={item}")
+                else:
+                    query_parts.append(f"{key}={value}")
+            if query_parts:
+                url += "?" + "&".join(query_parts)
+
         headers = self._get_headers()
 
         async with httpx.AsyncClient(timeout=60.0) as client:
@@ -241,7 +260,7 @@ class HttpClient:
 
                 content_type = response.headers.get("content-type", "")
                 if "application/json" in content_type:
-                    return self._smart_unwrap(response.json())
+                    return normalize_response(self._smart_unwrap(response.json()))
 
                 return response.content
             except httpx.TimeoutException as e:
@@ -283,7 +302,7 @@ class HttpClient:
             except Exception as e:
                 raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
 
-    async def post(self, path: str, data: Optional[Dict[str, Any]] = None) -> Any:
+    async def post(self, path: str, data: Any = None) -> Any:
         """
         Make POST request to API
 
@@ -304,7 +323,7 @@ class HttpClient:
                 if not response.is_success:
                     await self._handle_error_response(response)
 
-                return self._smart_unwrap(response.json())
+                return normalize_response(self._smart_unwrap(response.json()))
             except httpx.TimeoutException as e:
                 raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}")
             except httpx.NetworkError as e:
@@ -335,7 +354,7 @@ class HttpClient:
                 if not response.is_success:
                     await self._handle_error_response(response)
 
-                return self._smart_unwrap(response.json())
+                return normalize_response(self._smart_unwrap(response.json()))
             except httpx.TimeoutException as e:
                 raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}")
             except httpx.NetworkError as e:
@@ -367,7 +386,7 @@ class HttpClient:
 
                 content_type = response.headers.get("content-type", "")
                 if "application/json" in content_type:
-                    return self._smart_unwrap(response.json())
+                    return normalize_response(self._smart_unwrap(response.json()))
 
                 return response.content
             except httpx.TimeoutException as e:
@@ -378,6 +397,117 @@ class HttpClient:
                 raise
             except Exception as e:
                 raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+
+    async def get_raw(self, path: str, params: Optional[Dict[str, Any]] = None) -> bytes:
+        """
+        Make GET request and return raw bytes (e.g., for PDF downloads).
+
+        Args:
+            path: API endpoint path
+            params: Optional query parameters
+
+        Returns:
+            Raw response bytes
+        """
+        url = f"{self.base_url}{path}"
+        if params:
+            query_parts: List[str] = []
+            for key, value in params.items():
+                if value is None:
+                    continue
+                if isinstance(value, list):
+                    for item in value:
+                        query_parts.append(f"{key}={item}")
+                else:
+                    query_parts.append(f"{key}={value}")
+            if query_parts:
+                url += "?" + "&".join(query_parts)
+
+        headers = self._get_headers(include_content_type=False)
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            try:
+                response = await client.get(url, headers=headers)
+
+                if not response.is_success:
+                    await self._handle_error_response(response)
+
+                return response.content
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}")
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+            except TurboDocxError:
+                raise
+            except Exception as e:
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+
+    async def post_form_data(self, path: str, data: Dict[str, Any], files: Optional[List[Tuple[str, Any]]] = None) -> Any:
+        """
+        Make POST request with multipart form data.
+
+        Args:
+            path: API endpoint path
+            data: Form field data (non-file fields)
+            files: List of (field_name, (filename, content, content_type)) tuples
+
+        Returns:
+            Response data
+        """
+        return await self._request_form_data("POST", path, data, files)
+
+    async def patch_form_data(self, path: str, data: Dict[str, Any], files: Optional[List[Tuple[str, Any]]] = None) -> Any:
+        """
+        Make PATCH request with multipart form data.
+
+        Args:
+            path: API endpoint path
+            data: Form field data (non-file fields)
+            files: List of (field_name, (filename, content, content_type)) tuples
+
+        Returns:
+            Response data
+        """
+        return await self._request_form_data("PATCH", path, data, files)
+
+    async def _request_form_data(self, method: str, path: str, data: Dict[str, Any], files: Optional[List[Tuple[str, Any]]] = None) -> Any:
+        """
+        Internal: make a multipart form data request.
+
+        Args:
+            method: HTTP method (POST or PATCH)
+            path: API endpoint path
+            data: Form field data
+            files: Optional list of file tuples
+
+        Returns:
+            Response data
+        """
+        url = f"{self.base_url}{path}"
+        headers = self._get_headers(include_content_type=False)
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            try:
+                response = await client.request(
+                    method,
+                    url,
+                    headers=headers,
+                    data=data,
+                    files=files or [],
+                )
+
+                if not response.is_success:
+                    await self._handle_error_response(response)
+
+                return normalize_response(self._smart_unwrap(response.json()))
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}")
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+            except TurboDocxError:
+                raise
+            except Exception as e:
+                raise NetworkError(f"Form data request failed: {str(e) or 'Unknown error'}")
 
     async def upload_file(
         self,
@@ -431,9 +561,11 @@ class HttpClient:
                 if not response.is_success:
                     await self._handle_error_response(response)
 
-                return self._smart_unwrap(response.json())
+                return normalize_response(self._smart_unwrap(response.json()))
             except (httpx.NetworkError, httpx.TimeoutException) as e:
                 raise NetworkError(f"File upload failed: {str(e) or 'Connection error'}")
+            except TurboDocxError:
+                raise
             except Exception as e:
                 raise NetworkError(f"File upload failed: {str(e) or 'Unknown error'}")
 

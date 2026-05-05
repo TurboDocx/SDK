@@ -10,6 +10,8 @@ use GuzzleHttp\Exception\RequestException;
 use Psr\Http\Message\ResponseInterface;
 use TurboDocx\Config\HttpClientConfig;
 use TurboDocx\Config\PartnerClientConfig;
+use TurboDocx\Config\QuoteClientConfig;
+use TurboDocx\Utils\ResponseNormalizer;
 use TurboDocx\Exceptions\AuthenticationException;
 use TurboDocx\Exceptions\AuthorizationException;
 use TurboDocx\Exceptions\ConflictException;
@@ -29,7 +31,7 @@ final class HttpClient
     private ?string $senderEmail;
     private ?string $senderName;
 
-    public function __construct(HttpClientConfig|PartnerClientConfig $config)
+    public function __construct(HttpClientConfig|PartnerClientConfig|QuoteClientConfig $config)
     {
         if ($config instanceof HttpClientConfig) {
             $this->senderEmail = $config->senderEmail;
@@ -89,7 +91,9 @@ final class HttpClient
                 'query' => $params,
             ]);
 
-            return $this->smartUnwrap($this->parseResponse($response));
+            return ResponseNormalizer::normalizeResponse(
+                $this->smartUnwrap($this->parseResponse($response))
+            );
         } catch (GuzzleException $e) {
             $this->handleException($e);
         }
@@ -109,7 +113,9 @@ final class HttpClient
                 'json' => $data,
             ]);
 
-            return $this->smartUnwrap($this->parseResponse($response));
+            return ResponseNormalizer::normalizeResponse(
+                $this->smartUnwrap($this->parseResponse($response))
+            );
         } catch (GuzzleException $e) {
             $this->handleException($e);
         }
@@ -129,7 +135,9 @@ final class HttpClient
                 'json' => $data,
             ]);
 
-            return $this->smartUnwrap($this->parseResponse($response));
+            return ResponseNormalizer::normalizeResponse(
+                $this->smartUnwrap($this->parseResponse($response))
+            );
         } catch (GuzzleException $e) {
             $this->handleException($e);
         }
@@ -162,7 +170,9 @@ final class HttpClient
         try {
             $response = $this->client->delete($path);
 
-            return $this->smartUnwrap($this->parseResponse($response));
+            return ResponseNormalizer::normalizeResponse(
+                $this->smartUnwrap($this->parseResponse($response))
+            );
         } catch (GuzzleException $e) {
             $this->handleException($e);
         }
@@ -213,7 +223,9 @@ final class HttpClient
                 'multipart' => $multipart,
             ]);
 
-            return $this->smartUnwrap($this->parseResponse($response));
+            return ResponseNormalizer::normalizeResponse(
+                $this->smartUnwrap($this->parseResponse($response))
+            );
         } catch (GuzzleException $e) {
             $this->handleException($e);
         }
@@ -261,12 +273,72 @@ final class HttpClient
     }
 
     /**
+     * GET request that returns raw bytes (e.g. PDF download)
+     *
+     * @param string $path
+     * @return string Raw response body bytes
+     */
+    public function getRaw(string $path): string
+    {
+        try {
+            $response = $this->client->get($path);
+            return $response->getBody()->getContents();
+        } catch (GuzzleException $e) {
+            $this->handleException($e);
+        }
+    }
+
+    /**
+     * POST request with multipart form data (e.g. product images)
+     *
+     * @param string $path
+     * @param array<array{name: string, contents: string, filename?: string, headers?: array<string, string>}> $multipart
+     * @return mixed
+     */
+    public function postFormData(string $path, array $multipart): mixed
+    {
+        try {
+            $response = $this->client->post($path, [
+                'multipart' => $multipart,
+            ]);
+
+            return ResponseNormalizer::normalizeResponse(
+                $this->smartUnwrap($this->parseResponse($response))
+            );
+        } catch (GuzzleException $e) {
+            $this->handleException($e);
+        }
+    }
+
+    /**
+     * PATCH request with multipart form data (e.g. product image updates)
+     *
+     * @param string $path
+     * @param array<array{name: string, contents: string, filename?: string, headers?: array<string, string>}> $multipart
+     * @return mixed
+     */
+    public function patchFormData(string $path, array $multipart): mixed
+    {
+        try {
+            $response = $this->client->patch($path, [
+                'multipart' => $multipart,
+            ]);
+
+            return ResponseNormalizer::normalizeResponse(
+                $this->smartUnwrap($this->parseResponse($response))
+            );
+        } catch (GuzzleException $e) {
+            $this->handleException($e);
+        }
+    }
+
+    /**
      * Get headers for requests
      *
-     * @param HttpClientConfig|PartnerClientConfig $config
+     * @param HttpClientConfig|PartnerClientConfig|QuoteClientConfig $config
      * @return array<string, string>
      */
-    private function getHeaders(HttpClientConfig|PartnerClientConfig $config): array
+    private function getHeaders(HttpClientConfig|PartnerClientConfig|QuoteClientConfig $config): array
     {
         $headers = [
             'Content-Type' => 'application/json',
@@ -275,15 +347,24 @@ final class HttpClient
 
         if ($config instanceof PartnerClientConfig) {
             $headers['Authorization'] = "Bearer {$config->partnerApiKey}";
-        } else {
-            // Authorization
+        } elseif ($config instanceof QuoteClientConfig) {
             if (!empty($config->accessToken)) {
                 $headers['Authorization'] = "Bearer {$config->accessToken}";
             } elseif (!empty($config->apiKey)) {
                 $headers['Authorization'] = "Bearer {$config->apiKey}";
             }
 
-            // Organization ID
+            if (!empty($config->orgId)) {
+                $headers['x-rapiddocx-org-id'] = $config->orgId;
+            }
+        } else {
+            // HttpClientConfig
+            if (!empty($config->accessToken)) {
+                $headers['Authorization'] = "Bearer {$config->accessToken}";
+            } elseif (!empty($config->apiKey)) {
+                $headers['Authorization'] = "Bearer {$config->apiKey}";
+            }
+
             if (!empty($config->orgId)) {
                 $headers['x-rapiddocx-org-id'] = $config->orgId;
             }

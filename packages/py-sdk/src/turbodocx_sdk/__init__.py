@@ -14,6 +14,7 @@ from .modules.partner import TurboPartner
 from .modules.webhooks import TurboWebhooks
 from .modules.deliverable import Deliverable
 from .utils.verify_webhook_signature import verify_webhook_signature
+from .modules.quote import TurboQuote
 from .modules.partner import (
     SCOPE_ORG_CREATE,
     SCOPE_ORG_READ,
@@ -89,6 +90,7 @@ __all__ = [
     "TurboWebhooks",
     "Deliverable",
     "verify_webhook_signature",
+    "TurboQuote",
     "HttpClient",
     "PartnerHttpClient",
     "TurboDocxError",
