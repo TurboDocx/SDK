@@ -36,10 +36,11 @@ class TestTurboSignConfigure:
         )
         assert TurboSign._client.base_url == "https://custom-api.example.com"
 
-    def test_configure_requires_org_id(self):
-        """Should raise error when org_id is not provided"""
-        with pytest.raises(AuthenticationError, match="Organization ID"):
-            TurboSign.configure(api_key="test-api-key", sender_email="test@example.com")
+    def test_configure_without_org_id_does_not_raise(self):
+        """Should NOT raise when org_id is missing — orgId is optional, backend returns 401 if needed"""
+        TurboSign.configure(api_key="test-api-key", sender_email="test@example.com")
+        assert TurboSign._client is not None
+        assert TurboSign._client.org_id is None
 
 
 class TestCreateSignatureReviewLink:

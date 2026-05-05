@@ -521,6 +521,30 @@ RSpec.describe TurboDocxSdk::TurboQuote do
       )
     end
 
+    it "does not mutate the original request hash in create_product" do
+      mock_product = { "id" => "p-1", "name" => "Widget", "listPrice" => 99 }
+      allow(mock_client).to receive(:post_form_data).and_return({ "result" => mock_product, "message" => "Product created successfully" })
+
+      request = { "name" => "Widget", "listPrice" => 99, "images" => [StringIO.new("fake-image")] }
+      original_request = request.dup
+
+      described_class.create_product(request)
+
+      expect(request).to eq(original_request)
+    end
+
+    it "does not mutate the original request hash in update_product" do
+      mock_product = { "id" => "p-1", "name" => "Updated Widget" }
+      allow(mock_client).to receive(:patch_form_data).and_return({ "result" => mock_product, "message" => "Product updated successfully" })
+
+      request = { "name" => "Updated Widget", "images" => [StringIO.new("fake-image")] }
+      original_request = request.dup
+
+      described_class.update_product("p-1", request)
+
+      expect(request).to eq(original_request)
+    end
+
     it "gets primary images and unwraps results" do
       mock_image_map = { "p-1" => { "id" => "img-1", "productId" => "p-1" }, "p-2" => nil }
       allow(mock_client).to receive(:post).and_return({ "results" => mock_image_map })
@@ -1039,6 +1063,35 @@ RSpec.describe TurboDocxSdk::TurboQuote do
 
       expect(result["quote"]["status"]).to eq("sent")
       expect(mock_client).to have_received(:post).with("/v1/quotes/q-1/items/bundle", anything)
+    end
+
+    it "does not mutate the original request hash in create_and_send" do
+      mock_quote = { "id" => "q-1", "name" => "Enterprise License", "status" => "draft" }
+      mock_items = { "results" => [{ "id" => "li-1" }], "message" => "1 line item(s) added successfully" }
+      mock_send_response = { "result" => mock_quote.merge("status" => "sent"), "message" => "Sent" }
+
+      call_count = 0
+      allow(mock_client).to receive(:post) do |*_args|
+        call_count += 1
+        case call_count
+        when 1 then { "result" => mock_quote, "message" => "Quote created successfully" }
+        when 2 then mock_items
+        when 3 then mock_send_response
+        end
+      end
+
+      request = {
+        "name" => "Enterprise License",
+        "companyId" => "c-1",
+        "contactId" => "ct-1",
+        "items" => [{ "productId" => "p-1", "productName" => "Widget", "unitPrice" => 99, "billingFrequency" => "monthly", "quantity" => 10 }],
+        "send" => { "ccEmails" => ["admin@example.com"] }
+      }
+      original_request = request.dup
+
+      described_class.create_and_send(request)
+
+      expect(request).to eq(original_request)
     end
   end
 

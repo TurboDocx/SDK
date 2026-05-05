@@ -2,8 +2,12 @@
 TypedDict definitions for TurboQuote -- Line Item entity.
 """
 
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
 from typing_extensions import TypedDict
+
+from .product import Product
 
 
 class LineItem(TypedDict, total=False):
@@ -33,8 +37,8 @@ class LineItem(TypedDict, total=False):
     createdBy: Optional[str]
     createdOn: str
     updatedOn: str
-    product: Dict[str, Any]  # Product
-    childLineItems: List[Dict[str, Any]]  # LineItem[]
+    product: Product
+    childLineItems: List[LineItem]
 
 
 class AddLineItemRequest(TypedDict, total=False):
@@ -83,5 +87,5 @@ class ListLineItemsOptions(TypedDict, total=False):
 
 
 class LineItemListResponse(TypedDict):
-    results: List[Dict[str, Any]]
+    results: List[LineItem]
     totalRecords: int

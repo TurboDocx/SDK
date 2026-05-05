@@ -688,7 +688,7 @@ func (c *QuoteClient) DeleteCompany(ctx context.Context, id string) (*QuoteSucce
 }
 
 // ListCompanyContacts retrieves contacts for a specific company
-func (c *QuoteClient) ListCompanyContacts(ctx context.Context, companyID string, options *QuotePaginationParams) (*ContactListResponse, error) {
+func (c *QuoteClient) ListCompanyContacts(ctx context.Context, companyID string, options *PaginationParams) (*ContactListResponse, error) {
 	var result ContactListResponse
 	qs := quoteQueryParams(options)
 	if err := c.http.Get(ctx, "/v1/companies/"+companyID+"/contacts"+qs, &result); err != nil {
@@ -747,7 +747,7 @@ func (c *QuoteClient) DeleteContact(ctx context.Context, id string) (*QuoteSucce
 // ============================================
 
 // ListTemplates retrieves a paginated list of quote templates
-func (c *QuoteClient) ListTemplates(ctx context.Context, options *QuotePaginationParams) (*QuoteTemplateListResponse, error) {
+func (c *QuoteClient) ListTemplates(ctx context.Context, options *PaginationParams) (*QuoteTemplateListResponse, error) {
 	var result QuoteTemplateListResponse
 	qs := quoteQueryParams(options)
 	if err := c.http.Get(ctx, "/v1/quote-templates"+qs, &result); err != nil {
@@ -900,6 +900,6 @@ func (c *QuoteClient) CreateAndSend(ctx context.Context, request *CreateAndSendR
 	}
 
 	return &CreateAndSendResponse{
-		QuoteResult: sendResp.Result,
+		Quote: sendResp.Result,
 	}, nil
 }

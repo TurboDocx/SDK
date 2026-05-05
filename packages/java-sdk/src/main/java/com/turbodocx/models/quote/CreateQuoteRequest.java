@@ -13,6 +13,7 @@ public class CreateQuoteRequest {
     private String validUntil;
     private Double taxRate;
     private String priceBookId;
+    private String notes;
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -32,4 +33,6 @@ public class CreateQuoteRequest {
     public void setTaxRate(Double taxRate) { this.taxRate = taxRate; }
     public String getPriceBookId() { return priceBookId; }
     public void setPriceBookId(String priceBookId) { this.priceBookId = priceBookId; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 }

@@ -2,8 +2,15 @@
 TypedDict definitions for TurboQuote -- Quote entity and request/response types.
 """
 
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
 from typing_extensions import Literal, TypedDict
+
+from .company import Company
+from .contact import Contact
+from .quote_line_item import LineItem, AddLineItemRequest, AddBundleLineItemRequest
+from .pricebook import PriceBook
 
 
 class QuoteStatusInfo(TypedDict):
@@ -40,12 +47,12 @@ class Quote(TypedDict, total=False):
     createdBy: Optional[str]
     createdOn: str
     updatedOn: str
-    company: Dict[str, Any]  # Company
-    contact: Dict[str, Any]  # Contact
-    lineItems: List[Dict[str, Any]]  # LineItem[]
-    priceBook: Dict[str, Any]  # PriceBook
+    company: Company
+    contact: Contact
+    lineItems: List[LineItem]
+    priceBook: PriceBook
     creator: Dict[str, Any]
-    statusInfo: Dict[str, Any]  # QuoteStatusInfo
+    statusInfo: QuoteStatusInfo
 
 
 # ============================================
@@ -98,12 +105,12 @@ class SendQuoteWithDeliverableRequest(TypedDict, total=False):
 
 
 class SendQuoteResponse(TypedDict):
-    quote: Dict[str, Any]  # Quote
+    quote: Quote
     message: str
 
 
 class SendQuoteWithDeliverableResponse(TypedDict):
-    quote: Dict[str, Any]  # Quote
+    quote: Quote
     message: str
     documentId: str
 
@@ -117,7 +124,7 @@ class VoidQuoteRequest(TypedDict):
 
 
 class ApplyPriceBookResponse(TypedDict):
-    quote: Dict[str, Any]  # Quote
+    quote: Quote
     message: str
     updatedCount: int
     skippedCount: int
@@ -139,13 +146,13 @@ class CreateAndSendRequest(TypedDict, total=False):
     validUntil: Optional[str]
     taxRate: Optional[float]
     priceBookId: Optional[str]
-    items: List[Dict[str, Any]]  # AddLineItemRequest[]
-    bundleItems: List[Dict[str, Any]]  # AddBundleLineItemRequest[]
-    send: Dict[str, Any]  # SendQuoteRequest
+    items: List[AddLineItemRequest]
+    bundleItems: List[AddBundleLineItemRequest]
+    send: SendQuoteRequest
 
 
 class CreateAndSendResponse(TypedDict):
-    quote: Dict[str, Any]  # Quote
+    quote: Quote
 
 
 # ============================================
@@ -164,15 +171,15 @@ class QuoteListStats(TypedDict, total=False):
     accepted: int
     declined: int
     voided: int
-    totalPipeline: List[Dict[str, Any]]  # PipelineEntry[]
+    totalPipeline: List[PipelineEntry]
     activeQuotes: int
-    monthlyRecurringRevenue: List[Dict[str, Any]]  # PipelineEntry[]
+    monthlyRecurringRevenue: List[PipelineEntry]
     winRate: float
     avgMargin: float
     quotesThisMonth: int
 
 
 class QuoteListResponse(TypedDict, total=False):
-    results: List[Dict[str, Any]]  # Quote[]
+    results: List[Quote]
     totalRecords: int
-    stats: Dict[str, Any]  # QuoteListStats
+    stats: QuoteListStats

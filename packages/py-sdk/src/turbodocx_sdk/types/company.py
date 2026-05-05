@@ -2,8 +2,12 @@
 TypedDict definitions for TurboQuote -- Company entity.
 """
 
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
 from typing_extensions import TypedDict
+
+from .quote_type import QuoteType
 
 
 class Company(TypedDict, total=False):
@@ -21,7 +25,7 @@ class Company(TypedDict, total=False):
     createdOn: str
     updatedOn: str
     contactCount: int
-    industry: Dict[str, Any]  # QuoteType
+    industry: QuoteType
 
 
 class CreateCompanyContactInput(TypedDict, total=False):
@@ -33,7 +37,7 @@ class CreateCompanyContactInput(TypedDict, total=False):
 
 class CreateCompanyRequest(TypedDict, total=False):
     name: str
-    contacts: List[Dict[str, Any]]  # CreateCompanyContactInput[]
+    contacts: List[CreateCompanyContactInput]
     phone: Optional[str]
     city: Optional[str]
     state: Optional[str]
@@ -58,5 +62,5 @@ class ListCompaniesOptions(TypedDict, total=False):
 
 
 class CompanyListResponse(TypedDict):
-    results: List[Dict[str, Any]]
+    results: List[Company]
     totalRecords: int

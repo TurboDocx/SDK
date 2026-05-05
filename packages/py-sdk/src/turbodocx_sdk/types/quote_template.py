@@ -2,6 +2,8 @@
 TypedDict definitions for TurboQuote -- Quote Template entity.
 """
 
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
 from typing_extensions import TypedDict
 
@@ -43,5 +45,5 @@ UpdateQuoteTemplateRequest = CreateQuoteTemplateRequest
 
 
 class QuoteTemplateListResponse(TypedDict):
-    results: List[Dict[str, Any]]
+    results: List[QuoteTemplate]
     totalRecords: int

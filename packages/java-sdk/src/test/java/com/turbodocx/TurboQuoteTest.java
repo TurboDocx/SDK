@@ -1426,6 +1426,81 @@ class TurboQuoteTest {
         }
 
         @Test
+        @DisplayName("should pass all quote fields through to POST /v1/quotes and exclude convenience fields")
+        void createAndSendPassesThroughAllQuoteFields() throws Exception {
+            // 1. Create quote response
+            Map<String, Object> createResponse = new HashMap<>();
+            createResponse.put("result", createQuoteMap("q-1", "Full Fields Quote", "draft"));
+            createResponse.put("message", "Quote created successfully");
+            server.enqueue(new MockResponse().setBody(wrapInData(createResponse)));
+
+            // 2. Add items response
+            Map<String, Object> itemsResponse = new HashMap<>();
+            Map<String, Object> itemMap = new HashMap<>();
+            itemMap.put("id", "li-1");
+            itemsResponse.put("results", Collections.singletonList(itemMap));
+            itemsResponse.put("message", "1 line item(s) added successfully");
+            server.enqueue(new MockResponse().setBody(wrapInData(itemsResponse)));
+
+            // 3. Send response
+            Map<String, Object> sendResponse = new HashMap<>();
+            sendResponse.put("result", createQuoteMap("q-1", "Full Fields Quote", "sent"));
+            sendResponse.put("message", "Sent");
+            server.enqueue(new MockResponse().setBody(wrapInData(sendResponse)));
+
+            // Build request with ALL possible quote fields
+            CreateAndSendRequest request = new CreateAndSendRequest();
+            request.setName("Full Fields Quote");
+            request.setCompanyId("c-1");
+            request.setContactId("ct-1");
+            request.setCurrency("USD");
+            request.setTermDays(30);
+            request.setRenewalPeriod("annual");
+            request.setValidUntil("2026-12-31");
+            request.setTaxRate(8.5);
+            request.setPriceBookId("pb-1");
+            request.setNotes("Important notes for the quote");
+
+            AddLineItemRequest item = new AddLineItemRequest();
+            item.setProductId("p-1");
+            item.setProductName("Widget");
+            item.setUnitPrice(99.0);
+            item.setBillingFrequency("monthly");
+            item.setQuantity(10);
+            request.setItems(Collections.singletonList(item));
+
+            SendQuoteRequest sendReq = new SendQuoteRequest();
+            sendReq.setCcEmails(Collections.singletonList("admin@example.com"));
+            request.setSend(sendReq);
+
+            client.turboQuote().createAndSend(request);
+
+            // Inspect the POST /v1/quotes body
+            RecordedRequest createReq = server.takeRequest();
+            assertEquals("POST", createReq.getMethod());
+            assertTrue(createReq.getPath().endsWith("/v1/quotes"));
+            String body = createReq.getBody().readUtf8();
+
+            // All quote fields MUST be present in the quote creation body
+            assertTrue(body.contains("\"name\":\"Full Fields Quote\""), "name should be in body");
+            assertTrue(body.contains("\"companyId\":\"c-1\""), "companyId should be in body");
+            assertTrue(body.contains("\"contactId\":\"ct-1\""), "contactId should be in body");
+            assertTrue(body.contains("\"currency\":\"USD\""), "currency should be in body");
+            assertTrue(body.contains("\"termDays\":30"), "termDays should be in body");
+            assertTrue(body.contains("\"renewalPeriod\":\"annual\""), "renewalPeriod should be in body");
+            assertTrue(body.contains("\"validUntil\":\"2026-12-31\""), "validUntil should be in body");
+            assertTrue(body.contains("\"taxRate\":8.5"), "taxRate should be in body");
+            assertTrue(body.contains("\"priceBookId\":\"pb-1\""), "priceBookId should be in body");
+            assertTrue(body.contains("\"notes\":\"Important notes for the quote\""),
+                    "notes should be in body (forward-compatibility: new fields must flow through)");
+
+            // Convenience fields MUST NOT be in the quote creation body
+            assertFalse(body.contains("\"items\""), "items should NOT be in quote creation body");
+            assertFalse(body.contains("\"bundleItems\""), "bundleItems should NOT be in quote creation body");
+            assertFalse(body.contains("\"send\""), "send should NOT be in quote creation body");
+        }
+
+        @Test
         @DisplayName("should create and send without items")
         void createAndSendWithoutItems() throws Exception {
             // 1. Create quote

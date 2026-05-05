@@ -1792,7 +1792,7 @@ func TestQuoteClient_ListTemplates(t *testing.T) {
 		limit := 10
 		offset := 0
 		query := "sales"
-		result, err := client.ListTemplates(context.Background(), &QuotePaginationParams{
+		result, err := client.ListTemplates(context.Background(), &PaginationParams{
 			Limit:  &limit,
 			Offset: &offset,
 			Query:  &query,
@@ -2111,7 +2111,7 @@ func TestQuoteClient_CreateAndSend(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "sent", result.QuoteResult.Status)
+		assert.Equal(t, "sent", result.Quote.Status)
 		assert.Equal(t, 3, callCount)
 	})
 
@@ -2146,8 +2146,42 @@ func TestQuoteClient_CreateAndSend(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "sent", result.QuoteResult.Status)
+		assert.Equal(t, "sent", result.Quote.Status)
 		assert.Equal(t, 2, callCount)
+	})
+
+	t.Run("response exposes Quote field matching other SDKs", func(t *testing.T) {
+		callCount := 0
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCount++
+			w.Header().Set("Content-Type", "application/json")
+
+			switch callCount {
+			case 1:
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"result":  map[string]interface{}{"id": "q-1", "name": "Parity Quote", "status": "draft"},
+					"message": "Quote created successfully",
+				})
+			case 2:
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"result":  map[string]interface{}{"id": "q-1", "name": "Parity Quote", "status": "sent"},
+					"message": "Sent",
+				})
+			}
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		result, err := client.CreateAndSend(context.Background(), &CreateAndSendRequest{
+			Name:      "Parity Quote",
+			CompanyID: "c-1",
+			ContactID: "ct-1",
+		})
+
+		require.NoError(t, err)
+		// Fix 2: field should be named Quote, not QuoteResult, matching other SDKs
+		assert.Equal(t, "q-1", result.Quote.ID)
+		assert.Equal(t, "sent", result.Quote.Status)
 	})
 
 	t.Run("creates and sends with bundle items", func(t *testing.T) {
@@ -2190,7 +2224,7 @@ func TestQuoteClient_CreateAndSend(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "sent", result.QuoteResult.Status)
+		assert.Equal(t, "sent", result.Quote.Status)
 		assert.Equal(t, 3, callCount)
 	})
 }

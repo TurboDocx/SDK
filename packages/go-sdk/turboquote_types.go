@@ -79,8 +79,8 @@ const (
 // Shared Types
 // ============================================
 
-// QuotePaginationParams holds standard pagination/search options
-type QuotePaginationParams struct {
+// PaginationParams holds standard pagination/search options
+type PaginationParams struct {
 	Limit  *int    `json:"limit,omitempty"`
 	Offset *int    `json:"offset,omitempty"`
 	Query  *string `json:"query,omitempty"`
@@ -299,7 +299,7 @@ type ApplyPriceBookResponse struct {
 
 // CreateAndSendResponse is the response from the createAndSend convenience method
 type CreateAndSendResponse struct {
-	QuoteResult Quote `json:"quote"`
+	Quote Quote `json:"quote"`
 }
 
 // ============================================
