@@ -196,6 +196,9 @@ class TurboQuoteTest {
             assertTrue(recorded.getPath().endsWith("/v1/quotes"));
             String body = recorded.getBody().readUtf8();
             assertTrue(body.contains("\"name\":\"My Quote\""));
+            assertFalse(body.contains("\"currency\""), "null fields should be omitted from request body");
+            assertFalse(body.contains("\"taxRate\""), "null fields should be omitted from request body");
+            assertFalse(body.contains("\"priceBookId\""), "null fields should be omitted from request body");
         }
 
         @Test

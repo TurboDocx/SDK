@@ -630,10 +630,10 @@ class TurboQuote:
         client = cls._get_client()
 
         # Extract special fields; the rest is the quote creation payload
-        items = request.pop("items", None)
-        bundle_items = request.pop("bundleItems", None)
-        send_options = request.pop("send", None)
-        quote_fields = request
+        quote_fields = {k: v for k, v in request.items() if k not in ("items", "bundleItems", "send")}
+        items = request.get("items")
+        bundle_items = request.get("bundleItems")
+        send_options = request.get("send")
 
         # 1. Create quote
         quote = cls._unwrap(await client.post("/v1/quotes", quote_fields))
