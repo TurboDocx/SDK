@@ -41,11 +41,14 @@ class Product(TypedDict, total=False):
     category: Dict[str, Any]
 
 
-class CreateProductRequest(TypedDict, total=False):
+class _CreateProductRequestRequired(TypedDict):
     name: str
     listPrice: float
     billingFrequency: str  # BillingFrequency literal
     categoryId: str
+
+
+class CreateProductRequest(_CreateProductRequestRequired, total=False):
     sku: str
     description: str
     detailedSpecification: str

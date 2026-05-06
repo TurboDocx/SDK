@@ -97,6 +97,16 @@ func TestNewQuoteClient(t *testing.T) {
 }
 
 // =============================================
+// QuoteStatus Constants Tests
+// =============================================
+
+func TestQuoteStatusPendingApproval(t *testing.T) {
+	t.Run("QuoteStatusPendingApproval constant exists and equals pending_approval", func(t *testing.T) {
+		assert.Equal(t, QuoteStatus("pending_approval"), QuoteStatusPendingApproval)
+	})
+}
+
+// =============================================
 // Quotes CRUD Tests
 // =============================================
 
@@ -2405,4 +2415,219 @@ func TestQuoteClient_NormalizerIntegration(t *testing.T) {
 		assert.Equal(t, "Wrapped Quote", result.Name)
 		assert.True(t, result.IsActive)
 	})
+}
+
+// =============================================
+// Helper functions for pointer creation
+// =============================================
+
+func StringPtr(s string) *string    { return &s }
+func Float64Ptr(f float64) *float64 { return &f }
+
+// =============================================
+// PATCH Null Field Clearing Tests
+// =============================================
+
+func TestUpdateQuoteRequestClearNullableField(t *testing.T) {
+	req := &UpdateQuoteRequest{}
+	req.Name = StringPtr("New Name")
+	req.ClearTaxRate()
+	data, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	var obj map[string]interface{}
+	json.Unmarshal(data, &obj)
+	if obj["name"] != "New Name" {
+		t.Errorf("expected name=New Name, got %v", obj["name"])
+	}
+	if _, exists := obj["taxRate"]; !exists {
+		t.Error("taxRate should be present as null")
+	}
+	if obj["taxRate"] != nil {
+		t.Errorf("expected taxRate=null, got %v", obj["taxRate"])
+	}
+	if _, exists := obj["companyId"]; exists {
+		t.Error("companyId should not be present")
+	}
+}
+
+func TestUpdateQuoteRequestNoNullFields(t *testing.T) {
+	req := &UpdateQuoteRequest{}
+	req.Name = StringPtr("Test")
+	data, _ := json.Marshal(req)
+	var obj map[string]interface{}
+	json.Unmarshal(data, &obj)
+	if len(obj) != 1 {
+		t.Errorf("expected 1 field, got %d: %v", len(obj), obj)
+	}
+}
+
+func TestUpdateProductRequestClearCost(t *testing.T) {
+	req := &UpdateProductRequest{}
+	req.Name = StringPtr("Widget")
+	req.ClearCost()
+	data, _ := json.Marshal(req)
+	var obj map[string]interface{}
+	json.Unmarshal(data, &obj)
+	if _, exists := obj["cost"]; !exists {
+		t.Error("cost should be present as null")
+	}
+	if obj["cost"] != nil {
+		t.Error("cost should be null")
+	}
+}
+
+func TestUpdateCompanyRequestClearIndustryID(t *testing.T) {
+	req := &UpdateCompanyRequest{}
+	req.Name = StringPtr("Acme")
+	req.ClearIndustryID()
+	data, _ := json.Marshal(req)
+	var obj map[string]interface{}
+	json.Unmarshal(data, &obj)
+	if _, exists := obj["industryId"]; !exists {
+		t.Error("industryId should be present as null")
+	}
+	if obj["industryId"] != nil {
+		t.Error("industryId should be null")
+	}
+}
+
+func TestUpdateContactRequestClearEmail(t *testing.T) {
+	req := &UpdateContactRequest{}
+	req.Name = StringPtr("John")
+	req.ClearEmail()
+	data, _ := json.Marshal(req)
+	var obj map[string]interface{}
+	json.Unmarshal(data, &obj)
+	if _, exists := obj["email"]; !exists {
+		t.Error("email should be present as null")
+	}
+	if obj["email"] != nil {
+		t.Error("email should be null")
+	}
+}
+
+func TestUpdateLineItemRequestClearCost(t *testing.T) {
+	req := &UpdateLineItemRequest{}
+	qty := 5
+	req.Quantity = &qty
+	req.ClearCost()
+	data, _ := json.Marshal(req)
+	var obj map[string]interface{}
+	json.Unmarshal(data, &obj)
+	if _, exists := obj["cost"]; !exists {
+		t.Error("cost should be present as null")
+	}
+	if obj["cost"] != nil {
+		t.Error("cost should be null")
+	}
+}
+
+func TestUpdatePriceBookRequestClearDescription(t *testing.T) {
+	req := &UpdatePriceBookRequest{}
+	req.Name = StringPtr("Standard")
+	req.ClearDescription()
+	data, _ := json.Marshal(req)
+	var obj map[string]interface{}
+	json.Unmarshal(data, &obj)
+	if _, exists := obj["description"]; !exists {
+		t.Error("description should be present as null")
+	}
+	if obj["description"] != nil {
+		t.Error("description should be null")
+	}
+}
+
+func TestUpdateBundleRequestClearDescription(t *testing.T) {
+	req := &UpdateBundleRequest{}
+	req.Name = StringPtr("Pack")
+	req.ClearDescription()
+	data, _ := json.Marshal(req)
+	var obj map[string]interface{}
+	json.Unmarshal(data, &obj)
+	if _, exists := obj["description"]; !exists {
+		t.Error("description should be present as null")
+	}
+	if obj["description"] != nil {
+		t.Error("description should be null")
+	}
+}
+
+func TestUpdateQuoteTemplateRequestClearDisclaimer(t *testing.T) {
+	req := &UpdateQuoteTemplateRequest{}
+	req.PrimaryColor = StringPtr("#FF0000")
+	req.ClearDisclaimer()
+	data, _ := json.Marshal(req)
+	var obj map[string]interface{}
+	json.Unmarshal(data, &obj)
+	if _, exists := obj["disclaimer"]; !exists {
+		t.Error("disclaimer should be present as null")
+	}
+	if obj["disclaimer"] != nil {
+		t.Error("disclaimer should be null")
+	}
+	if obj["primaryColor"] != "#FF0000" {
+		t.Errorf("expected primaryColor=#FF0000, got %v", obj["primaryColor"])
+	}
+}
+
+func TestUpdateQuoteRequestClearNullableFieldViaHTTP(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "PATCH", r.Method)
+
+		var raw map[string]interface{}
+		json.NewDecoder(r.Body).Decode(&raw)
+
+		// name should be present with value
+		assert.Equal(t, "Updated", raw["name"])
+		// taxRate should be present as null
+		_, hasTaxRate := raw["taxRate"]
+		assert.True(t, hasTaxRate, "taxRate should be present in request body")
+		assert.Nil(t, raw["taxRate"], "taxRate should be null")
+		// companyId should NOT be present
+		_, hasCompanyID := raw["companyId"]
+		assert.False(t, hasCompanyID, "companyId should not be present")
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"result":  map[string]interface{}{"id": "q-1", "name": "Updated"},
+			"message": "Quote updated successfully",
+		})
+	}))
+	defer server.Close()
+
+	client := newTestQuoteClient(t, server.URL)
+	req := &UpdateQuoteRequest{}
+	req.Name = StringPtr("Updated")
+	req.ClearTaxRate()
+
+	result, err := client.UpdateQuote(context.Background(), "q-1", req)
+	require.NoError(t, err)
+	assert.Equal(t, "Updated", result.Name)
+}
+
+func TestUpdateQuoteRequestClearMultipleFields(t *testing.T) {
+	req := &UpdateQuoteRequest{}
+	req.Name = StringPtr("Updated")
+	req.ClearTaxRate()
+	req.ClearPriceBookID()
+	req.ClearValidUntil()
+	data, _ := json.Marshal(req)
+	var obj map[string]interface{}
+	json.Unmarshal(data, &obj)
+
+	// Should have name + 3 null fields = 4 total
+	if len(obj) != 4 {
+		t.Errorf("expected 4 fields, got %d: %v", len(obj), obj)
+	}
+	if obj["taxRate"] != nil {
+		t.Error("taxRate should be null")
+	}
+	if obj["priceBookId"] != nil {
+		t.Error("priceBookId should be null")
+	}
+	if obj["validUntil"] != nil {
+		t.Error("validUntil should be null")
+	}
 }

@@ -59,10 +59,13 @@ class Quote(TypedDict, total=False):
 # REQUEST TYPES
 # ============================================
 
-class CreateQuoteRequest(TypedDict, total=False):
+class _CreateQuoteRequestRequired(TypedDict):
     name: str
     companyId: str
     contactId: str
+
+
+class CreateQuoteRequest(_CreateQuoteRequestRequired, total=False):
     currency: str  # Currency literal
     termDays: int
     renewalPeriod: Optional[str]  # RenewalPeriod literal
@@ -98,9 +101,12 @@ class SendQuoteRequest(TypedDict, total=False):
     validUntil: str
 
 
-class SendQuoteWithDeliverableRequest(TypedDict, total=False):
+class _SendQuoteWithDeliverableRequestRequired(TypedDict):
     deliverableId: str
     mergePosition: str  # 'beginning' | 'end'
+
+
+class SendQuoteWithDeliverableRequest(_SendQuoteWithDeliverableRequestRequired, total=False):
     ccEmails: List[str]
 
 
@@ -136,10 +142,13 @@ class HandleExpiredQuoteRequest(TypedDict):
     newValidUntil: str
 
 
-class CreateAndSendRequest(TypedDict, total=False):
+class _CreateAndSendRequestRequired(TypedDict):
     name: str
     companyId: str
     contactId: str
+
+
+class CreateAndSendRequest(_CreateAndSendRequestRequired, total=False):
     currency: str
     termDays: int
     renewalPeriod: Optional[str]

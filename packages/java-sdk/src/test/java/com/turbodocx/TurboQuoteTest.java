@@ -1288,7 +1288,7 @@ class TurboQuoteTest {
             server.enqueue(new MockResponse().setBody(wrapInData(response)));
 
             ListTypesOptions options = new ListTypesOptions();
-            options.setCategoryType("company_industry");
+            options.setCategoryType(CategoryType.COMPANY_INDUSTRY);
             QuoteTypeListResponse result = client.turboQuote().listTypes(options);
 
             assertEquals(1, result.getResults().size());
@@ -1324,7 +1324,7 @@ class TurboQuoteTest {
 
             CreateQuoteTypeRequest request = new CreateQuoteTypeRequest();
             request.setName("SaaS");
-            request.setCategoryType("product_category");
+            request.setCategoryType(CategoryType.PRODUCT_CATEGORY);
             QuoteType result = client.turboQuote().createType(request);
 
             assertEquals("SaaS", result.getName());
@@ -1456,9 +1456,9 @@ class TurboQuoteTest {
             request.setName("Full Fields Quote");
             request.setCompanyId("c-1");
             request.setContactId("ct-1");
-            request.setCurrency("USD");
+            request.setCurrency(com.turbodocx.models.quote.Currency.USD);
             request.setTermDays(30);
-            request.setRenewalPeriod("annual");
+            request.setRenewalPeriod(RenewalPeriod.ANNUALLY);
             request.setValidUntil("2026-12-31");
             request.setTaxRate(8.5);
             request.setPriceBookId("pb-1");
@@ -1489,7 +1489,7 @@ class TurboQuoteTest {
             assertTrue(body.contains("\"contactId\":\"ct-1\""), "contactId should be in body");
             assertTrue(body.contains("\"currency\":\"USD\""), "currency should be in body");
             assertTrue(body.contains("\"termDays\":30"), "termDays should be in body");
-            assertTrue(body.contains("\"renewalPeriod\":\"annual\""), "renewalPeriod should be in body");
+            assertTrue(body.contains("\"renewalPeriod\":\"annually\""), "renewalPeriod should be in body");
             assertTrue(body.contains("\"validUntil\":\"2026-12-31\""), "validUntil should be in body");
             assertTrue(body.contains("\"taxRate\":8.5"), "taxRate should be in body");
             assertTrue(body.contains("\"priceBookId\":\"pb-1\""), "priceBookId should be in body");
@@ -1623,6 +1623,195 @@ class TurboQuoteTest {
     }
 
     // ============================================
+    // PATCH NULL FIELD TRACKING
+    // ============================================
+
+    @Nested
+    @DisplayName("Patch Null Field Tracking")
+    class PatchNullFieldTracking {
+
+        @Test
+        @DisplayName("should track explicitly set fields")
+        void trackableRequest_shouldTrackSetFields() {
+            UpdateQuoteRequest request = new UpdateQuoteRequest();
+            assertTrue(request.getSetFields().isEmpty(), "New request should have no set fields");
+
+            request.setPriceBookId(null);
+            assertTrue(request.getSetFields().contains("priceBookId"),
+                    "After setPriceBookId(null), setFields should contain 'priceBookId', got: " + request.getSetFields());
+            assertEquals(1, request.getSetFields().size(),
+                    "Should have exactly 1 set field");
+
+            request.setName("test");
+            assertTrue(request.getSetFields().contains("name"),
+                    "After setName, setFields should contain 'name'");
+            assertEquals(2, request.getSetFields().size(),
+                    "Should have exactly 2 set fields");
+        }
+
+        @Test
+        @DisplayName("should include explicitly null fields in PATCH body")
+        void updateQuote_shouldIncludeExplicitlyNullFields() throws Exception {
+            Map<String, Object> response = new HashMap<>();
+            Map<String, Object> quoteMap = createQuoteMap("q-1", "Test", "draft");
+            response.put("result", quoteMap);
+            response.put("message", "Quote updated successfully");
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            UpdateQuoteRequest request = new UpdateQuoteRequest();
+            request.setPriceBookId(null);
+
+            client.turboQuote().updateQuote("q-1", request);
+
+            RecordedRequest recorded = server.takeRequest();
+            String body = recorded.getBody().readUtf8();
+            assertTrue(body.contains("\"priceBookId\":null"),
+                    "Explicitly null priceBookId should appear as null in request body, got: " + body);
+        }
+
+        @Test
+        @DisplayName("should include explicitly null fields in multipart PATCH body")
+        void updateProduct_shouldIncludeExplicitlyNullFieldsInMultipart() throws Exception {
+            Map<String, Object> response = new HashMap<>();
+            response.put("result", createProductMap("p-1", "Widget"));
+            response.put("message", "Product updated successfully");
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            // JPEG magic bytes
+            byte[] jpegBytes = new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0};
+
+            UpdateProductRequest request = new UpdateProductRequest();
+            request.setName("Widget");
+            request.setDescription(null); // explicitly clear description
+            request.setImages(new byte[][]{jpegBytes});
+
+            client.turboQuote().updateProduct("p-1", request);
+
+            RecordedRequest recorded = server.takeRequest();
+            String body = recorded.getBody().readUtf8();
+            assertTrue(body.contains("\"description\":null"),
+                    "Explicitly null description should appear in multipart data part, got body:\n" + body);
+        }
+
+        @Test
+        @DisplayName("should omit unset fields from PATCH body")
+        void updateQuote_shouldOmitUnsetFields() throws Exception {
+            Map<String, Object> response = new HashMap<>();
+            Map<String, Object> quoteMap = createQuoteMap("q-1", "new name", "draft");
+            response.put("result", quoteMap);
+            response.put("message", "Quote updated successfully");
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            UpdateQuoteRequest request = new UpdateQuoteRequest();
+            request.setName("new name");
+
+            client.turboQuote().updateQuote("q-1", request);
+
+            RecordedRequest recorded = server.takeRequest();
+            String body = recorded.getBody().readUtf8();
+            assertTrue(body.contains("\"name\":\"new name\""),
+                    "Set field 'name' should be in request body, got: " + body);
+            assertFalse(body.contains("\"priceBookId\""),
+                    "Unset field 'priceBookId' should NOT be in request body, got: " + body);
+            assertFalse(body.contains("\"taxRate\""),
+                    "Unset field 'taxRate' should NOT be in request body, got: " + body);
+        }
+    }
+
+    // ============================================
+    // IMAGE MIME TYPE DETECTION
+    // ============================================
+
+    @Nested
+    @DisplayName("Image MIME Type Detection")
+    class ImageMimeTypeDetection {
+
+        @Test
+        @DisplayName("should detect PNG MIME type from magic bytes")
+        void createProduct_shouldDetectPngMimeType() throws Exception {
+            Map<String, Object> response = new HashMap<>();
+            response.put("result", createProductMap("p-1", "Widget"));
+            response.put("message", "Product created successfully");
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            // PNG magic bytes: 0x89 0x50 0x4E 0x47
+            byte[] pngBytes = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+
+            CreateProductRequest request = new CreateProductRequest();
+            request.setName("Widget");
+            request.setListPrice(10.0);
+            request.setBillingFrequency("monthly");
+            request.setCategoryId("cat-1");
+            request.setImages(new byte[][]{pngBytes});
+
+            client.turboQuote().createProduct(request);
+
+            RecordedRequest recorded = server.takeRequest();
+            String body = recorded.getBody().readUtf8();
+            assertTrue(body.contains("Content-Type: image/png"),
+                    "PNG image should use image/png content type, got body:\n" + body);
+            assertTrue(body.contains("filename=\"image.png\""),
+                    "PNG image should have filename image.png, got body:\n" + body);
+        }
+
+        @Test
+        @DisplayName("should detect JPEG MIME type from magic bytes")
+        void createProduct_shouldDetectJpegMimeType() throws Exception {
+            Map<String, Object> response = new HashMap<>();
+            response.put("result", createProductMap("p-1", "Widget"));
+            response.put("message", "Product created successfully");
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            // JPEG magic bytes: 0xFF 0xD8 0xFF
+            byte[] jpegBytes = new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0};
+
+            CreateProductRequest request = new CreateProductRequest();
+            request.setName("Widget");
+            request.setListPrice(10.0);
+            request.setBillingFrequency("monthly");
+            request.setCategoryId("cat-1");
+            request.setImages(new byte[][]{jpegBytes});
+
+            client.turboQuote().createProduct(request);
+
+            RecordedRequest recorded = server.takeRequest();
+            String body = recorded.getBody().readUtf8();
+            assertTrue(body.contains("Content-Type: image/jpeg"),
+                    "JPEG image should use image/jpeg content type, got body:\n" + body);
+            assertTrue(body.contains("filename=\"image.jpg\""),
+                    "JPEG image should have filename image.jpg, got body:\n" + body);
+        }
+
+        @Test
+        @DisplayName("should fall back to octet-stream for unknown bytes")
+        void createProduct_shouldFallbackToOctetStream() throws Exception {
+            Map<String, Object> response = new HashMap<>();
+            response.put("result", createProductMap("p-1", "Widget"));
+            response.put("message", "Product created successfully");
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            // Unknown magic bytes
+            byte[] unknownBytes = new byte[]{0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
+
+            CreateProductRequest request = new CreateProductRequest();
+            request.setName("Widget");
+            request.setListPrice(10.0);
+            request.setBillingFrequency("monthly");
+            request.setCategoryId("cat-1");
+            request.setImages(new byte[][]{unknownBytes});
+
+            client.turboQuote().createProduct(request);
+
+            RecordedRequest recorded = server.takeRequest();
+            String body = recorded.getBody().readUtf8();
+            assertTrue(body.contains("Content-Type: application/octet-stream"),
+                    "Unknown bytes should use application/octet-stream content type, got body:\n" + body);
+            assertTrue(body.contains("filename=\"image\""),
+                    "Unknown image should have filename 'image' (no extension), got body:\n" + body);
+        }
+    }
+
+    // ============================================
     // NORMALIZER INTEGRATION
     // ============================================
 
@@ -1666,6 +1855,77 @@ class TurboQuoteTest {
             assertEquals(1234.56, result.getGrandTotal(), 0.001);
             assertEquals(8.5, result.getTaxRate(), 0.001);
             assertEquals(500.0, result.getSubtotalMonthly(), 0.001);
+        }
+    }
+
+    // ============================================
+    // ENUM TYPES
+    // ============================================
+
+    @Nested
+    @DisplayName("Enum Types")
+    class EnumTypes {
+
+        @Test
+        @DisplayName("should have correct CategoryType enum values")
+        public void testCategoryTypeEnumValues() {
+            assertEquals("product_category", CategoryType.PRODUCT_CATEGORY.getValue());
+            assertEquals("pricebook_type", CategoryType.PRICEBOOK_TYPE.getValue());
+            assertEquals("company_industry", CategoryType.COMPANY_INDUSTRY.getValue());
+            assertEquals("bundle_category", CategoryType.BUNDLE_CATEGORY.getValue());
+            assertEquals(4, CategoryType.values().length);
+        }
+
+        @Test
+        @DisplayName("should have correct RenewalPeriod enum values")
+        public void testRenewalPeriodEnumValues() {
+            assertEquals("weekly", RenewalPeriod.WEEKLY.getValue());
+            assertEquals("monthly", RenewalPeriod.MONTHLY.getValue());
+            assertEquals("quarterly", RenewalPeriod.QUARTERLY.getValue());
+            assertEquals("annually", RenewalPeriod.ANNUALLY.getValue());
+            assertEquals(4, RenewalPeriod.values().length);
+        }
+
+        @Test
+        @DisplayName("should have correct Currency enum values")
+        public void testCurrencyEnumValues() {
+            assertEquals("USD", com.turbodocx.models.quote.Currency.USD.getValue());
+            assertEquals("EUR", com.turbodocx.models.quote.Currency.EUR.getValue());
+            assertEquals("GBP", com.turbodocx.models.quote.Currency.GBP.getValue());
+            assertEquals("CAD", com.turbodocx.models.quote.Currency.CAD.getValue());
+            assertEquals("INR", com.turbodocx.models.quote.Currency.INR.getValue());
+            assertEquals("AUD", com.turbodocx.models.quote.Currency.AUD.getValue());
+            assertEquals(6, com.turbodocx.models.quote.Currency.values().length);
+        }
+
+        @Test
+        @DisplayName("should have correct BundleItemStatus enum values")
+        public void testBundleItemStatusEnumValues() {
+            assertEquals("active", BundleItemStatus.ACTIVE.getValue());
+            assertEquals("product_deleted", BundleItemStatus.PRODUCT_DELETED.getValue());
+            assertEquals("product_unavailable", BundleItemStatus.PRODUCT_UNAVAILABLE.getValue());
+            assertEquals("currency_mismatch", BundleItemStatus.CURRENCY_MISMATCH.getValue());
+            assertEquals(4, BundleItemStatus.values().length);
+        }
+
+        @Test
+        @DisplayName("should serialize enums to JSON correctly with Gson")
+        public void testEnumGsonSerialization() {
+            Gson gson = new Gson();
+            assertEquals("\"product_category\"", gson.toJson(CategoryType.PRODUCT_CATEGORY));
+            assertEquals("\"monthly\"", gson.toJson(RenewalPeriod.MONTHLY));
+            assertEquals("\"USD\"", gson.toJson(com.turbodocx.models.quote.Currency.USD));
+            assertEquals("\"active\"", gson.toJson(BundleItemStatus.ACTIVE));
+        }
+
+        @Test
+        @DisplayName("should deserialize enums from JSON correctly with Gson")
+        public void testEnumGsonDeserialization() {
+            Gson gson = new Gson();
+            assertEquals(CategoryType.PRODUCT_CATEGORY, gson.fromJson("\"product_category\"", CategoryType.class));
+            assertEquals(com.turbodocx.models.quote.Currency.EUR, gson.fromJson("\"EUR\"", com.turbodocx.models.quote.Currency.class));
+            assertEquals(RenewalPeriod.ANNUALLY, gson.fromJson("\"annually\"", RenewalPeriod.class));
+            assertEquals(BundleItemStatus.PRODUCT_DELETED, gson.fromJson("\"product_deleted\"", BundleItemStatus.class));
         }
     }
 

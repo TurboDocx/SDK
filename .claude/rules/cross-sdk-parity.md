@@ -62,14 +62,46 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 | Java | camelCase | PascalCase | PascalCase | UPPER_SNAKE |
 | Ruby | snake_case | PascalCase | snake_case | UPPER_SNAKE |
 
+## Source of Truth: The Backend
+
+The backend (`/home/nicolas/repos/RapidDocxBackend`) is the single source of truth — not the JS SDK. When porting or auditing:
+
+1. **Verify against backend Joi schemas**, not just the JS types. The JS SDK itself may have gaps (e.g., missing enum values, wrong optionality).
+2. **Check the handler response shape** to confirm what keys the API actually returns (`result` vs `results`, extra keys like `statusInfo`, `documentId`, `updatedCount`).
+3. **Check null semantics on PATCH**: read the Joi schema for `.allow(null)` — that's how you know which fields can be null-cleared vs which reject null with a 400.
+4. **Check query param validation**: some list endpoints accept `string | string[]` for filter params — the backend coerces both.
+
+## Porting a New Endpoint — Checklist
+
+When adding a method to any SDK:
+
+1. Read the **backend route file** for the exact path, HTTP method, and middleware
+2. Read the **backend Joi schema** for request body fields, types, required/optional, and `.allow(null)` annotations
+3. Read the **backend handler** for the response shape (what keys, what nesting)
+4. Check if the response is wrapped in `{ data: ... }` (all TurboQuote endpoints are)
+5. Implement in the target SDK with correct types
+6. Write tests that verify: correct HTTP method, correct path, correct request body serialization (including null handling for PATCH), correct response unwrapping
+7. Port the same test to all other SDKs
+
+## Common Pitfalls (Learned from Audits)
+
+- **PATCH null semantics**: JS `JSON.stringify` includes explicit `null` values; Go/Java/Python serializers may omit them. SDKs must include `null` when the user explicitly sets a field to null, and omit fields the user didn't touch. This is critical for clearing nullable fields like `priceBookId`, `validUntil`, `taxRate`.
+- **Request mutation**: Never mutate the caller's input object/hash/dict. Use spread/copy/dup before extracting or deleting keys. (Bug found in Ruby and Python `createAndSend`.)
+- **Enum completeness**: Always derive enum/literal/const values from the backend constants file (`TurboQuotesConstants.ts`), not from the JS SDK types.
+- **Multipart uploads**: Detect MIME type from magic bytes, don't hardcode. The backend validates image types server-side with `file-type`.
+- **Integer vs Decimal**: Check the backend Joi schema — `Joi.number().integer()` means the SDK should use int, not float/double.
+- **Response key flips**: Some endpoints return `result` (singular) for single-item input and `results` (plural) for array input. The SDK must handle both.
+
 ## New SDK Checklist
 
 1. Create `packages/<lang>-sdk/` directory
 2. Implement TurboSign with all operations above
 3. Implement TurboPartner with all operations above
 4. Implement TurboWebhooks with all operations above + `verifyWebhookSignature` helper
-5. Implement error hierarchy (TurboDocxError + 6 subtypes: Authentication, Authorization, Validation, NotFound, RateLimit, Network)
-6. Write tests matching parity of existing SDKs
-7. Add CI job to `.github/workflows/ci.yml`
-8. Add publish workflow `.github/workflows/publish-<lang>.yml`
-9. Create README with install, configure, and usage examples
+5. Implement TurboQuote with all operations (see JS SDK for method list)
+6. Implement error hierarchy (TurboDocxError + 6 subtypes: Authentication, Authorization, Validation, NotFound, RateLimit, Network)
+7. Implement response normalizer (boolean + decimal field coercion)
+8. Write tests matching parity of existing SDKs
+9. Add CI job to `.github/workflows/ci.yml`
+10. Add publish workflow `.github/workflows/publish-<lang>.yml`
+11. Create README with install, configure, and usage examples

@@ -25,9 +25,12 @@ class Contact(TypedDict, total=False):
     company: Company
 
 
-class CreateContactRequest(TypedDict, total=False):
+class _CreateContactRequestRequired(TypedDict):
     name: str
     companyId: str
+
+
+class CreateContactRequest(_CreateContactRequestRequired, total=False):
     email: Optional[str]
     phone: Optional[str]
     title: Optional[str]

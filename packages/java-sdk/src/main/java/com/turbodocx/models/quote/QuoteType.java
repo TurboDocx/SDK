@@ -9,7 +9,7 @@ public class QuoteType {
     private String id;
     private String orgId;
     private String name;
-    private String categoryType;
+    private CategoryType categoryType;
     private Boolean isDefault;
     private Boolean isActive;
     private String createdBy;
@@ -20,7 +20,7 @@ public class QuoteType {
     public String getId() { return id; }
     public String getOrgId() { return orgId; }
     public String getName() { return name; }
-    public String getCategoryType() { return categoryType; }
+    public CategoryType getCategoryType() { return categoryType; }
     public Boolean getIsDefault() { return isDefault; }
     public Boolean getIsActive() { return isActive; }
     public String getCreatedBy() { return createdBy; }

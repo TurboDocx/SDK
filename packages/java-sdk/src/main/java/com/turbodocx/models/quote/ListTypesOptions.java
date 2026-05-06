@@ -10,7 +10,7 @@ public class ListTypesOptions {
     private Integer limit;
     private Integer offset;
     private String query;
-    private String categoryType;
+    private CategoryType categoryType;
     private Boolean includeUsage;
 
     public Integer getLimit() { return limit; }
@@ -19,8 +19,8 @@ public class ListTypesOptions {
     public void setOffset(Integer offset) { this.offset = offset; }
     public String getQuery() { return query; }
     public void setQuery(String query) { this.query = query; }
-    public String getCategoryType() { return categoryType; }
-    public void setCategoryType(String categoryType) { this.categoryType = categoryType; }
+    public CategoryType getCategoryType() { return categoryType; }
+    public void setCategoryType(CategoryType categoryType) { this.categoryType = categoryType; }
     public Boolean getIncludeUsage() { return includeUsage; }
     public void setIncludeUsage(Boolean includeUsage) { this.includeUsage = includeUsage; }
 
@@ -29,7 +29,7 @@ public class ListTypesOptions {
         if (limit != null) params.put("limit", limit.toString());
         if (offset != null) params.put("offset", offset.toString());
         if (query != null) params.put("query", query);
-        if (categoryType != null) params.put("categoryType", categoryType);
+        if (categoryType != null) params.put("categoryType", categoryType.getValue());
         if (includeUsage != null) params.put("includeUsage", includeUsage.toString());
         return params.isEmpty() ? null : params;
     }

@@ -58,8 +58,9 @@ def _build_product_form_data(request: Dict[str, Any]):
     Returns:
         Tuple of (data_dict, files_list) suitable for HttpClient.*_form_data
     """
-    images = request.pop("images", None)
-    data_json = json.dumps(request)
+    data = dict(request)
+    images = data.pop("images", None)
+    data_json = json.dumps(data)
     data = {"data": data_json}
 
     files: List[Any] = []

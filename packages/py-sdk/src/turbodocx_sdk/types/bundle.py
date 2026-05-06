@@ -64,8 +64,11 @@ class BundleItemInput(TypedDict, total=False):
     cost: Optional[float]
 
 
-class CreateBundleRequest(TypedDict, total=False):
+class _CreateBundleRequestRequired(TypedDict):
     name: str
+
+
+class CreateBundleRequest(_CreateBundleRequestRequired, total=False):
     categoryId: str
     items: List[BundleItemInput]
     description: Optional[str]

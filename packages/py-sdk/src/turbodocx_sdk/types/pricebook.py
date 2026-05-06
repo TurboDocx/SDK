@@ -50,10 +50,13 @@ class PriceBookProductPricingInput(TypedDict, total=False):
     finalPrice: float
 
 
-class CreatePriceBookRequest(TypedDict, total=False):
+class _CreatePriceBookRequestRequired(TypedDict):
     name: str
     priceBookTypeId: str
     validFrom: str
+
+
+class CreatePriceBookRequest(_CreatePriceBookRequestRequired, total=False):
     discountPercent: float
     description: str
     validTo: str

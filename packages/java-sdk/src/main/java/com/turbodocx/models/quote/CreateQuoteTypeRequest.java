@@ -5,10 +5,10 @@ package com.turbodocx.models.quote;
  */
 public class CreateQuoteTypeRequest {
     private String name;
-    private String categoryType;
+    private CategoryType categoryType;
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-    public String getCategoryType() { return categoryType; }
-    public void setCategoryType(String categoryType) { this.categoryType = categoryType; }
+    public CategoryType getCategoryType() { return categoryType; }
+    public void setCategoryType(CategoryType categoryType) { this.categoryType = categoryType; }
 }
