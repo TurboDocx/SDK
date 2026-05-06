@@ -301,7 +301,7 @@ func (c *QuoteClient) ListLineItems(ctx context.Context, quoteID string, options
 
 // AddLineItems adds one or more product line items to a quote.
 // Accepts a single item or a slice of items.
-func (c *QuoteClient) AddLineItems(ctx context.Context, quoteID string, items []AddLineItemRequest) ([]LineItem, error) {
+func (c *QuoteClient) AddLineItems(ctx context.Context, quoteID string, items ...AddLineItemRequest) ([]LineItem, error) {
 	var resp struct {
 		Results []LineItem `json:"results"`
 	}
@@ -312,7 +312,7 @@ func (c *QuoteClient) AddLineItems(ctx context.Context, quoteID string, items []
 }
 
 // AddBundleLineItems adds one or more bundle line items to a quote
-func (c *QuoteClient) AddBundleLineItems(ctx context.Context, quoteID string, items []AddBundleLineItemRequest) ([]LineItem, error) {
+func (c *QuoteClient) AddBundleLineItems(ctx context.Context, quoteID string, items ...AddBundleLineItemRequest) ([]LineItem, error) {
 	var resp struct {
 		Results []LineItem `json:"results"`
 	}

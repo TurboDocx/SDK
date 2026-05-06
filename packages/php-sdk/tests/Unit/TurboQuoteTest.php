@@ -683,6 +683,55 @@ final class TurboQuoteTest extends TestCase
         $this->assertSame(['img-id-1'], $parsed['imageIdsToKeep']);
     }
 
+    public function testUpdateProductWithImagesPreservesNullClearing(): void
+    {
+        $fakeImage = 'fake-image-data';
+        $this->mockClient->setPatchFormDataReturn(['result' => ['id' => 'p-1', 'name' => 'Widget', 'description' => null], 'message' => 'Product updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateProduct('p-1', new UpdateProductRequest(
+            name: 'Widget',
+            description: null,
+            includeDescription: true,
+            images: [$fakeImage],
+        ));
+
+        $this->assertSame('/v1/products/p-1', $this->mockClient->lastPatchFormDataPath);
+        // Extract the 'data' JSON field from the multipart body
+        $dataField = null;
+        foreach ($this->mockClient->lastPatchFormDataMultipart as $part) {
+            if ($part['name'] === 'data') {
+                $dataField = $part['contents'];
+            }
+        }
+        $this->assertNotNull($dataField);
+        $parsed = json_decode($dataField, true);
+        // The key 'description' must be present with value null — not just absent
+        $this->assertArrayHasKey('description', $parsed);
+        $this->assertNull($parsed['description']);
+        // name should still be present
+        $this->assertSame('Widget', $parsed['name']);
+    }
+
+    public function testUpdateProductWithoutImagesPreservesNullClearing(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'p-1', 'name' => 'Widget', 'description' => null], 'message' => 'Product updated successfully']);
+        $this->injectMockClient();
+
+        $result = TurboQuote::updateProduct('p-1', new UpdateProductRequest(
+            name: 'Widget',
+            description: null,
+            includeDescription: true,
+        ));
+
+        $this->assertInstanceOf(Product::class, $result);
+        $this->assertSame('/v1/products/p-1', $this->mockClient->lastPatchPath);
+        // Verify the PATCH body includes description: null
+        $this->assertArrayHasKey('description', $this->mockClient->lastPatchData);
+        $this->assertNull($this->mockClient->lastPatchData['description']);
+        $this->assertSame('Widget', $this->mockClient->lastPatchData['name']);
+    }
+
     public function testGetProductPrimaryImagesAndUnwrapResults(): void
     {
         $mockImageMap = ['p-1' => ['id' => 'img-1', 'productId' => 'p-1'], 'p-2' => null];

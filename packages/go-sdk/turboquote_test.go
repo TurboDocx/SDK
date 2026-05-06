@@ -709,14 +709,12 @@ func TestQuoteClient_AddLineItems(t *testing.T) {
 		client := newTestQuoteClient(t, server.URL)
 		prodID := "prod-1"
 		qty := 2
-		result, err := client.AddLineItems(context.Background(), "q-1", []AddLineItemRequest{
-			{
-				ProductID:        &prodID,
-				ProductName:      "Widget",
-				UnitPrice:        50,
-				BillingFrequency: "monthly",
-				Quantity:         &qty,
-			},
+		result, err := client.AddLineItems(context.Background(), "q-1", AddLineItemRequest{
+			ProductID:        &prodID,
+			ProductName:      "Widget",
+			UnitPrice:        50,
+			BillingFrequency: "monthly",
+			Quantity:         &qty,
 		})
 
 		require.NoError(t, err)
@@ -748,10 +746,10 @@ func TestQuoteClient_AddLineItems(t *testing.T) {
 		qty2 := 1
 		disc := 10.0
 
-		result, err := client.AddLineItems(context.Background(), "q-1", []AddLineItemRequest{
-			{ProductID: &prod1, ProductName: "Widget A", UnitPrice: 50, BillingFrequency: "monthly", Quantity: &qty1},
-			{ProductID: &prod2, ProductName: "Widget B", UnitPrice: 75, BillingFrequency: "monthly", Quantity: &qty2, DiscountPercent: &disc},
-		})
+		result, err := client.AddLineItems(context.Background(), "q-1",
+			AddLineItemRequest{ProductID: &prod1, ProductName: "Widget A", UnitPrice: 50, BillingFrequency: "monthly", Quantity: &qty1},
+			AddLineItemRequest{ProductID: &prod2, ProductName: "Widget B", UnitPrice: 75, BillingFrequency: "monthly", Quantity: &qty2, DiscountPercent: &disc},
+		)
 
 		require.NoError(t, err)
 		assert.Len(t, result, 2)
@@ -775,13 +773,72 @@ func TestQuoteClient_AddBundleLineItems(t *testing.T) {
 		defer server.Close()
 
 		client := newTestQuoteClient(t, server.URL)
-		result, err := client.AddBundleLineItems(context.Background(), "q-1", []AddBundleLineItemRequest{
-			{BundleID: "bun-1", BundleName: "Starter Pack"},
+		result, err := client.AddBundleLineItems(context.Background(), "q-1", AddBundleLineItemRequest{
+			BundleID: "bun-1", BundleName: "Starter Pack",
 		})
 
 		require.NoError(t, err)
 		assert.Len(t, result, 1)
 	})
+}
+
+func TestQuoteClient_AddLineItemsSingleVariadic(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/v1/quotes/q-1/items", r.URL.Path)
+
+		var body []map[string]interface{}
+		json.NewDecoder(r.Body).Decode(&body)
+		assert.Len(t, body, 1, "single variadic item should be sent as array of 1")
+		assert.Equal(t, "Widget", body[0]["productName"])
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"results": []map[string]interface{}{
+				{"id": "li-1", "productName": "Widget"},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client := newTestQuoteClient(t, server.URL)
+	result, err := client.AddLineItems(context.Background(), "q-1", AddLineItemRequest{
+		ProductName:      "Widget",
+		UnitPrice:        50,
+		BillingFrequency: "monthly",
+	})
+
+	require.NoError(t, err)
+	assert.Len(t, result, 1)
+}
+
+func TestQuoteClient_AddBundleLineItemsSingleVariadic(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/v1/quotes/q-1/items/bundle", r.URL.Path)
+
+		var body []map[string]interface{}
+		json.NewDecoder(r.Body).Decode(&body)
+		assert.Len(t, body, 1, "single variadic item should be sent as array of 1")
+		assert.Equal(t, "bun-1", body[0]["bundleId"])
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"results": []map[string]interface{}{
+				{"id": "li-5", "bundleId": "bun-1", "lineItemType": "bundle"},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client := newTestQuoteClient(t, server.URL)
+	result, err := client.AddBundleLineItems(context.Background(), "q-1", AddBundleLineItemRequest{
+		BundleID:   "bun-1",
+		BundleName: "Starter Pack",
+	})
+
+	require.NoError(t, err)
+	assert.Len(t, result, 1)
 }
 
 func TestQuoteClient_UpdateLineItem(t *testing.T) {
