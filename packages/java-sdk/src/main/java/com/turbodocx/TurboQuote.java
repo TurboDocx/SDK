@@ -1,6 +1,7 @@
 package com.turbodocx;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.turbodocx.models.quote.*;
@@ -27,7 +28,7 @@ public class TurboQuote {
 
     public TurboQuote(HttpClient httpClient) {
         this.httpClient = httpClient;
-        this.gson = new Gson();
+        this.gson = new GsonBuilder().create();
     }
 
     // ============================================
