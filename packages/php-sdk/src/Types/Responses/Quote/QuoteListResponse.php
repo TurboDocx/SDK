@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TurboDocx\Types\Responses\Quote;
 
 use TurboDocx\Types\Quote\Quote;
+use TurboDocx\Types\Quote\QuoteListStats;
 
 /**
  * Response from listing quotes
@@ -13,12 +14,11 @@ final class QuoteListResponse implements \JsonSerializable
 {
     /**
      * @param array<Quote> $results
-     * @param array<string, mixed>|null $stats
      */
     public function __construct(
         public readonly array $results,
         public readonly int $totalRecords,
-        public readonly ?array $stats = null,
+        public readonly ?QuoteListStats $stats = null,
     ) {}
 
     /**
@@ -33,7 +33,7 @@ final class QuoteListResponse implements \JsonSerializable
                 $data['results'] ?? []
             ),
             totalRecords: (int) ($data['totalRecords'] ?? 0),
-            stats: $data['stats'] ?? null,
+            stats: isset($data['stats']) ? QuoteListStats::fromArray($data['stats']) : null,
         );
     }
 
@@ -48,7 +48,7 @@ final class QuoteListResponse implements \JsonSerializable
         ];
 
         if ($this->stats !== null) {
-            $data['stats'] = $this->stats;
+            $data['stats'] = $this->stats->toArray();
         }
 
         return $data;

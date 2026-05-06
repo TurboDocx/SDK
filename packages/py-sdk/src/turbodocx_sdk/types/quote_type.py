@@ -27,9 +27,13 @@ class QuoteType(TypedDict, total=False):
     usage: QuoteTypeUsage
 
 
-class CreateQuoteTypeRequest(TypedDict, total=False):
+class _CreateQuoteTypeRequestRequired(TypedDict):
     name: str
     categoryType: str  # CategoryType literal
+
+
+class CreateQuoteTypeRequest(_CreateQuoteTypeRequestRequired, total=False):
+    pass
 
 
 class UpdateQuoteTypeRequest(TypedDict, total=False):

@@ -240,6 +240,25 @@ public class HttpClient {
         return execute(request, responseType);
     }
 
+    /**
+     * PATCH with a pre-serialized JSON string body.
+     * Use this when the body has already been serialized (e.g., to preserve explicit nulls
+     * that default Gson would drop).
+     */
+    public <T> T patchRawJson(String path, String jsonBody, Type responseType) throws IOException {
+        RequestBody requestBody = jsonBody != null
+                ? RequestBody.create(jsonBody, JSON)
+                : RequestBody.create("{}", JSON);
+
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .headers(buildHeaders())
+                .patch(requestBody)
+                .build();
+
+        return execute(request, responseType);
+    }
+
     public <T> T delete(String path, Class<T> responseClass) throws IOException {
         Request request = new Request.Builder()
                 .url(baseUrl + path)

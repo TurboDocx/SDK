@@ -35,9 +35,12 @@ class CreateCompanyContactInput(TypedDict, total=False):
     title: Optional[str]
 
 
-class CreateCompanyRequest(TypedDict, total=False):
+class _CreateCompanyRequestRequired(TypedDict):
     name: str
     contacts: List[CreateCompanyContactInput]
+
+
+class CreateCompanyRequest(_CreateCompanyRequestRequired, total=False):
     phone: Optional[str]
     city: Optional[str]
     state: Optional[str]

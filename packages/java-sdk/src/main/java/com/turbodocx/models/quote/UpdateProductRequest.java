@@ -6,7 +6,7 @@ import java.util.List;
  * Request to update a product.
  * Note: images are handled via multipart form data at the TurboQuote layer.
  */
-public class UpdateProductRequest {
+public class UpdateProductRequest extends TrackableRequest {
     private String name;
     private Double listPrice;
     private String billingFrequency;
@@ -26,33 +26,33 @@ public class UpdateProductRequest {
     private transient byte[][] images;
 
     public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setName(String name) { this.name = name; markFieldSet("name"); }
     public Double getListPrice() { return listPrice; }
-    public void setListPrice(Double listPrice) { this.listPrice = listPrice; }
+    public void setListPrice(Double listPrice) { this.listPrice = listPrice; markFieldSet("listPrice"); }
     public String getBillingFrequency() { return billingFrequency; }
-    public void setBillingFrequency(String billingFrequency) { this.billingFrequency = billingFrequency; }
+    public void setBillingFrequency(String billingFrequency) { this.billingFrequency = billingFrequency; markFieldSet("billingFrequency"); }
     public String getSku() { return sku; }
-    public void setSku(String sku) { this.sku = sku; }
+    public void setSku(String sku) { this.sku = sku; markFieldSet("sku"); }
     public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public void setDescription(String description) { this.description = description; markFieldSet("description"); }
     public String getDetailedSpecification() { return detailedSpecification; }
-    public void setDetailedSpecification(String detailedSpecification) { this.detailedSpecification = detailedSpecification; }
+    public void setDetailedSpecification(String detailedSpecification) { this.detailedSpecification = detailedSpecification; markFieldSet("detailedSpecification"); }
     public String getInternalNotes() { return internalNotes; }
-    public void setInternalNotes(String internalNotes) { this.internalNotes = internalNotes; }
+    public void setInternalNotes(String internalNotes) { this.internalNotes = internalNotes; markFieldSet("internalNotes"); }
     public String getCategoryId() { return categoryId; }
-    public void setCategoryId(String categoryId) { this.categoryId = categoryId; }
+    public void setCategoryId(String categoryId) { this.categoryId = categoryId; markFieldSet("categoryId"); }
     public Double getCost() { return cost; }
-    public void setCost(Double cost) { this.cost = cost; }
+    public void setCost(Double cost) { this.cost = cost; markFieldSet("cost"); }
     public Integer getMinimumOrderQuantity() { return minimumOrderQuantity; }
-    public void setMinimumOrderQuantity(Integer minimumOrderQuantity) { this.minimumOrderQuantity = minimumOrderQuantity; }
+    public void setMinimumOrderQuantity(Integer minimumOrderQuantity) { this.minimumOrderQuantity = minimumOrderQuantity; markFieldSet("minimumOrderQuantity"); }
     public String getCurrency() { return currency; }
-    public void setCurrency(String currency) { this.currency = currency; }
+    public void setCurrency(String currency) { this.currency = currency; markFieldSet("currency"); }
     public Boolean getShowInCatalog() { return showInCatalog; }
-    public void setShowInCatalog(Boolean showInCatalog) { this.showInCatalog = showInCatalog; }
+    public void setShowInCatalog(Boolean showInCatalog) { this.showInCatalog = showInCatalog; markFieldSet("showInCatalog"); }
     public List<String> getImageIdsToKeep() { return imageIdsToKeep; }
-    public void setImageIdsToKeep(List<String> imageIdsToKeep) { this.imageIdsToKeep = imageIdsToKeep; }
+    public void setImageIdsToKeep(List<String> imageIdsToKeep) { this.imageIdsToKeep = imageIdsToKeep; markFieldSet("imageIdsToKeep"); }
     public List<String> getImageOrder() { return imageOrder; }
-    public void setImageOrder(List<String> imageOrder) { this.imageOrder = imageOrder; }
+    public void setImageOrder(List<String> imageOrder) { this.imageOrder = imageOrder; markFieldSet("imageOrder"); }
     public byte[][] getImages() { return images; }
     public void setImages(byte[][] images) { this.images = images; }
 }

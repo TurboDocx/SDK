@@ -2,7 +2,7 @@
  * Shared types for the TurboQuote module
  */
 
-export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'declined' | 'voided';
+export type QuoteStatus = 'draft' | 'pending_approval' | 'sent' | 'accepted' | 'declined' | 'voided';
 
 export type BillingFrequency = 'monthly' | 'quarterly' | 'annual' | 'one-time';
 

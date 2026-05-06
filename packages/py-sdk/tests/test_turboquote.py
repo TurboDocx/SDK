@@ -1337,3 +1337,125 @@ class TestErrorHandling:
 
         with pytest.raises(Exception, match="Name is required"):
             await TurboQuote.create_quote({"name": "", "companyId": "c-1", "contactId": "ct-1"})
+
+
+# ============================================
+# INPUT MUTATION
+# ============================================
+
+
+class TestInputMutation:
+    """Test that SDK methods do not mutate caller input"""
+
+    def test_build_product_form_data_does_not_mutate_input(self):
+        """_build_product_form_data should not modify the caller's dict."""
+        from turbodocx_sdk.modules.quote import _build_product_form_data
+
+        request = {
+            "name": "Test Product",
+            "listPrice": 99.99,
+            "images": [b"\x89PNG\r\n\x1a\n" + b"\x00" * 100],
+        }
+        original_keys = set(request.keys())
+        _build_product_form_data(request)
+        assert set(request.keys()) == original_keys, "Input dict was mutated — 'images' key was removed"
+        assert "images" in request
+
+
+# ============================================
+# TYPEDDICT REQUIRED vs OPTIONAL FIELDS
+# ============================================
+
+
+class TestTypedDictRequiredFields:
+    """Test that TypedDicts have correct required/optional field separation"""
+
+    def test_create_quote_request_required_keys(self):
+        from turbodocx_sdk.types.quote import CreateQuoteRequest
+
+        assert "name" in CreateQuoteRequest.__required_keys__
+        assert "companyId" in CreateQuoteRequest.__required_keys__
+        assert "contactId" in CreateQuoteRequest.__required_keys__
+        assert "currency" in CreateQuoteRequest.__optional_keys__
+        assert "termDays" in CreateQuoteRequest.__optional_keys__
+
+    def test_create_product_request_required_keys(self):
+        from turbodocx_sdk.types.product import CreateProductRequest
+
+        assert "name" in CreateProductRequest.__required_keys__
+        assert "listPrice" in CreateProductRequest.__required_keys__
+        assert "billingFrequency" in CreateProductRequest.__required_keys__
+        assert "categoryId" in CreateProductRequest.__required_keys__
+        assert "sku" in CreateProductRequest.__optional_keys__
+        assert "description" in CreateProductRequest.__optional_keys__
+
+    def test_create_company_request_required_keys(self):
+        from turbodocx_sdk.types.company import CreateCompanyRequest
+
+        assert "name" in CreateCompanyRequest.__required_keys__
+        assert "contacts" in CreateCompanyRequest.__required_keys__
+        assert "phone" in CreateCompanyRequest.__optional_keys__
+        assert "city" in CreateCompanyRequest.__optional_keys__
+
+    def test_create_contact_request_required_keys(self):
+        from turbodocx_sdk.types.contact import CreateContactRequest
+
+        assert "name" in CreateContactRequest.__required_keys__
+        assert "companyId" in CreateContactRequest.__required_keys__
+        assert "email" in CreateContactRequest.__optional_keys__
+        assert "phone" in CreateContactRequest.__optional_keys__
+
+    def test_create_price_book_request_required_keys(self):
+        from turbodocx_sdk.types.pricebook import CreatePriceBookRequest
+
+        assert "name" in CreatePriceBookRequest.__required_keys__
+        assert "priceBookTypeId" in CreatePriceBookRequest.__required_keys__
+        assert "validFrom" in CreatePriceBookRequest.__required_keys__
+        assert "discountPercent" in CreatePriceBookRequest.__optional_keys__
+        assert "description" in CreatePriceBookRequest.__optional_keys__
+
+    def test_create_bundle_request_required_keys(self):
+        from turbodocx_sdk.types.bundle import CreateBundleRequest
+
+        assert "name" in CreateBundleRequest.__required_keys__
+        assert "categoryId" in CreateBundleRequest.__optional_keys__
+        assert "items" in CreateBundleRequest.__optional_keys__
+
+    def test_add_line_item_request_required_keys(self):
+        from turbodocx_sdk.types.quote_line_item import AddLineItemRequest
+
+        assert "productName" in AddLineItemRequest.__required_keys__
+        assert "unitPrice" in AddLineItemRequest.__required_keys__
+        assert "billingFrequency" in AddLineItemRequest.__required_keys__
+        assert "quantity" in AddLineItemRequest.__optional_keys__
+        assert "discountPercent" in AddLineItemRequest.__optional_keys__
+
+    def test_add_bundle_line_item_request_required_keys(self):
+        from turbodocx_sdk.types.quote_line_item import AddBundleLineItemRequest
+
+        assert "bundleId" in AddBundleLineItemRequest.__required_keys__
+        assert "bundleName" in AddBundleLineItemRequest.__required_keys__
+        assert "quantity" in AddBundleLineItemRequest.__optional_keys__
+        assert "discountPercent" in AddBundleLineItemRequest.__optional_keys__
+
+    def test_send_quote_with_deliverable_request_required_keys(self):
+        from turbodocx_sdk.types.quote import SendQuoteWithDeliverableRequest
+
+        assert "deliverableId" in SendQuoteWithDeliverableRequest.__required_keys__
+        assert "mergePosition" in SendQuoteWithDeliverableRequest.__required_keys__
+        assert "ccEmails" in SendQuoteWithDeliverableRequest.__optional_keys__
+
+    def test_create_and_send_request_required_keys(self):
+        from turbodocx_sdk.types.quote import CreateAndSendRequest
+
+        assert "name" in CreateAndSendRequest.__required_keys__
+        assert "companyId" in CreateAndSendRequest.__required_keys__
+        assert "contactId" in CreateAndSendRequest.__required_keys__
+        assert "currency" in CreateAndSendRequest.__optional_keys__
+        assert "items" in CreateAndSendRequest.__optional_keys__
+
+    def test_create_quote_type_request_required_keys(self):
+        from turbodocx_sdk.types.quote_type import CreateQuoteTypeRequest
+
+        assert "name" in CreateQuoteTypeRequest.__required_keys__
+        assert "categoryType" in CreateQuoteTypeRequest.__required_keys__

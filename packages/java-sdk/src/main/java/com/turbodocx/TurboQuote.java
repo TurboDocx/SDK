@@ -79,7 +79,7 @@ public class TurboQuote {
      */
     public Quote updateQuote(String id, UpdateQuoteRequest request) throws IOException {
         Type type = new TypeToken<ResultEnvelope<Quote>>(){}.getType();
-        ResultEnvelope<Quote> envelope = httpClient.patch("/v1/quotes/" + id, request, type);
+        ResultEnvelope<Quote> envelope = httpClient.patchRawJson("/v1/quotes/" + id, buildPatchBody(request), type);
         return envelope.getResult();
     }
 
@@ -249,7 +249,7 @@ public class TurboQuote {
      */
     public LineItem updateLineItem(String quoteId, String itemId, UpdateLineItemRequest request) throws IOException {
         Type type = new TypeToken<ResultEnvelope<LineItem>>(){}.getType();
-        ResultEnvelope<LineItem> envelope = httpClient.patch("/v1/quotes/" + quoteId + "/items/" + itemId, request, type);
+        ResultEnvelope<LineItem> envelope = httpClient.patchRawJson("/v1/quotes/" + quoteId + "/items/" + itemId, buildPatchBody(request), type);
         return envelope.getResult();
     }
 
@@ -314,7 +314,7 @@ public class TurboQuote {
             return envelope.getResult();
         }
         Type type = new TypeToken<ResultEnvelope<Product>>(){}.getType();
-        ResultEnvelope<Product> envelope = httpClient.patch("/v1/products/" + id, request, type);
+        ResultEnvelope<Product> envelope = httpClient.patchRawJson("/v1/products/" + id, buildPatchBody(request), type);
         return envelope.getResult();
     }
 
@@ -399,7 +399,7 @@ public class TurboQuote {
      */
     public PriceBook updatePriceBook(String id, UpdatePriceBookRequest request) throws IOException {
         Type type = new TypeToken<ResultEnvelope<PriceBook>>(){}.getType();
-        ResultEnvelope<PriceBook> envelope = httpClient.patch("/v1/pricebooks/" + id, request, type);
+        ResultEnvelope<PriceBook> envelope = httpClient.patchRawJson("/v1/pricebooks/" + id, buildPatchBody(request), type);
         return envelope.getResult();
     }
 
@@ -476,7 +476,7 @@ public class TurboQuote {
      */
     public Bundle updateBundle(String id, UpdateBundleRequest request) throws IOException {
         Type type = new TypeToken<ResultEnvelope<Bundle>>(){}.getType();
-        ResultEnvelope<Bundle> envelope = httpClient.patch("/v1/bundles/" + id, request, type);
+        ResultEnvelope<Bundle> envelope = httpClient.patchRawJson("/v1/bundles/" + id, buildPatchBody(request), type);
         return envelope.getResult();
     }
 
@@ -538,7 +538,7 @@ public class TurboQuote {
      */
     public Company updateCompany(String id, UpdateCompanyRequest request) throws IOException {
         Type type = new TypeToken<ResultEnvelope<Company>>(){}.getType();
-        ResultEnvelope<Company> envelope = httpClient.patch("/v1/companies/" + id, request, type);
+        ResultEnvelope<Company> envelope = httpClient.patchRawJson("/v1/companies/" + id, buildPatchBody(request), type);
         return envelope.getResult();
     }
 
@@ -597,7 +597,7 @@ public class TurboQuote {
      */
     public Contact updateContact(String id, UpdateContactRequest request) throws IOException {
         Type type = new TypeToken<ResultEnvelope<Contact>>(){}.getType();
-        ResultEnvelope<Contact> envelope = httpClient.patch("/v1/contacts/" + id, request, type);
+        ResultEnvelope<Contact> envelope = httpClient.patchRawJson("/v1/contacts/" + id, buildPatchBody(request), type);
         return envelope.getResult();
     }
 
@@ -659,7 +659,7 @@ public class TurboQuote {
      */
     public QuoteTemplate updateTemplate(String id, UpdateQuoteTemplateRequest request) throws IOException {
         Type type = new TypeToken<ResultEnvelope<QuoteTemplate>>(){}.getType();
-        ResultEnvelope<QuoteTemplate> envelope = httpClient.patch("/v1/quote-templates/" + id, request, type);
+        ResultEnvelope<QuoteTemplate> envelope = httpClient.patchRawJson("/v1/quote-templates/" + id, buildPatchBody(request), type);
         return envelope.getResult();
     }
 
@@ -703,7 +703,7 @@ public class TurboQuote {
      */
     public QuoteType updateType(String id, UpdateQuoteTypeRequest request) throws IOException {
         Type type = new TypeToken<ResultEnvelope<QuoteType>>(){}.getType();
-        ResultEnvelope<QuoteType> envelope = httpClient.patch("/v1/types/" + id, request, type);
+        ResultEnvelope<QuoteType> envelope = httpClient.patchRawJson("/v1/types/" + id, buildPatchBody(request), type);
         return envelope.getResult();
     }
 
@@ -757,12 +757,80 @@ public class TurboQuote {
     // ============================================
 
     /**
+     * Build a JSON body string for PATCH requests using field-tracking.
+     *
+     * <p>Only includes fields that were explicitly set via setters (including
+     * those set to {@code null}). Fields that the caller never touched are
+     * omitted entirely, so the backend won't reset them.</p>
+     *
+     * <p>Returns a pre-serialized JSON string (using {@code serializeNulls})
+     * because default Gson drops {@code JsonNull} entries from a {@code JsonObject}
+     * during serialization.</p>
+     *
+     * @param request a {@link TrackableRequest} subclass with field tracking
+     * @return a JSON string containing only the explicitly set fields
+     */
+    private String buildPatchBody(TrackableRequest request) {
+        // Use serializeNulls so that fields explicitly set to null appear in the tree AND output
+        Gson nullGson = new GsonBuilder().serializeNulls().create();
+        JsonObject full = nullGson.toJsonTree(request).getAsJsonObject();
+        JsonObject filtered = new JsonObject();
+        for (String field : request.getSetFields()) {
+            filtered.add(field, full.has(field) ? full.get(field) : com.google.gson.JsonNull.INSTANCE);
+        }
+        return nullGson.toJson(filtered);
+    }
+
+    /**
+     * Detect image MIME type from magic bytes.
+     *
+     * @param data the raw image bytes
+     * @return the detected MIME type, or "application/octet-stream" if unknown
+     */
+    private String detectImageMimeType(byte[] data) {
+        if (data.length >= 4 && data[0] == (byte) 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47) {
+            return "image/png";
+        }
+        if (data.length >= 3 && data[0] == (byte) 0xFF && data[1] == (byte) 0xD8 && data[2] == (byte) 0xFF) {
+            return "image/jpeg";
+        }
+        if (data.length >= 4 && data[0] == 0x47 && data[1] == 0x49 && data[2] == 0x46 && data[3] == 0x38) {
+            return "image/gif";
+        }
+        if (data.length >= 12 && data[0] == 0x52 && data[1] == 0x49 && data[2] == 0x46 && data[3] == 0x46
+                && data[8] == 0x57 && data[9] == 0x45 && data[10] == 0x42 && data[11] == 0x50) {
+            return "image/webp";
+        }
+        return "application/octet-stream";
+    }
+
+    /**
+     * Get a filename with the correct extension for the given MIME type.
+     *
+     * @param mimeType the detected MIME type
+     * @return a filename like "image.png", "image.jpg", etc.
+     */
+    private String getImageFilename(String mimeType) {
+        switch (mimeType) {
+            case "image/png": return "image.png";
+            case "image/jpeg": return "image.jpg";
+            case "image/gif": return "image.gif";
+            case "image/webp": return "image.webp";
+            default: return "image";
+        }
+    }
+
+    /**
      * Build multipart form data for product create/update with images.
      * Non-image fields go into a "data" JSON field, images go as separate parts.
+     * Image MIME types and filenames are detected from magic bytes.
      */
     private MultipartBody buildProductFormData(Object request, byte[][] images) {
         // Serialize the request object (images field is transient, won't be included)
-        String dataJson = gson.toJson(request);
+        // For TrackableRequest (PATCH), use buildPatchBody to preserve explicit nulls
+        String dataJson = (request instanceof TrackableRequest)
+                ? buildPatchBody((TrackableRequest) request)
+                : gson.toJson(request);
 
         MultipartBody.Builder builder = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
@@ -770,8 +838,10 @@ public class TurboQuote {
 
         if (images != null) {
             for (byte[] image : images) {
-                builder.addFormDataPart("images", "image.jpg",
-                        RequestBody.create(image, MediaType.parse("image/jpeg")));
+                String mimeType = detectImageMimeType(image);
+                String filename = getImageFilename(mimeType);
+                builder.addFormDataPart("images", filename,
+                        RequestBody.create(image, MediaType.parse(mimeType)));
             }
         }
 

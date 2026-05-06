@@ -63,6 +63,10 @@ use TurboDocx\Types\Responses\Quote\QuoteTemplateListResponse;
 use TurboDocx\Types\Responses\Quote\QuoteTypeListResponse;
 use TurboDocx\Types\Responses\Quote\MessageResponse;
 use TurboDocx\Types\Responses\Quote\CreateAndSendResponse;
+use TurboDocx\Types\Enums\QuoteStatus;
+use TurboDocx\Types\Enums\BundleItemStatus;
+use TurboDocx\Types\Quote\QuoteListStats;
+use TurboDocx\Types\Quote\CurrencyTotal;
 
 /**
  * TurboQuote Module Tests
@@ -1245,6 +1249,203 @@ final class TurboQuoteTest extends TestCase
         $this->assertInstanceOf(CreateAndSendResponse::class, $result);
         $this->assertSame('sent', $result->quote->status);
         $this->assertSame('/v1/quotes/q-1/items/bundle', $this->mockClient->postPaths[1]);
+    }
+
+    // ============================================
+    // ENUMS
+    // ============================================
+
+    public function testQuoteStatusPendingApprovalExists(): void
+    {
+        $status = QuoteStatus::PENDING_APPROVAL;
+        $this->assertSame('pending_approval', $status->value);
+    }
+
+    public function testQuoteStatusEnumHasAllValues(): void
+    {
+        $cases = array_map(fn(QuoteStatus $s) => $s->value, QuoteStatus::cases());
+        $this->assertContains('draft', $cases);
+        $this->assertContains('pending_approval', $cases);
+        $this->assertContains('sent', $cases);
+        $this->assertContains('accepted', $cases);
+        $this->assertContains('declined', $cases);
+        $this->assertContains('voided', $cases);
+        $this->assertCount(6, $cases);
+    }
+
+    public function testBundleItemStatusEnumValues(): void
+    {
+        $this->assertEquals('active', BundleItemStatus::ACTIVE->value);
+        $this->assertEquals('product_deleted', BundleItemStatus::PRODUCT_DELETED->value);
+        $this->assertEquals('product_unavailable', BundleItemStatus::PRODUCT_UNAVAILABLE->value);
+        $this->assertEquals('currency_mismatch', BundleItemStatus::CURRENCY_MISMATCH->value);
+        $this->assertCount(4, BundleItemStatus::cases());
+    }
+
+    // ============================================
+    // QUOTE LIST STATS
+    // ============================================
+
+    public function testQuoteListStatsFromArray(): void
+    {
+        $data = [
+            'total' => 42,
+            'draft' => 10,
+            'sent' => 15,
+            'accepted' => 8,
+            'declined' => 5,
+            'voided' => 4,
+            'totalPipeline' => [
+                ['currency' => 'USD', 'total' => 50000.00],
+                ['currency' => 'EUR', 'total' => 12000.00],
+            ],
+            'activeQuotes' => 25,
+            'monthlyRecurringRevenue' => [
+                ['currency' => 'USD', 'total' => 9500.00],
+            ],
+            'winRate' => 61.5,
+            'avgMargin' => 42.3,
+            'quotesThisMonth' => 7,
+        ];
+
+        $stats = QuoteListStats::fromArray($data);
+
+        $this->assertSame(42, $stats->total);
+        $this->assertSame(10, $stats->draft);
+        $this->assertSame(15, $stats->sent);
+        $this->assertSame(8, $stats->accepted);
+        $this->assertSame(5, $stats->declined);
+        $this->assertSame(4, $stats->voided);
+        $this->assertSame(25, $stats->activeQuotes);
+        $this->assertSame(61.5, $stats->winRate);
+        $this->assertSame(42.3, $stats->avgMargin);
+        $this->assertSame(7, $stats->quotesThisMonth);
+
+        // totalPipeline
+        $this->assertCount(2, $stats->totalPipeline);
+        $this->assertInstanceOf(CurrencyTotal::class, $stats->totalPipeline[0]);
+        $this->assertSame('USD', $stats->totalPipeline[0]->currency);
+        $this->assertSame(50000.00, $stats->totalPipeline[0]->total);
+        $this->assertSame('EUR', $stats->totalPipeline[1]->currency);
+        $this->assertSame(12000.00, $stats->totalPipeline[1]->total);
+
+        // monthlyRecurringRevenue
+        $this->assertCount(1, $stats->monthlyRecurringRevenue);
+        $this->assertInstanceOf(CurrencyTotal::class, $stats->monthlyRecurringRevenue[0]);
+        $this->assertSame('USD', $stats->monthlyRecurringRevenue[0]->currency);
+        $this->assertSame(9500.00, $stats->monthlyRecurringRevenue[0]->total);
+    }
+
+    public function testQuoteListStatsToArray(): void
+    {
+        $stats = QuoteListStats::fromArray([
+            'total' => 5,
+            'draft' => 2,
+            'sent' => 1,
+            'accepted' => 1,
+            'declined' => 0,
+            'voided' => 1,
+            'totalPipeline' => [['currency' => 'USD', 'total' => 1000]],
+            'activeQuotes' => 3,
+            'monthlyRecurringRevenue' => [],
+            'winRate' => 50.0,
+            'avgMargin' => 30.0,
+            'quotesThisMonth' => 2,
+        ]);
+
+        $arr = $stats->toArray();
+        $this->assertSame(5, $arr['total']);
+        $this->assertSame(2, $arr['draft']);
+        $this->assertSame(1, $arr['sent']);
+        $this->assertSame(1, $arr['accepted']);
+        $this->assertSame(0, $arr['declined']);
+        $this->assertSame(1, $arr['voided']);
+        $this->assertSame(3, $arr['activeQuotes']);
+        $this->assertSame(50.0, $arr['winRate']);
+        $this->assertSame(30.0, $arr['avgMargin']);
+        $this->assertSame(2, $arr['quotesThisMonth']);
+        $this->assertCount(1, $arr['totalPipeline']);
+        $this->assertSame(['currency' => 'USD', 'total' => 1000.0], $arr['totalPipeline'][0]);
+        $this->assertCount(0, $arr['monthlyRecurringRevenue']);
+    }
+
+    public function testQuoteListStatsDefaults(): void
+    {
+        $stats = QuoteListStats::fromArray([]);
+
+        $this->assertSame(0, $stats->total);
+        $this->assertSame(0, $stats->draft);
+        $this->assertSame(0, $stats->sent);
+        $this->assertSame(0, $stats->accepted);
+        $this->assertSame(0, $stats->declined);
+        $this->assertSame(0, $stats->voided);
+        $this->assertSame(0, $stats->activeQuotes);
+        $this->assertSame(0.0, $stats->winRate);
+        $this->assertSame(0.0, $stats->avgMargin);
+        $this->assertSame(0, $stats->quotesThisMonth);
+        $this->assertCount(0, $stats->totalPipeline);
+        $this->assertCount(0, $stats->monthlyRecurringRevenue);
+    }
+
+    public function testQuoteListResponseUsesTypedStats(): void
+    {
+        $mockResponse = [
+            'results' => [['id' => 'q-1', 'name' => 'Test Quote', 'status' => 'draft']],
+            'totalRecords' => 1,
+            'stats' => [
+                'total' => 1,
+                'draft' => 1,
+                'sent' => 0,
+                'accepted' => 0,
+                'declined' => 0,
+                'voided' => 0,
+                'totalPipeline' => [],
+                'activeQuotes' => 1,
+                'monthlyRecurringRevenue' => [],
+                'winRate' => 0,
+                'avgMargin' => 0,
+                'quotesThisMonth' => 1,
+            ],
+        ];
+        $this->mockClient->setGetReturn($mockResponse);
+        $this->injectMockClient();
+
+        $result = TurboQuote::listQuotes(new ListQuotesRequest());
+
+        $this->assertInstanceOf(QuoteListStats::class, $result->stats);
+        $this->assertSame(1, $result->stats->total);
+        $this->assertSame(1, $result->stats->draft);
+        $this->assertSame(1, $result->stats->quotesThisMonth);
+    }
+
+    public function testQuoteListResponseWithNullStats(): void
+    {
+        $mockResponse = [
+            'results' => [],
+            'totalRecords' => 0,
+        ];
+        $this->mockClient->setGetReturn($mockResponse);
+        $this->injectMockClient();
+
+        $result = TurboQuote::listQuotes(new ListQuotesRequest());
+
+        $this->assertNull($result->stats);
+    }
+
+    public function testCurrencyTotalFromArray(): void
+    {
+        $ct = CurrencyTotal::fromArray(['currency' => 'GBP', 'total' => 7500.50]);
+
+        $this->assertSame('GBP', $ct->currency);
+        $this->assertSame(7500.50, $ct->total);
+    }
+
+    public function testCurrencyTotalToArray(): void
+    {
+        $ct = CurrencyTotal::fromArray(['currency' => 'USD', 'total' => 100]);
+
+        $arr = $ct->toArray();
+        $this->assertSame(['currency' => 'USD', 'total' => 100.0], $arr);
     }
 
     // ============================================

@@ -15,11 +15,11 @@ public class Quote {
     private String contactId;
     private String priceBookId;
     private Integer termDays;
-    private String renewalPeriod;
+    private RenewalPeriod renewalPeriod;
     private String sentAt;
     private String validUntil;
     private Double taxRate;
-    private String currency;
+    private Currency currency;
     private Double subtotalMonthly;
     private Double subtotalQuarterly;
     private Double subtotalAnnual;
@@ -46,11 +46,11 @@ public class Quote {
     public String getContactId() { return contactId; }
     public String getPriceBookId() { return priceBookId; }
     public Integer getTermDays() { return termDays; }
-    public String getRenewalPeriod() { return renewalPeriod; }
+    public RenewalPeriod getRenewalPeriod() { return renewalPeriod; }
     public String getSentAt() { return sentAt; }
     public String getValidUntil() { return validUntil; }
     public Double getTaxRate() { return taxRate; }
-    public String getCurrency() { return currency; }
+    public Currency getCurrency() { return currency; }
     public Double getSubtotalMonthly() { return subtotalMonthly; }
     public Double getSubtotalQuarterly() { return subtotalQuarterly; }
     public Double getSubtotalAnnual() { return subtotalAnnual; }

@@ -1,5 +1,7 @@
 package turbodocx
 
+import "encoding/json"
+
 // ============================================
 // Shared Enums / Constants
 // ============================================
@@ -8,11 +10,12 @@ package turbodocx
 type QuoteStatus = string
 
 const (
-	QuoteStatusDraft    QuoteStatus = "draft"
-	QuoteStatusSent     QuoteStatus = "sent"
-	QuoteStatusAccepted QuoteStatus = "accepted"
-	QuoteStatusDeclined QuoteStatus = "declined"
-	QuoteStatusVoided   QuoteStatus = "voided"
+	QuoteStatusDraft           QuoteStatus = "draft"
+	QuoteStatusPendingApproval QuoteStatus = "pending_approval"
+	QuoteStatusSent            QuoteStatus = "sent"
+	QuoteStatusAccepted        QuoteStatus = "accepted"
+	QuoteStatusDeclined        QuoteStatus = "declined"
+	QuoteStatusVoided          QuoteStatus = "voided"
 )
 
 // BillingFrequency represents a billing interval
@@ -179,6 +182,49 @@ type UpdateQuoteRequest struct {
 	TaxRate       *float64 `json:"taxRate,omitempty"`
 	CurrencyCode  *string  `json:"currency,omitempty"`
 	PriceBookID   *string  `json:"priceBookId,omitempty"`
+	nullFields    map[string]bool `json:"-"`
+}
+
+// ClearPriceBookID explicitly sets priceBookId to null in the JSON payload.
+func (r *UpdateQuoteRequest) ClearPriceBookID() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["priceBookId"] = true
+	r.PriceBookID = nil
+}
+
+// ClearValidUntil explicitly sets validUntil to null in the JSON payload.
+func (r *UpdateQuoteRequest) ClearValidUntil() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["validUntil"] = true
+	r.ValidUntil = nil
+}
+
+// ClearTaxRate explicitly sets taxRate to null in the JSON payload.
+func (r *UpdateQuoteRequest) ClearTaxRate() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["taxRate"] = true
+	r.TaxRate = nil
+}
+
+// ClearRenewalPeriod explicitly sets renewalPeriod to null in the JSON payload.
+func (r *UpdateQuoteRequest) ClearRenewalPeriod() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["renewalPeriod"] = true
+	r.RenewalPeriod = nil
+}
+
+// MarshalJSON implements custom JSON marshaling to include explicitly-nulled fields.
+func (r UpdateQuoteRequest) MarshalJSON() ([]byte, error) {
+	type Alias UpdateQuoteRequest
+	data, err := json.Marshal(Alias(r))
+	if err != nil { return nil, err }
+	if len(r.nullFields) == 0 { return data, nil }
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(data, &obj); err != nil { return nil, err }
+	for field := range r.nullFields {
+		obj[field] = json.RawMessage("null")
+	}
+	return json.Marshal(obj)
 }
 
 // ListQuotesOptions holds the filter/pagination options for listing quotes
@@ -376,6 +422,56 @@ type UpdateLineItemRequest struct {
 	ProductName        *string  `json:"productName,omitempty"`
 	ProductSku         *string  `json:"productSku,omitempty"`
 	ProductDescription *string  `json:"productDescription,omitempty"`
+	nullFields         map[string]bool `json:"-"`
+}
+
+// ClearCost explicitly sets cost to null in the JSON payload.
+func (r *UpdateLineItemRequest) ClearCost() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["cost"] = true
+	r.Cost = nil
+}
+
+// ClearCategoryID explicitly sets categoryId to null in the JSON payload.
+func (r *UpdateLineItemRequest) ClearCategoryID() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["categoryId"] = true
+	r.CategoryID = nil
+}
+
+// ClearCategoryName explicitly sets categoryName to null in the JSON payload.
+func (r *UpdateLineItemRequest) ClearCategoryName() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["categoryName"] = true
+	r.CategoryName = nil
+}
+
+// ClearProductSku explicitly sets productSku to null in the JSON payload.
+func (r *UpdateLineItemRequest) ClearProductSku() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["productSku"] = true
+	r.ProductSku = nil
+}
+
+// ClearProductDescription explicitly sets productDescription to null in the JSON payload.
+func (r *UpdateLineItemRequest) ClearProductDescription() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["productDescription"] = true
+	r.ProductDescription = nil
+}
+
+// MarshalJSON implements custom JSON marshaling to include explicitly-nulled fields.
+func (r UpdateLineItemRequest) MarshalJSON() ([]byte, error) {
+	type Alias UpdateLineItemRequest
+	data, err := json.Marshal(Alias(r))
+	if err != nil { return nil, err }
+	if len(r.nullFields) == 0 { return data, nil }
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(data, &obj); err != nil { return nil, err }
+	for field := range r.nullFields {
+		obj[field] = json.RawMessage("null")
+	}
+	return json.Marshal(obj)
 }
 
 // ListLineItemsOptions holds the filter/pagination options for listing line items
@@ -481,9 +577,59 @@ type UpdateProductRequest struct {
 	ShowInCatalog         *bool    `json:"showInCatalog,omitempty"`
 	ImageIDsToKeep        []string `json:"imageIdsToKeep,omitempty"`
 	ImageOrder            []string `json:"imageOrder,omitempty"`
+	nullFields            map[string]bool `json:"-"`
 
 	// Images for multipart upload
 	Images []ProductImageInput `json:"-"`
+}
+
+// ClearCost explicitly sets cost to null in the JSON payload.
+func (r *UpdateProductRequest) ClearCost() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["cost"] = true
+	r.Cost = nil
+}
+
+// ClearSku explicitly sets sku to null in the JSON payload.
+func (r *UpdateProductRequest) ClearSku() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["sku"] = true
+	r.Sku = nil
+}
+
+// ClearDescription explicitly sets description to null in the JSON payload.
+func (r *UpdateProductRequest) ClearDescription() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["description"] = true
+	r.Description = nil
+}
+
+// ClearDetailedSpecification explicitly sets detailedSpecification to null in the JSON payload.
+func (r *UpdateProductRequest) ClearDetailedSpecification() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["detailedSpecification"] = true
+	r.DetailedSpecification = nil
+}
+
+// ClearInternalNotes explicitly sets internalNotes to null in the JSON payload.
+func (r *UpdateProductRequest) ClearInternalNotes() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["internalNotes"] = true
+	r.InternalNotes = nil
+}
+
+// MarshalJSON implements custom JSON marshaling to include explicitly-nulled fields.
+func (r UpdateProductRequest) MarshalJSON() ([]byte, error) {
+	type Alias UpdateProductRequest
+	data, err := json.Marshal(Alias(r))
+	if err != nil { return nil, err }
+	if len(r.nullFields) == 0 { return data, nil }
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(data, &obj); err != nil { return nil, err }
+	for field := range r.nullFields {
+		obj[field] = json.RawMessage("null")
+	}
+	return json.Marshal(obj)
 }
 
 // ListProductsOptions holds the filter/pagination options for listing products
@@ -588,6 +734,35 @@ type UpdatePriceBookRequest struct {
 	IsDefault          *bool                          `json:"isDefault,omitempty"`
 	ShowInQuoteBuilder *bool                          `json:"showInQuoteBuilder,omitempty"`
 	ProductPricing     []PriceBookProductPricingInput `json:"productPricing,omitempty"`
+	nullFields         map[string]bool                `json:"-"`
+}
+
+// ClearDescription explicitly sets description to null in the JSON payload.
+func (r *UpdatePriceBookRequest) ClearDescription() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["description"] = true
+	r.Description = nil
+}
+
+// ClearValidTo explicitly sets validTo to null in the JSON payload.
+func (r *UpdatePriceBookRequest) ClearValidTo() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["validTo"] = true
+	r.ValidTo = nil
+}
+
+// MarshalJSON implements custom JSON marshaling to include explicitly-nulled fields.
+func (r UpdatePriceBookRequest) MarshalJSON() ([]byte, error) {
+	type Alias UpdatePriceBookRequest
+	data, err := json.Marshal(Alias(r))
+	if err != nil { return nil, err }
+	if len(r.nullFields) == 0 { return data, nil }
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(data, &obj); err != nil { return nil, err }
+	for field := range r.nullFields {
+		obj[field] = json.RawMessage("null")
+	}
+	return json.Marshal(obj)
 }
 
 // ListPriceBooksOptions holds the filter/pagination options for listing price books
@@ -715,6 +890,42 @@ type UpdateBundleRequest struct {
 	ShowItemsToEndUser    *bool             `json:"showItemsToEndUser,omitempty"`
 	ShowInCatalog         *bool             `json:"showInCatalog,omitempty"`
 	SyncWithProducts      *bool             `json:"syncWithProducts,omitempty"`
+	nullFields            map[string]bool   `json:"-"`
+}
+
+// ClearDescription explicitly sets description to null in the JSON payload.
+func (r *UpdateBundleRequest) ClearDescription() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["description"] = true
+	r.Description = nil
+}
+
+// ClearSku explicitly sets sku to null in the JSON payload.
+func (r *UpdateBundleRequest) ClearSku() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["sku"] = true
+	r.Sku = nil
+}
+
+// ClearCategoryID explicitly sets categoryId to null in the JSON payload.
+func (r *UpdateBundleRequest) ClearCategoryID() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["categoryId"] = true
+	r.CategoryID = nil
+}
+
+// MarshalJSON implements custom JSON marshaling to include explicitly-nulled fields.
+func (r UpdateBundleRequest) MarshalJSON() ([]byte, error) {
+	type Alias UpdateBundleRequest
+	data, err := json.Marshal(Alias(r))
+	if err != nil { return nil, err }
+	if len(r.nullFields) == 0 { return data, nil }
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(data, &obj); err != nil { return nil, err }
+	for field := range r.nullFields {
+		obj[field] = json.RawMessage("null")
+	}
+	return json.Marshal(obj)
 }
 
 // ListBundlesOptions holds the filter/pagination options for listing bundles
@@ -781,12 +992,62 @@ type CreateCompanyRequest struct {
 
 // UpdateCompanyRequest is the request to update a company
 type UpdateCompanyRequest struct {
-	Name       *string `json:"name,omitempty"`
-	Phone      *string `json:"phone,omitempty"`
-	City       *string `json:"city,omitempty"`
-	State      *string `json:"state,omitempty"`
-	Country    *string `json:"country,omitempty"`
-	IndustryID *string `json:"industryId,omitempty"`
+	Name       *string         `json:"name,omitempty"`
+	Phone      *string         `json:"phone,omitempty"`
+	City       *string         `json:"city,omitempty"`
+	State      *string         `json:"state,omitempty"`
+	Country    *string         `json:"country,omitempty"`
+	IndustryID *string         `json:"industryId,omitempty"`
+	nullFields map[string]bool `json:"-"`
+}
+
+// ClearPhone explicitly sets phone to null in the JSON payload.
+func (r *UpdateCompanyRequest) ClearPhone() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["phone"] = true
+	r.Phone = nil
+}
+
+// ClearCity explicitly sets city to null in the JSON payload.
+func (r *UpdateCompanyRequest) ClearCity() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["city"] = true
+	r.City = nil
+}
+
+// ClearState explicitly sets state to null in the JSON payload.
+func (r *UpdateCompanyRequest) ClearState() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["state"] = true
+	r.State = nil
+}
+
+// ClearCountry explicitly sets country to null in the JSON payload.
+func (r *UpdateCompanyRequest) ClearCountry() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["country"] = true
+	r.Country = nil
+}
+
+// ClearIndustryID explicitly sets industryId to null in the JSON payload.
+func (r *UpdateCompanyRequest) ClearIndustryID() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["industryId"] = true
+	r.IndustryID = nil
+}
+
+// MarshalJSON implements custom JSON marshaling to include explicitly-nulled fields.
+func (r UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
+	type Alias UpdateCompanyRequest
+	data, err := json.Marshal(Alias(r))
+	if err != nil { return nil, err }
+	if len(r.nullFields) == 0 { return data, nil }
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(data, &obj); err != nil { return nil, err }
+	for field := range r.nullFields {
+		obj[field] = json.RawMessage("null")
+	}
+	return json.Marshal(obj)
 }
 
 // ListCompaniesOptions holds the filter/pagination options for listing companies
@@ -834,10 +1095,46 @@ type CreateContactRequest struct {
 
 // UpdateContactRequest is the request to update a contact
 type UpdateContactRequest struct {
-	Name  *string `json:"name,omitempty"`
-	Email *string `json:"email,omitempty"`
-	Phone *string `json:"phone,omitempty"`
-	Title *string `json:"title,omitempty"`
+	Name       *string         `json:"name,omitempty"`
+	Email      *string         `json:"email,omitempty"`
+	Phone      *string         `json:"phone,omitempty"`
+	Title      *string         `json:"title,omitempty"`
+	nullFields map[string]bool `json:"-"`
+}
+
+// ClearEmail explicitly sets email to null in the JSON payload.
+func (r *UpdateContactRequest) ClearEmail() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["email"] = true
+	r.Email = nil
+}
+
+// ClearPhone explicitly sets phone to null in the JSON payload.
+func (r *UpdateContactRequest) ClearPhone() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["phone"] = true
+	r.Phone = nil
+}
+
+// ClearTitle explicitly sets title to null in the JSON payload.
+func (r *UpdateContactRequest) ClearTitle() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["title"] = true
+	r.Title = nil
+}
+
+// MarshalJSON implements custom JSON marshaling to include explicitly-nulled fields.
+func (r UpdateContactRequest) MarshalJSON() ([]byte, error) {
+	type Alias UpdateContactRequest
+	data, err := json.Marshal(Alias(r))
+	if err != nil { return nil, err }
+	if len(r.nullFields) == 0 { return data, nil }
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(data, &obj); err != nil { return nil, err }
+	for field := range r.nullFields {
+		obj[field] = json.RawMessage("null")
+	}
+	return json.Marshal(obj)
 }
 
 // ListContactsOptions holds the filter/pagination options for listing contacts
@@ -892,8 +1189,83 @@ type CreateQuoteTemplateRequest struct {
 	ContactEmail       *string `json:"contactEmail,omitempty"`
 }
 
-// UpdateQuoteTemplateRequest is the same shape as CreateQuoteTemplateRequest
-type UpdateQuoteTemplateRequest = CreateQuoteTemplateRequest
+// UpdateQuoteTemplateRequest is the request to update a quote template
+type UpdateQuoteTemplateRequest struct {
+	LogoURL            *string         `json:"logoUrl,omitempty"`
+	PrimaryColor       *string         `json:"primaryColor,omitempty"`
+	PrimaryTextColor   *string         `json:"primaryTextColor,omitempty"`
+	Disclaimer         *string         `json:"disclaimer,omitempty"`
+	TermsAndConditions *string         `json:"termsAndConditions,omitempty"`
+	ClosingMessage     *string         `json:"closingMessage,omitempty"`
+	SenderName         *string         `json:"senderName,omitempty"`
+	SenderPhone        *string         `json:"senderPhone,omitempty"`
+	SenderEmail        *string         `json:"senderEmail,omitempty"`
+	ContactEmail       *string         `json:"contactEmail,omitempty"`
+	nullFields         map[string]bool `json:"-"`
+}
+
+// ClearLogoURL explicitly sets logoUrl to null in the JSON payload.
+func (r *UpdateQuoteTemplateRequest) ClearLogoURL() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["logoUrl"] = true
+	r.LogoURL = nil
+}
+
+// ClearDisclaimer explicitly sets disclaimer to null in the JSON payload.
+func (r *UpdateQuoteTemplateRequest) ClearDisclaimer() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["disclaimer"] = true
+	r.Disclaimer = nil
+}
+
+// ClearTermsAndConditions explicitly sets termsAndConditions to null in the JSON payload.
+func (r *UpdateQuoteTemplateRequest) ClearTermsAndConditions() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["termsAndConditions"] = true
+	r.TermsAndConditions = nil
+}
+
+// ClearClosingMessage explicitly sets closingMessage to null in the JSON payload.
+func (r *UpdateQuoteTemplateRequest) ClearClosingMessage() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["closingMessage"] = true
+	r.ClosingMessage = nil
+}
+
+// ClearSenderName explicitly sets senderName to null in the JSON payload.
+func (r *UpdateQuoteTemplateRequest) ClearSenderName() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["senderName"] = true
+	r.SenderName = nil
+}
+
+// ClearSenderPhone explicitly sets senderPhone to null in the JSON payload.
+func (r *UpdateQuoteTemplateRequest) ClearSenderPhone() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["senderPhone"] = true
+	r.SenderPhone = nil
+}
+
+// ClearContactEmail explicitly sets contactEmail to null in the JSON payload.
+func (r *UpdateQuoteTemplateRequest) ClearContactEmail() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["contactEmail"] = true
+	r.ContactEmail = nil
+}
+
+// MarshalJSON implements custom JSON marshaling to include explicitly-nulled fields.
+func (r UpdateQuoteTemplateRequest) MarshalJSON() ([]byte, error) {
+	type Alias UpdateQuoteTemplateRequest
+	data, err := json.Marshal(Alias(r))
+	if err != nil { return nil, err }
+	if len(r.nullFields) == 0 { return data, nil }
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(data, &obj); err != nil { return nil, err }
+	for field := range r.nullFields {
+		obj[field] = json.RawMessage("null")
+	}
+	return json.Marshal(obj)
+}
 
 // QuoteTemplateListResponse is the response from listing templates
 type QuoteTemplateListResponse struct {
@@ -950,70 +1322,6 @@ type ListTypesOptions struct {
 type QuoteTypeListResponse struct {
 	Results      []QuoteType `json:"results"`
 	TotalRecords int         `json:"totalRecords"`
-}
-
-// ============================================
-// Workflow Types (for completeness)
-// ============================================
-
-// WorkflowNodePosition represents x/y position of a workflow node
-type WorkflowNodePosition struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
-}
-
-// WorkflowConditionData represents a condition in a workflow node
-type WorkflowConditionData struct {
-	Field    string      `json:"field"`
-	Operator string      `json:"operator"`
-	Value    interface{} `json:"value"`
-}
-
-// WorkflowNodeData holds the data section of a workflow node
-type WorkflowNodeData struct {
-	Label        string                 `json:"label"`
-	Condition    *WorkflowConditionData `json:"condition,omitempty"`
-	Approvers    []string               `json:"approvers,omitempty"`
-	RequireAll   *bool                  `json:"requireAll,omitempty"`
-	TimeoutHours *int                   `json:"timeoutHours,omitempty"`
-}
-
-// WorkflowNode represents a single node in a workflow
-type WorkflowNode struct {
-	ID        string               `json:"id"`
-	Type      string               `json:"type"`
-	Data      WorkflowNodeData     `json:"data"`
-	Position  WorkflowNodePosition `json:"position"`
-	Deletable *bool                `json:"deletable,omitempty"`
-}
-
-// WorkflowEdge represents a connection between workflow nodes
-type WorkflowEdge struct {
-	ID     string `json:"id"`
-	Source string `json:"source"`
-	Target string `json:"target"`
-}
-
-// WorkflowViewport represents the visual viewport of a workflow
-type WorkflowViewport struct {
-	X    float64 `json:"x"`
-	Y    float64 `json:"y"`
-	Zoom float64 `json:"zoom"`
-}
-
-// Workflow represents an approval workflow
-type Workflow struct {
-	ID          string            `json:"id"`
-	OrgID       string            `json:"orgId"`
-	Name        string            `json:"name"`
-	Description *string           `json:"description"`
-	Nodes       []WorkflowNode    `json:"nodes"`
-	Edges       []WorkflowEdge    `json:"edges"`
-	Viewport    *WorkflowViewport `json:"viewport"`
-	IsActive    bool              `json:"isActive"`
-	CreatedBy   *string           `json:"createdBy"`
-	CreatedOn   string            `json:"createdOn"`
-	UpdatedOn   string            `json:"updatedOn"`
 }
 
 // ============================================

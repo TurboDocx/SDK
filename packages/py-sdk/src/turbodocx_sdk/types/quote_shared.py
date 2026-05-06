@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 from typing_extensions import Literal, TypedDict
 
 # Literal union types (used as type hints, not runtime values)
-QuoteStatus = Literal["draft", "sent", "accepted", "declined", "voided"]
+QuoteStatus = Literal["draft", "pending_approval", "sent", "accepted", "declined", "voided"]
 
 BillingFrequency = Literal["monthly", "quarterly", "annual", "one-time"]
 

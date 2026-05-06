@@ -140,6 +140,33 @@ describe("TurboQuote Module", () => {
       );
     });
 
+    it("should accept pending_approval as a valid quote status filter", async () => {
+      const mockResponse = {
+        results: [{ id: "q-1", name: "Pending Quote", status: "pending_approval" }],
+        totalRecords: 1,
+      };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      await TurboQuote.listQuotes({ statuses: "pending_approval" });
+
+      expect(mockClient.get).toHaveBeenCalledWith(
+        "/v1/quotes",
+        expect.objectContaining({ statuses: "pending_approval" })
+      );
+    });
+
+    it("should accept pending_approval in a multi-status array filter", async () => {
+      const mockResponse = { results: [], totalRecords: 0 };
+      mockClient.get.mockResolvedValue(mockResponse);
+
+      await TurboQuote.listQuotes({ statuses: ["draft", "pending_approval", "sent"] });
+
+      expect(mockClient.get).toHaveBeenCalledWith(
+        "/v1/quotes",
+        expect.objectContaining({ statuses: ["draft", "pending_approval", "sent"] })
+      );
+    });
+
     it("should create a quote and unwrap result", async () => {
       const mockQuote = { id: "q-1", name: "My Quote", status: "draft", quoteNumber: "Q-2026-00001" };
       mockClient.post.mockResolvedValue({ result: mockQuote, message: "Quote created successfully" });

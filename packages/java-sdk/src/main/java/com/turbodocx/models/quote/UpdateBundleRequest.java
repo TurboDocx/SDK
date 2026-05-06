@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Request to update a bundle.
  */
-public class UpdateBundleRequest {
+public class UpdateBundleRequest extends TrackableRequest {
     private String name;
     private List<BundleItemInput> items;
     private String description;
@@ -18,23 +18,23 @@ public class UpdateBundleRequest {
     private Boolean syncWithProducts;
 
     public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setName(String name) { this.name = name; markFieldSet("name"); }
     public List<BundleItemInput> getItems() { return items; }
-    public void setItems(List<BundleItemInput> items) { this.items = items; }
+    public void setItems(List<BundleItemInput> items) { this.items = items; markFieldSet("items"); }
     public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public void setDescription(String description) { this.description = description; markFieldSet("description"); }
     public String getSku() { return sku; }
-    public void setSku(String sku) { this.sku = sku; }
+    public void setSku(String sku) { this.sku = sku; markFieldSet("sku"); }
     public String getCategoryId() { return categoryId; }
-    public void setCategoryId(String categoryId) { this.categoryId = categoryId; }
+    public void setCategoryId(String categoryId) { this.categoryId = categoryId; markFieldSet("categoryId"); }
     public Double getBundleDiscountPercent() { return bundleDiscountPercent; }
-    public void setBundleDiscountPercent(Double bundleDiscountPercent) { this.bundleDiscountPercent = bundleDiscountPercent; }
+    public void setBundleDiscountPercent(Double bundleDiscountPercent) { this.bundleDiscountPercent = bundleDiscountPercent; markFieldSet("bundleDiscountPercent"); }
     public String getCurrency() { return currency; }
-    public void setCurrency(String currency) { this.currency = currency; }
+    public void setCurrency(String currency) { this.currency = currency; markFieldSet("currency"); }
     public Boolean getShowItemsToEndUser() { return showItemsToEndUser; }
-    public void setShowItemsToEndUser(Boolean showItemsToEndUser) { this.showItemsToEndUser = showItemsToEndUser; }
+    public void setShowItemsToEndUser(Boolean showItemsToEndUser) { this.showItemsToEndUser = showItemsToEndUser; markFieldSet("showItemsToEndUser"); }
     public Boolean getShowInCatalog() { return showInCatalog; }
-    public void setShowInCatalog(Boolean showInCatalog) { this.showInCatalog = showInCatalog; }
+    public void setShowInCatalog(Boolean showInCatalog) { this.showInCatalog = showInCatalog; markFieldSet("showInCatalog"); }
     public Boolean getSyncWithProducts() { return syncWithProducts; }
-    public void setSyncWithProducts(Boolean syncWithProducts) { this.syncWithProducts = syncWithProducts; }
+    public void setSyncWithProducts(Boolean syncWithProducts) { this.syncWithProducts = syncWithProducts; markFieldSet("syncWithProducts"); }
 }

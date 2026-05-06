@@ -14,7 +14,7 @@ public class BundleItem {
     private Double finalPrice;
     private Double cost;
     private String billingFrequency;
-    private String itemStatus;
+    private BundleItemStatus itemStatus;
     private Boolean isActive;
     private String createdBy;
     private String createdOn;
@@ -31,7 +31,7 @@ public class BundleItem {
     public Double getFinalPrice() { return finalPrice; }
     public Double getCost() { return cost; }
     public String getBillingFrequency() { return billingFrequency; }
-    public String getItemStatus() { return itemStatus; }
+    public BundleItemStatus getItemStatus() { return itemStatus; }
     public Boolean getIsActive() { return isActive; }
     public String getCreatedBy() { return createdBy; }
     public String getCreatedOn() { return createdOn; }

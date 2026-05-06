@@ -41,11 +41,14 @@ class LineItem(TypedDict, total=False):
     childLineItems: List[LineItem]
 
 
-class AddLineItemRequest(TypedDict, total=False):
-    productId: Optional[str]
+class _AddLineItemRequestRequired(TypedDict):
     productName: str
     unitPrice: float
     billingFrequency: str  # BillingFrequency literal
+
+
+class AddLineItemRequest(_AddLineItemRequestRequired, total=False):
+    productId: Optional[str]
     quantity: int
     discountPercent: float
     categoryId: Optional[str]
@@ -55,9 +58,12 @@ class AddLineItemRequest(TypedDict, total=False):
     productDescription: Optional[str]
 
 
-class AddBundleLineItemRequest(TypedDict, total=False):
+class _AddBundleLineItemRequestRequired(TypedDict):
     bundleId: str
     bundleName: str
+
+
+class AddBundleLineItemRequest(_AddBundleLineItemRequestRequired, total=False):
     quantity: int
     discountPercent: float
     bundleDescription: Optional[str]

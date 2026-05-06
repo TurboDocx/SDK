@@ -34,3 +34,14 @@ All SDKs must have equivalent test coverage. When adding a test case in one SDK,
 - Test error mapping: mock HTTP 401 → verify AuthenticationError is thrown
 - Never make real HTTP calls in unit tests
 - Keep mocks minimal — only mock what's needed for the specific test case
+
+## Backend Contract Tests
+
+When adding or modifying SDK methods, include tests that verify the SDK produces the correct HTTP request:
+
+- **Request body field names** match the backend Joi schema (camelCase)
+- **PATCH null handling**: explicitly-set null fields ARE included in the body; unset fields are OMITTED
+- **Multipart structure**: `data` field contains JSON, `images` field contains file parts with detected MIME types
+- **Query parameters**: array filters serialize as repeated keys (`?statuses=draft&statuses=sent`)
+- **Response unwrapping**: verify `{ data: { result: ... } }` is correctly unwrapped to just the entity
+- **Enum values**: test that SDK type definitions include all valid backend values (check `TurboQuotesConstants.ts`)
