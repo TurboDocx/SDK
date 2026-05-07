@@ -9,8 +9,8 @@ namespace TurboDocx\Exceptions;
  */
 class NetworkException extends TurboDocxException
 {
-    public function __construct(string $message)
+    public function __construct(string $message, ?\Throwable $previous = null)
     {
-        parent::__construct($message, statusCode: null, errorCode: 'NETWORK_ERROR');
+        parent::__construct($message, statusCode: null, errorCode: 'NETWORK_ERROR', previous: $previous);
     }
 }

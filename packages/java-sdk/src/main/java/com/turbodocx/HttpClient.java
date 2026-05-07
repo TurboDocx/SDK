@@ -96,10 +96,15 @@ public class HttpClient {
     private final Gson gson;
 
     public HttpClient(String baseUrl, String apiKey, String accessToken, String orgId, String senderEmail, String senderName) {
+        this(baseUrl, apiKey, accessToken, orgId, senderEmail, senderName, 60, 120, 60);
+    }
+
+    public HttpClient(String baseUrl, String apiKey, String accessToken, String orgId, String senderEmail, String senderName,
+                       int connectTimeoutSeconds, int readTimeoutSeconds, int writeTimeoutSeconds) {
         this.client = new OkHttpClient.Builder()
-                .connectTimeout(60, TimeUnit.SECONDS)
-                .readTimeout(120, TimeUnit.SECONDS)
-                .writeTimeout(60, TimeUnit.SECONDS)
+                .connectTimeout(connectTimeoutSeconds, TimeUnit.SECONDS)
+                .readTimeout(readTimeoutSeconds, TimeUnit.SECONDS)
+                .writeTimeout(writeTimeoutSeconds, TimeUnit.SECONDS)
                 .build();
         this.baseUrl = baseUrl != null ? baseUrl.replaceAll("/$", "") : DEFAULT_BASE_URL;
         this.apiKey = apiKey;
@@ -125,6 +130,25 @@ public class HttpClient {
      */
     public String getSenderName() {
         return senderName;
+    }
+
+    /**
+     * Get the underlying OkHttpClient for inspection (package-private).
+     */
+    OkHttpClient getOkHttpClient() {
+        return client;
+    }
+
+    /**
+     * Shut down the underlying OkHttpClient's connection pool and dispatcher.
+     */
+    public void close() {
+        client.dispatcher().executorService().shutdown();
+        client.connectionPool().evictAll();
+        okhttp3.Cache cache = client.cache();
+        if (cache != null) {
+            try { cache.close(); } catch (IOException ignored) { }
+        }
     }
 
     public <T> T get(String path, Class<T> responseClass) throws IOException {

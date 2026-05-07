@@ -18,7 +18,13 @@
 import { TurboQuote } from "../src/modules/quote";
 import { HttpClient } from "../src/http";
 
-jest.mock("../src/http");
+jest.mock("../src/http", () => {
+  const actual = jest.requireActual("../src/http");
+  return {
+    ...actual,
+    HttpClient: jest.fn(),
+  };
+});
 
 const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
 
@@ -610,6 +616,36 @@ describe("TurboQuote Module", () => {
       const parsed = JSON.parse(dataField as string);
       expect(parsed.name).toBe("Updated Widget");
       expect(parsed.imageIdsToKeep).toEqual(["img-id-1"]);
+    });
+
+    it("should detect MIME type from magic bytes for Buffer images", async () => {
+      const mockProduct = { id: "p-1", name: "Widget" };
+      mockClient.postFormData.mockResolvedValue({ result: mockProduct, message: "Product created successfully" });
+
+      // JPEG magic bytes: 0xFF 0xD8 0xFF
+      const jpegBuffer = Buffer.from([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10]);
+      // PNG magic bytes: 0x89 0x50 0x4E 0x47
+      const pngBuffer = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]);
+
+      await TurboQuote.createProduct({
+        name: "Widget",
+        listPrice: 50,
+        billingFrequency: "one-time",
+        categoryId: "cat-1",
+        images: [jpegBuffer, pngBuffer],
+      });
+
+      const formData = mockClient.postFormData.mock.calls[0][1] as FormData;
+      const imageEntries = formData.getAll("images");
+      expect(imageEntries).toHaveLength(2);
+
+      // Verify JPEG Blob has correct MIME type
+      const jpegBlob = imageEntries[0] as Blob;
+      expect(jpegBlob.type).toBe("image/jpeg");
+
+      // Verify PNG Blob has correct MIME type
+      const pngBlob = imageEntries[1] as Blob;
+      expect(pngBlob.type).toBe("image/png");
     });
 
     it("should get primary images and unwrap results", async () => {

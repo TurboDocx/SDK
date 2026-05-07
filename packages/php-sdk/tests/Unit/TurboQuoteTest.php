@@ -1531,10 +1531,18 @@ final class TurboQuoteTest extends TestCase
  * we use a plain object with the same public method signatures
  * and inject it via ReflectionClass.
  */
-class MockHttpClient
+class MockHttpClient extends \TurboDocx\HttpClient
 {
+    public function __construct()
+    {
+        // Intentionally empty — no parent::__construct() call.
+        // This mock replaces all public methods, so the parent's
+        // Guzzle client is never used.
+    }
+
     // Last call tracking
     public ?string $lastGetPath = null;
+    /** @var array<string, mixed> */
     public array $lastGetParams = [];
     public ?string $lastPostPath = null;
     public mixed $lastPostData = null;
@@ -1543,8 +1551,10 @@ class MockHttpClient
     public ?string $lastDeletePath = null;
     public ?string $lastGetRawPath = null;
     public ?string $lastPostFormDataPath = null;
+    /** @var array<int, array<string, mixed>> */
     public array $lastPostFormDataMultipart = [];
     public ?string $lastPatchFormDataPath = null;
+    /** @var array<int, array<string, mixed>> */
     public array $lastPatchFormDataMultipart = [];
 
     /** @var string[] */
@@ -1576,6 +1586,7 @@ class MockHttpClient
         $this->postReturnSequence = [];
     }
 
+    /** @param array<mixed> $sequence */
     public function setPostReturnSequence(array $sequence): void
     {
         $this->postReturnSequence = $sequence;

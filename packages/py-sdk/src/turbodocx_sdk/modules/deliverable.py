@@ -15,7 +15,7 @@ managing deliverables, and downloading files:
 from typing import Any, Dict, List, Optional, Union
 from urllib.parse import urlencode
 
-from ..http import HttpClient
+from ..http import HttpClient, AuthenticationError
 
 
 class Deliverable:
@@ -46,13 +46,20 @@ class Deliverable:
             ...     org_id=os.environ.get("TURBODOCX_ORG_ID"),
             ... )
         """
-        cls._client = HttpClient(
+        client = HttpClient(
             api_key=api_key,
             access_token=access_token,
             base_url=base_url,
             org_id=org_id,
             skip_sender_validation=True,
         )
+        # Deliverable operations are org-scoped — org_id is required (HttpClient
+        # itself leaves it optional for TurboSign, which can resolve org from the key).
+        if client.org_id is None:
+            raise AuthenticationError(
+                "Organization ID (org_id) is required for authentication"
+            )
+        cls._client = client
 
     @classmethod
     def _get_client(cls) -> HttpClient:

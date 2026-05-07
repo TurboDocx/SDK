@@ -1058,5 +1058,26 @@ RSpec.describe TurboDocxSdk::TurboPartner do
         described_class.delete_organization("nonexistent")
       }.to raise_error(TurboDocxSdk::NotFoundError, "Organization not found")
     end
+
+    it "raises ValidationError (not RuntimeError) when unconfigured and no env vars" do
+      # Reset module state so it acts as if never configured
+      described_class.instance_variable_set(:@client, nil)
+      described_class.instance_variable_set(:@partner_id, nil)
+
+      # Save and clear env vars to ensure env-var fallback also fails
+      original_key = ENV["TURBODOCX_PARTNER_API_KEY"]
+      original_pid = ENV["TURBODOCX_PARTNER_ID"]
+      begin
+        ENV["TURBODOCX_PARTNER_API_KEY"] = nil
+        ENV["TURBODOCX_PARTNER_ID"] = nil
+
+        expect {
+          described_class.list_organizations
+        }.to raise_error(TurboDocxSdk::ValidationError, /TurboPartner must be configured/)
+      ensure
+        ENV["TURBODOCX_PARTNER_API_KEY"] = original_key
+        ENV["TURBODOCX_PARTNER_ID"] = original_pid
+      end
+    end
   end
 end

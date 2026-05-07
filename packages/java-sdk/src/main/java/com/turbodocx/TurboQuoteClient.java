@@ -16,7 +16,7 @@ package com.turbodocx;
  * Quote quote = client.turboQuote().createQuote(request);
  * }</pre>
  */
-public class TurboQuoteClient {
+public final class TurboQuoteClient {
     private final TurboQuote turboQuote;
 
     private TurboQuoteClient(Builder builder) {

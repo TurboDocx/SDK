@@ -22,7 +22,7 @@ import java.util.*;
  * Price Books (7), Bundles (6), Companies (6), Contacts (4), Templates (6),
  * Types (4), Convenience (1).</p>
  */
-public class TurboQuote {
+public final class TurboQuote {
     private final HttpClient httpClient;
     private final Gson gson;
 

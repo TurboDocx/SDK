@@ -140,4 +140,56 @@ RSpec.describe TurboDocxSdk::HttpClient do
       expect(TurboDocxSdk::HttpClient::DEFAULT_BASE_URL).to eq("https://api.turbodocx.com")
     end
   end
+
+  # ============================================
+  # EXCEPTION CAUSE CHAINING (R3)
+  # ============================================
+
+  describe "exception cause chaining" do
+    it "preserves SocketError as .cause when raising NetworkError" do
+      client = described_class.new(api_key: "test-key", skip_sender_validation: true)
+      original_error = SocketError.new("getaddrinfo: Name or service not known")
+
+      allow(client).to receive(:http_request).and_raise(original_error)
+
+      begin
+        client.get("/test")
+        raise "Expected NetworkError to be raised"
+      rescue TurboDocxSdk::NetworkError => e
+        expect(e).to be_a(TurboDocxSdk::NetworkError)
+        expect(e.message).to include("Network request failed")
+        expect(e.cause).to be_a(SocketError)
+        expect(e.cause.message).to eq("getaddrinfo: Name or service not known")
+      end
+    end
+
+    it "preserves Errno::ECONNREFUSED as .cause when raising NetworkError" do
+      client = described_class.new(api_key: "test-key", skip_sender_validation: true)
+      original_error = Errno::ECONNREFUSED.new("Connection refused")
+
+      allow(client).to receive(:http_request).and_raise(original_error)
+
+      begin
+        client.get("/test")
+        raise "Expected NetworkError to be raised"
+      rescue TurboDocxSdk::NetworkError => e
+        expect(e.cause).to be_a(Errno::ECONNREFUSED)
+      end
+    end
+
+    it "preserves cause in form data requests" do
+      client = described_class.new(api_key: "test-key", skip_sender_validation: true)
+      original_error = SocketError.new("network down")
+
+      # Stub build_url to return a valid URI, then let request_form_data's http_request fail
+      allow(client).to receive(:http_request).and_raise(original_error)
+
+      begin
+        client.post_form_data("/test", { "key" => "value" })
+        raise "Expected NetworkError to be raised"
+      rescue TurboDocxSdk::NetworkError => e
+        expect(e.cause).to be_a(SocketError)
+      end
+    end
+  end
 end

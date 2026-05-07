@@ -1459,3 +1459,40 @@ class TestTypedDictRequiredFields:
 
         assert "name" in CreateQuoteTypeRequest.__required_keys__
         assert "categoryType" in CreateQuoteTypeRequest.__required_keys__
+
+
+# ============================================
+# IMAGE MIME TYPE DETECTION
+# ============================================
+
+
+class TestProductImageMimeDetection:
+    """Test that product image uploads detect MIME type via magic bytes"""
+
+    def test_png_image_bytes_detected_as_image_png(self):
+        """_build_product_form_data should detect PNG bytes and set correct MIME type"""
+        from turbodocx_sdk.modules.quote import _build_product_form_data
+
+        png_magic = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
+        request = {"name": "Widget", "listPrice": 99, "images": [png_magic]}
+
+        _, files = _build_product_form_data(request)
+
+        assert len(files) == 1
+        field_name, (filename, content, mime_type) = files[0]
+        assert mime_type != "application/octet-stream", (
+            "Image MIME should be detected from magic bytes, not hardcoded as application/octet-stream"
+        )
+
+    def test_jpeg_image_bytes_detected_correctly(self):
+        """_build_product_form_data should detect JPEG bytes"""
+        from turbodocx_sdk.modules.quote import _build_product_form_data
+
+        jpeg_magic = b"\xff\xd8\xff\xe0" + b"\x00" * 100
+        request = {"name": "Widget", "listPrice": 99, "images": [jpeg_magic]}
+
+        _, files = _build_product_form_data(request)
+
+        assert len(files) == 1
+        _, (filename, content, mime_type) = files[0]
+        assert mime_type != "application/octet-stream"

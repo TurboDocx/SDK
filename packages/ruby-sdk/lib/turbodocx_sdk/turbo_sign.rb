@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "json"
+require "net/http"
+require "uri"
 require_relative "http_client"
 
 module TurboDocxSdk
@@ -22,6 +24,8 @@ module TurboDocxSdk
       # @param sender_email [String, nil] Reply-to email for signature requests (required)
       # @param sender_name [String, nil] Sender display name (optional but recommended)
       # @param base_url [String, nil]
+      # @raise [AuthenticationError] if no API key or access token is provided
+      # @raise [ValidationError] if senderEmail is missing
       def configure(api_key: nil, access_token: nil, org_id: nil,
                     sender_email: nil, sender_name: nil, base_url: nil)
         @client = HttpClient.new(
@@ -40,6 +44,9 @@ module TurboDocxSdk
       #   :recipients (Array), :fields (Array), :documentName, :documentDescription,
       #   :senderEmail, :senderName, :ccEmails
       # @return [Hash] document info with review URL
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def create_signature_review_link(request)
         client = get_client
         sender = client.sender_config
@@ -65,6 +72,9 @@ module TurboDocxSdk
       #
       # @param request [Hash] same as create_signature_review_link
       # @return [Hash] document info with confirmation
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def send_signature(request)
         client = get_client
         sender = client.sender_config
@@ -91,6 +101,9 @@ module TurboDocxSdk
       # @param document_id [String]
       # @param reason [String]
       # @return [Hash] voided document details
+      # @raise [NotFoundError] if the document does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def void_document(document_id, reason)
         client = get_client
         client.post("/turbosign/documents/#{document_id}/void", { "reason" => reason })
@@ -101,6 +114,9 @@ module TurboDocxSdk
       # @param document_id [String]
       # @param recipient_ids [Array<String>]
       # @return [Hash] resend confirmation
+      # @raise [NotFoundError] if the document does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def resend_email(document_id, recipient_ids)
         client = get_client
         client.post("/turbosign/documents/#{document_id}/resend-email", { "recipientIds" => recipient_ids })
@@ -110,6 +126,9 @@ module TurboDocxSdk
       #
       # @param document_id [String]
       # @return [Hash] audit trail with entries
+      # @raise [NotFoundError] if the document does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def get_audit_trail(document_id)
         client = get_client
         client.get("/turbosign/documents/#{document_id}/audit-trail")
@@ -119,6 +138,10 @@ module TurboDocxSdk
       #
       # @param document_id [String]
       # @return [String] raw PDF bytes
+      # @raise [NotFoundError] if the document does not exist
+      # @raise [TurboDocxError] if the file download from storage fails
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def download(document_id)
         client = get_client
         response = client.get("/turbosign/documents/#{document_id}/download")
@@ -140,6 +163,9 @@ module TurboDocxSdk
       #
       # @param document_id [String]
       # @return [Hash] document status
+      # @raise [NotFoundError] if the document does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def get_status(document_id)
         client = get_client
         client.get("/turbosign/documents/#{document_id}/status")

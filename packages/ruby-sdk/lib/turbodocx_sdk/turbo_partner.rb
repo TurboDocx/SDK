@@ -18,6 +18,7 @@ module TurboDocxSdk
       # @param partner_api_key [String] Partner API key (TDXP- prefix)
       # @param partner_id [String] Partner UUID
       # @param base_url [String, nil]
+      # @raise [AuthenticationError] if the partner API key is invalid
       def configure(partner_api_key:, partner_id:, base_url: nil)
         @client = HttpClient.new(
           api_key: partner_api_key,
@@ -31,31 +32,77 @@ module TurboDocxSdk
       # ORGANIZATION MANAGEMENT
       # ============================================
 
+      # Create a new organization.
+      #
+      # @param request [Hash] organization data (:name, :metadata, :features)
+      # @return [Hash] the created organization
+      # @raise [ValidationError] on invalid request data or if not configured
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def create_organization(request)
         client = get_client
         client.post("/partner/#{partner_id}/organization", request)
       end
 
+      # List organizations with optional pagination and search.
+      #
+      # @param request [Hash, nil] :limit, :offset, :search
+      # @return [Hash] paginated list of organizations
+      # @raise [ValidationError] if not configured and no env vars
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_organizations(request = nil)
         client = get_client
         client.get("/partner/#{partner_id}/organizations", to_query_params(request))
       end
 
+      # Get detailed information about an organization.
+      #
+      # @param organization_id [String]
+      # @return [Hash] organization details with features and tracking
+      # @raise [NotFoundError] if the organization does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def get_organization_details(organization_id)
         client = get_client
         client.get("/partner/#{partner_id}/organizations/#{organization_id}")
       end
 
+      # Update an organization's info.
+      #
+      # @param organization_id [String]
+      # @param request [Hash] fields to update
+      # @return [Hash] the updated organization
+      # @raise [NotFoundError] if the organization does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_organization_info(organization_id, request)
         client = get_client
         client.patch("/partner/#{partner_id}/organizations/#{organization_id}", request)
       end
 
+      # Delete an organization.
+      #
+      # @param organization_id [String]
+      # @return [Hash] deletion confirmation
+      # @raise [NotFoundError] if the organization does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def delete_organization(organization_id)
         client = get_client
         client.delete("/partner/#{partner_id}/organizations/#{organization_id}")
       end
 
+      # Update an organization's entitlements (features and tracking).
+      #
+      # @param organization_id [String]
+      # @param request [Hash] :features, :tracking
+      # @return [Hash] updated entitlements
+      # @raise [NotFoundError] if the organization does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_organization_entitlements(organization_id, request)
         client = get_client
         client.patch("/partner/#{partner_id}/organizations/#{organization_id}/entitlements", request)
@@ -65,26 +112,68 @@ module TurboDocxSdk
       # ORGANIZATION USER MANAGEMENT
       # ============================================
 
+      # List users in an organization.
+      #
+      # @param organization_id [String]
+      # @param request [Hash, nil] :limit, :offset, :search
+      # @return [Hash] paginated list of users
+      # @raise [NotFoundError] if the organization does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_organization_users(organization_id, request = nil)
         client = get_client
         client.get("/partner/#{partner_id}/organizations/#{organization_id}/users", to_query_params(request))
       end
 
+      # Add a user to an organization.
+      #
+      # @param organization_id [String]
+      # @param request [Hash] :email, :role
+      # @return [Hash] the added user
+      # @raise [ValidationError] on invalid request data
+      # @raise [NotFoundError] if the organization does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def add_user_to_organization(organization_id, request)
         client = get_client
         client.post("/partner/#{partner_id}/organizations/#{organization_id}/users", request)
       end
 
+      # Update a user's role in an organization.
+      #
+      # @param organization_id [String]
+      # @param user_id [String]
+      # @param request [Hash] :role
+      # @return [Hash] the updated user
+      # @raise [NotFoundError] if the organization or user does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_organization_user_role(organization_id, user_id, request)
         client = get_client
         client.patch("/partner/#{partner_id}/organizations/#{organization_id}/users/#{user_id}", request)
       end
 
+      # Remove a user from an organization.
+      #
+      # @param organization_id [String]
+      # @param user_id [String]
+      # @return [Hash] removal confirmation
+      # @raise [NotFoundError] if the organization or user does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def remove_user_from_organization(organization_id, user_id)
         client = get_client
         client.delete("/partner/#{partner_id}/organizations/#{organization_id}/users/#{user_id}")
       end
 
+      # Resend an organization invitation to a user.
+      #
+      # @param organization_id [String]
+      # @param user_id [String]
+      # @return [Hash] resend confirmation
+      # @raise [NotFoundError] if the organization or user does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def resend_organization_invitation_to_user(organization_id, user_id)
         client = get_client
         client.post("/partner/#{partner_id}/organizations/#{organization_id}/users/#{user_id}/resend-invitation")
@@ -94,21 +183,55 @@ module TurboDocxSdk
       # ORGANIZATION API KEY MANAGEMENT
       # ============================================
 
+      # List API keys for an organization.
+      #
+      # @param organization_id [String]
+      # @param request [Hash, nil] :limit, :offset, :search
+      # @return [Hash] paginated list of API keys
+      # @raise [NotFoundError] if the organization does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_organization_api_keys(organization_id, request = nil)
         client = get_client
         client.get("/partner/#{partner_id}/organizations/#{organization_id}/apikeys", to_query_params(request))
       end
 
+      # Create an API key for an organization.
+      #
+      # @param organization_id [String]
+      # @param request [Hash] :name, :role
+      # @return [Hash] the created API key (includes full key value)
+      # @raise [ValidationError] on invalid request data
+      # @raise [NotFoundError] if the organization does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def create_organization_api_key(organization_id, request)
         client = get_client
         client.post("/partner/#{partner_id}/organizations/#{organization_id}/apikeys", request)
       end
 
+      # Update an organization API key.
+      #
+      # @param organization_id [String]
+      # @param api_key_id [String]
+      # @param request [Hash] fields to update
+      # @return [Hash] the updated API key
+      # @raise [NotFoundError] if the organization or API key does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_organization_api_key(organization_id, api_key_id, request)
         client = get_client
         client.patch("/partner/#{partner_id}/organizations/#{organization_id}/apikeys/#{api_key_id}", request)
       end
 
+      # Revoke an organization API key.
+      #
+      # @param organization_id [String]
+      # @param api_key_id [String]
+      # @return [Hash] revocation confirmation
+      # @raise [NotFoundError] if the organization or API key does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def revoke_organization_api_key(organization_id, api_key_id)
         client = get_client
         client.delete("/partner/#{partner_id}/organizations/#{organization_id}/apikeys/#{api_key_id}")
@@ -118,21 +241,49 @@ module TurboDocxSdk
       # PARTNER API KEY MANAGEMENT
       # ============================================
 
+      # List partner API keys.
+      #
+      # @param request [Hash, nil] :limit, :offset
+      # @return [Hash] paginated list of partner API keys
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_partner_api_keys(request = nil)
         client = get_client
         client.get("/partner/#{partner_id}/api-keys", to_query_params(request))
       end
 
+      # Create a partner API key.
+      #
+      # @param request [Hash] :name, :scopes, :description
+      # @return [Hash] the created partner API key (includes full key value)
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def create_partner_api_key(request)
         client = get_client
         client.post("/partner/#{partner_id}/api-keys", request)
       end
 
+      # Update a partner API key.
+      #
+      # @param key_id [String]
+      # @param request [Hash] fields to update
+      # @return [Hash] the updated partner API key
+      # @raise [NotFoundError] if the API key does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_partner_api_key(key_id, request)
         client = get_client
         client.patch("/partner/#{partner_id}/api-keys/#{key_id}", request)
       end
 
+      # Revoke a partner API key.
+      #
+      # @param key_id [String]
+      # @return [Hash] revocation confirmation
+      # @raise [NotFoundError] if the API key does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def revoke_partner_api_key(key_id)
         client = get_client
         client.delete("/partner/#{partner_id}/api-keys/#{key_id}")
@@ -142,26 +293,61 @@ module TurboDocxSdk
       # PARTNER USER MANAGEMENT
       # ============================================
 
+      # List partner portal users.
+      #
+      # @param request [Hash, nil] :limit, :offset, :search
+      # @return [Hash] paginated list of partner users
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_partner_portal_users(request = nil)
         client = get_client
         client.get("/partner/#{partner_id}/users", to_query_params(request))
       end
 
+      # Add a user to the partner portal.
+      #
+      # @param request [Hash] :email, :role, :permissions
+      # @return [Hash] the added user
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def add_user_to_partner_portal(request)
         client = get_client
         client.post("/partner/#{partner_id}/users", request)
       end
 
+      # Update a partner user's permissions.
+      #
+      # @param user_id [String]
+      # @param request [Hash] :role, :permissions
+      # @return [Hash] the updated user
+      # @raise [NotFoundError] if the user does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_partner_user_permissions(user_id, request)
         client = get_client
         client.patch("/partner/#{partner_id}/users/#{user_id}", request)
       end
 
+      # Remove a user from the partner portal.
+      #
+      # @param user_id [String]
+      # @return [Hash] removal confirmation
+      # @raise [NotFoundError] if the user does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def remove_user_from_partner_portal(user_id)
         client = get_client
         client.delete("/partner/#{partner_id}/users/#{user_id}")
       end
 
+      # Resend a partner portal invitation to a user.
+      #
+      # @param user_id [String]
+      # @return [Hash] resend confirmation
+      # @raise [NotFoundError] if the user does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def resend_partner_portal_invitation_to_user(user_id)
         client = get_client
         client.post("/partner/#{partner_id}/users/#{user_id}/resend-invitation")
@@ -171,6 +357,12 @@ module TurboDocxSdk
       # AUDIT LOGS
       # ============================================
 
+      # Get partner audit logs with optional filters.
+      #
+      # @param request [Hash, nil] :limit, :offset, :action, :resourceType, :success, :startDate, :endDate
+      # @return [Hash] paginated list of audit log entries
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def get_partner_audit_logs(request = nil)
         client = get_client
         client.get("/partner/#{partner_id}/audit-logs", to_query_params(request))
@@ -179,23 +371,23 @@ module TurboDocxSdk
       private
 
       def get_client
-        unless @client
+        @client ||= begin
           partner_api_key = ENV["TURBODOCX_PARTNER_API_KEY"]
           pid = ENV["TURBODOCX_PARTNER_ID"]
           unless partner_api_key && pid
-            raise "TurboPartner must be configured before use. Call TurboPartner.configure() " \
+            raise ValidationError, "TurboPartner must be configured before use. Call TurboPartner.configure() " \
                   "or set TURBODOCX_PARTNER_API_KEY and TURBODOCX_PARTNER_ID environment variables."
           end
           configure(partner_api_key: partner_api_key, partner_id: pid)
+          @client
         end
-        @client
       end
 
       def partner_id
-        unless @partner_id
+        @partner_id || begin
           get_client # triggers auto-init
+          @partner_id
         end
-        @partner_id
       end
 
       def to_query_params(request)

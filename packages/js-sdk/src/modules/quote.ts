@@ -4,7 +4,7 @@
 
 import * as fs from 'fs';
 import * as nodePath from 'path';
-import { HttpClient, QuoteClientConfig } from '../http';
+import { HttpClient, QuoteClientConfig, detectFileType } from '../http';
 import type { PaginationParams, SuccessResponse } from '../types/quote-shared';
 import type {
   Quote,
@@ -113,11 +113,13 @@ function buildProductFormData(request: Record<string, any>): FormData {
     for (const image of images as Array<string | File | Buffer>) {
       if (typeof image === 'string') {
         const fileBuffer = fs.readFileSync(image);
-        const blob = new Blob([fileBuffer]);
+        const detected = detectFileType(fileBuffer);
+        const blob = new Blob([fileBuffer], { type: detected.mimetype });
         formData.append('images', blob, nodePath.basename(image));
       } else if (image instanceof Buffer) {
-        const blob = new Blob([image]);
-        formData.append('images', blob, 'image.jpg');
+        const detected = detectFileType(image);
+        const blob = new Blob([image], { type: detected.mimetype });
+        formData.append('images', blob, `image.${detected.extension}`);
       } else {
         formData.append('images', image as File, (image as File).name);
       }

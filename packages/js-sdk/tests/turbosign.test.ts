@@ -13,6 +13,7 @@
 
 import { TurboSign } from "../src/modules/sign";
 import { HttpClient } from "../src/http";
+import { NetworkError } from "../src/utils/errors";
 import type { Recipient, Field } from "../src/types/sign";
 
 // Mock the HttpClient
@@ -477,6 +478,29 @@ describe("TurboSign Module", () => {
 
       await expect(TurboSign.download("doc-123")).rejects.toThrow(
         "Failed to download file"
+      );
+    });
+
+    it("should throw NetworkError (not generic Error) when S3 download fails", async () => {
+      const mockPresignedResponse = {
+        downloadUrl: "https://s3.example.com/presigned-url",
+        fileName: "signed-document.pdf",
+      };
+
+      const mockFetchResponse = {
+        ok: false,
+        status: 403,
+        statusText: "Forbidden",
+      };
+
+      MockedHttpClient.prototype.get = jest
+        .fn()
+        .mockResolvedValue(mockPresignedResponse);
+      mockFetch.mockResolvedValue(mockFetchResponse);
+      TurboSign.configure({ apiKey: "test-key" });
+
+      await expect(TurboSign.download("doc-123")).rejects.toBeInstanceOf(
+        NetworkError
       );
     });
   });

@@ -28,27 +28,39 @@ def detect_file_type(file_bytes: bytes) -> Tuple[str, str]:
     if file_bytes[0:4] == b'%PDF':
         return ("application/pdf", "pdf")
 
+    # PNG: 0x89 0x50 0x4E 0x47
+    if file_bytes[0:4] == b'\x89PNG':
+        return ("image/png", "png")
+
+    # JPEG: 0xFF 0xD8 0xFF
+    if file_bytes[0:3] == b'\xff\xd8\xff':
+        return ("image/jpeg", "jpg")
+
+    # GIF: GIF87a or GIF89a
+    if file_bytes[0:3] == b'GIF':
+        return ("image/gif", "gif")
+
+    # WebP: RIFF....WEBP
+    if file_bytes[0:4] == b'RIFF' and len(file_bytes) >= 12 and file_bytes[8:12] == b'WEBP':
+        return ("image/webp", "webp")
+
     # ZIP-based formats (DOCX, PPTX): starts with PK (0x50 0x4B)
     if file_bytes[0:2] == b'PK':
-        # Check first 2000 bytes for internal markers
         header = file_bytes[:min(len(file_bytes), 2000)]
         header_str = header.decode('utf-8', errors='ignore')
 
-        # PPTX contains 'ppt/' in the ZIP structure
         if 'ppt/' in header_str:
             return (
                 "application/vnd.openxmlformats-officedocument.presentationml.presentation",
                 "pptx"
             )
 
-        # DOCX contains 'word/' in the ZIP structure
         if 'word/' in header_str:
             return (
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 "docx"
             )
 
-        # Default to DOCX for unknown ZIP
         return (
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "docx"
@@ -261,13 +273,13 @@ class HttpClient:
 
                 return response.content
             except httpx.TimeoutException as e:
-                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}")
+                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}") from e
             except httpx.NetworkError as e:
-                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}") from e
             except TurboDocxError:
                 raise
             except Exception as e:
-                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}") from e
 
     async def get_raw(self, path: str) -> bytes:
         """
@@ -322,13 +334,13 @@ class HttpClient:
 
                 return normalize_response(self._smart_unwrap(response.json()))
             except httpx.TimeoutException as e:
-                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}")
+                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}") from e
             except httpx.NetworkError as e:
-                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}") from e
             except TurboDocxError:
                 raise
             except Exception as e:
-                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}") from e
 
     async def patch(self, path: str, data: Optional[Dict[str, Any]] = None) -> Any:
         """
@@ -353,13 +365,13 @@ class HttpClient:
 
                 return normalize_response(self._smart_unwrap(response.json()))
             except httpx.TimeoutException as e:
-                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}")
+                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}") from e
             except httpx.NetworkError as e:
-                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}") from e
             except TurboDocxError:
                 raise
             except Exception as e:
-                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}") from e
 
     async def delete(self, path: str) -> Any:
         """
@@ -387,13 +399,13 @@ class HttpClient:
 
                 return response.content
             except httpx.TimeoutException as e:
-                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}")
+                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}") from e
             except httpx.NetworkError as e:
-                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}") from e
             except TurboDocxError:
                 raise
             except Exception as e:
-                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}") from e
 
     async def get_raw(self, path: str, params: Optional[Dict[str, Any]] = None) -> bytes:
         """
@@ -431,13 +443,13 @@ class HttpClient:
 
                 return response.content
             except httpx.TimeoutException as e:
-                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}")
+                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}") from e
             except httpx.NetworkError as e:
-                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}") from e
             except TurboDocxError:
                 raise
             except Exception as e:
-                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}") from e
 
     async def post_form_data(self, path: str, data: Dict[str, Any], files: Optional[List[Tuple[str, Any]]] = None) -> Any:
         """
@@ -498,13 +510,13 @@ class HttpClient:
 
                 return normalize_response(self._smart_unwrap(response.json()))
             except httpx.TimeoutException as e:
-                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}")
+                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}") from e
             except httpx.NetworkError as e:
-                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}") from e
             except TurboDocxError:
                 raise
             except Exception as e:
-                raise NetworkError(f"Form data request failed: {str(e) or 'Unknown error'}")
+                raise NetworkError(f"Form data request failed: {str(e) or 'Unknown error'}") from e
 
     async def upload_file(
         self,
@@ -560,11 +572,11 @@ class HttpClient:
 
                 return normalize_response(self._smart_unwrap(response.json()))
             except (httpx.NetworkError, httpx.TimeoutException) as e:
-                raise NetworkError(f"File upload failed: {str(e) or 'Connection error'}")
+                raise NetworkError(f"File upload failed: {str(e) or 'Connection error'}") from e
             except TurboDocxError:
                 raise
             except Exception as e:
-                raise NetworkError(f"File upload failed: {str(e) or 'Unknown error'}")
+                raise NetworkError(f"File upload failed: {str(e) or 'Unknown error'}") from e
 
 
 class PartnerHttpClient:
@@ -639,13 +651,13 @@ class PartnerHttpClient:
 
                 return response.json()
             except httpx.TimeoutException as e:
-                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}")
+                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}") from e
             except httpx.NetworkError as e:
-                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}") from e
             except TurboDocxError:
                 raise
             except Exception as e:
-                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}") from e
 
     async def post(self, path: str, data: Optional[Dict[str, Any]] = None) -> Any:
         """Make POST request to Partner API"""
@@ -661,13 +673,13 @@ class PartnerHttpClient:
 
                 return response.json()
             except httpx.TimeoutException as e:
-                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}")
+                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}") from e
             except httpx.NetworkError as e:
-                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}") from e
             except TurboDocxError:
                 raise
             except Exception as e:
-                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}") from e
 
     async def patch(self, path: str, data: Optional[Dict[str, Any]] = None) -> Any:
         """Make PATCH request to Partner API"""
@@ -683,13 +695,13 @@ class PartnerHttpClient:
 
                 return response.json()
             except httpx.TimeoutException as e:
-                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}")
+                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}") from e
             except httpx.NetworkError as e:
-                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}") from e
             except TurboDocxError:
                 raise
             except Exception as e:
-                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}") from e
 
     async def delete(self, path: str) -> Any:
         """Make DELETE request to Partner API"""
@@ -709,10 +721,10 @@ class PartnerHttpClient:
 
                 return response.content
             except httpx.TimeoutException as e:
-                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}")
+                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}") from e
             except httpx.NetworkError as e:
-                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}") from e
             except TurboDocxError:
                 raise
             except Exception as e:
-                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}") from e

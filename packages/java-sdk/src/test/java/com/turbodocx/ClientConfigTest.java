@@ -213,4 +213,90 @@ class ClientConfigTest {
         assertNotNull(client);
         assertNotNull(client.turboSign());
     }
+
+    // ============================================
+    // V2: AutoCloseable / close() Tests
+    // ============================================
+
+    @Test
+    @DisplayName("should implement AutoCloseable and close without exception")
+    void closeWithoutException() {
+        TurboDocxClient client = new TurboDocxClient.Builder()
+                .apiKey("test-api-key")
+                .orgId("test-org-id")
+                .senderEmail("support@company.com")
+                .build();
+
+        assertDoesNotThrow(() -> client.close());
+    }
+
+    @Test
+    @DisplayName("should be usable in try-with-resources")
+    void tryWithResources() {
+        assertDoesNotThrow(() -> {
+            try (TurboDocxClient client = new TurboDocxClient.Builder()
+                    .apiKey("test-api-key")
+                    .orgId("test-org-id")
+                    .senderEmail("support@company.com")
+                    .build()) {
+                assertNotNull(client.turboSign());
+            }
+        });
+    }
+
+    @Test
+    @DisplayName("should allow calling close() multiple times without exception")
+    void closeMultipleTimes() {
+        TurboDocxClient client = new TurboDocxClient.Builder()
+                .apiKey("test-api-key")
+                .orgId("test-org-id")
+                .senderEmail("support@company.com")
+                .build();
+
+        assertDoesNotThrow(() -> {
+            client.close();
+            client.close();
+        });
+    }
+
+    // ============================================
+    // V3: Configurable Timeout Tests
+    // ============================================
+
+    @Test
+    @DisplayName("should use default timeouts when not configured")
+    void defaultTimeouts() {
+        TurboDocxClient client = new TurboDocxClient.Builder()
+                .apiKey("test-api-key")
+                .orgId("test-org-id")
+                .senderEmail("support@company.com")
+                .build();
+
+        HttpClient httpClient = client.getHttpClient();
+        okhttp3.OkHttpClient okClient = httpClient.getOkHttpClient();
+
+        assertEquals(60_000, okClient.connectTimeoutMillis());
+        assertEquals(120_000, okClient.readTimeoutMillis());
+        assertEquals(60_000, okClient.writeTimeoutMillis());
+    }
+
+    @Test
+    @DisplayName("should use custom timeouts when configured via builder")
+    void customTimeouts() {
+        TurboDocxClient client = new TurboDocxClient.Builder()
+                .apiKey("test-api-key")
+                .orgId("test-org-id")
+                .senderEmail("support@company.com")
+                .connectTimeoutSeconds(10)
+                .readTimeoutSeconds(30)
+                .writeTimeoutSeconds(15)
+                .build();
+
+        HttpClient httpClient = client.getHttpClient();
+        okhttp3.OkHttpClient okClient = httpClient.getOkHttpClient();
+
+        assertEquals(10_000, okClient.connectTimeoutMillis());
+        assertEquals(30_000, okClient.readTimeoutMillis());
+        assertEquals(15_000, okClient.writeTimeoutMillis());
+    }
 }

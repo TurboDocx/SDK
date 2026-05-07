@@ -15,7 +15,7 @@ package com.turbodocx;
  * JsonObject org = client.turboPartner().createOrganization("Acme Corp");
  * }</pre>
  */
-public class TurboPartnerClient {
+public final class TurboPartnerClient {
     private final TurboPartner turboPartner;
 
     private TurboPartnerClient(Builder builder) {

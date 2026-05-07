@@ -3,6 +3,7 @@
  */
 
 import { HttpClient, PartnerClientConfig } from '../http';
+import { ValidationError } from '../utils/errors';
 import {
   CreateOrganizationRequest,
   ListOrganizationsRequest,
@@ -97,7 +98,7 @@ export class TurboPartner {
       const partnerApiKey = process.env.TURBODOCX_PARTNER_API_KEY;
       const partnerId = process.env.TURBODOCX_PARTNER_ID;
       if (!partnerApiKey || !partnerId) {
-        throw new Error('TurboPartner must be configured before use. Call TurboPartner.configure() or set TURBODOCX_PARTNER_API_KEY and TURBODOCX_PARTNER_ID environment variables.');
+        throw new ValidationError('TurboPartner must be configured before use. Call TurboPartner.configure() or set TURBODOCX_PARTNER_API_KEY and TURBODOCX_PARTNER_ID environment variables.');
       }
       this.configure({ partnerApiKey, partnerId });
     }

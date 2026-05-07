@@ -25,7 +25,7 @@ use TurboDocx\Utils\FileTypeDetector;
 /**
  * HTTP client with generic type support via PHPDoc
  */
-final class HttpClient
+class HttpClient
 {
     private Client $client;
     private ?string $senderEmail;
@@ -82,9 +82,9 @@ final class HttpClient
      *
      * @param string $path
      * @param array<string, mixed> $params
-     * @return array<string, mixed>
+     * @return mixed
      */
-    public function get(string $path, array $params = []): array
+    public function get(string $path, array $params = []): mixed
     {
         try {
             $response = $this->client->get($path, [
@@ -104,9 +104,9 @@ final class HttpClient
      *
      * @param string $path
      * @param array<string, mixed>|null $data
-     * @return array<string, mixed>
+     * @return mixed
      */
-    public function post(string $path, ?array $data = null): array
+    public function post(string $path, ?array $data = null): mixed
     {
         try {
             $response = $this->client->post($path, [
@@ -126,9 +126,9 @@ final class HttpClient
      *
      * @param string $path
      * @param array<string, mixed>|null $data
-     * @return array<string, mixed>
+     * @return mixed
      */
-    public function patch(string $path, ?array $data = null): array
+    public function patch(string $path, ?array $data = null): mixed
     {
         try {
             $response = $this->client->patch($path, [
@@ -163,9 +163,9 @@ final class HttpClient
      * Generic DELETE request
      *
      * @param string $path
-     * @return array<string, mixed>
+     * @return mixed
      */
-    public function delete(string $path): array
+    public function delete(string $path): mixed
     {
         try {
             $response = $this->client->delete($path);
@@ -185,14 +185,14 @@ final class HttpClient
      * @param string $file File content (bytes)
      * @param string $fieldName Form field name
      * @param array<string, mixed> $additionalData Extra form fields
-     * @return array<string, mixed>
+     * @return mixed
      */
     public function uploadFile(
         string $path,
         string $file,
         string $fieldName = 'file',
         array $additionalData = []
-    ): array {
+    ): mixed {
         // Detect file type using magic bytes
         $fileType = FileTypeDetector::detect($file);
         $fileName = $additionalData['fileName'] ?? "document.{$fileType['extension']}";
@@ -244,21 +244,23 @@ final class HttpClient
             if ($response !== null) {
                 $statusCode = $response->getStatusCode();
                 $body = json_decode($response->getBody()->getContents(), true);
-                $message = $body['message'] ?? $body['error'] ?? $e->getMessage();
+                $message = is_array($body)
+                    ? ($body['message'] ?? $body['error'] ?? $e->getMessage())
+                    : $e->getMessage();
 
                 throw match ($statusCode) {
-                    400 => new ValidationException($message),
-                    401 => new AuthenticationException($message),
-                    403 => new AuthorizationException($message),
-                    404 => new NotFoundException($message),
-                    409 => new ConflictException($message),
-                    429 => new RateLimitException($message),
-                    default => new TurboDocxException($message, $statusCode),
+                    400 => new ValidationException($message, previous: $e),
+                    401 => new AuthenticationException($message, previous: $e),
+                    403 => new AuthorizationException($message, previous: $e),
+                    404 => new NotFoundException($message, previous: $e),
+                    409 => new ConflictException($message, previous: $e),
+                    429 => new RateLimitException($message, previous: $e),
+                    default => new TurboDocxException($message, $statusCode, previous: $e),
                 };
             }
         }
 
-        throw new NetworkException("Network request failed: {$e->getMessage()}");
+        throw new NetworkException("Network request failed: {$e->getMessage()}", previous: $e);
     }
 
     /**
@@ -269,23 +271,24 @@ final class HttpClient
      */
     private function parseResponse(ResponseInterface $response): array
     {
-        return json_decode($response->getBody()->getContents(), true);
-    }
-
-    /**
-     * GET request that returns raw bytes (e.g. PDF download)
-     *
-     * @param string $path
-     * @return string Raw response body bytes
-     */
-    public function getRaw(string $path): string
-    {
         try {
-            $response = $this->client->get($path);
-            return $response->getBody()->getContents();
-        } catch (GuzzleException $e) {
-            $this->handleException($e);
+            $decoded = json_decode($response->getBody()->getContents(), true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            throw new TurboDocxException(
+                "Failed to parse JSON response: {$e->getMessage()}",
+                statusCode: $response->getStatusCode(),
+                previous: $e,
+            );
         }
+
+        if (!is_array($decoded)) {
+            throw new TurboDocxException(
+                'Unexpected JSON response format: expected object or array',
+                statusCode: $response->getStatusCode(),
+            );
+        }
+
+        return $decoded;
     }
 
     /**

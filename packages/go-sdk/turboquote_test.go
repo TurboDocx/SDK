@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -21,6 +22,34 @@ func newTestQuoteClient(t *testing.T, serverURL string) *QuoteClient {
 	})
 	require.NoError(t, err)
 	return client
+}
+
+// =============================================
+// Type Safety Tests (G1)
+// =============================================
+
+func TestEnumTypesAreDistinct(t *testing.T) {
+	t.Run("QuoteStatus is a distinct type", func(t *testing.T) {
+		assert.Equal(t, "QuoteStatus", reflect.TypeOf(QuoteStatusDraft).Name())
+	})
+	t.Run("BillingFrequency is a distinct type", func(t *testing.T) {
+		assert.Equal(t, "BillingFrequency", reflect.TypeOf(BillingFrequencyMonthly).Name())
+	})
+	t.Run("LineItemType is a distinct type", func(t *testing.T) {
+		assert.Equal(t, "LineItemType", reflect.TypeOf(LineItemTypeProduct).Name())
+	})
+	t.Run("RenewalPeriod is a distinct type", func(t *testing.T) {
+		assert.Equal(t, "RenewalPeriod", reflect.TypeOf(RenewalPeriodMonthly).Name())
+	})
+	t.Run("Currency is a distinct type", func(t *testing.T) {
+		assert.Equal(t, "Currency", reflect.TypeOf(CurrencyUSD).Name())
+	})
+	t.Run("CategoryType is a distinct type", func(t *testing.T) {
+		assert.Equal(t, "CategoryType", reflect.TypeOf(CategoryTypeProductCategory).Name())
+	})
+	t.Run("BundleItemStatus is a distinct type", func(t *testing.T) {
+		assert.Equal(t, "BundleItemStatus", reflect.TypeOf(BundleItemStatusActive).Name())
+	})
 }
 
 // =============================================
@@ -218,7 +247,7 @@ func TestQuoteClient_CreateQuote(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, "q-1", result.ID)
-		assert.Equal(t, "draft", result.Status)
+		assert.Equal(t, QuoteStatusDraft, result.Status)
 		assert.Equal(t, "Q-2026-00001", result.QuoteNumber)
 	})
 
@@ -398,7 +427,7 @@ func TestQuoteClient_DuplicateQuote(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, "q-2", result.ID)
-		assert.Equal(t, "draft", result.Status)
+		assert.Equal(t, QuoteStatusDraft, result.Status)
 	})
 }
 
@@ -509,7 +538,7 @@ func TestQuoteClient_SendQuote(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "sent", result.QuoteResult.Status)
+		assert.Equal(t, QuoteStatusSent, result.QuoteResult.Status)
 		assert.Equal(t, "Quote sent", result.Message)
 	})
 
@@ -558,7 +587,7 @@ func TestQuoteClient_SendQuoteWithDeliverable(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "sent", result.QuoteResult.Status)
+		assert.Equal(t, QuoteStatusSent, result.QuoteResult.Status)
 		assert.Equal(t, "doc-2", result.DocumentID)
 		assert.Equal(t, "Quote sent with deliverable", result.Message)
 	})
@@ -588,7 +617,7 @@ func TestQuoteClient_DeclineQuote(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "declined", result.Status)
+		assert.Equal(t, QuoteStatusDeclined, result.Status)
 	})
 }
 
@@ -616,7 +645,7 @@ func TestQuoteClient_VoidQuote(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "voided", result.Status)
+		assert.Equal(t, QuoteStatusVoided, result.Status)
 	})
 }
 
@@ -652,7 +681,7 @@ func TestQuoteClient_HandleExpiredQuote(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "draft", result.Status)
+		assert.Equal(t, QuoteStatusDraft, result.Status)
 	})
 }
 
@@ -1009,6 +1038,63 @@ func TestQuoteClient_CreateProduct(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, "p-1", result.ID)
+	})
+}
+
+func TestDetectFileType_Images(t *testing.T) {
+	t.Run("detects PNG from magic bytes", func(t *testing.T) {
+		png := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00}
+		info := DetectFileType(png)
+		assert.Equal(t, "image/png", info.MimeType)
+		assert.Equal(t, "png", info.Extension)
+	})
+	t.Run("detects JPEG from magic bytes", func(t *testing.T) {
+		jpeg := []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10}
+		info := DetectFileType(jpeg)
+		assert.Equal(t, "image/jpeg", info.MimeType)
+		assert.Equal(t, "jpg", info.Extension)
+	})
+	t.Run("detects GIF from magic bytes", func(t *testing.T) {
+		gif := []byte{0x47, 0x49, 0x46, 0x38, 0x39, 0x61}
+		info := DetectFileType(gif)
+		assert.Equal(t, "image/gif", info.MimeType)
+		assert.Equal(t, "gif", info.Extension)
+	})
+	t.Run("detects WebP from magic bytes", func(t *testing.T) {
+		webp := []byte{0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50}
+		info := DetectFileType(webp)
+		assert.Equal(t, "image/webp", info.MimeType)
+		assert.Equal(t, "webp", info.Extension)
+	})
+}
+
+func TestCreateProduct_ImageMIMEDetection(t *testing.T) {
+	t.Run("sends detected MIME type for PNG image in multipart upload", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			err := r.ParseMultipartForm(10 << 20)
+			require.NoError(t, err)
+
+			files := r.MultipartForm.File["images"]
+			require.Len(t, files, 1)
+			assert.Equal(t, "image/png", files[0].Header.Get("Content-Type"))
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"result": map[string]interface{}{"id": "p-1", "name": "Widget"},
+			})
+		}))
+		defer server.Close()
+
+		pngBytes := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00}
+		client := newTestQuoteClient(t, server.URL)
+		_, err := client.CreateProduct(context.Background(), &CreateProductRequest{
+			Name:             "Widget",
+			ListPrice:        10,
+			BillingFrequency: "monthly",
+			CategoryID:       "cat-1",
+			Images:           []ProductImageInput{{Data: pngBytes, FileName: "logo.png"}},
+		})
+		require.NoError(t, err)
 	})
 }
 
@@ -2178,7 +2264,7 @@ func TestQuoteClient_CreateAndSend(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "sent", result.Quote.Status)
+		assert.Equal(t, QuoteStatusSent, result.Quote.Status)
 		assert.Equal(t, 3, callCount)
 	})
 
@@ -2213,7 +2299,7 @@ func TestQuoteClient_CreateAndSend(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "sent", result.Quote.Status)
+		assert.Equal(t, QuoteStatusSent, result.Quote.Status)
 		assert.Equal(t, 2, callCount)
 	})
 
@@ -2248,7 +2334,7 @@ func TestQuoteClient_CreateAndSend(t *testing.T) {
 		require.NoError(t, err)
 		// Fix 2: field should be named Quote, not QuoteResult, matching other SDKs
 		assert.Equal(t, "q-1", result.Quote.ID)
-		assert.Equal(t, "sent", result.Quote.Status)
+		assert.Equal(t, QuoteStatusSent, result.Quote.Status)
 	})
 
 	t.Run("creates and sends with bundle items", func(t *testing.T) {
@@ -2291,7 +2377,7 @@ func TestQuoteClient_CreateAndSend(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "sent", result.Quote.Status)
+		assert.Equal(t, QuoteStatusSent, result.Quote.Status)
 		assert.Equal(t, 3, callCount)
 	})
 }

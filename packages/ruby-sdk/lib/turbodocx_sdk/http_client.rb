@@ -23,6 +23,8 @@ module TurboDocxSdk
     # @param sender_email [String, nil]
     # @param sender_name [String, nil]
     # @param skip_sender_validation [Boolean]
+    # @raise [AuthenticationError] if no API key or access token is provided
+    # @raise [ValidationError] if senderEmail is missing and validation is not skipped
     def initialize(
       api_key: nil,
       access_token: nil,
@@ -59,6 +61,11 @@ module TurboDocxSdk
     # @param path [String]
     # @param params [Hash, nil] query params (values may be String or Array<String>)
     # @return [Object] parsed, unwrapped, normalized response
+    # @raise [AuthenticationError] on 401 response
+    # @raise [NotFoundError] on 404 response
+    # @raise [RateLimitError] on 429 response
+    # @raise [ValidationError] on 400 response
+    # @raise [NetworkError] on connection failure
     def get(path, params = nil)
       url = build_url(path, params)
       request = Net::HTTP::Get.new(url)
@@ -67,6 +74,14 @@ module TurboDocxSdk
     end
 
     # POST request with JSON body.
+    # @param path [String]
+    # @param data [Hash, nil] request body
+    # @return [Object] parsed, unwrapped, normalized response
+    # @raise [ValidationError] on 400 response
+    # @raise [AuthenticationError] on 401 response
+    # @raise [NotFoundError] on 404 response
+    # @raise [RateLimitError] on 429 response
+    # @raise [NetworkError] on connection failure
     def post(path, data = nil)
       url = build_url(path)
       request = Net::HTTP::Post.new(url)
@@ -78,6 +93,14 @@ module TurboDocxSdk
     end
 
     # PATCH request with JSON body.
+    # @param path [String]
+    # @param data [Hash, nil] request body
+    # @return [Object] parsed, unwrapped, normalized response
+    # @raise [ValidationError] on 400 response
+    # @raise [AuthenticationError] on 401 response
+    # @raise [NotFoundError] on 404 response
+    # @raise [RateLimitError] on 429 response
+    # @raise [NetworkError] on connection failure
     def patch(path, data = nil)
       url = build_url(path)
       request = Net::HTTP::Patch.new(url)
@@ -89,6 +112,12 @@ module TurboDocxSdk
     end
 
     # DELETE request.
+    # @param path [String]
+    # @return [Object] parsed, unwrapped, normalized response
+    # @raise [AuthenticationError] on 401 response
+    # @raise [NotFoundError] on 404 response
+    # @raise [RateLimitError] on 429 response
+    # @raise [NetworkError] on connection failure
     def delete(path)
       url = build_url(path)
       request = Net::HTTP::Delete.new(url)
@@ -97,7 +126,12 @@ module TurboDocxSdk
     end
 
     # GET returning raw binary (for PDF downloads etc.).
+    # @param path [String]
+    # @param params [Hash, nil] query params
     # @return [String] raw response body bytes
+    # @raise [AuthenticationError] on 401 response
+    # @raise [NotFoundError] on 404 response
+    # @raise [NetworkError] on connection failure
     def get_raw(path, params = nil)
       url = build_url(path, params)
       request = Net::HTTP::Get.new(url)
@@ -109,11 +143,22 @@ module TurboDocxSdk
     # @param path [String]
     # @param form_data [Hash] keys are field names, values are strings or
     #   Hashes with :io, :filename, :content_type for file parts.
+    # @return [Object] parsed, unwrapped, normalized response
+    # @raise [ValidationError] on 400 response
+    # @raise [AuthenticationError] on 401 response
+    # @raise [NetworkError] on connection failure
     def post_form_data(path, form_data)
       request_form_data("POST", path, form_data)
     end
 
     # PATCH with multipart/form-data.
+    # @param path [String]
+    # @param form_data [Hash] keys are field names, values are strings or
+    #   Hashes with :io, :filename, :content_type for file parts.
+    # @return [Object] parsed, unwrapped, normalized response
+    # @raise [ValidationError] on 400 response
+    # @raise [AuthenticationError] on 401 response
+    # @raise [NetworkError] on connection failure
     def patch_form_data(path, form_data)
       request_form_data("PATCH", path, form_data)
     end
@@ -123,6 +168,10 @@ module TurboDocxSdk
     # @param file [String, IO] file path or IO-like object
     # @param field_name [String] form field name for the file
     # @param additional_data [Hash, nil] extra form fields
+    # @return [Object] parsed, unwrapped, normalized response
+    # @raise [ValidationError] if the file input type is unsupported or on 400 response
+    # @raise [AuthenticationError] on 401 response
+    # @raise [NetworkError] on connection failure
     def upload_file(api_path, file, field_name: "file", additional_data: nil)
       parts = {}
 

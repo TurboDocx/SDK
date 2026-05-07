@@ -121,8 +121,8 @@ type OrganizationUser struct {
 	IsActive  bool   `json:"isActive,omitempty"`
 }
 
-// OrgApiKey represents an organization API key
-type OrgApiKey struct {
+// OrgAPIKey represents an organization API key
+type OrgAPIKey struct {
 	ID         string   `json:"id"`
 	Name       string   `json:"name"`
 	Key        string   `json:"key,omitempty"`
@@ -135,8 +135,8 @@ type OrgApiKey struct {
 	UpdatedOn  string   `json:"updatedOn,omitempty"`
 }
 
-// PartnerApiKey represents a partner-level API key
-type PartnerApiKey struct {
+// PartnerAPIKey represents a partner-level API key
+type PartnerAPIKey struct {
 	ID          string   `json:"id"`
 	Name        string   `json:"name"`
 	Key         string   `json:"key,omitempty"`
@@ -249,14 +249,14 @@ const (
 	ScopePartnerUsersRead    = "partner-users:read"
 	ScopePartnerUsersUpdate  = "partner-users:update"
 	ScopePartnerUsersDelete  = "partner-users:delete"
-	ScopeOrgApikeysCreate    = "org-apikeys:create"
-	ScopeOrgApikeysRead      = "org-apikeys:read"
-	ScopeOrgApikeysUpdate    = "org-apikeys:update"
-	ScopeOrgApikeysDelete    = "org-apikeys:delete"
-	ScopePartnerApikeysCreate = "partner-apikeys:create"
-	ScopePartnerApikeysRead  = "partner-apikeys:read"
-	ScopePartnerApikeysUpdate = "partner-apikeys:update"
-	ScopePartnerApikeysDelete = "partner-apikeys:delete"
+	ScopeOrgAPIKeysCreate    = "org-apikeys:create"
+	ScopeOrgAPIKeysRead      = "org-apikeys:read"
+	ScopeOrgAPIKeysUpdate    = "org-apikeys:update"
+	ScopeOrgAPIKeysDelete    = "org-apikeys:delete"
+	ScopePartnerAPIKeysCreate = "partner-apikeys:create"
+	ScopePartnerAPIKeysRead  = "partner-apikeys:read"
+	ScopePartnerAPIKeysUpdate = "partner-apikeys:update"
+	ScopePartnerAPIKeysDelete = "partner-apikeys:delete"
 	ScopeAuditRead           = "audit:read"
 )
 
@@ -307,41 +307,41 @@ type UpdateOrgUserRequest struct {
 	Role string `json:"role"`
 }
 
-// CreateOrgApiKeyRequest is the request to create an organization API key
-type CreateOrgApiKeyRequest struct {
+// CreateOrgAPIKeyRequest is the request to create an organization API key
+type CreateOrgAPIKeyRequest struct {
 	Name string `json:"name"`
 	Role string `json:"role"`
 }
 
-// ListOrgApiKeysRequest is the request to list organization API keys
-type ListOrgApiKeysRequest struct {
+// ListOrgAPIKeysRequest is the request to list organization API keys
+type ListOrgAPIKeysRequest struct {
 	Limit  *int
 	Offset *int
 	Search string
 }
 
-// UpdateOrgApiKeyRequest is the request to update an organization API key
-type UpdateOrgApiKeyRequest struct {
+// UpdateOrgAPIKeyRequest is the request to update an organization API key
+type UpdateOrgAPIKeyRequest struct {
 	Name string `json:"name,omitempty"`
 	Role string `json:"role,omitempty"`
 }
 
-// CreatePartnerApiKeyRequest is the request to create a partner API key
-type CreatePartnerApiKeyRequest struct {
+// CreatePartnerAPIKeyRequest is the request to create a partner API key
+type CreatePartnerAPIKeyRequest struct {
 	Name        string   `json:"name"`
 	Scopes      []string `json:"scopes"`
 	Description string   `json:"description,omitempty"`
 }
 
-// ListPartnerApiKeysRequest is the request to list partner API keys
-type ListPartnerApiKeysRequest struct {
+// ListPartnerAPIKeysRequest is the request to list partner API keys
+type ListPartnerAPIKeysRequest struct {
 	Limit  *int
 	Offset *int
 	Search string
 }
 
-// UpdatePartnerApiKeyRequest is the request to update a partner API key
-type UpdatePartnerApiKeyRequest struct {
+// UpdatePartnerAPIKeyRequest is the request to update a partner API key
+type UpdatePartnerAPIKeyRequest struct {
 	Name        string   `json:"name,omitempty"`
 	Description string   `json:"description,omitempty"`
 	Scopes      []string `json:"scopes,omitempty"`
@@ -444,18 +444,18 @@ type OrgUserListResponse struct {
 	UserLimit map[string]interface{} `json:"userLimit,omitempty"`
 }
 
-// OrgApiKeyResponse is the response for organization API key creation
-type OrgApiKeyResponse struct {
+// OrgAPIKeyResponse is the response for organization API key creation
+type OrgAPIKeyResponse struct {
 	Success bool      `json:"success"`
-	Data    OrgApiKey `json:"data"`
+	Data    OrgAPIKey `json:"data"`
 	Message string    `json:"message,omitempty"`
 }
 
-// OrgApiKeyUpdateResponse is the response for organization API key updates
-type OrgApiKeyUpdateResponse struct {
+// OrgAPIKeyUpdateResponse is the response for organization API key updates
+type OrgAPIKeyUpdateResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message,omitempty"`
-	ApiKey  struct {
+	APIKey struct {
 		ID        string `json:"id"`
 		Name      string `json:"name"`
 		Role      string `json:"role,omitempty"`
@@ -463,29 +463,29 @@ type OrgApiKeyUpdateResponse struct {
 	} `json:"apiKey"`
 }
 
-// OrgApiKeyListResponse is the response for listing organization API keys
-type OrgApiKeyListResponse struct {
+// OrgAPIKeyListResponse is the response for listing organization API keys
+type OrgAPIKeyListResponse struct {
 	Success bool `json:"success"`
 	Data    struct {
-		Results      []OrgApiKey `json:"results"`
+		Results      []OrgAPIKey `json:"results"`
 		TotalRecords int         `json:"totalRecords"`
 		Limit        int         `json:"limit"`
 		Offset       int         `json:"offset"`
 	} `json:"data"`
 }
 
-// PartnerApiKeyResponse is the response for partner API key creation
-type PartnerApiKeyResponse struct {
+// PartnerAPIKeyResponse is the response for partner API key creation
+type PartnerAPIKeyResponse struct {
 	Success bool          `json:"success"`
-	Data    PartnerApiKey `json:"data"`
+	Data    PartnerAPIKey `json:"data"`
 	Message string        `json:"message,omitempty"`
 }
 
-// PartnerApiKeyUpdateResponse is the response for partner API key updates
-type PartnerApiKeyUpdateResponse struct {
+// PartnerAPIKeyUpdateResponse is the response for partner API key updates
+type PartnerAPIKeyUpdateResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message,omitempty"`
-	ApiKey  struct {
+	APIKey struct {
 		ID          string   `json:"id"`
 		Name        string   `json:"name"`
 		Description string   `json:"description,omitempty"`
@@ -494,11 +494,11 @@ type PartnerApiKeyUpdateResponse struct {
 	} `json:"apiKey"`
 }
 
-// PartnerApiKeyListResponse is the response for listing partner API keys
-type PartnerApiKeyListResponse struct {
+// PartnerAPIKeyListResponse is the response for listing partner API keys
+type PartnerAPIKeyListResponse struct {
 	Success bool `json:"success"`
 	Data    struct {
-		Results      []PartnerApiKey `json:"results"`
+		Results      []PartnerAPIKey `json:"results"`
 		TotalRecords int             `json:"totalRecords"`
 		Limit        int             `json:"limit"`
 		Offset       int             `json:"offset"`
@@ -675,14 +675,14 @@ func (c *PartnerClient) ResendOrganizationInvitationToUser(ctx context.Context, 
 // Organization API Key Management
 // =============================================
 
-// ListOrganizationApiKeys lists all API keys for an organization
-func (c *PartnerClient) ListOrganizationApiKeys(ctx context.Context, organizationID string, req *ListOrgApiKeysRequest) (*OrgApiKeyListResponse, error) {
+// ListOrganizationAPIKeys lists all API keys for an organization
+func (c *PartnerClient) ListOrganizationAPIKeys(ctx context.Context, organizationID string, req *ListOrgAPIKeysRequest) (*OrgAPIKeyListResponse, error) {
 	q := url.Values{}
 	if req != nil {
 		addPaginationParams(q, req.Limit, req.Offset, req.Search)
 	}
 
-	var response OrgApiKeyListResponse
+	var response OrgAPIKeyListResponse
 	err := c.http.Get(ctx, c.basePath()+"/organizations/"+organizationID+"/apikeys"+buildQuery(q), &response)
 	if err != nil {
 		return nil, err
@@ -690,9 +690,9 @@ func (c *PartnerClient) ListOrganizationApiKeys(ctx context.Context, organizatio
 	return &response, nil
 }
 
-// CreateOrganizationApiKey creates an API key for an organization
-func (c *PartnerClient) CreateOrganizationApiKey(ctx context.Context, organizationID string, req *CreateOrgApiKeyRequest) (*OrgApiKeyResponse, error) {
-	var response OrgApiKeyResponse
+// CreateOrganizationAPIKey creates an API key for an organization
+func (c *PartnerClient) CreateOrganizationAPIKey(ctx context.Context, organizationID string, req *CreateOrgAPIKeyRequest) (*OrgAPIKeyResponse, error) {
+	var response OrgAPIKeyResponse
 	err := c.http.Post(ctx, c.basePath()+"/organizations/"+organizationID+"/apikeys", req, &response)
 	if err != nil {
 		return nil, err
@@ -700,9 +700,9 @@ func (c *PartnerClient) CreateOrganizationApiKey(ctx context.Context, organizati
 	return &response, nil
 }
 
-// UpdateOrganizationApiKey updates an organization API key
-func (c *PartnerClient) UpdateOrganizationApiKey(ctx context.Context, organizationID, apiKeyID string, req *UpdateOrgApiKeyRequest) (*OrgApiKeyUpdateResponse, error) {
-	var response OrgApiKeyUpdateResponse
+// UpdateOrganizationAPIKey updates an organization API key
+func (c *PartnerClient) UpdateOrganizationAPIKey(ctx context.Context, organizationID, apiKeyID string, req *UpdateOrgAPIKeyRequest) (*OrgAPIKeyUpdateResponse, error) {
+	var response OrgAPIKeyUpdateResponse
 	err := c.http.Patch(ctx, c.basePath()+"/organizations/"+organizationID+"/apikeys/"+apiKeyID, req, &response)
 	if err != nil {
 		return nil, err
@@ -710,8 +710,8 @@ func (c *PartnerClient) UpdateOrganizationApiKey(ctx context.Context, organizati
 	return &response, nil
 }
 
-// RevokeOrganizationApiKey revokes an organization API key
-func (c *PartnerClient) RevokeOrganizationApiKey(ctx context.Context, organizationID, apiKeyID string) (*SuccessResponse, error) {
+// RevokeOrganizationAPIKey revokes an organization API key
+func (c *PartnerClient) RevokeOrganizationAPIKey(ctx context.Context, organizationID, apiKeyID string) (*SuccessResponse, error) {
 	var response SuccessResponse
 	err := c.http.Delete(ctx, c.basePath()+"/organizations/"+organizationID+"/apikeys/"+apiKeyID, &response)
 	if err != nil {
@@ -724,14 +724,14 @@ func (c *PartnerClient) RevokeOrganizationApiKey(ctx context.Context, organizati
 // Partner API Key Management
 // =============================================
 
-// ListPartnerApiKeys lists all partner API keys
-func (c *PartnerClient) ListPartnerApiKeys(ctx context.Context, req *ListPartnerApiKeysRequest) (*PartnerApiKeyListResponse, error) {
+// ListPartnerAPIKeys lists all partner API keys
+func (c *PartnerClient) ListPartnerAPIKeys(ctx context.Context, req *ListPartnerAPIKeysRequest) (*PartnerAPIKeyListResponse, error) {
 	q := url.Values{}
 	if req != nil {
 		addPaginationParams(q, req.Limit, req.Offset, req.Search)
 	}
 
-	var response PartnerApiKeyListResponse
+	var response PartnerAPIKeyListResponse
 	err := c.http.Get(ctx, c.basePath()+"/api-keys"+buildQuery(q), &response)
 	if err != nil {
 		return nil, err
@@ -739,9 +739,9 @@ func (c *PartnerClient) ListPartnerApiKeys(ctx context.Context, req *ListPartner
 	return &response, nil
 }
 
-// CreatePartnerApiKey creates a new partner-level API key with specific scopes
-func (c *PartnerClient) CreatePartnerApiKey(ctx context.Context, req *CreatePartnerApiKeyRequest) (*PartnerApiKeyResponse, error) {
-	var response PartnerApiKeyResponse
+// CreatePartnerAPIKey creates a new partner-level API key with specific scopes
+func (c *PartnerClient) CreatePartnerAPIKey(ctx context.Context, req *CreatePartnerAPIKeyRequest) (*PartnerAPIKeyResponse, error) {
+	var response PartnerAPIKeyResponse
 	err := c.http.Post(ctx, c.basePath()+"/api-keys", req, &response)
 	if err != nil {
 		return nil, err
@@ -749,9 +749,9 @@ func (c *PartnerClient) CreatePartnerApiKey(ctx context.Context, req *CreatePart
 	return &response, nil
 }
 
-// UpdatePartnerApiKey updates a partner API key
-func (c *PartnerClient) UpdatePartnerApiKey(ctx context.Context, keyID string, req *UpdatePartnerApiKeyRequest) (*PartnerApiKeyUpdateResponse, error) {
-	var response PartnerApiKeyUpdateResponse
+// UpdatePartnerAPIKey updates a partner API key
+func (c *PartnerClient) UpdatePartnerAPIKey(ctx context.Context, keyID string, req *UpdatePartnerAPIKeyRequest) (*PartnerAPIKeyUpdateResponse, error) {
+	var response PartnerAPIKeyUpdateResponse
 	err := c.http.Patch(ctx, c.basePath()+"/api-keys/"+keyID, req, &response)
 	if err != nil {
 		return nil, err
@@ -759,8 +759,8 @@ func (c *PartnerClient) UpdatePartnerApiKey(ctx context.Context, keyID string, r
 	return &response, nil
 }
 
-// RevokePartnerApiKey revokes a partner API key
-func (c *PartnerClient) RevokePartnerApiKey(ctx context.Context, keyID string) (*SuccessResponse, error) {
+// RevokePartnerAPIKey revokes a partner API key
+func (c *PartnerClient) RevokePartnerAPIKey(ctx context.Context, keyID string) (*SuccessResponse, error) {
 	var response SuccessResponse
 	err := c.http.Delete(ctx, c.basePath()+"/api-keys/"+keyID, &response)
 	if err != nil {

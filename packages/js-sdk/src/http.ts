@@ -56,7 +56,7 @@ export interface QuoteClientConfig {
  * - PDF: starts with %PDF (0x25 0x50 0x44 0x46)
  * - DOCX/PPTX: starts with PK (ZIP), differentiate by internal content
  */
-const detectFileType = (buffer: Buffer): { mimetype: string; extension: string } => {
+export const detectFileType = (buffer: Buffer): { mimetype: string; extension: string } => {
   // PDF: %PDF
   if (buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) {
     return { mimetype: 'application/pdf', extension: 'pdf' };
@@ -88,6 +88,27 @@ const detectFileType = (buffer: Buffer): { mimetype: string; extension: string }
       mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       extension: 'docx'
     };
+  }
+
+  // JPEG: starts with 0xFF 0xD8 0xFF
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+    return { mimetype: 'image/jpeg', extension: 'jpg' };
+  }
+
+  // PNG: starts with 0x89 0x50 0x4E 0x47
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+    return { mimetype: 'image/png', extension: 'png' };
+  }
+
+  // GIF: starts with GIF87a or GIF89a (0x47 0x49 0x46)
+  if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46) {
+    return { mimetype: 'image/gif', extension: 'gif' };
+  }
+
+  // WEBP: starts with RIFF....WEBP (0x52 0x49 0x46 0x46 .... 0x57 0x45 0x42 0x50)
+  if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+      buffer.length >= 12 && buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
+    return { mimetype: 'image/webp', extension: 'webp' };
   }
 
   // Unknown file type
@@ -374,6 +395,15 @@ export class HttpClient {
     return this.request<T>('POST', path, data, options);
   }
 
+  /**
+   * Send a PATCH request.
+   *
+   * Null semantics: properties explicitly set to `null` in the `data` object
+   * **are** included in the JSON body (used to clear nullable fields on the
+   * server, e.g. `priceBookId`, `validUntil`, `taxRate`). Properties that are
+   * `undefined` are omitted by `JSON.stringify` and therefore not sent, which
+   * means "leave the current value unchanged."
+   */
   async patch<T>(path: string, data?: any, options?: RequestInit): Promise<T> {
     return this.request<T>('PATCH', path, data, options);
   }

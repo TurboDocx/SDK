@@ -3,6 +3,7 @@
  */
 
 import { HttpClient, HttpClientConfig } from '../http';
+import { NetworkError } from '../utils/errors';
 import {
   VoidDocumentResponse,
   ResendEmailResponse,
@@ -323,7 +324,7 @@ export class TurboSign {
     // Step 2: Fetch the actual file from S3
     const fileResponse = await fetch(response.downloadUrl);
     if (!fileResponse.ok) {
-      throw new Error(`Failed to download file: ${fileResponse.statusText}`);
+      throw new NetworkError(`Failed to download file: ${fileResponse.statusText}`);
     }
 
     // Step 3: Return as Blob
