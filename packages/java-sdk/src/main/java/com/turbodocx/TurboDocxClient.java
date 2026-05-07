@@ -3,14 +3,19 @@ package com.turbodocx;
 /**
  * Main client for TurboDocx API
  */
-public class TurboDocxClient {
+public final class TurboDocxClient implements AutoCloseable {
+    private final HttpClient httpClient;
     private final TurboSign turboSign;
     private final DeliverableClient deliverable;
 
     private TurboDocxClient(Builder builder) {
-        HttpClient httpClient = new HttpClient(builder.baseUrl, builder.apiKey, builder.accessToken, builder.orgId, builder.senderEmail, builder.senderName);
-        this.turboSign = new TurboSign(httpClient);
-        this.deliverable = new DeliverableClient(httpClient);
+        this.httpClient = new HttpClient(
+                builder.baseUrl, builder.apiKey, builder.accessToken,
+                builder.orgId, builder.senderEmail, builder.senderName,
+                builder.connectTimeoutSeconds, builder.readTimeoutSeconds, builder.writeTimeoutSeconds
+        );
+        this.turboSign = new TurboSign(this.httpClient);
+        this.deliverable = new DeliverableClient(this.httpClient);
     }
 
     /**
@@ -28,6 +33,22 @@ public class TurboDocxClient {
     }
 
     /**
+     * Get the underlying HttpClient for inspection (package-private).
+     */
+    HttpClient getHttpClient() {
+        return httpClient;
+    }
+
+    /**
+     * Shut down HTTP connection pools and release resources.
+     * Safe to call multiple times.
+     */
+    @Override
+    public void close() {
+        turboSign.close();
+    }
+
+    /**
      * Builder for TurboDocxClient
      */
     public static class Builder {
@@ -37,6 +58,9 @@ public class TurboDocxClient {
         private String baseUrl;
         private String senderEmail;
         private String senderName;
+        private int connectTimeoutSeconds = 60;
+        private int readTimeoutSeconds = 120;
+        private int writeTimeoutSeconds = 60;
 
         /**
          * Set the API key (required)
@@ -84,6 +108,30 @@ public class TurboDocxClient {
          */
         public Builder senderName(String senderName) {
             this.senderName = senderName;
+            return this;
+        }
+
+        /**
+         * Set the connect timeout in seconds (optional, defaults to 60).
+         */
+        public Builder connectTimeoutSeconds(int connectTimeoutSeconds) {
+            this.connectTimeoutSeconds = connectTimeoutSeconds;
+            return this;
+        }
+
+        /**
+         * Set the read timeout in seconds (optional, defaults to 120).
+         */
+        public Builder readTimeoutSeconds(int readTimeoutSeconds) {
+            this.readTimeoutSeconds = readTimeoutSeconds;
+            return this;
+        }
+
+        /**
+         * Set the write timeout in seconds (optional, defaults to 60).
+         */
+        public Builder writeTimeoutSeconds(int writeTimeoutSeconds) {
+            this.writeTimeoutSeconds = writeTimeoutSeconds;
             return this;
         }
 

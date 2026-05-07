@@ -14,6 +14,7 @@
 
 import { TurboPartner } from "../src/modules/partner";
 import { HttpClient } from "../src/http";
+import { ValidationError } from "../src/utils/errors";
 import type {
   CreateOrganizationRequest,
   PartnerPermissions,
@@ -1121,6 +1122,33 @@ describe("TurboPartner Module", () => {
       await expect(
         TurboPartner.deleteOrganization("nonexistent")
       ).rejects.toEqual(error);
+    });
+
+    it("should throw ValidationError when auto-config fails without env vars", async () => {
+      // Save current env vars
+      const savedPartnerApiKey = process.env.TURBODOCX_PARTNER_API_KEY;
+      const savedPartnerId = process.env.TURBODOCX_PARTNER_ID;
+
+      try {
+        // Clear env vars and reset static state
+        delete process.env.TURBODOCX_PARTNER_API_KEY;
+        delete process.env.TURBODOCX_PARTNER_ID;
+        (TurboPartner as any).client = undefined;
+        (TurboPartner as any).partnerId = undefined;
+
+        // Calling without configure() and without env vars should throw ValidationError
+        await expect(
+          TurboPartner.listOrganizations()
+        ).rejects.toBeInstanceOf(ValidationError);
+      } finally {
+        // Restore env vars
+        if (savedPartnerApiKey !== undefined) {
+          process.env.TURBODOCX_PARTNER_API_KEY = savedPartnerApiKey;
+        }
+        if (savedPartnerId !== undefined) {
+          process.env.TURBODOCX_PARTNER_ID = savedPartnerId;
+        }
+      }
     });
   });
 });

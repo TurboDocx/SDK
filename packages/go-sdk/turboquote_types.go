@@ -7,7 +7,7 @@ import "encoding/json"
 // ============================================
 
 // QuoteStatus represents the status of a quote
-type QuoteStatus = string
+type QuoteStatus string
 
 const (
 	QuoteStatusDraft           QuoteStatus = "draft"
@@ -19,7 +19,7 @@ const (
 )
 
 // BillingFrequency represents a billing interval
-type BillingFrequency = string
+type BillingFrequency string
 
 const (
 	BillingFrequencyMonthly   BillingFrequency = "monthly"
@@ -29,7 +29,7 @@ const (
 )
 
 // LineItemType represents line item types
-type LineItemType = string
+type LineItemType string
 
 const (
 	LineItemTypeProduct LineItemType = "product"
@@ -37,7 +37,7 @@ const (
 )
 
 // RenewalPeriod represents a renewal interval
-type RenewalPeriod = string
+type RenewalPeriod string
 
 const (
 	RenewalPeriodWeekly    RenewalPeriod = "weekly"
@@ -47,7 +47,7 @@ const (
 )
 
 // Currency represents a supported currency
-type Currency = string
+type Currency string
 
 const (
 	CurrencyUSD Currency = "USD"
@@ -59,7 +59,7 @@ const (
 )
 
 // CategoryType represents a category classification
-type CategoryType = string
+type CategoryType string
 
 const (
 	CategoryTypeProductCategory CategoryType = "product_category"
@@ -69,7 +69,7 @@ const (
 )
 
 // BundleItemStatus represents the status of a bundle item
-type BundleItemStatus = string
+type BundleItemStatus string
 
 const (
 	BundleItemStatusActive             BundleItemStatus = "active"

@@ -25,7 +25,7 @@ import java.util.Map;
  * <p>All methods return {@link JsonObject} containing the raw API response
  * with {@code success}, {@code data}, and optionally {@code message} fields.</p>
  */
-public class TurboPartner {
+public final class TurboPartner {
 
     private final PartnerHttpClient httpClient;
     private final String partnerId;

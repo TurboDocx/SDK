@@ -15,7 +15,7 @@ import java.util.Map;
  * TurboSign client for digital signature operations
  * with 100% parity with the JS SDK
  */
-public class TurboSign {
+public final class TurboSign {
     private final HttpClient httpClient;
     private final Gson gson;
     private final OkHttpClient s3Client;
@@ -187,6 +187,20 @@ public class TurboSign {
                 "/turbosign/documents/" + documentId + "/audit-trail",
                 AuditTrailResponse.class
         );
+    }
+
+    /**
+     * Shut down HTTP clients used by TurboSign.
+     * Closes both the main HttpClient and the S3 download client.
+     */
+    void close() {
+        httpClient.close();
+        s3Client.dispatcher().executorService().shutdown();
+        s3Client.connectionPool().evictAll();
+        okhttp3.Cache cache = s3Client.cache();
+        if (cache != null) {
+            try { cache.close(); } catch (java.io.IOException ignored) { }
+        }
     }
 
     private Map<String, String> buildFormData(

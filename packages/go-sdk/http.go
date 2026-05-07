@@ -32,6 +32,27 @@ func DetectFileType(fileBytes []byte) FileTypeInfo {
 		return FileTypeInfo{MimeType: "application/pdf", Extension: "pdf"}
 	}
 
+	// PNG: 0x89 0x50 0x4E 0x47
+	if fileBytes[0] == 0x89 && fileBytes[1] == 0x50 && fileBytes[2] == 0x4E && fileBytes[3] == 0x47 {
+		return FileTypeInfo{MimeType: "image/png", Extension: "png"}
+	}
+
+	// JPEG: 0xFF 0xD8 0xFF
+	if fileBytes[0] == 0xFF && fileBytes[1] == 0xD8 && fileBytes[2] == 0xFF {
+		return FileTypeInfo{MimeType: "image/jpeg", Extension: "jpg"}
+	}
+
+	// GIF: GIF8 (0x47 0x49 0x46 0x38)
+	if fileBytes[0] == 0x47 && fileBytes[1] == 0x49 && fileBytes[2] == 0x46 && fileBytes[3] == 0x38 {
+		return FileTypeInfo{MimeType: "image/gif", Extension: "gif"}
+	}
+
+	// WebP: RIFF....WEBP
+	if len(fileBytes) >= 12 && fileBytes[0] == 0x52 && fileBytes[1] == 0x49 && fileBytes[2] == 0x46 && fileBytes[3] == 0x46 &&
+		fileBytes[8] == 0x57 && fileBytes[9] == 0x45 && fileBytes[10] == 0x42 && fileBytes[11] == 0x50 {
+		return FileTypeInfo{MimeType: "image/webp", Extension: "webp"}
+	}
+
 	// ZIP-based formats (DOCX, PPTX): starts with PK (0x50 0x4B)
 	if fileBytes[0] == 0x50 && fileBytes[1] == 0x4B {
 		headerLen := len(fileBytes)
@@ -143,6 +164,26 @@ type NetworkError struct {
 	TurboDocxError
 }
 
+// mapStatusToError maps an HTTP status code to the appropriate typed error.
+func mapStatusToError(baseErr TurboDocxError) error {
+	switch baseErr.StatusCode {
+	case 400:
+		return &ValidationError{TurboDocxError: baseErr}
+	case 401:
+		return &AuthenticationError{TurboDocxError: baseErr}
+	case 403:
+		return &AuthorizationError{TurboDocxError: baseErr}
+	case 404:
+		return &NotFoundError{TurboDocxError: baseErr}
+	case 409:
+		return &ConflictError{TurboDocxError: baseErr}
+	case 429:
+		return &RateLimitError{TurboDocxError: baseErr}
+	default:
+		return &baseErr
+	}
+}
+
 func (c *HTTPClient) setHeaders(req *http.Request, contentType string) {
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
@@ -186,49 +227,16 @@ func (c *HTTPClient) handleResponse(resp *http.Response, result interface{}) err
 			if msg == "" {
 				msg = resp.Status
 			}
-			baseErr := TurboDocxError{
+			return mapStatusToError(TurboDocxError{
 				Message:    msg,
 				StatusCode: resp.StatusCode,
 				Code:       apiErr.Code,
-			}
-
-			switch resp.StatusCode {
-			case 400:
-				return &ValidationError{TurboDocxError: baseErr}
-			case 401:
-				return &AuthenticationError{TurboDocxError: baseErr}
-			case 403:
-				return &AuthorizationError{TurboDocxError: baseErr}
-			case 404:
-				return &NotFoundError{TurboDocxError: baseErr}
-			case 409:
-				return &ConflictError{TurboDocxError: baseErr}
-			case 429:
-				return &RateLimitError{TurboDocxError: baseErr}
-			default:
-				return &baseErr
-			}
+			})
 		}
-		baseErr := TurboDocxError{
+		return mapStatusToError(TurboDocxError{
 			Message:    resp.Status,
 			StatusCode: resp.StatusCode,
-		}
-		switch resp.StatusCode {
-		case 400:
-			return &ValidationError{TurboDocxError: baseErr}
-		case 401:
-			return &AuthenticationError{TurboDocxError: baseErr}
-		case 403:
-			return &AuthorizationError{TurboDocxError: baseErr}
-		case 404:
-			return &NotFoundError{TurboDocxError: baseErr}
-		case 409:
-			return &ConflictError{TurboDocxError: baseErr}
-		case 429:
-			return &RateLimitError{TurboDocxError: baseErr}
-		default:
-			return &baseErr
-		}
+		})
 	}
 
 	if result != nil && len(body) > 0 {
@@ -306,26 +314,10 @@ func (c *HTTPClient) GetRaw(ctx context.Context, path string) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		baseErr := TurboDocxError{
+		return nil, mapStatusToError(TurboDocxError{
 			Message:    resp.Status,
 			StatusCode: resp.StatusCode,
-		}
-		switch resp.StatusCode {
-		case 400:
-			return nil, &ValidationError{TurboDocxError: baseErr}
-		case 401:
-			return nil, &AuthenticationError{TurboDocxError: baseErr}
-		case 403:
-			return nil, &AuthorizationError{TurboDocxError: baseErr}
-		case 404:
-			return nil, &NotFoundError{TurboDocxError: baseErr}
-		case 409:
-			return nil, &ConflictError{TurboDocxError: baseErr}
-		case 429:
-			return nil, &RateLimitError{TurboDocxError: baseErr}
-		default:
-			return nil, &baseErr
-		}
+		})
 	}
 
 	return io.ReadAll(resp.Body)
@@ -532,7 +524,8 @@ func (c *HTTPClient) doProductMultipart(ctx context.Context, method, path string
 	for _, img := range images {
 		h := make(textproto.MIMEHeader)
 		h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="images"; filename="%s"`, img.FileName))
-		h.Set("Content-Type", "application/octet-stream")
+		detected := DetectFileType(img.Data)
+		h.Set("Content-Type", detected.MimeType)
 
 		part, err := writer.CreatePart(h)
 		if err != nil {

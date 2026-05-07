@@ -88,7 +88,7 @@ use TurboDocx\Types\Responses\Quote\SendQuoteWithDeliverableResponse;
 final class TurboQuote
 {
     /** @var HttpClient|null */
-    private static mixed $client = null;
+    private static ?HttpClient $client = null;
 
     /**
      * Configure TurboQuote with API credentials
@@ -106,7 +106,7 @@ final class TurboQuote
      *
      * @return HttpClient
      */
-    private static function getClient(): mixed
+    private static function getClient(): HttpClient
     {
         if (self::$client === null) {
             self::$client = new HttpClient(
@@ -138,19 +138,28 @@ final class TurboQuote
         $images = $request['images'] ?? [];
         unset($request['images']);
 
+        $encoded = json_encode($request);
+        if ($encoded === false) {
+            throw new Exceptions\ValidationException('Failed to encode product data as JSON');
+        }
+
         $multipart = [
             [
                 'name' => 'data',
-                'contents' => json_encode($request),
+                'contents' => $encoded,
             ],
         ];
 
         foreach ($images as $image) {
             if (is_string($image) && file_exists($image)) {
                 // File path
+                $contents = file_get_contents($image);
+                if ($contents === false) {
+                    throw new Exceptions\ValidationException("Failed to read image file: {$image}");
+                }
                 $multipart[] = [
                     'name' => 'images',
-                    'contents' => file_get_contents($image),
+                    'contents' => $contents,
                     'filename' => basename($image),
                 ];
             } elseif (is_string($image)) {

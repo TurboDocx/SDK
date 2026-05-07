@@ -19,7 +19,7 @@ import json
 import os
 from typing import Any, Dict, List, Optional, Union
 
-from ..http import HttpClient
+from ..http import HttpClient, detect_file_type
 
 
 def _to_query_params(request: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
@@ -67,16 +67,18 @@ def _build_product_form_data(request: Dict[str, Any]):
     if images:
         for image in images:
             if isinstance(image, str):
-                # File path
                 with open(image, "rb") as f:
                     file_bytes = f.read()
                 file_name = os.path.basename(image)
-                files.append(("images", (file_name, file_bytes, "application/octet-stream")))
+                mime_type, _ = detect_file_type(file_bytes)
+                files.append(("images", (file_name, file_bytes, mime_type)))
             elif isinstance(image, bytes):
-                files.append(("images", ("image.jpg", image, "application/octet-stream")))
+                mime_type, ext = detect_file_type(image)
+                files.append(("images", (f"image.{ext}", image, mime_type)))
             else:
-                # Assume file-like object
-                files.append(("images", (getattr(image, "name", "image.jpg"), image, "application/octet-stream")))
+                file_bytes = image.read() if hasattr(image, "read") else image
+                mime_type, ext = detect_file_type(file_bytes if isinstance(file_bytes, bytes) else b"")
+                files.append(("images", (getattr(image, "name", f"image.{ext}"), file_bytes, mime_type)))
 
     return data, files
 

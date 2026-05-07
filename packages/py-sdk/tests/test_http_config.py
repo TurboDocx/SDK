@@ -6,7 +6,7 @@ Tests for configuration validation including senderEmail/senderName requirements
 
 import os
 import pytest
-from turbodocx_sdk.http import HttpClient, ValidationError, AuthenticationError
+from turbodocx_sdk.http import HttpClient, ValidationError, AuthenticationError, NetworkError
 
 
 @pytest.fixture(autouse=True)
@@ -222,3 +222,81 @@ class TestFullConfiguration:
         )
 
         assert client.base_url == "https://api.turbodocx.com"
+
+
+class TestExceptionChaining:
+    """Tests that SDK exceptions preserve the original cause for debugging"""
+
+    @pytest.mark.asyncio
+    async def test_network_error_preserves_cause_on_timeout(self):
+        """NetworkError should chain the original httpx.TimeoutException via __cause__"""
+        import httpx
+
+        client = HttpClient(
+            api_key="test-api-key",
+            org_id="test-org-id",
+            sender_email="support@company.com",
+        )
+
+        with pytest.raises(NetworkError) as exc_info:
+            # Force a timeout by mocking httpx.AsyncClient
+            from unittest.mock import AsyncMock, patch, MagicMock
+
+            mock_response = MagicMock()
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(side_effect=httpx.TimeoutException("connection timed out"))
+
+            with patch("httpx.AsyncClient") as mock_cls:
+                mock_cls.return_value.__aenter__.return_value = mock_client
+                await client.get("/test")
+
+        assert exc_info.value.__cause__ is not None
+        assert isinstance(exc_info.value.__cause__, httpx.TimeoutException)
+
+    @pytest.mark.asyncio
+    async def test_network_error_preserves_cause_on_connection_failure(self):
+        """NetworkError should chain the original httpx.NetworkError via __cause__"""
+        import httpx
+        from unittest.mock import AsyncMock, patch
+
+        client = HttpClient(
+            api_key="test-api-key",
+            org_id="test-org-id",
+            sender_email="support@company.com",
+        )
+
+        with pytest.raises(NetworkError) as exc_info:
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(
+                side_effect=httpx.ConnectError("Connection refused")
+            )
+
+            with patch("httpx.AsyncClient") as mock_cls:
+                mock_cls.return_value.__aenter__.return_value = mock_client
+                await client.get("/test")
+
+        assert exc_info.value.__cause__ is not None
+
+    @pytest.mark.asyncio
+    async def test_network_error_preserves_cause_on_unexpected_error(self):
+        """NetworkError should chain unexpected exceptions via __cause__"""
+        from unittest.mock import AsyncMock, patch
+
+        client = HttpClient(
+            api_key="test-api-key",
+            org_id="test-org-id",
+            sender_email="support@company.com",
+        )
+
+        with pytest.raises(NetworkError) as exc_info:
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(
+                side_effect=RuntimeError("unexpected failure")
+            )
+
+            with patch("httpx.AsyncClient") as mock_cls:
+                mock_cls.return_value.__aenter__.return_value = mock_client
+                await client.post("/test", {"key": "value"})
+
+        assert exc_info.value.__cause__ is not None
+        assert isinstance(exc_info.value.__cause__, RuntimeError)

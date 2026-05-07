@@ -443,13 +443,13 @@ func TestResendOrganizationInvitationToUser(t *testing.T) {
 // Organization API Key Management Tests
 // =============================================
 
-func TestCreateOrganizationApiKey(t *testing.T) {
+func TestCreateOrganizationAPIKey(t *testing.T) {
 	t.Run("creates organization API key", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "POST", r.Method)
 			assert.Equal(t, "/partner/test-partner-id/organizations/org-123/apikeys", r.URL.Path)
 
-			var body CreateOrgApiKeyRequest
+			var body CreateOrgAPIKeyRequest
 			json.NewDecoder(r.Body).Decode(&body)
 			assert.Equal(t, "Production Key", body.Name)
 			assert.Equal(t, "admin", body.Role)
@@ -463,7 +463,7 @@ func TestCreateOrganizationApiKey(t *testing.T) {
 		defer server.Close()
 
 		client := newTestPartnerClient(t, server.URL)
-		result, err := client.CreateOrganizationApiKey(context.Background(), "org-123", &CreateOrgApiKeyRequest{
+		result, err := client.CreateOrganizationAPIKey(context.Background(), "org-123", &CreateOrgAPIKeyRequest{
 			Name: "Production Key",
 			Role: "admin",
 		})
@@ -474,7 +474,7 @@ func TestCreateOrganizationApiKey(t *testing.T) {
 	})
 }
 
-func TestListOrganizationApiKeys(t *testing.T) {
+func TestListOrganizationAPIKeys(t *testing.T) {
 	t.Run("lists organization API keys", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "GET", r.Method)
@@ -492,14 +492,14 @@ func TestListOrganizationApiKeys(t *testing.T) {
 		defer server.Close()
 
 		client := newTestPartnerClient(t, server.URL)
-		result, err := client.ListOrganizationApiKeys(context.Background(), "org-123", nil)
+		result, err := client.ListOrganizationAPIKeys(context.Background(), "org-123", nil)
 
 		require.NoError(t, err)
 		assert.Equal(t, 1, result.Data.TotalRecords)
 	})
 }
 
-func TestUpdateOrganizationApiKey(t *testing.T) {
+func TestUpdateOrganizationAPIKey(t *testing.T) {
 	t.Run("updates organization API key", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "PATCH", r.Method)
@@ -514,17 +514,17 @@ func TestUpdateOrganizationApiKey(t *testing.T) {
 		defer server.Close()
 
 		client := newTestPartnerClient(t, server.URL)
-		result, err := client.UpdateOrganizationApiKey(context.Background(), "org-123", "key-123", &UpdateOrgApiKeyRequest{
+		result, err := client.UpdateOrganizationAPIKey(context.Background(), "org-123", "key-123", &UpdateOrgAPIKeyRequest{
 			Name: "Updated Key",
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "key-123", result.ApiKey.ID)
-		assert.Equal(t, "Updated Key", result.ApiKey.Name)
+		assert.Equal(t, "key-123", result.APIKey.ID)
+		assert.Equal(t, "Updated Key", result.APIKey.Name)
 	})
 }
 
-func TestRevokeOrganizationApiKey(t *testing.T) {
+func TestRevokeOrganizationAPIKey(t *testing.T) {
 	t.Run("revokes organization API key", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "DELETE", r.Method)
@@ -536,7 +536,7 @@ func TestRevokeOrganizationApiKey(t *testing.T) {
 		defer server.Close()
 
 		client := newTestPartnerClient(t, server.URL)
-		result, err := client.RevokeOrganizationApiKey(context.Background(), "org-123", "key-123")
+		result, err := client.RevokeOrganizationAPIKey(context.Background(), "org-123", "key-123")
 
 		require.NoError(t, err)
 		assert.True(t, result.Success)
@@ -547,13 +547,13 @@ func TestRevokeOrganizationApiKey(t *testing.T) {
 // Partner API Key Management Tests
 // =============================================
 
-func TestCreatePartnerApiKey(t *testing.T) {
+func TestCreatePartnerAPIKey(t *testing.T) {
 	t.Run("creates partner API key with scopes", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "POST", r.Method)
 			assert.Equal(t, "/partner/test-partner-id/api-keys", r.URL.Path)
 
-			var body CreatePartnerApiKeyRequest
+			var body CreatePartnerAPIKeyRequest
 			json.NewDecoder(r.Body).Decode(&body)
 			assert.Equal(t, "Integration Key", body.Name)
 			assert.Contains(t, body.Scopes, ScopeOrgCreate)
@@ -568,7 +568,7 @@ func TestCreatePartnerApiKey(t *testing.T) {
 		defer server.Close()
 
 		client := newTestPartnerClient(t, server.URL)
-		result, err := client.CreatePartnerApiKey(context.Background(), &CreatePartnerApiKeyRequest{
+		result, err := client.CreatePartnerAPIKey(context.Background(), &CreatePartnerAPIKeyRequest{
 			Name:   "Integration Key",
 			Scopes: []string{ScopeOrgCreate, ScopeOrgRead, ScopeAuditRead},
 		})
@@ -579,7 +579,7 @@ func TestCreatePartnerApiKey(t *testing.T) {
 	})
 }
 
-func TestListPartnerApiKeys(t *testing.T) {
+func TestListPartnerAPIKeys(t *testing.T) {
 	t.Run("lists partner API keys", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "GET", r.Method)
@@ -597,14 +597,14 @@ func TestListPartnerApiKeys(t *testing.T) {
 		defer server.Close()
 
 		client := newTestPartnerClient(t, server.URL)
-		result, err := client.ListPartnerApiKeys(context.Background(), nil)
+		result, err := client.ListPartnerAPIKeys(context.Background(), nil)
 
 		require.NoError(t, err)
 		assert.Equal(t, 1, result.Data.TotalRecords)
 	})
 }
 
-func TestUpdatePartnerApiKey(t *testing.T) {
+func TestUpdatePartnerAPIKey(t *testing.T) {
 	t.Run("updates partner API key", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "PATCH", r.Method)
@@ -619,17 +619,17 @@ func TestUpdatePartnerApiKey(t *testing.T) {
 		defer server.Close()
 
 		client := newTestPartnerClient(t, server.URL)
-		result, err := client.UpdatePartnerApiKey(context.Background(), "pkey-123", &UpdatePartnerApiKeyRequest{
+		result, err := client.UpdatePartnerAPIKey(context.Background(), "pkey-123", &UpdatePartnerAPIKeyRequest{
 			Name:        "Updated Key",
 			Description: "Updated",
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "pkey-123", result.ApiKey.ID)
+		assert.Equal(t, "pkey-123", result.APIKey.ID)
 	})
 }
 
-func TestRevokePartnerApiKey(t *testing.T) {
+func TestRevokePartnerAPIKey(t *testing.T) {
 	t.Run("revokes partner API key", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "DELETE", r.Method)
@@ -641,7 +641,7 @@ func TestRevokePartnerApiKey(t *testing.T) {
 		defer server.Close()
 
 		client := newTestPartnerClient(t, server.URL)
-		result, err := client.RevokePartnerApiKey(context.Background(), "pkey-123")
+		result, err := client.RevokePartnerAPIKey(context.Background(), "pkey-123")
 
 		require.NoError(t, err)
 		assert.True(t, result.Success)

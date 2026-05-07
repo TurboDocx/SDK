@@ -20,7 +20,7 @@ import os
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
-from ..http import HttpClient
+from ..http import HttpClient, AuthenticationError
 
 
 SIGNATURE_WEBHOOK_NAME = "signature"
@@ -63,12 +63,19 @@ class TurboWebhooks:
             ...     org_id=os.environ["TURBODOCX_ORG_ID"],
             ... )
         """
-        cls._client = HttpClient(
+        client = HttpClient(
             api_key=api_key,
             org_id=org_id,
             base_url=base_url,
             skip_sender_validation=True,
         )
+        # Webhook routes are org-scoped and admin-gated — org_id is required
+        # (HttpClient leaves it optional for TurboSign).
+        if client.org_id is None:
+            raise AuthenticationError(
+                "Organization ID (org_id) is required for authentication"
+            )
+        cls._client = client
 
     @classmethod
     def _get_client(cls) -> HttpClient:

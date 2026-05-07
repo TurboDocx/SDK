@@ -21,6 +21,7 @@ module TurboDocxSdk
       # @param access_token [String, nil]
       # @param org_id [String, nil]
       # @param base_url [String, nil]
+      # @raise [AuthenticationError] if no API key or access token is provided
       def configure(api_key: nil, access_token: nil, org_id: nil, base_url: nil)
         @client = HttpClient.new(
           api_key: api_key,
@@ -39,6 +40,8 @@ module TurboDocxSdk
       #
       # @param options [Hash, nil] :limit, :offset, :query, :statuses, :companyId, :contactId, :currency
       # @return [Hash] { "results" => [...], "totalRecords" => N, "stats" => {...} }
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_quotes(options = nil)
         client = get_client
         client.get("/v1/quotes", to_query_params(options))
@@ -49,6 +52,9 @@ module TurboDocxSdk
       # @param request [Hash] :name (required), :companyId (required), :contactId (required),
       #   :currency, :termDays, :renewalPeriod, :validUntil, :taxRate, :priceBookId
       # @return [Hash] the created quote
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def create_quote(request)
         client = get_client
         unwrap(client.post("/v1/quotes", request))
@@ -58,6 +64,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] the quote, with "statusInfo" merged in if present
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def get_quote(id)
         client = get_client
         response = client.get("/v1/quotes/#{id}")
@@ -71,6 +80,10 @@ module TurboDocxSdk
       # @param id [String]
       # @param request [Hash] fields to update
       # @return [Hash] the updated quote
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_quote(id, request)
         client = get_client
         unwrap(client.patch("/v1/quotes/#{id}", request))
@@ -80,6 +93,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] { "message" => "..." }
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def delete_quote(id)
         client = get_client
         client.delete("/v1/quotes/#{id}")
@@ -89,6 +105,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] the duplicated quote
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def duplicate_quote(id)
         client = get_client
         unwrap(client.post("/v1/quotes/#{id}/duplicate"))
@@ -99,6 +118,10 @@ module TurboDocxSdk
       # @param quote_id [String]
       # @param price_book_id [String]
       # @return [Hash] { "quote" => {...}, "message" => "...", "updatedCount" => N, "skippedCount" => N }
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def apply_price_book(quote_id, price_book_id)
         client = get_client
         response = client.post("/v1/quotes/#{quote_id}/apply-pricebook", { "priceBookId" => price_book_id })
@@ -114,6 +137,9 @@ module TurboDocxSdk
       #
       # @param quote_id [String]
       # @return [Hash] the updated quote
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def remove_price_book(quote_id)
         client = get_client
         unwrap(client.post("/v1/quotes/#{quote_id}/remove-pricebook"))
@@ -123,6 +149,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [String] raw PDF bytes
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def download_quote_pdf(id)
         client = get_client
         client.get_raw("/v1/quotes/#{id}/pdf")
@@ -137,6 +166,10 @@ module TurboDocxSdk
       # @param id [String]
       # @param request [Hash, nil] :ccEmails, :validUntil
       # @return [Hash] { "quote" => {...}, "message" => "..." }
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def send_quote(id, request = nil)
         client = get_client
         response = client.post("/v1/quotes/#{id}/send", request)
@@ -151,6 +184,10 @@ module TurboDocxSdk
       # @param id [String]
       # @param request [Hash] :deliverableId, :mergePosition, :ccEmails
       # @return [Hash] { "quote" => {...}, "message" => "...", "documentId" => "..." }
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def send_quote_with_deliverable(id, request)
         client = get_client
         response = client.post("/v1/quotes/#{id}/send-with-deliverable", request)
@@ -166,6 +203,10 @@ module TurboDocxSdk
       # @param id [String]
       # @param request [Hash] :reason
       # @return [Hash] the declined quote
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def decline_quote(id, request)
         client = get_client
         unwrap(client.post("/v1/quotes/#{id}/decline", request))
@@ -176,6 +217,10 @@ module TurboDocxSdk
       # @param id [String]
       # @param request [Hash] :reason
       # @return [Hash] the voided quote
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def void_quote(id, request)
         client = get_client
         unwrap(client.post("/v1/quotes/#{id}/void", request))
@@ -186,6 +231,10 @@ module TurboDocxSdk
       # @param id [String]
       # @param request [Hash] :action, :reason, :newValidUntil
       # @return [Hash] the processed quote
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def handle_expired_quote(id, request)
         client = get_client
         unwrap(client.post("/v1/quotes/#{id}/handle-expired-sent", request))
@@ -200,6 +249,9 @@ module TurboDocxSdk
       # @param quote_id [String]
       # @param options [Hash, nil] :limit, :offset, :lineItemType, :billingFrequency, :parentLineItemId
       # @return [Hash] { "results" => [...], "totalRecords" => N }
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_line_items(quote_id, options = nil)
         client = get_client
         client.get("/v1/quotes/#{quote_id}/items", to_query_params(options))
@@ -210,6 +262,10 @@ module TurboDocxSdk
       # @param quote_id [String]
       # @param items [Hash, Array<Hash>] single item or array of items
       # @return [Array<Hash>] the created line items
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def add_line_items(quote_id, items)
         client = get_client
         payload = items.is_a?(Array) ? items : [items]
@@ -222,6 +278,10 @@ module TurboDocxSdk
       # @param quote_id [String]
       # @param items [Hash, Array<Hash>] single item or array of items
       # @return [Array<Hash>] the created line items
+      # @raise [NotFoundError] if the quote does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def add_bundle_line_items(quote_id, items)
         client = get_client
         payload = items.is_a?(Array) ? items : [items]
@@ -235,6 +295,10 @@ module TurboDocxSdk
       # @param item_id [String]
       # @param request [Hash] fields to update
       # @return [Hash] the updated line item
+      # @raise [NotFoundError] if the quote or line item does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_line_item(quote_id, item_id, request)
         client = get_client
         unwrap(client.patch("/v1/quotes/#{quote_id}/items/#{item_id}", request))
@@ -245,6 +309,9 @@ module TurboDocxSdk
       # @param quote_id [String]
       # @param item_id [String]
       # @return [Hash] { "message" => "..." }
+      # @raise [NotFoundError] if the quote or line item does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def remove_line_item(quote_id, item_id)
         client = get_client
         client.delete("/v1/quotes/#{quote_id}/items/#{item_id}")
@@ -258,6 +325,8 @@ module TurboDocxSdk
       #
       # @param options [Hash, nil] :limit, :offset, :query, :categoryIds, :billingFrequency, :currency, :showInCatalog
       # @return [Hash] paginated response with stats
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_products(options = nil)
         client = get_client
         client.get("/v1/products", to_query_params(options))
@@ -267,6 +336,9 @@ module TurboDocxSdk
       #
       # @param request [Hash] product fields; may include :images (array of file paths or IO)
       # @return [Hash] the created product
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def create_product(request)
         client = get_client
         data = request.dup
@@ -283,6 +355,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] the product
+      # @raise [NotFoundError] if the product does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def get_product(id)
         client = get_client
         unwrap(client.get("/v1/products/#{id}"))
@@ -293,6 +368,10 @@ module TurboDocxSdk
       # @param id [String]
       # @param request [Hash] fields to update; may include :images
       # @return [Hash] the updated product
+      # @raise [NotFoundError] if the product does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_product(id, request)
         client = get_client
         data = request.dup
@@ -309,6 +388,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] { "message" => "..." }
+      # @raise [NotFoundError] if the product does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def delete_product(id)
         client = get_client
         client.delete("/v1/products/#{id}")
@@ -318,6 +400,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] the duplicated product
+      # @raise [NotFoundError] if the product does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def duplicate_product(id)
         client = get_client
         unwrap(client.post("/v1/products/#{id}/duplicate"))
@@ -327,6 +412,8 @@ module TurboDocxSdk
       #
       # @param product_ids [Array<String>]
       # @return [Hash] product_id => image_hash or nil
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def get_product_primary_images(product_ids)
         client = get_client
         response = client.post("/v1/products/primary-images", { "productIds" => product_ids })
@@ -341,6 +428,8 @@ module TurboDocxSdk
       #
       # @param options [Hash, nil]
       # @return [Hash] paginated response with stats
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_price_books(options = nil)
         client = get_client
         client.get("/v1/pricebooks", to_query_params(options))
@@ -350,6 +439,9 @@ module TurboDocxSdk
       #
       # @param request [Hash]
       # @return [Hash] the created price book
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def create_price_book(request)
         client = get_client
         unwrap(client.post("/v1/pricebooks", request))
@@ -359,6 +451,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] the price book
+      # @raise [NotFoundError] if the price book does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def get_price_book(id)
         client = get_client
         unwrap(client.get("/v1/pricebooks/#{id}"))
@@ -369,6 +464,10 @@ module TurboDocxSdk
       # @param id [String]
       # @param request [Hash]
       # @return [Hash] the updated price book
+      # @raise [NotFoundError] if the price book does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_price_book(id, request)
         client = get_client
         unwrap(client.patch("/v1/pricebooks/#{id}", request))
@@ -378,6 +477,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] { "message" => "..." }
+      # @raise [NotFoundError] if the price book does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def delete_price_book(id)
         client = get_client
         client.delete("/v1/pricebooks/#{id}")
@@ -387,6 +489,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] the duplicated price book
+      # @raise [NotFoundError] if the price book does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def duplicate_price_book(id)
         client = get_client
         unwrap(client.post("/v1/pricebooks/#{id}/duplicate"))
@@ -397,6 +502,9 @@ module TurboDocxSdk
       # @param id [String]
       # @param options [Hash, nil]
       # @return [Hash] paginated response
+      # @raise [NotFoundError] if the price book does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_price_book_products(id, options = nil)
         client = get_client
         client.get("/v1/pricebooks/#{id}/products", to_query_params(options))
@@ -410,6 +518,8 @@ module TurboDocxSdk
       #
       # @param options [Hash, nil]
       # @return [Hash] paginated response with stats
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_bundles(options = nil)
         client = get_client
         client.get("/v1/bundles", to_query_params(options))
@@ -419,6 +529,9 @@ module TurboDocxSdk
       #
       # @param request [Hash]
       # @return [Hash] the created bundle
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def create_bundle(request)
         client = get_client
         unwrap(client.post("/v1/bundles", request))
@@ -428,6 +541,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] the bundle
+      # @raise [NotFoundError] if the bundle does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def get_bundle(id)
         client = get_client
         unwrap(client.get("/v1/bundles/#{id}"))
@@ -438,6 +554,10 @@ module TurboDocxSdk
       # @param id [String]
       # @param request [Hash]
       # @return [Hash] the updated bundle
+      # @raise [NotFoundError] if the bundle does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_bundle(id, request)
         client = get_client
         unwrap(client.patch("/v1/bundles/#{id}", request))
@@ -447,6 +567,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] { "message" => "..." }
+      # @raise [NotFoundError] if the bundle does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def delete_bundle(id)
         client = get_client
         client.delete("/v1/bundles/#{id}")
@@ -456,6 +579,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] the duplicated bundle
+      # @raise [NotFoundError] if the bundle does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def duplicate_bundle(id)
         client = get_client
         unwrap(client.post("/v1/bundles/#{id}/duplicate"))
@@ -469,6 +595,8 @@ module TurboDocxSdk
       #
       # @param options [Hash, nil]
       # @return [Hash] paginated response
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_companies(options = nil)
         client = get_client
         client.get("/v1/companies", to_query_params(options))
@@ -478,6 +606,9 @@ module TurboDocxSdk
       #
       # @param request [Hash] :name, :contacts (array), :phone, :city, :state, :country, :industryId
       # @return [Hash] the created company
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def create_company(request)
         client = get_client
         unwrap(client.post("/v1/companies", request))
@@ -487,6 +618,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] the company
+      # @raise [NotFoundError] if the company does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def get_company(id)
         client = get_client
         unwrap(client.get("/v1/companies/#{id}"))
@@ -497,6 +631,10 @@ module TurboDocxSdk
       # @param id [String]
       # @param request [Hash]
       # @return [Hash] the updated company
+      # @raise [NotFoundError] if the company does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_company(id, request)
         client = get_client
         unwrap(client.patch("/v1/companies/#{id}", request))
@@ -506,6 +644,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] { "message" => "..." }
+      # @raise [NotFoundError] if the company does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def delete_company(id)
         client = get_client
         client.delete("/v1/companies/#{id}")
@@ -516,6 +657,9 @@ module TurboDocxSdk
       # @param company_id [String]
       # @param options [Hash, nil]
       # @return [Hash] paginated response
+      # @raise [NotFoundError] if the company does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_company_contacts(company_id, options = nil)
         client = get_client
         client.get("/v1/companies/#{company_id}/contacts", to_query_params(options))
@@ -529,6 +673,8 @@ module TurboDocxSdk
       #
       # @param options [Hash, nil] :companyId, :limit, :offset, :query
       # @return [Hash] paginated response
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_contacts(options = nil)
         client = get_client
         client.get("/v1/contacts", to_query_params(options))
@@ -538,6 +684,9 @@ module TurboDocxSdk
       #
       # @param request [Hash] :name, :companyId, :email, :phone, :title
       # @return [Hash] the created contact
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def create_contact(request)
         client = get_client
         unwrap(client.post("/v1/contacts", request))
@@ -548,6 +697,10 @@ module TurboDocxSdk
       # @param id [String]
       # @param request [Hash]
       # @return [Hash] the updated contact
+      # @raise [NotFoundError] if the contact does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_contact(id, request)
         client = get_client
         unwrap(client.patch("/v1/contacts/#{id}", request))
@@ -557,6 +710,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] { "message" => "..." }
+      # @raise [NotFoundError] if the contact does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def delete_contact(id)
         client = get_client
         client.delete("/v1/contacts/#{id}")
@@ -570,6 +726,8 @@ module TurboDocxSdk
       #
       # @param options [Hash, nil] :limit, :offset, :query
       # @return [Hash] { "results" => [...], "totalRecords" => N }
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_templates(options = nil)
         client = get_client
         client.get("/v1/quote-templates", to_query_params(options))
@@ -578,6 +736,8 @@ module TurboDocxSdk
       # Get the org's current quote template.
       #
       # @return [Hash] the template
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def get_template
         client = get_client
         unwrap(client.get("/v1/quote-template"))
@@ -587,6 +747,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] the template
+      # @raise [NotFoundError] if the template does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def get_template_by_id(id)
         client = get_client
         unwrap(client.get("/v1/quote-templates/#{id}"))
@@ -596,6 +759,9 @@ module TurboDocxSdk
       #
       # @param request [Hash]
       # @return [Hash] the created template
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def create_template(request)
         client = get_client
         unwrap(client.post("/v1/quote-templates", request))
@@ -606,6 +772,10 @@ module TurboDocxSdk
       # @param id [String]
       # @param request [Hash]
       # @return [Hash] the updated template
+      # @raise [NotFoundError] if the template does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_template(id, request)
         client = get_client
         unwrap(client.patch("/v1/quote-templates/#{id}", request))
@@ -615,6 +785,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] { "message" => "..." }
+      # @raise [NotFoundError] if the template does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def delete_template(id)
         client = get_client
         client.delete("/v1/quote-templates/#{id}")
@@ -628,6 +801,8 @@ module TurboDocxSdk
       #
       # @param options [Hash, nil] :categoryType, :includeUsage, :limit, :offset, :query
       # @return [Hash] paginated response
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def list_types(options = nil)
         client = get_client
         client.get("/v1/types", to_query_params(options))
@@ -637,6 +812,9 @@ module TurboDocxSdk
       #
       # @param request [Hash] :name, :categoryType
       # @return [Hash] the created type
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def create_type(request)
         client = get_client
         unwrap(client.post("/v1/types", request))
@@ -647,6 +825,10 @@ module TurboDocxSdk
       # @param id [String]
       # @param request [Hash]
       # @return [Hash] the updated type
+      # @raise [NotFoundError] if the type does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def update_type(id, request)
         client = get_client
         unwrap(client.patch("/v1/types/#{id}", request))
@@ -656,6 +838,9 @@ module TurboDocxSdk
       #
       # @param id [String]
       # @return [Hash] { "message" => "..." }
+      # @raise [NotFoundError] if the type does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def delete_type(id)
         client = get_client
         client.delete("/v1/types/#{id}")
@@ -669,6 +854,9 @@ module TurboDocxSdk
       #
       # @param request [Hash] quote fields plus :items, :bundleItems, :send
       # @return [Hash] { "quote" => {...} }
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
       def create_and_send(request)
         client = get_client
 

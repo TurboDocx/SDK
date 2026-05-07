@@ -219,8 +219,14 @@ type AuditTrailResponse struct {
 // CreateSignatureReviewLink prepares a document for review without sending emails.
 // Use this to preview field placement before sending.
 func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *CreateSignatureReviewLinkRequest) (*CreateSignatureReviewLinkResponse, error) {
-	recipientsJSON, _ := json.Marshal(req.Recipients)
-	fieldsJSON, _ := json.Marshal(req.Fields)
+	recipientsJSON, err := json.Marshal(req.Recipients)
+	if err != nil {
+		return nil, fmt.Errorf("marshal recipients: %w", err)
+	}
+	fieldsJSON, err := json.Marshal(req.Fields)
+	if err != nil {
+		return nil, fmt.Errorf("marshal fields: %w", err)
+	}
 
 	// Get sender config from client
 	senderEmail, senderName := c.http.GetSenderConfig()
@@ -250,7 +256,10 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 	}
 
 	if len(req.CCEmails) > 0 {
-		ccEmailsJSON, _ := json.Marshal(req.CCEmails)
+		ccEmailsJSON, err := json.Marshal(req.CCEmails)
+		if err != nil {
+			return nil, fmt.Errorf("marshal ccEmails: %w", err)
+		}
 		formData["ccEmails"] = string(ccEmailsJSON)
 	}
 
@@ -284,8 +293,14 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 
 // SendSignature prepares a document for signing and sends emails in a single call.
 func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureRequest) (*SendSignatureResponse, error) {
-	recipientsJSON, _ := json.Marshal(req.Recipients)
-	fieldsJSON, _ := json.Marshal(req.Fields)
+	recipientsJSON, err := json.Marshal(req.Recipients)
+	if err != nil {
+		return nil, fmt.Errorf("marshal recipients: %w", err)
+	}
+	fieldsJSON, err := json.Marshal(req.Fields)
+	if err != nil {
+		return nil, fmt.Errorf("marshal fields: %w", err)
+	}
 
 	// Get sender config from client
 	senderEmail, senderName := c.http.GetSenderConfig()
@@ -315,7 +330,10 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 	}
 
 	if len(req.CCEmails) > 0 {
-		ccEmailsJSON, _ := json.Marshal(req.CCEmails)
+		ccEmailsJSON, err := json.Marshal(req.CCEmails)
+		if err != nil {
+			return nil, fmt.Errorf("marshal ccEmails: %w", err)
+		}
 		formData["ccEmails"] = string(ccEmailsJSON)
 	}
 
