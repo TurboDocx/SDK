@@ -51,6 +51,27 @@ Comprehensive SDKs, detailed documentation, and responsive support. Ship faster 
 
 ---
 
+## Install via AI Agent Skill
+
+![skills.sh](https://skills.sh/b/TurboDocx/quickstart)
+
+Install the TurboDocx SDKs in a single prompt using the [TurboDocx Quickstart Agent Skill](https://github.com/TurboDocx/quickstart) — works with Claude Code, GitHub Copilot, Cursor, OpenCode, and other AI coding agents.
+
+```bash
+npx skills add TurboDocx/quickstart
+```
+
+Two skills are included:
+
+| Skill | What it does |
+|-------|-------------|
+| `turbodocx` | Scaffolds document generation in your project — picks the right SDK for your language, installs it, and writes a working code example |
+| `turbodocx-html-to-docx` | Installs and configures `@turbodocx/html-to-docx` (open-source HTML → DOCX converter) |
+
+> **Prefer manual install?** Jump straight to [Available SDKs](#available-sdks) below.
+
+---
+
 ## Available SDKs
 
 | Language | Package | Install | Registry |
