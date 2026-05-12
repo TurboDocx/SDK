@@ -53,8 +53,6 @@ Comprehensive SDKs, detailed documentation, and responsive support. Ship faster 
 
 ## Install via AI Agent Skill
 
-![skills.sh](https://skills.sh/b/TurboDocx/quickstart)
-
 Install the TurboDocx SDKs in a single prompt using the [TurboDocx Quickstart Agent Skill](https://github.com/TurboDocx/quickstart) — works with Claude Code, GitHub Copilot, Cursor, OpenCode, and other AI coding agents.
 
 ```bash
