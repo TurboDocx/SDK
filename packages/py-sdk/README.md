@@ -78,6 +78,18 @@ conda install -c conda-forge turbodocx-sdk
 
 ---
 
+## Install via AI Agent Skill
+
+Let an AI coding agent set up this SDK for you with the [TurboDocx Quickstart Agent Skill](https://github.com/TurboDocx/quickstart):
+
+```bash
+npx skills add TurboDocx/quickstart
+```
+
+Works with Claude Code, GitHub Copilot, Cursor, OpenCode, and other AI coding agents. The skill detects your language, installs the package, and generates working integration code.
+
+---
+
 ## Quick Start
 
 ### Async (Recommended)
