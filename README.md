@@ -63,7 +63,7 @@ Two skills are included:
 
 | Skill | What it does |
 |-------|-------------|
-| `turbodocx` | Scaffolds document generation in your project — picks the right SDK for your language, installs it, and writes a working code example |
+| `turbodocx-sdk` | Scaffolds document generation in your project — picks the right SDK for your language, installs it, and writes a working code example |
 | `turbodocx-html-to-docx` | Installs and configures `@turbodocx/html-to-docx` (open-source HTML → DOCX converter) |
 
 > **Prefer manual install?** Jump straight to [Available SDKs](#available-sdks) below.
