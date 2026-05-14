@@ -11,7 +11,9 @@ from typing import Optional
 
 from .modules.sign import TurboSign
 from .modules.partner import TurboPartner
+from .modules.webhooks import TurboWebhooks
 from .modules.deliverable import Deliverable
+from .utils.verify_webhook_signature import verify_webhook_signature
 from .modules.partner import (
     SCOPE_ORG_CREATE,
     SCOPE_ORG_READ,
@@ -41,6 +43,7 @@ from .http import (
     PartnerHttpClient,
     TurboDocxError,
     AuthenticationError,
+    AuthorizationError,
     ValidationError,
     NotFoundError,
     RateLimitError,
@@ -82,11 +85,14 @@ __all__ = [
     "TurboDocxClient",
     "TurboSign",
     "TurboPartner",
+    "TurboWebhooks",
     "Deliverable",
+    "verify_webhook_signature",
     "HttpClient",
     "PartnerHttpClient",
     "TurboDocxError",
     "AuthenticationError",
+    "AuthorizationError",
     "ValidationError",
     "NotFoundError",
     "RateLimitError",
