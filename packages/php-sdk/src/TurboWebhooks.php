@@ -145,7 +145,7 @@ final class TurboWebhooks
                 'events' => $events,
                 'isActive' => $isActive,
             ],
-            fn ($v) => $v !== null,
+            fn($v) => $v !== null,
         );
         $envelope = self::getClient()->patch('/api/webhooks/' . self::SIGNATURE_NAME, $body);
         return $envelope['data'];
@@ -221,7 +221,7 @@ final class TurboWebhooks
                 'isDelivered' => $isDelivered,
                 'httpStatus' => $httpStatus,
             ],
-            fn ($v) => $v !== null,
+            fn($v) => $v !== null,
         );
         if (isset($params['isDelivered'])) {
             $params['isDelivered'] = $params['isDelivered'] ? 'true' : 'false';
