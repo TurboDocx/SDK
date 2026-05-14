@@ -24,6 +24,13 @@ export class AuthenticationError extends TurboDocxError {
   }
 }
 
+export class AuthorizationError extends TurboDocxError {
+  constructor(message: string = 'Forbidden: API key lacks required permissions') {
+    super(message, 403, 'AUTHORIZATION_ERROR');
+    this.name = 'AuthorizationError';
+  }
+}
+
 export class ValidationError extends TurboDocxError {
   constructor(message: string) {
     super(message, 400, 'VALIDATION_ERROR');

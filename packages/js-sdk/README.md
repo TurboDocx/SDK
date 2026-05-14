@@ -473,6 +473,116 @@ for (const entry of logs.data.results) {
 
 ---
 
+### TurboWebhooks (Event Subscriptions)
+
+The `TurboWebhooks` module manages organization-scoped webhook subscriptions for TurboDocx events (e.g. `signature.document.completed`). It also exposes a `verifyWebhookSignature` helper for incoming webhook receivers.
+
+> **Requires administrator role.** All webhook routes require an admin TDX- API key.
+
+#### Configuration
+
+```typescript
+import { TurboWebhooks } from '@turbodocx/sdk';
+
+TurboWebhooks.configure({
+  apiKey: process.env.TURBODOCX_API_KEY,
+  orgId: process.env.TURBODOCX_ORG_ID,
+  // baseUrl: 'http://localhost:3000',  // optional, defaults to https://api.turbodocx.com
+});
+```
+
+`TurboWebhooks` does not require `senderEmail` (unlike `TurboSign`) — webhook routes don't send signature emails.
+
+#### Create a webhook (save the secret immediately)
+
+```typescript
+const created = await TurboWebhooks.createWebhook({
+  name: 'order-fulfillment',
+  urls: ['https://your-server.example.com/webhooks/turbodocx'], // HTTPS only
+  events: ['signature.document.completed', 'signature.document.voided'],
+});
+
+// `secret` is shown ONCE here — store it securely. It cannot be retrieved later.
+console.log(`Save this secret: ${created.secret}`);
+```
+
+#### List, get, update, delete
+
+```typescript
+const all = await TurboWebhooks.listWebhooks({ limit: 25 });
+
+const one = await TurboWebhooks.getWebhook('order-fulfillment');
+// `one.deliveryStats` and `one.availableEvents` are included
+
+await TurboWebhooks.updateWebhook('order-fulfillment', { isActive: false });
+
+await TurboWebhooks.deleteWebhook('order-fulfillment');
+```
+
+#### Test deliveries and replay
+
+```typescript
+const tested = await TurboWebhooks.testWebhook('order-fulfillment', {
+  eventType: 'signature.document.completed',
+  payload: { documentId: 'doc-xyz', status: 'completed' },
+});
+console.log(tested.summary); // { total, successful, failed }
+
+const deliveries = await TurboWebhooks.listWebhookDeliveries('order-fulfillment', { limit: 10 });
+
+// Retry a specific past delivery
+const replayed = await TurboWebhooks.replayWebhookDelivery('order-fulfillment', deliveries.results[0].id);
+```
+
+#### Rotate the secret
+
+```typescript
+const rotated = await TurboWebhooks.regenerateWebhookSecret('order-fulfillment');
+// `rotated.secret` is the new secret. Old signatures will fail from this moment on.
+```
+
+#### Aggregate stats
+
+```typescript
+const stats = await TurboWebhooks.getWebhookStats('order-fulfillment', { days: 30 });
+console.log(stats.summary.successRate, stats.eventBreakdown);
+```
+
+#### Verify incoming webhook signatures
+
+Webhook deliveries from TurboDocx are signed with HMAC-SHA256 over `${timestamp}.${rawBody}` using your webhook secret. Use the `verifyWebhookSignature` helper to verify them in your receiver:
+
+```typescript
+import express from 'express';
+import { verifyWebhookSignature } from '@turbodocx/sdk';
+
+const app = express();
+
+// CRITICAL: use raw body parser on the webhook route, NOT express.json().
+// The signature is over the exact bytes — re-stringifying breaks verification.
+app.post(
+  '/webhooks/turbodocx',
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    const signature = req.header('X-TurboDocx-Signature') ?? '';
+    const timestamp = req.header('X-TurboDocx-Timestamp') ?? '';
+    const secret = process.env.TURBODOCX_WEBHOOK_SECRET!;
+
+    if (!verifyWebhookSignature(req.body, signature, timestamp, secret)) {
+      return res.status(401).send('invalid signature');
+    }
+
+    const event = JSON.parse(req.body.toString('utf8'));
+    // ... process event ...
+    res.status(200).send('ok');
+  },
+);
+```
+
+By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Override with `{ toleranceSeconds: N }` (0 disables the check — not recommended in production).
+
+---
+
 ## Field Types
 
 | Type | Description |

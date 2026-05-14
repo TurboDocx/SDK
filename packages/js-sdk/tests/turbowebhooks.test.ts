@@ -1,0 +1,591 @@
+/**
+ * TurboWebhooks Module Tests
+ *
+ * Mocks HttpClient directly (matches the pattern in turbosign.test.ts and
+ * turbopartner.test.ts). Order-sensitive pattern: each test stubs the
+ * `MockedHttpClient.prototype.<verb>` BEFORE calling `configure()`, because
+ * auto-mocked instance methods are bound at construction time and ignore
+ * later prototype reassignment.
+ */
+
+import { TurboWebhooks } from "../src/modules/webhooks";
+import { HttpClient } from "../src/http";
+import { verifyWebhookSignature } from "../src/utils/verifyWebhookSignature";
+import {
+  AuthenticationError,
+  AuthorizationError,
+  NotFoundError,
+  ValidationError,
+} from "../src/utils/errors";
+import { createHmac } from "crypto";
+
+// Mock the HttpClient
+jest.mock("../src/http");
+
+const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
+
+const API_KEY = "TDX-test-key-abc123";
+const ORG_ID = "org-uuid-test";
+
+/** Configure helper — call AFTER prototype stubs are set. */
+function configure() {
+  TurboWebhooks.configure({ apiKey: API_KEY, orgId: ORG_ID });
+}
+
+describe("TurboWebhooks Module", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (TurboWebhooks as any).client = undefined;
+    delete process.env.TURBODOCX_API_KEY;
+    delete process.env.TURBODOCX_ORG_ID;
+  });
+
+  // ============================================
+  // CONFIGURATION
+  // ============================================
+
+  describe("configure", () => {
+    it("should configure HttpClient with skipSenderValidation: true", () => {
+      TurboWebhooks.configure({ apiKey: API_KEY, orgId: ORG_ID });
+
+      expect(MockedHttpClient).toHaveBeenCalledWith({
+        apiKey: API_KEY,
+        accessToken: undefined,
+        orgId: ORG_ID,
+        baseUrl: undefined,
+        skipSenderValidation: true,
+      });
+    });
+
+    it("should pass through baseUrl when provided", () => {
+      TurboWebhooks.configure({
+        apiKey: API_KEY,
+        orgId: ORG_ID,
+        baseUrl: "http://localhost:3000",
+      });
+
+      expect(MockedHttpClient).toHaveBeenCalledWith({
+        apiKey: API_KEY,
+        accessToken: undefined,
+        orgId: ORG_ID,
+        baseUrl: "http://localhost:3000",
+        skipSenderValidation: true,
+      });
+    });
+
+    it("should not let a caller override skipSenderValidation", () => {
+      TurboWebhooks.configure({
+        apiKey: API_KEY,
+        orgId: ORG_ID,
+        skipSenderValidation: false,
+      } as any);
+
+      const lastCall = MockedHttpClient.mock.calls[MockedHttpClient.mock.calls.length - 1];
+      expect(lastCall[0]).toMatchObject({ skipSenderValidation: true });
+    });
+  });
+
+  describe("getClient lazy fallback", () => {
+    it("should auto-configure from env vars when not configured", async () => {
+      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({
+        results: [],
+        totalRecords: 0,
+        limit: 25,
+        offset: 0,
+      });
+      process.env.TURBODOCX_API_KEY = "TDX-env-key";
+      process.env.TURBODOCX_ORG_ID = "env-org-id";
+
+      await TurboWebhooks.listWebhooks();
+
+      expect(MockedHttpClient).toHaveBeenCalledWith({
+        apiKey: "TDX-env-key",
+        accessToken: undefined,
+        orgId: "env-org-id",
+        baseUrl: undefined,
+        skipSenderValidation: true,
+      });
+    });
+
+    it("should throw descriptive error when env vars are missing", async () => {
+      await expect(TurboWebhooks.listWebhooks()).rejects.toThrow(
+        /TurboWebhooks must be configured/,
+      );
+    });
+  });
+
+  // ============================================
+  // CRUD
+  // ============================================
+
+  describe("createWebhook", () => {
+    it("should POST /api/webhooks and return id + secret", async () => {
+      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+        data: { id: "wh-1", secret: "whsec_abc123" },
+        message: "Webhook created successfully. Save the secret - it won't be shown again.",
+      });
+      configure();
+
+      const result = await TurboWebhooks.createWebhook({
+        name: "my-hook",
+        urls: ["https://example.com/sink"],
+        events: ["signature.document.completed"],
+      });
+
+      expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith("/api/webhooks", {
+        name: "my-hook",
+        urls: ["https://example.com/sink"],
+        events: ["signature.document.completed"],
+      });
+      expect(result).toEqual({ id: "wh-1", secret: "whsec_abc123" });
+    });
+  });
+
+  describe("listWebhooks", () => {
+    it("should GET /api/webhooks with no filters", async () => {
+      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({
+        results: [
+          {
+            id: "wh-1",
+            name: "my-hook",
+            urls: ["https://example.com/sink"],
+            events: ["signature.document.completed"],
+            isActive: true,
+            createdOn: "2026-05-01T00:00:00Z",
+            updatedOn: "2026-05-01T00:00:00Z",
+            totalDeliveries: 5,
+            successfulDeliveries: 4,
+            lastDelivery: "2026-05-13T00:00:00Z",
+          },
+        ],
+        totalRecords: 1,
+        limit: 25,
+        offset: 0,
+      });
+      configure();
+
+      const result = await TurboWebhooks.listWebhooks();
+
+      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith("/api/webhooks", {});
+      expect(result.totalRecords).toBe(1);
+      expect(result.results[0].totalDeliveries).toBe(5);
+    });
+
+    it("should pass query filters through", async () => {
+      MockedHttpClient.prototype.get = jest
+        .fn()
+        .mockResolvedValue({ results: [], totalRecords: 0, limit: 10, offset: 0 });
+      configure();
+
+      await TurboWebhooks.listWebhooks({
+        limit: 10,
+        offset: 20,
+        name: "prefix-",
+        isActive: false,
+      });
+
+      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith("/api/webhooks", {
+        limit: 10,
+        offset: 20,
+        name: "prefix-",
+        isActive: false,
+      });
+    });
+  });
+
+  describe("getWebhook", () => {
+    it("should GET /api/webhooks/:name and return WebhookWithStats", async () => {
+      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({
+        id: "wh-1",
+        name: "my-hook",
+        urls: ["https://example.com/sink"],
+        events: ["signature.document.completed"],
+        isActive: true,
+        createdOn: "2026-05-01T00:00:00Z",
+        updatedOn: "2026-05-01T00:00:00Z",
+        deliveryStats: {
+          totalDeliveries: 10,
+          successfulDeliveries: 8,
+          failedDeliveries: 2,
+          pendingRetries: 0,
+        },
+        availableEvents: ["signature.document.completed", "signature.document.voided"],
+      });
+      configure();
+
+      const result = await TurboWebhooks.getWebhook("my-hook");
+
+      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith("/api/webhooks/my-hook");
+      expect(result.deliveryStats.totalDeliveries).toBe(10);
+      expect(result.availableEvents.length).toBe(2);
+    });
+
+    it("should URL-encode names with special characters", async () => {
+      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({});
+      configure();
+
+      await TurboWebhooks.getWebhook("my hook/with spaces");
+
+      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
+        "/api/webhooks/my%20hook%2Fwith%20spaces",
+      );
+    });
+  });
+
+  describe("updateWebhook", () => {
+    it("should PATCH /api/webhooks/:name with the partial body and unwrap envelope", async () => {
+      MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue({
+        data: {
+          id: "wh-1",
+          name: "my-hook",
+          urls: ["https://example.com/sink"],
+          events: ["signature.document.completed"],
+          isActive: false,
+        },
+        message: "Webhook updated successfully",
+      });
+      configure();
+
+      const result = await TurboWebhooks.updateWebhook("my-hook", { isActive: false });
+
+      expect(MockedHttpClient.prototype.patch).toHaveBeenCalledWith(
+        "/api/webhooks/my-hook",
+        { isActive: false },
+      );
+      expect(result.isActive).toBe(false);
+    });
+  });
+
+  describe("deleteWebhook", () => {
+    it("should DELETE /api/webhooks/:name", async () => {
+      MockedHttpClient.prototype.delete = jest
+        .fn()
+        .mockResolvedValue({ message: "Webhook deleted successfully" });
+      configure();
+
+      const result = await TurboWebhooks.deleteWebhook("my-hook");
+
+      expect(MockedHttpClient.prototype.delete).toHaveBeenCalledWith("/api/webhooks/my-hook");
+      expect(result.message).toMatch(/deleted/);
+    });
+  });
+
+  // ============================================
+  // TEST / NOTIFY
+  // ============================================
+
+  describe("testWebhook", () => {
+    it("should POST /api/webhooks/:name/test with eventType + payload and unwrap envelope", async () => {
+      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+        data: {
+          deliveries: [],
+          summary: { total: 1, successful: 1, failed: 0 },
+        },
+        message: "Test webhook sent successfully to all URLs",
+      });
+      configure();
+
+      const result = await TurboWebhooks.testWebhook("my-hook", {
+        eventType: "signature.document.completed",
+        payload: { documentId: "doc-1" },
+      });
+
+      expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
+        "/api/webhooks/my-hook/test",
+        {
+          eventType: "signature.document.completed",
+          payload: { documentId: "doc-1" },
+        },
+      );
+      expect(result.summary.successful).toBe(1);
+    });
+  });
+
+  describe("notifyWebhook", () => {
+    it("should POST /api/webhooks/:name/notify with eventType + payload and unwrap envelope", async () => {
+      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+        data: {
+          deliveries: [],
+          summary: { total: 1, successful: 1, failed: 0 },
+        },
+        message: "Manual notification sent successfully to all URLs",
+      });
+      configure();
+
+      await TurboWebhooks.notifyWebhook("my-hook", {
+        eventType: "signature.document.completed",
+        payload: { documentId: "doc-2" },
+      });
+
+      expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
+        "/api/webhooks/my-hook/notify",
+        {
+          eventType: "signature.document.completed",
+          payload: { documentId: "doc-2" },
+        },
+      );
+    });
+  });
+
+  // ============================================
+  // DELIVERIES + REPLAY
+  // ============================================
+
+  describe("listWebhookDeliveries", () => {
+    it("should GET /api/webhooks/:name/deliveries with filters", async () => {
+      MockedHttpClient.prototype.get = jest
+        .fn()
+        .mockResolvedValue({ results: [], totalRecords: 0, limit: 10, offset: 0 });
+      configure();
+
+      await TurboWebhooks.listWebhookDeliveries("my-hook", {
+        limit: 10,
+        isDelivered: false,
+      });
+
+      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
+        "/api/webhooks/my-hook/deliveries",
+        { limit: 10, isDelivered: false },
+      );
+    });
+  });
+
+  describe("replayWebhookDelivery", () => {
+    it("should POST /api/webhooks/:name/replay with deliveryId and unwrap envelope", async () => {
+      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+        data: {
+          id: "delivery-1",
+          httpStatus: 200,
+          message: "Delivery replayed",
+        },
+        message: "Delivery replayed",
+      });
+      configure();
+
+      const result = await TurboWebhooks.replayWebhookDelivery("my-hook", "delivery-1");
+
+      expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
+        "/api/webhooks/my-hook/replay",
+        { deliveryId: "delivery-1" },
+      );
+      expect(result.httpStatus).toBe(200);
+    });
+  });
+
+  // ============================================
+  // SECRET ROTATION + STATS
+  // ============================================
+
+  describe("regenerateWebhookSecret", () => {
+    it("should POST /api/webhooks/:name/regenerate and unwrap envelope", async () => {
+      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+        data: {
+          id: "wh-1",
+          secret: "whsec_newRotated",
+          regeneratedAt: "2026-05-13T12:00:00Z",
+          message: "Webhook secret regenerated successfully.",
+        },
+        message: "Webhook secret regenerated successfully. Save the new secret - it won't be shown again.",
+      });
+      configure();
+
+      const result = await TurboWebhooks.regenerateWebhookSecret("my-hook");
+
+      expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
+        "/api/webhooks/my-hook/regenerate",
+      );
+      expect(result.secret).toBe("whsec_newRotated");
+    });
+  });
+
+  describe("getWebhookStats", () => {
+    it("should GET /api/webhooks/:name/stats with days query", async () => {
+      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({
+        webhook: {
+          id: "wh-1",
+          name: "my-hook",
+          isActive: true,
+          events: ["signature.document.completed"],
+          urls: ["https://example.com/sink"],
+        },
+        period: { days: 7, from: "2026-05-06", to: "2026-05-13" },
+        summary: {
+          totalDeliveries: 100,
+          successfulDeliveries: 95,
+          failedDeliveries: 5,
+          pendingRetries: 0,
+          avgResponseTime: 234,
+          successRate: 95,
+          lastSuccessfulDelivery: "2026-05-13T11:00:00Z",
+          lastFailedDelivery: "2026-05-12T08:00:00Z",
+        },
+        eventBreakdown: [
+          {
+            eventType: "signature.document.completed",
+            total: 100,
+            successful: 95,
+            failed: 5,
+            successRate: 95,
+          },
+        ],
+      });
+      configure();
+
+      const result = await TurboWebhooks.getWebhookStats("my-hook", { days: 7 });
+
+      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
+        "/api/webhooks/my-hook/stats",
+        { days: 7 },
+      );
+      expect(result.summary.successRate).toBe(95);
+      expect(result.period.from).toBe("2026-05-06");
+    });
+  });
+
+  // ============================================
+  // ERROR PROPAGATION
+  // ============================================
+
+  describe("error propagation", () => {
+    it("should propagate AuthenticationError on 401", async () => {
+      MockedHttpClient.prototype.get = jest
+        .fn()
+        .mockRejectedValue(new AuthenticationError("Invalid API key"));
+      configure();
+
+      await expect(TurboWebhooks.listWebhooks()).rejects.toBeInstanceOf(AuthenticationError);
+    });
+
+    it("should propagate AuthorizationError on 403", async () => {
+      MockedHttpClient.prototype.get = jest
+        .fn()
+        .mockRejectedValue(new AuthorizationError("Forbidden"));
+      configure();
+
+      await expect(TurboWebhooks.listWebhooks()).rejects.toBeInstanceOf(AuthorizationError);
+    });
+
+    it("should propagate NotFoundError on 404", async () => {
+      MockedHttpClient.prototype.get = jest
+        .fn()
+        .mockRejectedValue(new NotFoundError("Webhook not found"));
+      configure();
+
+      await expect(TurboWebhooks.getWebhook("missing")).rejects.toBeInstanceOf(NotFoundError);
+    });
+
+    it("should propagate ValidationError on 400", async () => {
+      MockedHttpClient.prototype.post = jest
+        .fn()
+        .mockRejectedValue(new ValidationError("All webhook URLs must use HTTPS"));
+      configure();
+
+      await expect(
+        TurboWebhooks.createWebhook({
+          name: "bad-hook",
+          urls: ["http://insecure.example.com"],
+          events: ["signature.document.completed"],
+        }),
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+  });
+});
+
+// ============================================
+// HMAC HELPER (pure function, no HTTP)
+// ============================================
+
+describe("verifyWebhookSignature", () => {
+  const SECRET = "whsec_test_secret_xyz";
+  const BODY = JSON.stringify({ event: "signature.document.completed", documentId: "doc-1" });
+  const NOW_SECONDS = 1747000000;
+  const TIMESTAMP = NOW_SECONDS.toString();
+
+  function sign(body: string, timestamp: string, secret: string): string {
+    return (
+      "sha256=" +
+      createHmac("sha256", secret).update(`${timestamp}.${body}`, "utf8").digest("hex")
+    );
+  }
+
+  const validSig = sign(BODY, TIMESTAMP, SECRET);
+
+  it("should accept a valid signature within the timestamp window", () => {
+    expect(
+      verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, { now: () => NOW_SECONDS }),
+    ).toBe(true);
+  });
+
+  it("should reject a tampered body", () => {
+    expect(
+      verifyWebhookSignature(BODY + "tampered", validSig, TIMESTAMP, SECRET, {
+        now: () => NOW_SECONDS,
+      }),
+    ).toBe(false);
+  });
+
+  it("should reject a tampered timestamp (signature no longer matches)", () => {
+    expect(
+      verifyWebhookSignature(BODY, validSig, (NOW_SECONDS + 1).toString(), SECRET, {
+        now: () => NOW_SECONDS + 1,
+      }),
+    ).toBe(false);
+  });
+
+  it("should reject a stale timestamp (older than tolerance)", () => {
+    expect(
+      verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, {
+        now: () => NOW_SECONDS + 301,
+      }),
+    ).toBe(false);
+  });
+
+  it("should reject a future timestamp (further than tolerance)", () => {
+    expect(
+      verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, {
+        now: () => NOW_SECONDS - 301,
+      }),
+    ).toBe(false);
+  });
+
+  it("should ignore the timestamp window when toleranceSeconds is 0", () => {
+    expect(
+      verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, {
+        toleranceSeconds: 0,
+        now: () => NOW_SECONDS + 99999,
+      }),
+    ).toBe(true);
+  });
+
+  it("should reject when signature header is missing", () => {
+    expect(verifyWebhookSignature(BODY, "", TIMESTAMP, SECRET)).toBe(false);
+  });
+
+  it("should reject when timestamp header is missing", () => {
+    expect(verifyWebhookSignature(BODY, validSig, "", SECRET)).toBe(false);
+  });
+
+  it("should reject when secret is missing", () => {
+    expect(verifyWebhookSignature(BODY, validSig, TIMESTAMP, "")).toBe(false);
+  });
+
+  it("should reject a non-numeric timestamp", () => {
+    expect(
+      verifyWebhookSignature(BODY, validSig, "not-a-number", SECRET, { now: () => NOW_SECONDS }),
+    ).toBe(false);
+  });
+
+  it("should reject a length-mismatched signature without crashing", () => {
+    expect(
+      verifyWebhookSignature(BODY, "sha256=short", TIMESTAMP, SECRET, { now: () => NOW_SECONDS }),
+    ).toBe(false);
+  });
+
+  it("should accept a Buffer body", () => {
+    expect(
+      verifyWebhookSignature(Buffer.from(BODY, "utf8"), validSig, TIMESTAMP, SECRET, {
+        now: () => NOW_SECONDS,
+      }),
+    ).toBe(true);
+  });
+});
