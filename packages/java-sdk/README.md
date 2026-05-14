@@ -505,6 +505,104 @@ for (int i = 0; i < results.size(); i++) {
 
 ---
 
+## TurboWebhooks (Signature Webhook)
+
+The `TurboWebhooks` class manages your organization's **signature webhook** — a single subscription to TurboDocx signature events (`signature.document.completed`, `signature.document.voided`). It also exposes a `WebhookSignatureVerifier` helper for incoming webhook receivers.
+
+> **One webhook per org.** The SDK manages a single fixed-name webhook (`signature`) per org so SDK-managed and UI-managed webhooks stay in sync — what you create here also appears in the dashboard's Signature Webhooks settings page. To manage multiple webhooks per org, call the REST API directly.
+>
+> **Requires administrator role.** All webhook routes require an admin TDX- API key.
+
+### Configuration
+
+Build a client via `TurboDocxClient.Builder().buildWebhooksClient()` — this variant skips the `senderEmail` requirement that `buildSignClient()` enforces, since webhook routes don't send emails.
+
+```java
+import com.turbodocx.TurboDocxClient;
+import com.turbodocx.TurboWebhooks;
+
+TurboWebhooks webhooks = new TurboDocxClient.Builder()
+        .apiKey(System.getenv("TURBODOCX_API_KEY"))
+        .orgId(System.getenv("TURBODOCX_ORG_ID"))
+        // .baseUrl("http://localhost:3000")  // optional, defaults to https://api.turbodocx.com
+        .buildWebhooksClient();
+```
+
+### Create the signature webhook (save the secret immediately)
+
+```java
+JsonObject created = webhooks.createWebhook(
+        List.of("https://your-server.example.com/webhooks/turbodocx"),  // HTTPS only
+        List.of("signature.document.completed", "signature.document.voided"));
+
+// `secret` is shown ONCE here. Store it securely; it cannot be retrieved later.
+System.out.println("Save this secret: " + created.get("secret").getAsString());
+```
+
+If the signature webhook already exists, `createWebhook` throws `TurboDocxException.ValidationException`. Either update the existing one with `updateWebhook` or `deleteWebhook` first.
+
+### Get, update, delete
+
+```java
+JsonObject webhook = webhooks.getWebhook();
+// webhook.getAsJsonObject("deliveryStats") and webhook.getAsJsonArray("availableEvents") are included
+
+// Pass null to leave a field unchanged
+webhooks.updateWebhook(null, null, false);  // isActive=false
+webhooks.deleteWebhook();
+```
+
+### Test deliveries and replay
+
+```java
+JsonObject tested = webhooks.testWebhook(
+        "signature.document.completed",
+        Map.of("documentId", "doc-xyz", "status", "completed"));
+
+JsonObject deliveries = webhooks.listWebhookDeliveries();
+String firstId = deliveries.getAsJsonArray("results").get(0).getAsJsonObject().get("id").getAsString();
+JsonObject replayed = webhooks.replayWebhookDelivery(firstId);
+```
+
+### Rotate the secret
+
+```java
+JsonObject rotated = webhooks.regenerateWebhookSecret();
+// rotated.get("secret").getAsString() is the new secret. Old signatures will fail immediately.
+```
+
+### Aggregate stats
+
+```java
+JsonObject stats = webhooks.getWebhookStats(30);
+// stats.getAsJsonObject("summary").get("successRate"), stats.getAsJsonArray("eventBreakdown")
+```
+
+### Verify incoming webhook signatures
+
+Webhook deliveries from TurboDocx are signed with HMAC-SHA256 over `timestamp + "." + rawBody` using your webhook secret. Use `WebhookSignatureVerifier` in your receiver (constant-time comparison via `MessageDigest.isEqual`):
+
+```java
+import com.turbodocx.WebhookSignatureVerifier;
+
+// In your webhook handler (Servlet example):
+byte[] rawBody = request.getInputStream().readAllBytes(); // raw bytes; do NOT parse JSON first
+String signature = request.getHeader("X-TurboDocx-Signature");
+String timestamp = request.getHeader("X-TurboDocx-Timestamp");
+String secret = System.getenv("TURBODOCX_WEBHOOK_SECRET");
+
+if (!WebhookSignatureVerifier.verify(rawBody, signature, timestamp, secret)) {
+    response.sendError(401, "invalid signature");
+    return;
+}
+
+// Now safe to parse and process
+```
+
+By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Use the full 6-arg overload to override `toleranceSeconds` (0 disables the check — not recommended in production) or to inject a `now` supplier for testing.
+
+---
+
 ## Field Types
 
 | Type | Description |

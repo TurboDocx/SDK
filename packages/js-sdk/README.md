@@ -473,10 +473,12 @@ for (const entry of logs.data.results) {
 
 ---
 
-### TurboWebhooks (Event Subscriptions)
+### TurboWebhooks (Signature Webhook)
 
-The `TurboWebhooks` module manages organization-scoped webhook subscriptions for TurboDocx events (e.g. `signature.document.completed`). It also exposes a `verifyWebhookSignature` helper for incoming webhook receivers.
+The `TurboWebhooks` module manages your organization's **signature webhook** — a single subscription to TurboDocx signature events (`signature.document.completed`, `signature.document.voided`). It also exposes a `verifyWebhookSignature` helper for incoming webhook receivers.
 
+> **One webhook per org.** The SDK manages a single fixed-name webhook (`signature`) per org so SDK-managed and UI-managed webhooks stay in sync — what you create here also appears in the dashboard's Signature Webhooks settings page. To manage multiple webhooks per org, call the REST API directly.
+>
 > **Requires administrator role.** All webhook routes require an admin TDX- API key.
 
 #### Configuration
@@ -493,11 +495,10 @@ TurboWebhooks.configure({
 
 `TurboWebhooks` does not require `senderEmail` (unlike `TurboSign`) — webhook routes don't send signature emails.
 
-#### Create a webhook (save the secret immediately)
+#### Create the signature webhook (save the secret immediately)
 
 ```typescript
 const created = await TurboWebhooks.createWebhook({
-  name: 'order-fulfillment',
   urls: ['https://your-server.example.com/webhooks/turbodocx'], // HTTPS only
   events: ['signature.document.completed', 'signature.document.voided'],
 });
@@ -506,45 +507,44 @@ const created = await TurboWebhooks.createWebhook({
 console.log(`Save this secret: ${created.secret}`);
 ```
 
-#### List, get, update, delete
+If the signature webhook already exists, `createWebhook` returns 400 `ValidationError`. Either update the existing one with `updateWebhook` or `deleteWebhook` first.
+
+#### Get, update, delete
 
 ```typescript
-const all = await TurboWebhooks.listWebhooks({ limit: 25 });
+const webhook = await TurboWebhooks.getWebhook();
+// `webhook.deliveryStats` and `webhook.availableEvents` are included
 
-const one = await TurboWebhooks.getWebhook('order-fulfillment');
-// `one.deliveryStats` and `one.availableEvents` are included
-
-await TurboWebhooks.updateWebhook('order-fulfillment', { isActive: false });
-
-await TurboWebhooks.deleteWebhook('order-fulfillment');
+await TurboWebhooks.updateWebhook({ isActive: false });
+await TurboWebhooks.deleteWebhook();
 ```
 
 #### Test deliveries and replay
 
 ```typescript
-const tested = await TurboWebhooks.testWebhook('order-fulfillment', {
+const tested = await TurboWebhooks.testWebhook({
   eventType: 'signature.document.completed',
   payload: { documentId: 'doc-xyz', status: 'completed' },
 });
 console.log(tested.summary); // { total, successful, failed }
 
-const deliveries = await TurboWebhooks.listWebhookDeliveries('order-fulfillment', { limit: 10 });
+const deliveries = await TurboWebhooks.listWebhookDeliveries({ limit: 10 });
 
 // Retry a specific past delivery
-const replayed = await TurboWebhooks.replayWebhookDelivery('order-fulfillment', deliveries.results[0].id);
+const replayed = await TurboWebhooks.replayWebhookDelivery(deliveries.results[0].id);
 ```
 
 #### Rotate the secret
 
 ```typescript
-const rotated = await TurboWebhooks.regenerateWebhookSecret('order-fulfillment');
+const rotated = await TurboWebhooks.regenerateWebhookSecret();
 // `rotated.secret` is the new secret. Old signatures will fail from this moment on.
 ```
 
 #### Aggregate stats
 
 ```typescript
-const stats = await TurboWebhooks.getWebhookStats('order-fulfillment', { days: 30 });
+const stats = await TurboWebhooks.getWebhookStats({ days: 30 });
 console.log(stats.summary.successRate, stats.eventBreakdown);
 ```
 

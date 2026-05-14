@@ -42,6 +42,19 @@ public class TurboDocxException extends RuntimeException {
     }
 
     /**
+     * Exception thrown when the caller is authenticated but lacks the
+     * permissions required by the route (HTTP 403).
+     */
+    public static class AuthorizationException extends TurboDocxException {
+        public AuthorizationException(String message, String code) {
+            super(message, 403, code);
+        }
+        public AuthorizationException(String message) {
+            super(message, 403, null);
+        }
+    }
+
+    /**
      * Exception thrown when validation fails (HTTP 400)
      */
     public static class ValidationException extends TurboDocxException {

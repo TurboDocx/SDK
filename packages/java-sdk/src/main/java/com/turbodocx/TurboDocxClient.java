@@ -114,5 +114,20 @@ public class TurboDocxClient {
             HttpClient httpClient = new HttpClient(baseUrl, apiKey, accessToken, orgId, senderEmail, senderName);
             return new DeliverableClient(httpClient);
         }
+
+        /**
+         * Build a {@link TurboWebhooks} client.
+         * Does not require senderEmail/senderName (webhook routes do not send email).
+         */
+        public TurboWebhooks buildWebhooksClient() {
+            if ((apiKey == null || apiKey.isEmpty()) && (accessToken == null || accessToken.isEmpty())) {
+                throw new IllegalArgumentException("API key or access token is required");
+            }
+            if (orgId == null || orgId.isEmpty()) {
+                throw new TurboDocxException.AuthenticationException("Organization ID (orgId) is required for authentication");
+            }
+            HttpClient httpClient = new HttpClient(baseUrl, apiKey, accessToken, orgId, senderEmail, senderName);
+            return new TurboWebhooks(httpClient);
+        }
     }
 }

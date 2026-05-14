@@ -1,8 +1,11 @@
 """
 TurboWebhooks Module Tests
 
-Mocks _get_client() to return a MagicMock whose async verb methods are AsyncMocks.
-Same pattern as test_turbopartner.py.
+The SDK is locked to a single webhook per org named `signature`. No method
+takes a `name` parameter — every route hits `/api/webhooks/signature[/...]`.
+
+Mocks _get_client() to return a MagicMock whose async verb methods are
+AsyncMocks. Pattern matches test_turbopartner.py.
 """
 
 import hmac
@@ -44,11 +47,8 @@ class TestConfigure:
 
     def test_configure_sets_skip_sender_validation(self):
         TurboWebhooks.configure(api_key=API_KEY, org_id=ORG_ID)
-        # Module is configured; the HttpClient was constructed with the right flag.
+        # No ValidationError raised despite no sender_email = skip_sender_validation worked
         assert TurboWebhooks._client is not None
-        # sender_email was not supplied; constructor would have raised
-        # ValidationError if skip_sender_validation weren't True. Test passes
-        # by virtue of no exception being raised.
 
     def test_configure_with_custom_base_url(self):
         TurboWebhooks.configure(
@@ -88,7 +88,7 @@ class TestLazyAutoConfigure:
 
 
 # ============================================
-# CRUD
+# CRUD — always hits /api/webhooks/signature
 # ============================================
 
 
@@ -97,7 +97,7 @@ class TestCreateWebhook:
         _reset()
 
     @pytest.mark.asyncio
-    async def test_create_webhook_unwraps_envelope(self):
+    async def test_create_webhook_injects_signature_name_and_unwraps_envelope(self):
         envelope = {
             "data": {"id": "wh-1", "secret": "whsec_abc123"},
             "message": "Webhook created successfully.",
@@ -108,7 +108,6 @@ class TestCreateWebhook:
             mock_get.return_value = mock_client
 
             result = await TurboWebhooks.create_webhook(
-                name="my-hook",
                 urls=["https://example.com/sink"],
                 events=["signature.document.completed"],
             )
@@ -117,50 +116,11 @@ class TestCreateWebhook:
             mock_client.post.assert_called_once_with(
                 "/api/webhooks",
                 data={
-                    "name": "my-hook",
+                    "name": "signature",
                     "urls": ["https://example.com/sink"],
                     "events": ["signature.document.completed"],
                 },
             )
-
-
-class TestListWebhooks:
-    def setup_method(self):
-        _reset()
-
-    @pytest.mark.asyncio
-    async def test_list_no_filters(self):
-        with patch.object(TurboWebhooks, "_get_client") as mock_get:
-            mock_client = MagicMock()
-            mock_client.get = AsyncMock(
-                return_value={"results": [], "totalRecords": 0, "limit": 25, "offset": 0}
-            )
-            mock_get.return_value = mock_client
-
-            result = await TurboWebhooks.list_webhooks()
-
-            assert result["totalRecords"] == 0
-            mock_client.get.assert_called_once_with("/api/webhooks")
-
-    @pytest.mark.asyncio
-    async def test_list_with_filters_serializes_query_string(self):
-        with patch.object(TurboWebhooks, "_get_client") as mock_get:
-            mock_client = MagicMock()
-            mock_client.get = AsyncMock(return_value={"results": []})
-            mock_get.return_value = mock_client
-
-            await TurboWebhooks.list_webhooks(
-                limit=10, offset=20, name="prefix-", is_active=False
-            )
-
-            # is_active=False becomes "false" lowercase per _build_query_string
-            mock_client.get.assert_called_once()
-            called_with = mock_client.get.call_args[0][0]
-            assert called_with.startswith("/api/webhooks?")
-            assert "limit=10" in called_with
-            assert "offset=20" in called_with
-            assert "name=prefix-" in called_with
-            assert "isActive=false" in called_with
 
 
 class TestGetWebhook:
@@ -174,30 +134,17 @@ class TestGetWebhook:
             mock_client.get = AsyncMock(
                 return_value={
                     "id": "wh-1",
-                    "name": "my-hook",
+                    "name": "signature",
                     "deliveryStats": {"totalDeliveries": 0},
                     "availableEvents": ["signature.document.completed"],
                 }
             )
             mock_get.return_value = mock_client
 
-            result = await TurboWebhooks.get_webhook("my-hook")
+            result = await TurboWebhooks.get_webhook()
 
             assert result["deliveryStats"]["totalDeliveries"] == 0
-            mock_client.get.assert_called_once_with("/api/webhooks/my-hook")
-
-    @pytest.mark.asyncio
-    async def test_get_webhook_url_encodes_name(self):
-        with patch.object(TurboWebhooks, "_get_client") as mock_get:
-            mock_client = MagicMock()
-            mock_client.get = AsyncMock(return_value={})
-            mock_get.return_value = mock_client
-
-            await TurboWebhooks.get_webhook("my hook/with spaces")
-
-            mock_client.get.assert_called_once_with(
-                "/api/webhooks/my%20hook%2Fwith%20spaces"
-            )
+            mock_client.get.assert_called_once_with("/api/webhooks/signature")
 
 
 class TestUpdateWebhook:
@@ -207,7 +154,7 @@ class TestUpdateWebhook:
     @pytest.mark.asyncio
     async def test_update_webhook_unwraps_envelope(self):
         envelope = {
-            "data": {"id": "wh-1", "name": "my-hook", "isActive": False},
+            "data": {"id": "wh-1", "name": "signature", "isActive": False},
             "message": "Webhook updated successfully",
         }
         with patch.object(TurboWebhooks, "_get_client") as mock_get:
@@ -215,11 +162,11 @@ class TestUpdateWebhook:
             mock_client.patch = AsyncMock(return_value=envelope)
             mock_get.return_value = mock_client
 
-            result = await TurboWebhooks.update_webhook("my-hook", is_active=False)
+            result = await TurboWebhooks.update_webhook(is_active=False)
 
             assert result["isActive"] is False
             mock_client.patch.assert_called_once_with(
-                "/api/webhooks/my-hook", data={"isActive": False}
+                "/api/webhooks/signature", data={"isActive": False}
             )
 
 
@@ -236,10 +183,10 @@ class TestDeleteWebhook:
             )
             mock_get.return_value = mock_client
 
-            result = await TurboWebhooks.delete_webhook("my-hook")
+            result = await TurboWebhooks.delete_webhook()
 
             assert "deleted" in result["message"].lower()
-            mock_client.delete.assert_called_once_with("/api/webhooks/my-hook")
+            mock_client.delete.assert_called_once_with("/api/webhooks/signature")
 
 
 # ============================================
@@ -263,14 +210,13 @@ class TestTestWebhook:
             mock_get.return_value = mock_client
 
             result = await TurboWebhooks.test_webhook(
-                "my-hook",
                 event_type="signature.document.completed",
                 payload={"documentId": "doc-1"},
             )
 
             assert result["summary"]["successful"] == 1
             mock_client.post.assert_called_once_with(
-                "/api/webhooks/my-hook/test",
+                "/api/webhooks/signature/test",
                 data={
                     "eventType": "signature.document.completed",
                     "payload": {"documentId": "doc-1"},
@@ -294,14 +240,13 @@ class TestNotifyWebhook:
             mock_get.return_value = mock_client
 
             result = await TurboWebhooks.notify_webhook(
-                "my-hook",
                 event_type="signature.document.completed",
                 payload={"documentId": "doc-2"},
             )
 
             assert result["summary"]["successful"] == 1
             mock_client.post.assert_called_once_with(
-                "/api/webhooks/my-hook/notify",
+                "/api/webhooks/signature/notify",
                 data={
                     "eventType": "signature.document.completed",
                     "payload": {"documentId": "doc-2"},
@@ -325,12 +270,10 @@ class TestListDeliveries:
             mock_client.get = AsyncMock(return_value={"results": []})
             mock_get.return_value = mock_client
 
-            await TurboWebhooks.list_webhook_deliveries(
-                "my-hook", limit=10, is_delivered=False
-            )
+            await TurboWebhooks.list_webhook_deliveries(limit=10, is_delivered=False)
 
             called_with = mock_client.get.call_args[0][0]
-            assert called_with.startswith("/api/webhooks/my-hook/deliveries?")
+            assert called_with.startswith("/api/webhooks/signature/deliveries?")
             assert "limit=10" in called_with
             assert "isDelivered=false" in called_with
 
@@ -350,11 +293,11 @@ class TestReplayDelivery:
             mock_client.post = AsyncMock(return_value=envelope)
             mock_get.return_value = mock_client
 
-            result = await TurboWebhooks.replay_webhook_delivery("my-hook", "delivery-1")
+            result = await TurboWebhooks.replay_webhook_delivery("delivery-1")
 
             assert result["httpStatus"] == 200
             mock_client.post.assert_called_once_with(
-                "/api/webhooks/my-hook/replay", data={"deliveryId": "delivery-1"}
+                "/api/webhooks/signature/replay", data={"deliveryId": "delivery-1"}
             )
 
 
@@ -383,11 +326,11 @@ class TestRegenerateSecret:
             mock_client.post = AsyncMock(return_value=envelope)
             mock_get.return_value = mock_client
 
-            result = await TurboWebhooks.regenerate_webhook_secret("my-hook")
+            result = await TurboWebhooks.regenerate_webhook_secret()
 
             assert result["secret"] == "whsec_newRotated"
             mock_client.post.assert_called_once_with(
-                "/api/webhooks/my-hook/regenerate", data=None
+                "/api/webhooks/signature/regenerate", data=None
             )
 
 
@@ -398,7 +341,7 @@ class TestWebhookStats:
     @pytest.mark.asyncio
     async def test_stats_with_days(self):
         stats_response = {
-            "webhook": {"id": "wh-1", "name": "my-hook"},
+            "webhook": {"id": "wh-1", "name": "signature"},
             "period": {"days": 7, "from": "2026-05-06", "to": "2026-05-13"},
             "summary": {
                 "totalDeliveries": 100,
@@ -412,11 +355,11 @@ class TestWebhookStats:
             mock_client.get = AsyncMock(return_value=stats_response)
             mock_get.return_value = mock_client
 
-            result = await TurboWebhooks.get_webhook_stats("my-hook", days=7)
+            result = await TurboWebhooks.get_webhook_stats(days=7)
 
             assert result["summary"]["successRate"] == 95
             assert result["period"]["from"] == "2026-05-06"
-            mock_client.get.assert_called_once_with("/api/webhooks/my-hook/stats?days=7")
+            mock_client.get.assert_called_once_with("/api/webhooks/signature/stats?days=7")
 
 
 # ============================================
@@ -432,13 +375,11 @@ class TestErrorPropagation:
     async def test_propagates_authentication_error_on_401(self):
         with patch.object(TurboWebhooks, "_get_client") as mock_get:
             mock_client = MagicMock()
-            mock_client.get = AsyncMock(
-                side_effect=AuthenticationError("Invalid API key")
-            )
+            mock_client.get = AsyncMock(side_effect=AuthenticationError("Invalid API key"))
             mock_get.return_value = mock_client
 
             with pytest.raises(AuthenticationError):
-                await TurboWebhooks.list_webhooks()
+                await TurboWebhooks.get_webhook()
 
     @pytest.mark.asyncio
     async def test_propagates_authorization_error_on_403(self):
@@ -448,7 +389,7 @@ class TestErrorPropagation:
             mock_get.return_value = mock_client
 
             with pytest.raises(AuthorizationError):
-                await TurboWebhooks.list_webhooks()
+                await TurboWebhooks.get_webhook()
 
     @pytest.mark.asyncio
     async def test_propagates_not_found_error_on_404(self):
@@ -458,7 +399,7 @@ class TestErrorPropagation:
             mock_get.return_value = mock_client
 
             with pytest.raises(NotFoundError):
-                await TurboWebhooks.get_webhook("missing")
+                await TurboWebhooks.get_webhook()
 
     @pytest.mark.asyncio
     async def test_propagates_validation_error_on_400(self):
@@ -471,7 +412,6 @@ class TestErrorPropagation:
 
             with pytest.raises(ValidationError):
                 await TurboWebhooks.create_webhook(
-                    name="bad",
                     urls=["http://insecure.example.com"],
                     events=["signature.document.completed"],
                 )
@@ -501,50 +441,35 @@ class TestVerifyWebhookSignature:
     def test_rejects_tampered_body(self):
         sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
         assert not verify_webhook_signature(
-            self.BODY + "tampered",
-            sig,
-            self.TIMESTAMP,
-            self.SECRET,
+            self.BODY + "tampered", sig, self.TIMESTAMP, self.SECRET,
             now=lambda: self.NOW_SECONDS,
         )
 
     def test_rejects_tampered_timestamp(self):
         sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
         assert not verify_webhook_signature(
-            self.BODY,
-            sig,
-            str(self.NOW_SECONDS + 1),
-            self.SECRET,
+            self.BODY, sig, str(self.NOW_SECONDS + 1), self.SECRET,
             now=lambda: self.NOW_SECONDS + 1,
         )
 
     def test_rejects_stale_timestamp(self):
         sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
         assert not verify_webhook_signature(
-            self.BODY,
-            sig,
-            self.TIMESTAMP,
-            self.SECRET,
+            self.BODY, sig, self.TIMESTAMP, self.SECRET,
             now=lambda: self.NOW_SECONDS + 301,
         )
 
     def test_rejects_future_timestamp(self):
         sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
         assert not verify_webhook_signature(
-            self.BODY,
-            sig,
-            self.TIMESTAMP,
-            self.SECRET,
+            self.BODY, sig, self.TIMESTAMP, self.SECRET,
             now=lambda: self.NOW_SECONDS - 301,
         )
 
     def test_zero_tolerance_disables_check(self):
         sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
         assert verify_webhook_signature(
-            self.BODY,
-            sig,
-            self.TIMESTAMP,
-            self.SECRET,
+            self.BODY, sig, self.TIMESTAMP, self.SECRET,
             tolerance_seconds=0,
             now=lambda: self.NOW_SECONDS + 99999,
         )
@@ -563,28 +488,18 @@ class TestVerifyWebhookSignature:
     def test_rejects_non_numeric_timestamp(self):
         sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
         assert not verify_webhook_signature(
-            self.BODY,
-            sig,
-            "not-a-number",
-            self.SECRET,
-            now=lambda: self.NOW_SECONDS,
+            self.BODY, sig, "not-a-number", self.SECRET, now=lambda: self.NOW_SECONDS,
         )
 
     def test_rejects_length_mismatched_signature(self):
         assert not verify_webhook_signature(
-            self.BODY,
-            "sha256=short",
-            self.TIMESTAMP,
-            self.SECRET,
+            self.BODY, "sha256=short", self.TIMESTAMP, self.SECRET,
             now=lambda: self.NOW_SECONDS,
         )
 
     def test_accepts_bytes_body(self):
         sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
         assert verify_webhook_signature(
-            self.BODY.encode("utf-8"),
-            sig,
-            self.TIMESTAMP,
-            self.SECRET,
+            self.BODY.encode("utf-8"), sig, self.TIMESTAMP, self.SECRET,
             now=lambda: self.NOW_SECONDS,
         )

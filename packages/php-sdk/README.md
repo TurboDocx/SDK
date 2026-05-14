@@ -350,10 +350,12 @@ The audit trail includes a cryptographic hash chain for tamper-evidence verifica
 
 ---
 
-### TurboWebhooks (Event Subscriptions)
+### TurboWebhooks (Signature Webhook)
 
-The `TurboWebhooks` class manages organization-scoped webhook subscriptions for TurboDocx events (e.g. `signature.document.completed`). It also exposes a `verifyWebhookSignature` helper for incoming webhook receivers.
+The `TurboWebhooks` class manages your organization's **signature webhook** — a single subscription to TurboDocx signature events (`signature.document.completed`, `signature.document.voided`). It also exposes a `verifyWebhookSignature` helper for incoming webhook receivers.
 
+> **One webhook per org.** The SDK manages a single fixed-name webhook (`signature`) per org so SDK-managed and UI-managed webhooks stay in sync — what you create here also appears in the dashboard's Signature Webhooks settings page. To manage multiple webhooks per org, call the REST API directly.
+>
 > **Requires administrator role.** All webhook routes require an admin TDX- API key.
 
 #### Configuration
@@ -370,11 +372,10 @@ TurboWebhooks::configureFromCredentials(
 
 Unlike `TurboSign`, `TurboWebhooks` does NOT require `senderEmail` — webhook routes don't send signature emails.
 
-#### Create a webhook (save the secret immediately)
+#### Create the signature webhook (save the secret immediately)
 
 ```php
 $created = TurboWebhooks::createWebhook(
-    name: 'order-fulfillment',
     urls: ['https://your-server.example.com/webhooks/turbodocx'],  // HTTPS only
     events: ['signature.document.completed', 'signature.document.voided'],
 );
@@ -382,46 +383,42 @@ $created = TurboWebhooks::createWebhook(
 echo "Save this secret: {$created['secret']}";
 ```
 
-#### List, get, update, delete
+If the signature webhook already exists, `createWebhook` throws `ValidationException`. Either update the existing one with `updateWebhook` or `deleteWebhook` first.
+
+#### Get, update, delete
 
 ```php
-$all = TurboWebhooks::listWebhooks(limit: 25);
+$webhook = TurboWebhooks::getWebhook();
+// $webhook['deliveryStats'] and $webhook['availableEvents'] are included
 
-$one = TurboWebhooks::getWebhook('order-fulfillment');
-// $one['deliveryStats'] and $one['availableEvents'] are included
-
-TurboWebhooks::updateWebhook('order-fulfillment', isActive: false);
-TurboWebhooks::deleteWebhook('order-fulfillment');
+TurboWebhooks::updateWebhook(isActive: false);
+TurboWebhooks::deleteWebhook();
 ```
 
 #### Test deliveries and replay
 
 ```php
 $tested = TurboWebhooks::testWebhook(
-    'order-fulfillment',
     eventType: 'signature.document.completed',
     payload: ['documentId' => 'doc-xyz', 'status' => 'completed'],
 );
 // $tested['summary']: ['total' => N, 'successful' => N, 'failed' => N]
 
-$deliveries = TurboWebhooks::listWebhookDeliveries('order-fulfillment', limit: 10);
-$replayed = TurboWebhooks::replayWebhookDelivery(
-    'order-fulfillment',
-    $deliveries['results'][0]['id'],
-);
+$deliveries = TurboWebhooks::listWebhookDeliveries(limit: 10);
+$replayed = TurboWebhooks::replayWebhookDelivery($deliveries['results'][0]['id']);
 ```
 
 #### Rotate the secret
 
 ```php
-$rotated = TurboWebhooks::regenerateWebhookSecret('order-fulfillment');
+$rotated = TurboWebhooks::regenerateWebhookSecret();
 // $rotated['secret'] is the new secret. Old signatures will fail immediately.
 ```
 
 #### Aggregate stats
 
 ```php
-$stats = TurboWebhooks::getWebhookStats('order-fulfillment', days: 30);
+$stats = TurboWebhooks::getWebhookStats(days: 30);
 // $stats['summary']['successRate'], $stats['eventBreakdown']
 ```
 

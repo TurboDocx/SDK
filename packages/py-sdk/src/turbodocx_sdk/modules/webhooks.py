@@ -1,21 +1,29 @@
 """
-TurboWebhooks Module - Org-scoped webhook subscription management
+TurboWebhooks Module - Org-scoped signature webhook subscription
 
-Wraps the backend /api/webhooks/* surface. All routes require an admin
-TDX- API key. Webhook management does not send signature emails, so the
-HttpClient is constructed with skip_sender_validation=True.
+The SDK is intentionally locked to a single webhook per org, identified by
+the fixed name `signature`. This matches the UI's Signature Webhooks
+settings page so SDK-managed and UI-managed webhooks stay in sync. To
+manage multiple webhooks per org, call the REST API directly.
+
+All routes require an admin TDX- API key. Webhook management does not
+send signature emails, so HttpClient is constructed with
+skip_sender_validation=True.
 
 POST/PATCH responses come back as `{"data": ..., "message": ...}` envelopes
-which the HttpClient's _smart_unwrap leaves intact (it only unwraps single-key
-`{"data": ...}` responses). Methods that hit non-GET routes therefore extract
-`.data` explicitly. GET routes are auto-unwrapped.
+which the HttpClient's _smart_unwrap leaves intact (it only unwraps
+single-key `{"data": ...}` responses). Methods that hit non-GET routes
+extract `.data` explicitly. GET routes are auto-unwrapped.
 """
 
 import os
 from typing import Any, Dict, List, Optional
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 
 from ..http import HttpClient
+
+
+SIGNATURE_WEBHOOK_NAME = "signature"
 
 
 def _build_query_string(params: Dict[str, Any]) -> str:
@@ -30,7 +38,7 @@ def _build_query_string(params: Dict[str, Any]) -> str:
 
 
 class TurboWebhooks:
-    """TurboWebhooks module for managing webhook subscriptions."""
+    """TurboWebhooks module for managing the org's signature webhook."""
 
     _client: Optional[HttpClient] = None
 
@@ -81,27 +89,20 @@ class TurboWebhooks:
             cls.configure(api_key=api_key, org_id=org_id)
         return cls._client  # type: ignore[return-value]
 
-    @staticmethod
-    def _encode_name(name: str) -> str:
-        """URL-encode a webhook name for path interpolation. safe='' encodes /."""
-        return quote(name, safe="")
-
     # ============================================
-    # CRUD
+    # CRUD - always hits /api/webhooks/signature[/...]
     # ============================================
 
     @classmethod
     async def create_webhook(
         cls,
-        name: str,
         urls: List[str],
         events: List[str],
     ) -> Dict[str, Any]:
         """
-        Create a webhook subscription.
+        Create the org's signature webhook.
 
         Args:
-            name: Unique webhook name within the org
             urls: List of HTTPS URLs to deliver events to (HTTP returns 400)
             events: List of event types (e.g. "signature.document.completed")
 
@@ -110,69 +111,39 @@ class TurboWebhooks:
             immediately on receipt.
 
         Raises:
-            ValidationError: if URLs are not HTTPS or events are unknown
+            ValidationError: if URLs are not HTTPS, if a webhook already exists
             AuthorizationError: if the API key lacks admin role
         """
         envelope = await cls._get_client().post(
             "/api/webhooks",
-            data={"name": name, "urls": urls, "events": events},
+            data={"name": SIGNATURE_WEBHOOK_NAME, "urls": urls, "events": events},
         )
         return envelope["data"]
 
     @classmethod
-    async def list_webhooks(
-        cls,
-        *,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-        name: Optional[str] = None,
-        is_active: Optional[bool] = None,
-    ) -> Dict[str, Any]:
+    async def get_webhook(cls) -> Dict[str, Any]:
         """
-        List webhook subscriptions for the configured org.
-
-        Returns:
-            Dict with `results` (list of webhook dicts including delivery
-            aggregates), `totalRecords`, `limit`, `offset`.
-        """
-        qs = _build_query_string(
-            {"limit": limit, "offset": offset, "name": name, "isActive": is_active}
-        )
-        return await cls._get_client().get(f"/api/webhooks{qs}")
-
-    @classmethod
-    async def get_webhook(cls, name: str) -> Dict[str, Any]:
-        """
-        Get a single webhook by name with current delivery stats and
-        the server-provided list of subscribable events.
+        Get the org's signature webhook with delivery stats + the server-
+        provided list of subscribable events.
         """
         return await cls._get_client().get(
-            f"/api/webhooks/{cls._encode_name(name)}"
+            f"/api/webhooks/{SIGNATURE_WEBHOOK_NAME}"
         )
 
     @classmethod
     async def update_webhook(
         cls,
-        name: str,
         *,
-        new_name: Optional[str] = None,
         urls: Optional[List[str]] = None,
         events: Optional[List[str]] = None,
         is_active: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """
-        Patch one or more fields on an existing webhook.
+        Patch one or more fields on the signature webhook.
 
-        Args:
-            name: The CURRENT webhook name (used in URL path)
-            new_name: New name to rename to (optional)
-            urls: New URL list (optional, HTTPS only)
-            events: New event subscription list (optional)
-            is_active: Enable/disable the webhook (optional)
+        Renaming is not supported — the SDK manages a fixed name.
         """
         body: Dict[str, Any] = {}
-        if new_name is not None:
-            body["name"] = new_name
         if urls is not None:
             body["urls"] = urls
         if events is not None:
@@ -181,16 +152,16 @@ class TurboWebhooks:
             body["isActive"] = is_active
 
         envelope = await cls._get_client().patch(
-            f"/api/webhooks/{cls._encode_name(name)}",
+            f"/api/webhooks/{SIGNATURE_WEBHOOK_NAME}",
             data=body,
         )
         return envelope["data"]
 
     @classmethod
-    async def delete_webhook(cls, name: str) -> Dict[str, Any]:
-        """Soft-delete a webhook and its delivery history."""
+    async def delete_webhook(cls) -> Dict[str, Any]:
+        """Soft-delete the signature webhook and its delivery history."""
         return await cls._get_client().delete(
-            f"/api/webhooks/{cls._encode_name(name)}"
+            f"/api/webhooks/{SIGNATURE_WEBHOOK_NAME}"
         )
 
     # ============================================
@@ -200,18 +171,17 @@ class TurboWebhooks:
     @classmethod
     async def test_webhook(
         cls,
-        name: str,
         event_type: str,
         payload: Dict[str, Any],
     ) -> Dict[str, Any]:
         """
-        Send a test delivery to all URLs configured on the webhook.
+        Send a test delivery to all URLs configured on the signature webhook.
 
         Returns:
             Dict with `deliveries` (list) and `summary` (total/successful/failed).
         """
         envelope = await cls._get_client().post(
-            f"/api/webhooks/{cls._encode_name(name)}/test",
+            f"/api/webhooks/{SIGNATURE_WEBHOOK_NAME}/test",
             data={"eventType": event_type, "payload": payload},
         )
         return envelope["data"]
@@ -219,19 +189,19 @@ class TurboWebhooks:
     @classmethod
     async def notify_webhook(
         cls,
-        name: str,
         event_type: str,
         payload: Dict[str, Any],
     ) -> Dict[str, Any]:
         """
-        Send a manual notification to all URLs configured on the webhook.
+        Send a manual notification to all URLs configured on the signature
+        webhook.
 
         NOTE: routes through the same backend handler as `test_webhook` and
         returns the same shape; the only wire-level difference is the response
         message string. Prefer `test_webhook` in new code.
         """
         envelope = await cls._get_client().post(
-            f"/api/webhooks/{cls._encode_name(name)}/notify",
+            f"/api/webhooks/{SIGNATURE_WEBHOOK_NAME}/notify",
             data={"eventType": event_type, "payload": payload},
         )
         return envelope["data"]
@@ -243,7 +213,6 @@ class TurboWebhooks:
     @classmethod
     async def list_webhook_deliveries(
         cls,
-        name: str,
         *,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
@@ -251,7 +220,7 @@ class TurboWebhooks:
         is_delivered: Optional[bool] = None,
         http_status: Optional[int] = None,
     ) -> Dict[str, Any]:
-        """List historical delivery attempts for a webhook, with optional filters."""
+        """List historical delivery attempts for the signature webhook."""
         qs = _build_query_string(
             {
                 "limit": limit,
@@ -262,18 +231,17 @@ class TurboWebhooks:
             }
         )
         return await cls._get_client().get(
-            f"/api/webhooks/{cls._encode_name(name)}/deliveries{qs}"
+            f"/api/webhooks/{SIGNATURE_WEBHOOK_NAME}/deliveries{qs}"
         )
 
     @classmethod
     async def replay_webhook_delivery(
         cls,
-        name: str,
         delivery_id: str,
     ) -> Dict[str, Any]:
         """Manually retry a specific past delivery by ID."""
         envelope = await cls._get_client().post(
-            f"/api/webhooks/{cls._encode_name(name)}/replay",
+            f"/api/webhooks/{SIGNATURE_WEBHOOK_NAME}/replay",
             data={"deliveryId": delivery_id},
         )
         return envelope["data"]
@@ -283,13 +251,13 @@ class TurboWebhooks:
     # ============================================
 
     @classmethod
-    async def regenerate_webhook_secret(cls, name: str) -> Dict[str, Any]:
+    async def regenerate_webhook_secret(cls) -> Dict[str, Any]:
         """
         Rotate the webhook's HMAC secret. The new secret is shown ONCE in the
         response and must be saved; old signatures will fail immediately.
         """
         envelope = await cls._get_client().post(
-            f"/api/webhooks/{cls._encode_name(name)}/regenerate",
+            f"/api/webhooks/{SIGNATURE_WEBHOOK_NAME}/regenerate",
             data=None,
         )
         return envelope["data"]
@@ -297,12 +265,11 @@ class TurboWebhooks:
     @classmethod
     async def get_webhook_stats(
         cls,
-        name: str,
         *,
         days: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Aggregate delivery stats for the webhook over a sliding window."""
         qs = _build_query_string({"days": days})
         return await cls._get_client().get(
-            f"/api/webhooks/{cls._encode_name(name)}/stats{qs}"
+            f"/api/webhooks/{SIGNATURE_WEBHOOK_NAME}/stats{qs}"
         )

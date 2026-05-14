@@ -1,11 +1,19 @@
 /**
- * TurboWebhooks Module - Org-scoped webhook subscription management
+ * TurboWebhooks Module - Org-scoped signature webhook subscription
  *
- * Wraps the backend `/api/webhooks/*` surface. All routes require an admin
- * `TDX-` API key. Webhook management does not send signature emails, so
- * `skipSenderValidation: true` is hardcoded inside `configure()` and
- * `getClient()` to avoid the senderEmail-required `ValidationError` from
- * `HttpClient`.
+ * The SDK is intentionally locked to a single webhook per org, identified by
+ * the fixed name `signature`. This matches the UI's "Signature Webhooks"
+ * settings page so SDK-created webhooks show up where users expect to manage
+ * them. To manage multiple webhooks per org, call the REST API directly.
+ *
+ * All routes require an admin TDX- API key. Webhook management does not
+ * send signature emails, so `skipSenderValidation: true` is hardcoded
+ * inside `configure()` and `getClient()`.
+ *
+ * POST/PATCH responses come back as `{ data, message }` envelopes which
+ * `smartUnwrap` leaves intact (it only unwraps single-key `{ data }`).
+ * Methods that hit non-GET routes extract `.data` explicitly. GET routes
+ * are auto-unwrapped.
  */
 
 import { HttpClient, HttpClientConfig } from '../http';
@@ -14,8 +22,6 @@ import {
   CreateWebhookResponse,
   ListDeliveriesRequest,
   ListDeliveriesResponse,
-  ListWebhooksRequest,
-  ListWebhooksResponse,
   NotifyWebhookResponse,
   RegenerateSecretResponse,
   ReplayDeliveryResponse,
@@ -28,6 +34,12 @@ import {
   WebhookWithStats,
 } from '../types/webhooks';
 
+/**
+ * The fixed name used for the single SDK-managed webhook per org.
+ * Mirrors the convention enforced by the UI's Signature Webhooks settings.
+ */
+const SIGNATURE_WEBHOOK_NAME = 'signature';
+
 export class TurboWebhooks {
   private static client: HttpClient;
 
@@ -35,13 +47,7 @@ export class TurboWebhooks {
    * Configure the TurboWebhooks module with API credentials.
    *
    * Mirrors `TurboPartner.configure()` — extracts only the fields needed
-   * and hardcodes `skipSenderValidation: true` as a literal so a caller
-   * cannot accidentally override it by passing `skipSenderValidation: false`.
-   *
-   * @param config - Configuration object
-   * @param config.apiKey - TurboDocx API key (required, must be administrator role)
-   * @param config.orgId - Organization ID (required)
-   * @param config.baseUrl - API base URL (optional, defaults to https://api.turbodocx.com)
+   * and hardcodes `skipSenderValidation: true` as a literal.
    *
    * @example
    * ```typescript
@@ -62,9 +68,9 @@ export class TurboWebhooks {
   }
 
   /**
-   * Get the HTTP client instance, initializing from env vars if necessary.
-   * Mirrors `TurboPartner.getClient()` — fails loudly with a descriptive
-   * error rather than silently auto-configuring.
+   * Lazy fallback to env-driven config. Mirrors `TurboPartner.getClient()` —
+   * explicit env-var check + descriptive error, NOT TurboSign's silent
+   * auto-configure pattern.
    */
   private static getClient(): HttpClient {
     if (!this.client) {
@@ -82,130 +88,100 @@ export class TurboWebhooks {
   }
 
   /**
-   * Create a webhook subscription. The returned `secret` is shown ONCE and
-   * must be saved by the caller; it is never returned again by any other
-   * endpoint. Webhook URLs must use HTTPS.
+   * Create the org's signature webhook. The returned `secret` is shown ONCE;
+   * store it on receipt — it cannot be retrieved later.
+   *
+   * If a webhook named `signature` already exists, the backend returns 400
+   * ValidationError. Update the existing webhook with `updateWebhook` or
+   * delete it first.
    */
   static async createWebhook(input: CreateWebhookRequest): Promise<CreateWebhookResponse> {
-    // Backend response is `{ data: { id, secret }, message }`. Because `data`
-    // is not the sole top-level key, the HttpClient's smartUnwrap returns the
-    // envelope as-is. Pull `.data` here so the SDK return shape stays domain-focused.
     const envelope = await this.getClient().post<{ data: CreateWebhookResponse }>(
       '/api/webhooks',
-      input,
+      { name: SIGNATURE_WEBHOOK_NAME, ...input },
     );
     return envelope.data;
   }
 
-  /** List webhook subscriptions for the configured org. */
-  static async listWebhooks(input: ListWebhooksRequest = {}): Promise<ListWebhooksResponse> {
-    return this.getClient().get<ListWebhooksResponse>('/api/webhooks', input);
-  }
-
-  /** Get a single webhook by name with current delivery stats and available events. */
-  static async getWebhook(name: string): Promise<WebhookWithStats> {
+  /** Get the org's signature webhook with delivery stats + available events. */
+  static async getWebhook(): Promise<WebhookWithStats> {
     return this.getClient().get<WebhookWithStats>(
-      `/api/webhooks/${encodeURIComponent(name)}`,
+      `/api/webhooks/${SIGNATURE_WEBHOOK_NAME}`,
     );
   }
 
-  /** Patch one or more fields on an existing webhook. */
-  static async updateWebhook(name: string, patch: UpdateWebhookRequest): Promise<Webhook> {
-    // Backend returns `{ data: webhook, message }` — same envelope quirk as
-    // createWebhook. smartUnwrap leaves it alone because of the extra `message`
-    // key, so we extract `.data` explicitly.
+  /** Patch one or more fields on the signature webhook. */
+  static async updateWebhook(patch: UpdateWebhookRequest): Promise<Webhook> {
     const envelope = await this.getClient().patch<{ data: Webhook }>(
-      `/api/webhooks/${encodeURIComponent(name)}`,
+      `/api/webhooks/${SIGNATURE_WEBHOOK_NAME}`,
       patch,
     );
     return envelope.data;
   }
 
-  /** Soft-delete a webhook and its delivery history. */
-  static async deleteWebhook(name: string): Promise<{ message: string }> {
+  /** Soft-delete the signature webhook and its delivery history. */
+  static async deleteWebhook(): Promise<{ message: string }> {
     return this.getClient().delete<{ message: string }>(
-      `/api/webhooks/${encodeURIComponent(name)}`,
+      `/api/webhooks/${SIGNATURE_WEBHOOK_NAME}`,
     );
   }
 
-  /** Send a test delivery to all URLs configured on the webhook. */
-  static async testWebhook(
-    name: string,
-    input: TestWebhookRequest,
-  ): Promise<TestWebhookResponse> {
-    // Envelope: `{ data: { deliveries, summary }, message }`
+  /** Send a test delivery to all URLs configured on the signature webhook. */
+  static async testWebhook(input: TestWebhookRequest): Promise<TestWebhookResponse> {
     const envelope = await this.getClient().post<{ data: TestWebhookResponse }>(
-      `/api/webhooks/${encodeURIComponent(name)}/test`,
+      `/api/webhooks/${SIGNATURE_WEBHOOK_NAME}/test`,
       input,
     );
     return envelope.data;
   }
 
   /**
-   * Send a manual notification to all URLs configured on the webhook.
-   *
-   * NOTE: This routes to the same internal delivery path as `testWebhook` and
-   * returns the same payload shape. The backend differentiates the two only in
-   * the response/error message strings ("Test webhook sent..." vs
-   * "Manual notification sent...", "Cannot test inactive webhook" vs
-   * "Cannot send notification to inactive webhook"). Prefer `testWebhook` in
-   * new code; `notifyWebhook` exists for symmetry with the backend route.
+   * Send a manual notification to all URLs configured on the signature
+   * webhook. Routes through the same backend handler as `testWebhook` —
+   * only the response/error message strings differ.
    */
-  static async notifyWebhook(
-    name: string,
-    input: TestWebhookRequest,
-  ): Promise<NotifyWebhookResponse> {
-    // Envelope: `{ data: { deliveries, summary }, message }`
+  static async notifyWebhook(input: TestWebhookRequest): Promise<NotifyWebhookResponse> {
     const envelope = await this.getClient().post<{ data: NotifyWebhookResponse }>(
-      `/api/webhooks/${encodeURIComponent(name)}/notify`,
+      `/api/webhooks/${SIGNATURE_WEBHOOK_NAME}/notify`,
       input,
     );
     return envelope.data;
   }
 
   /**
-   * Rotate the webhook's HMAC secret. The new secret is shown ONCE in the
-   * response and must be saved; old signatures will fail immediately.
+   * Rotate the webhook's HMAC secret. The new secret is shown ONCE; old
+   * signatures will fail immediately.
    */
-  static async regenerateWebhookSecret(name: string): Promise<RegenerateSecretResponse> {
-    // Envelope: `{ data: { id, secret, regeneratedAt }, message }`
+  static async regenerateWebhookSecret(): Promise<RegenerateSecretResponse> {
     const envelope = await this.getClient().post<{ data: RegenerateSecretResponse }>(
-      `/api/webhooks/${encodeURIComponent(name)}/regenerate`,
+      `/api/webhooks/${SIGNATURE_WEBHOOK_NAME}/regenerate`,
     );
     return envelope.data;
   }
 
-  /** List historical delivery attempts for a webhook, with optional filters. */
+  /** List historical delivery attempts for the signature webhook. */
   static async listWebhookDeliveries(
-    name: string,
     input: ListDeliveriesRequest = {},
   ): Promise<ListDeliveriesResponse> {
     return this.getClient().get<ListDeliveriesResponse>(
-      `/api/webhooks/${encodeURIComponent(name)}/deliveries`,
+      `/api/webhooks/${SIGNATURE_WEBHOOK_NAME}/deliveries`,
       input,
     );
   }
 
   /** Manually retry a specific past delivery by ID. */
-  static async replayWebhookDelivery(
-    name: string,
-    deliveryId: string,
-  ): Promise<ReplayDeliveryResponse> {
-    // Envelope: `{ data: { id, httpStatus }, message }`
+  static async replayWebhookDelivery(deliveryId: string): Promise<ReplayDeliveryResponse> {
     const envelope = await this.getClient().post<{ data: ReplayDeliveryResponse }>(
-      `/api/webhooks/${encodeURIComponent(name)}/replay`,
+      `/api/webhooks/${SIGNATURE_WEBHOOK_NAME}/replay`,
       { deliveryId },
     );
     return envelope.data;
   }
 
-  /** Aggregate delivery stats for the webhook over a sliding window (days). */
-  static async getWebhookStats(
-    name: string,
-    input: WebhookStatsRequest = {},
-  ): Promise<WebhookStats> {
+  /** Aggregate delivery stats over a sliding window (days). */
+  static async getWebhookStats(input: WebhookStatsRequest = {}): Promise<WebhookStats> {
     return this.getClient().get<WebhookStats>(
-      `/api/webhooks/${encodeURIComponent(name)}/stats`,
+      `/api/webhooks/${SIGNATURE_WEBHOOK_NAME}/stats`,
       input,
     );
   }
