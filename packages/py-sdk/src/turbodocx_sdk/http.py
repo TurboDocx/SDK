@@ -69,6 +69,11 @@ class AuthenticationError(TurboDocxError):
     pass
 
 
+class AuthorizationError(TurboDocxError):
+    """Raised when the caller is authenticated but lacks required permissions (HTTP 403)"""
+    pass
+
+
 class ValidationError(TurboDocxError):
     """Raised when validation fails (HTTP 400)"""
     pass
@@ -198,6 +203,8 @@ class HttpClient:
             raise ValidationError(error_message, response.status_code, error_code)
         if response.status_code == 401:
             raise AuthenticationError(error_message, response.status_code, error_code)
+        if response.status_code == 403:
+            raise AuthorizationError(error_message, response.status_code, error_code)
         if response.status_code == 404:
             raise NotFoundError(error_message, response.status_code, error_code)
         if response.status_code == 429:
@@ -471,6 +478,8 @@ class PartnerHttpClient:
             raise ValidationError(error_message, response.status_code, error_code)
         if response.status_code == 401:
             raise AuthenticationError(error_message, response.status_code, error_code)
+        if response.status_code == 403:
+            raise AuthorizationError(error_message, response.status_code, error_code)
         if response.status_code == 404:
             raise NotFoundError(error_message, response.status_code, error_code)
         if response.status_code == 429:

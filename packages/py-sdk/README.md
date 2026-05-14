@@ -414,6 +414,119 @@ logs = await TurboPartner.get_partner_audit_logs(limit=10)
 
 ---
 
+### TurboWebhooks (Event Subscriptions)
+
+The `TurboWebhooks` module manages organization-scoped webhook subscriptions for TurboDocx events (e.g. `signature.document.completed`). It also exposes a `verify_webhook_signature` helper for incoming webhook receivers.
+
+> **Requires administrator role.** All webhook routes require an admin TDX- API key.
+
+#### Configuration
+
+```python
+import os
+from turbodocx_sdk import TurboWebhooks
+
+TurboWebhooks.configure(
+    api_key=os.environ["TURBODOCX_API_KEY"],
+    org_id=os.environ["TURBODOCX_ORG_ID"],
+    # base_url="http://localhost:3000",  # optional; defaults to https://api.turbodocx.com
+)
+```
+
+Unlike `TurboSign`, `TurboWebhooks` does NOT require `sender_email` — webhook routes don't send signature emails.
+
+#### Create a webhook (save the secret immediately)
+
+```python
+created = await TurboWebhooks.create_webhook(
+    name="order-fulfillment",
+    urls=["https://your-server.example.com/webhooks/turbodocx"],  # HTTPS only
+    events=["signature.document.completed", "signature.document.voided"],
+)
+# `secret` is shown ONCE here. Store it securely; it cannot be retrieved later.
+print(f"Save this secret: {created['secret']}")
+```
+
+#### List, get, update, delete
+
+```python
+all_webhooks = await TurboWebhooks.list_webhooks(limit=25)
+
+one = await TurboWebhooks.get_webhook("order-fulfillment")
+# `one["deliveryStats"]` and `one["availableEvents"]` are included
+
+await TurboWebhooks.update_webhook("order-fulfillment", is_active=False)
+await TurboWebhooks.delete_webhook("order-fulfillment")
+```
+
+#### Test deliveries and replay
+
+```python
+tested = await TurboWebhooks.test_webhook(
+    "order-fulfillment",
+    event_type="signature.document.completed",
+    payload={"documentId": "doc-xyz", "status": "completed"},
+)
+print(tested["summary"])  # {"total": ..., "successful": ..., "failed": ...}
+
+deliveries = await TurboWebhooks.list_webhook_deliveries("order-fulfillment", limit=10)
+replayed = await TurboWebhooks.replay_webhook_delivery(
+    "order-fulfillment", deliveries["results"][0]["id"]
+)
+```
+
+#### Rotate the secret
+
+```python
+rotated = await TurboWebhooks.regenerate_webhook_secret("order-fulfillment")
+# `rotated["secret"]` is the new secret. Old signatures will fail immediately.
+```
+
+#### Aggregate stats
+
+```python
+stats = await TurboWebhooks.get_webhook_stats("order-fulfillment", days=30)
+print(stats["summary"]["successRate"], stats["eventBreakdown"])
+```
+
+#### Verify incoming webhook signatures (FastAPI example)
+
+Webhook deliveries from TurboDocx are signed with HMAC-SHA256 over `f"{timestamp}.{raw_body}"` using your webhook secret. Use `verify_webhook_signature` in your receiver:
+
+```python
+import os
+from fastapi import FastAPI, Header, HTTPException, Request
+from turbodocx_sdk import verify_webhook_signature
+
+app = FastAPI()
+
+@app.post("/webhooks/turbodocx")
+async def turbodocx_webhook(
+    request: Request,
+    x_turbodocx_signature: str = Header(...),
+    x_turbodocx_timestamp: str = Header(...),
+):
+    # CRITICAL: read raw bytes. Do NOT use `request.json()` first — the signature
+    # is over the exact bytes; re-serialization breaks verification.
+    raw_body = await request.body()
+    secret = os.environ["TURBODOCX_WEBHOOK_SECRET"]
+
+    if not verify_webhook_signature(
+        raw_body, x_turbodocx_signature, x_turbodocx_timestamp, secret
+    ):
+        raise HTTPException(status_code=401, detail="invalid signature")
+
+    # Now safe to parse and process
+    import json
+    event = json.loads(raw_body)
+    # ... process event ...
+    return {"ok": True}
+```
+
+By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Override with `tolerance_seconds=N` (0 disables the check — not recommended in production).
+
+---
+
 ## Field Types
 
 | Type | Description |
