@@ -26,15 +26,7 @@ export interface Webhook {
   updatedOn: string;
 }
 
-/** Item shape returned in `listWebhooks().results`. Adds delivery aggregates. */
-export interface WebhookListItem extends Webhook {
-  totalDeliveries: number;
-  successfulDeliveries: number;
-  /** ISO timestamp, or null if no deliveries have been recorded yet. */
-  lastDelivery: string | null;
-}
-
-/** Shape returned by `getWebhook(name)`. Adds delivery stats + available events. */
+/** Shape returned by `getWebhook()`. Adds delivery stats + available events. */
 export interface WebhookWithStats extends Webhook {
   deliveryStats: {
     totalDeliveries: number;
@@ -47,8 +39,6 @@ export interface WebhookWithStats extends Webhook {
 }
 
 export interface CreateWebhookRequest {
-  /** Must be unique within the org. */
-  name: string;
   /** Backend enforces HTTPS-only; HTTP URLs return 400 ValidationError. */
   urls: string[];
   events: WebhookEvent[];
@@ -61,24 +51,9 @@ export interface CreateWebhookResponse {
 }
 
 export interface UpdateWebhookRequest {
-  name?: string;
   urls?: string[];
   events?: WebhookEvent[];
   isActive?: boolean;
-}
-
-export interface ListWebhooksRequest {
-  limit?: number;
-  offset?: number;
-  name?: string;
-  isActive?: boolean;
-}
-
-export interface ListWebhooksResponse {
-  results: WebhookListItem[];
-  totalRecords: number;
-  limit: number;
-  offset: number;
 }
 
 export interface WebhookDelivery {

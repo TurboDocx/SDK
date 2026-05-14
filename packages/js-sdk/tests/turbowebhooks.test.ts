@@ -2,10 +2,13 @@
  * TurboWebhooks Module Tests
  *
  * Mocks HttpClient directly (matches the pattern in turbosign.test.ts and
- * turbopartner.test.ts). Order-sensitive pattern: each test stubs the
- * `MockedHttpClient.prototype.<verb>` BEFORE calling `configure()`, because
- * auto-mocked instance methods are bound at construction time and ignore
- * later prototype reassignment.
+ * turbopartner.test.ts). The SDK is locked to a single webhook per org
+ * named `signature`, so no `name` parameter exists on any method — every
+ * route hits `/api/webhooks/signature[/...]`.
+ *
+ * Order-sensitive: each test stubs `MockedHttpClient.prototype.<verb>`
+ * BEFORE calling `configure()`, because auto-mocked instance methods are
+ * bound at construction time and ignore later prototype reassignment.
  */
 
 import { TurboWebhooks } from "../src/modules/webhooks";
@@ -19,7 +22,6 @@ import {
 } from "../src/utils/errors";
 import { createHmac } from "crypto";
 
-// Mock the HttpClient
 jest.mock("../src/http");
 
 const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
@@ -27,7 +29,6 @@ const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
 const API_KEY = "TDX-test-key-abc123";
 const ORG_ID = "org-uuid-test";
 
-/** Configure helper — call AFTER prototype stubs are set. */
 function configure() {
   TurboWebhooks.configure({ apiKey: API_KEY, orgId: ORG_ID });
 }
@@ -87,16 +88,11 @@ describe("TurboWebhooks Module", () => {
 
   describe("getClient lazy fallback", () => {
     it("should auto-configure from env vars when not configured", async () => {
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({
-        results: [],
-        totalRecords: 0,
-        limit: 25,
-        offset: 0,
-      });
+      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({});
       process.env.TURBODOCX_API_KEY = "TDX-env-key";
       process.env.TURBODOCX_ORG_ID = "env-org-id";
 
-      await TurboWebhooks.listWebhooks();
+      await TurboWebhooks.getWebhook();
 
       expect(MockedHttpClient).toHaveBeenCalledWith({
         apiKey: "TDX-env-key",
@@ -108,32 +104,31 @@ describe("TurboWebhooks Module", () => {
     });
 
     it("should throw descriptive error when env vars are missing", async () => {
-      await expect(TurboWebhooks.listWebhooks()).rejects.toThrow(
+      await expect(TurboWebhooks.getWebhook()).rejects.toThrow(
         /TurboWebhooks must be configured/,
       );
     });
   });
 
   // ============================================
-  // CRUD
+  // CRUD — always hits /api/webhooks/signature[/...]
   // ============================================
 
   describe("createWebhook", () => {
-    it("should POST /api/webhooks and return id + secret", async () => {
+    it("should POST /api/webhooks with name=signature injected and return id + secret", async () => {
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
         data: { id: "wh-1", secret: "whsec_abc123" },
-        message: "Webhook created successfully. Save the secret - it won't be shown again.",
+        message: "Webhook created successfully.",
       });
       configure();
 
       const result = await TurboWebhooks.createWebhook({
-        name: "my-hook",
         urls: ["https://example.com/sink"],
         events: ["signature.document.completed"],
       });
 
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith("/api/webhooks", {
-        name: "my-hook",
+        name: "signature",
         urls: ["https://example.com/sink"],
         events: ["signature.document.completed"],
       });
@@ -141,63 +136,11 @@ describe("TurboWebhooks Module", () => {
     });
   });
 
-  describe("listWebhooks", () => {
-    it("should GET /api/webhooks with no filters", async () => {
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({
-        results: [
-          {
-            id: "wh-1",
-            name: "my-hook",
-            urls: ["https://example.com/sink"],
-            events: ["signature.document.completed"],
-            isActive: true,
-            createdOn: "2026-05-01T00:00:00Z",
-            updatedOn: "2026-05-01T00:00:00Z",
-            totalDeliveries: 5,
-            successfulDeliveries: 4,
-            lastDelivery: "2026-05-13T00:00:00Z",
-          },
-        ],
-        totalRecords: 1,
-        limit: 25,
-        offset: 0,
-      });
-      configure();
-
-      const result = await TurboWebhooks.listWebhooks();
-
-      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith("/api/webhooks", {});
-      expect(result.totalRecords).toBe(1);
-      expect(result.results[0].totalDeliveries).toBe(5);
-    });
-
-    it("should pass query filters through", async () => {
-      MockedHttpClient.prototype.get = jest
-        .fn()
-        .mockResolvedValue({ results: [], totalRecords: 0, limit: 10, offset: 0 });
-      configure();
-
-      await TurboWebhooks.listWebhooks({
-        limit: 10,
-        offset: 20,
-        name: "prefix-",
-        isActive: false,
-      });
-
-      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith("/api/webhooks", {
-        limit: 10,
-        offset: 20,
-        name: "prefix-",
-        isActive: false,
-      });
-    });
-  });
-
   describe("getWebhook", () => {
-    it("should GET /api/webhooks/:name and return WebhookWithStats", async () => {
+    it("should GET /api/webhooks/signature and return WebhookWithStats", async () => {
       MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({
         id: "wh-1",
-        name: "my-hook",
+        name: "signature",
         urls: ["https://example.com/sink"],
         events: ["signature.document.completed"],
         isActive: true,
@@ -213,31 +156,20 @@ describe("TurboWebhooks Module", () => {
       });
       configure();
 
-      const result = await TurboWebhooks.getWebhook("my-hook");
+      const result = await TurboWebhooks.getWebhook();
 
-      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith("/api/webhooks/my-hook");
+      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith("/api/webhooks/signature");
       expect(result.deliveryStats.totalDeliveries).toBe(10);
       expect(result.availableEvents.length).toBe(2);
-    });
-
-    it("should URL-encode names with special characters", async () => {
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({});
-      configure();
-
-      await TurboWebhooks.getWebhook("my hook/with spaces");
-
-      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
-        "/api/webhooks/my%20hook%2Fwith%20spaces",
-      );
     });
   });
 
   describe("updateWebhook", () => {
-    it("should PATCH /api/webhooks/:name with the partial body and unwrap envelope", async () => {
+    it("should PATCH /api/webhooks/signature and unwrap envelope", async () => {
       MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue({
         data: {
           id: "wh-1",
-          name: "my-hook",
+          name: "signature",
           urls: ["https://example.com/sink"],
           events: ["signature.document.completed"],
           isActive: false,
@@ -246,10 +178,10 @@ describe("TurboWebhooks Module", () => {
       });
       configure();
 
-      const result = await TurboWebhooks.updateWebhook("my-hook", { isActive: false });
+      const result = await TurboWebhooks.updateWebhook({ isActive: false });
 
       expect(MockedHttpClient.prototype.patch).toHaveBeenCalledWith(
-        "/api/webhooks/my-hook",
+        "/api/webhooks/signature",
         { isActive: false },
       );
       expect(result.isActive).toBe(false);
@@ -257,15 +189,15 @@ describe("TurboWebhooks Module", () => {
   });
 
   describe("deleteWebhook", () => {
-    it("should DELETE /api/webhooks/:name", async () => {
+    it("should DELETE /api/webhooks/signature", async () => {
       MockedHttpClient.prototype.delete = jest
         .fn()
         .mockResolvedValue({ message: "Webhook deleted successfully" });
       configure();
 
-      const result = await TurboWebhooks.deleteWebhook("my-hook");
+      const result = await TurboWebhooks.deleteWebhook();
 
-      expect(MockedHttpClient.prototype.delete).toHaveBeenCalledWith("/api/webhooks/my-hook");
+      expect(MockedHttpClient.prototype.delete).toHaveBeenCalledWith("/api/webhooks/signature");
       expect(result.message).toMatch(/deleted/);
     });
   });
@@ -275,7 +207,7 @@ describe("TurboWebhooks Module", () => {
   // ============================================
 
   describe("testWebhook", () => {
-    it("should POST /api/webhooks/:name/test with eventType + payload and unwrap envelope", async () => {
+    it("should POST /api/webhooks/signature/test with eventType + payload and unwrap envelope", async () => {
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
         data: {
           deliveries: [],
@@ -285,13 +217,13 @@ describe("TurboWebhooks Module", () => {
       });
       configure();
 
-      const result = await TurboWebhooks.testWebhook("my-hook", {
+      const result = await TurboWebhooks.testWebhook({
         eventType: "signature.document.completed",
         payload: { documentId: "doc-1" },
       });
 
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
-        "/api/webhooks/my-hook/test",
+        "/api/webhooks/signature/test",
         {
           eventType: "signature.document.completed",
           payload: { documentId: "doc-1" },
@@ -302,7 +234,7 @@ describe("TurboWebhooks Module", () => {
   });
 
   describe("notifyWebhook", () => {
-    it("should POST /api/webhooks/:name/notify with eventType + payload and unwrap envelope", async () => {
+    it("should POST /api/webhooks/signature/notify and unwrap envelope", async () => {
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
         data: {
           deliveries: [],
@@ -312,13 +244,13 @@ describe("TurboWebhooks Module", () => {
       });
       configure();
 
-      await TurboWebhooks.notifyWebhook("my-hook", {
+      await TurboWebhooks.notifyWebhook({
         eventType: "signature.document.completed",
         payload: { documentId: "doc-2" },
       });
 
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
-        "/api/webhooks/my-hook/notify",
+        "/api/webhooks/signature/notify",
         {
           eventType: "signature.document.completed",
           payload: { documentId: "doc-2" },
@@ -332,26 +264,26 @@ describe("TurboWebhooks Module", () => {
   // ============================================
 
   describe("listWebhookDeliveries", () => {
-    it("should GET /api/webhooks/:name/deliveries with filters", async () => {
+    it("should GET /api/webhooks/signature/deliveries with filters", async () => {
       MockedHttpClient.prototype.get = jest
         .fn()
         .mockResolvedValue({ results: [], totalRecords: 0, limit: 10, offset: 0 });
       configure();
 
-      await TurboWebhooks.listWebhookDeliveries("my-hook", {
+      await TurboWebhooks.listWebhookDeliveries({
         limit: 10,
         isDelivered: false,
       });
 
       expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
-        "/api/webhooks/my-hook/deliveries",
+        "/api/webhooks/signature/deliveries",
         { limit: 10, isDelivered: false },
       );
     });
   });
 
   describe("replayWebhookDelivery", () => {
-    it("should POST /api/webhooks/:name/replay with deliveryId and unwrap envelope", async () => {
+    it("should POST /api/webhooks/signature/replay with deliveryId and unwrap envelope", async () => {
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
         data: {
           id: "delivery-1",
@@ -362,10 +294,10 @@ describe("TurboWebhooks Module", () => {
       });
       configure();
 
-      const result = await TurboWebhooks.replayWebhookDelivery("my-hook", "delivery-1");
+      const result = await TurboWebhooks.replayWebhookDelivery("delivery-1");
 
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
-        "/api/webhooks/my-hook/replay",
+        "/api/webhooks/signature/replay",
         { deliveryId: "delivery-1" },
       );
       expect(result.httpStatus).toBe(200);
@@ -377,7 +309,7 @@ describe("TurboWebhooks Module", () => {
   // ============================================
 
   describe("regenerateWebhookSecret", () => {
-    it("should POST /api/webhooks/:name/regenerate and unwrap envelope", async () => {
+    it("should POST /api/webhooks/signature/regenerate and unwrap envelope", async () => {
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
         data: {
           id: "wh-1",
@@ -389,21 +321,21 @@ describe("TurboWebhooks Module", () => {
       });
       configure();
 
-      const result = await TurboWebhooks.regenerateWebhookSecret("my-hook");
+      const result = await TurboWebhooks.regenerateWebhookSecret();
 
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
-        "/api/webhooks/my-hook/regenerate",
+        "/api/webhooks/signature/regenerate",
       );
       expect(result.secret).toBe("whsec_newRotated");
     });
   });
 
   describe("getWebhookStats", () => {
-    it("should GET /api/webhooks/:name/stats with days query", async () => {
+    it("should GET /api/webhooks/signature/stats with days query", async () => {
       MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({
         webhook: {
           id: "wh-1",
-          name: "my-hook",
+          name: "signature",
           isActive: true,
           events: ["signature.document.completed"],
           urls: ["https://example.com/sink"],
@@ -431,10 +363,10 @@ describe("TurboWebhooks Module", () => {
       });
       configure();
 
-      const result = await TurboWebhooks.getWebhookStats("my-hook", { days: 7 });
+      const result = await TurboWebhooks.getWebhookStats({ days: 7 });
 
       expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
-        "/api/webhooks/my-hook/stats",
+        "/api/webhooks/signature/stats",
         { days: 7 },
       );
       expect(result.summary.successRate).toBe(95);
@@ -453,7 +385,7 @@ describe("TurboWebhooks Module", () => {
         .mockRejectedValue(new AuthenticationError("Invalid API key"));
       configure();
 
-      await expect(TurboWebhooks.listWebhooks()).rejects.toBeInstanceOf(AuthenticationError);
+      await expect(TurboWebhooks.getWebhook()).rejects.toBeInstanceOf(AuthenticationError);
     });
 
     it("should propagate AuthorizationError on 403", async () => {
@@ -462,7 +394,7 @@ describe("TurboWebhooks Module", () => {
         .mockRejectedValue(new AuthorizationError("Forbidden"));
       configure();
 
-      await expect(TurboWebhooks.listWebhooks()).rejects.toBeInstanceOf(AuthorizationError);
+      await expect(TurboWebhooks.getWebhook()).rejects.toBeInstanceOf(AuthorizationError);
     });
 
     it("should propagate NotFoundError on 404", async () => {
@@ -471,7 +403,7 @@ describe("TurboWebhooks Module", () => {
         .mockRejectedValue(new NotFoundError("Webhook not found"));
       configure();
 
-      await expect(TurboWebhooks.getWebhook("missing")).rejects.toBeInstanceOf(NotFoundError);
+      await expect(TurboWebhooks.getWebhook()).rejects.toBeInstanceOf(NotFoundError);
     });
 
     it("should propagate ValidationError on 400", async () => {
@@ -482,7 +414,6 @@ describe("TurboWebhooks Module", () => {
 
       await expect(
         TurboWebhooks.createWebhook({
-          name: "bad-hook",
           urls: ["http://insecure.example.com"],
           events: ["signature.document.completed"],
         }),

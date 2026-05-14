@@ -7,31 +7,26 @@ namespace TurboDocx;
 use TurboDocx\Config\HttpClientConfig;
 
 /**
- * TurboWebhooks - Org-scoped webhook subscription management
+ * TurboWebhooks - Org-scoped signature webhook subscription
  *
- * Wraps the backend /api/webhooks/* surface. All routes require an admin
- * TDX- API key. Webhook management does not send signature emails, so this
- * class constructs its HttpClient with skipSenderValidation=true so a
- * caller can omit senderEmail safely.
+ * The SDK is intentionally locked to a single webhook per org, identified by
+ * the fixed name `signature`. This matches the UI's Signature Webhooks
+ * settings page so SDK-managed and UI-managed webhooks stay in sync. To
+ * manage multiple webhooks per org, call the REST API directly.
  *
  * POST/PATCH responses come back as `{"data": ..., "message": ...}` envelopes
  * which the HttpClient's smartUnwrap leaves intact (it only unwraps
- * single-key {data} responses). Methods that hit non-GET routes therefore
- * extract `['data']` explicitly. GET routes are auto-unwrapped.
+ * single-key {data} responses). Methods that hit non-GET routes extract
+ * `['data']` explicitly. GET routes are auto-unwrapped.
  *
  * @example
  * ```php
- * TurboWebhooks::configure(new HttpClientConfig(
+ * TurboWebhooks::configureFromCredentials(
  *     apiKey: 'TDX-...',
  *     orgId: '...',
- *     skipSenderValidation: true,
- * ));
- *
- * // OR rely on env vars:
- * // TURBODOCX_API_KEY, TURBODOCX_ORG_ID, TURBODOCX_BASE_URL
+ * );
  *
  * $created = TurboWebhooks::createWebhook(
- *     name: 'order-fulfillment',
  *     urls: ['https://your-server.example.com/webhooks/turbodocx'],
  *     events: ['signature.document.completed'],
  * );
@@ -39,13 +34,14 @@ use TurboDocx\Config\HttpClientConfig;
  */
 final class TurboWebhooks
 {
+    public const SIGNATURE_NAME = 'signature';
+
     private static ?HttpClient $client = null;
 
     /**
-     * Configure TurboWebhooks with API credentials. Pass an HttpClientConfig
-     * constructed with skipSenderValidation: true (webhooks don't send emails,
-     * so the SDK helper TurboWebhooks::configureFromCredentials() does this
-     * automatically — use it if you don't want to construct the config yourself).
+     * Configure TurboWebhooks with an explicit HttpClientConfig. Pass
+     * skipSenderValidation: true (webhooks don't send emails). Prefer
+     * configureFromCredentials() for the common case.
      */
     public static function configure(HttpClientConfig $config): void
     {
@@ -70,12 +66,9 @@ final class TurboWebhooks
     }
 
     /**
-     * Get the HTTP client instance, auto-initializing from environment
-     * variables if neither configure() nor configureFromCredentials() has
-     * been called. Raises a clear error if the required env vars are absent.
-     *
-     * Mirrors TurboPartner's loud-failure pattern rather than TurboSign's
-     * silent auto-configure.
+     * Get the HTTP client, auto-initializing from env vars if not yet
+     * configured. Raises a clear error if env vars are missing — mirrors
+     * TurboPartner's loud-failure pattern.
      */
     private static function getClient(): HttpClient
     {
@@ -97,32 +90,22 @@ final class TurboWebhooks
         return self::$client;
     }
 
-    /**
-     * URL-encode a webhook name for path interpolation.
-     * rawurlencode encodes / and other reserved chars (urlencode would leave them).
-     */
-    private static function encodeName(string $name): string
-    {
-        return rawurlencode($name);
-    }
-
     // ============================================
-    // CRUD
+    // CRUD - always hits /api/webhooks/signature[/...]
     // ============================================
 
     /**
-     * Create a webhook subscription. The returned `secret` is shown ONCE
-     * and must be stored on receipt; it cannot be retrieved later.
+     * Create the org's signature webhook. The returned `secret` is shown
+     * ONCE and must be stored on receipt; it cannot be retrieved later.
      *
-     * @param string $name Unique name within the org
      * @param array<int, string> $urls HTTPS URLs (HTTP returns 400)
      * @param array<int, string> $events Event types (e.g. "signature.document.completed")
      * @return array<string, mixed> {id: string, secret: string}
      */
-    public static function createWebhook(string $name, array $urls, array $events): array
+    public static function createWebhook(array $urls, array $events): array
     {
         $envelope = self::getClient()->post('/api/webhooks', [
-            'name' => $name,
+            'name' => self::SIGNATURE_NAME,
             'urls' => $urls,
             'events' => $events,
         ]);
@@ -130,77 +113,49 @@ final class TurboWebhooks
     }
 
     /**
-     * List webhook subscriptions for the configured org.
-     *
-     * @return array<string, mixed> {results: array, totalRecords: int, limit: int, offset: int}
-     */
-    public static function listWebhooks(
-        ?int $limit = null,
-        ?int $offset = null,
-        ?string $name = null,
-        ?bool $isActive = null,
-    ): array {
-        $params = array_filter(
-            [
-                'limit' => $limit,
-                'offset' => $offset,
-                'name' => $name,
-                'isActive' => $isActive,
-            ],
-            fn ($v) => $v !== null,
-        );
-        if (isset($params['isActive'])) {
-            $params['isActive'] = $params['isActive'] ? 'true' : 'false';
-        }
-        return self::getClient()->get('/api/webhooks', $params);
-    }
-
-    /**
-     * Get a single webhook by name with current delivery stats and the
-     * server-provided list of subscribable events.
+     * Get the org's signature webhook with delivery stats + the server-
+     * provided list of subscribable events.
      *
      * @return array<string, mixed>
      */
-    public static function getWebhook(string $name): array
+    public static function getWebhook(): array
     {
-        return self::getClient()->get('/api/webhooks/' . self::encodeName($name));
+        return self::getClient()->get('/api/webhooks/' . self::SIGNATURE_NAME);
     }
 
     /**
-     * Patch one or more fields on an existing webhook.
+     * Patch one or more fields on the signature webhook. Renaming is not
+     * supported — the SDK manages a fixed name.
      *
      * @param array<int, string>|null $urls
      * @param array<int, string>|null $events
      * @return array<string, mixed>
      */
     public static function updateWebhook(
-        string $name,
-        ?string $newName = null,
         ?array $urls = null,
         ?array $events = null,
         ?bool $isActive = null,
     ): array {
         $body = array_filter(
             [
-                'name' => $newName,
                 'urls' => $urls,
                 'events' => $events,
                 'isActive' => $isActive,
             ],
             fn ($v) => $v !== null,
         );
-        $envelope = self::getClient()->patch('/api/webhooks/' . self::encodeName($name), $body);
+        $envelope = self::getClient()->patch('/api/webhooks/' . self::SIGNATURE_NAME, $body);
         return $envelope['data'];
     }
 
     /**
-     * Soft-delete a webhook and its delivery history.
+     * Soft-delete the signature webhook and its delivery history.
      *
      * @return array<string, mixed>
      */
-    public static function deleteWebhook(string $name): array
+    public static function deleteWebhook(): array
     {
-        return self::getClient()->delete('/api/webhooks/' . self::encodeName($name));
+        return self::getClient()->delete('/api/webhooks/' . self::SIGNATURE_NAME);
     }
 
     // ============================================
@@ -208,34 +163,32 @@ final class TurboWebhooks
     // ============================================
 
     /**
-     * Send a test delivery to all URLs configured on the webhook.
+     * Send a test delivery to all URLs configured on the signature webhook.
      *
      * @param array<string, mixed> $payload
      * @return array<string, mixed> {deliveries: array, summary: array}
      */
-    public static function testWebhook(string $name, string $eventType, array $payload): array
+    public static function testWebhook(string $eventType, array $payload): array
     {
         $envelope = self::getClient()->post(
-            '/api/webhooks/' . self::encodeName($name) . '/test',
+            '/api/webhooks/' . self::SIGNATURE_NAME . '/test',
             ['eventType' => $eventType, 'payload' => $payload],
         );
         return $envelope['data'];
     }
 
     /**
-     * Send a manual notification to all URLs configured on the webhook.
-     *
-     * NOTE: Routes through the same backend handler as testWebhook() and
-     * returns the same shape; the only wire-level difference is the response
-     * message string. Prefer testWebhook() in new code.
+     * Send a manual notification. Routes through the same backend handler
+     * as testWebhook() and returns the same shape; the only wire-level
+     * difference is the response message string. Prefer testWebhook().
      *
      * @param array<string, mixed> $payload
      * @return array<string, mixed>
      */
-    public static function notifyWebhook(string $name, string $eventType, array $payload): array
+    public static function notifyWebhook(string $eventType, array $payload): array
     {
         $envelope = self::getClient()->post(
-            '/api/webhooks/' . self::encodeName($name) . '/notify',
+            '/api/webhooks/' . self::SIGNATURE_NAME . '/notify',
             ['eventType' => $eventType, 'payload' => $payload],
         );
         return $envelope['data'];
@@ -246,12 +199,11 @@ final class TurboWebhooks
     // ============================================
 
     /**
-     * List historical delivery attempts for a webhook, with optional filters.
+     * List historical delivery attempts for the signature webhook.
      *
      * @return array<string, mixed>
      */
     public static function listWebhookDeliveries(
-        string $name,
         ?int $limit = null,
         ?int $offset = null,
         ?string $eventType = null,
@@ -272,7 +224,7 @@ final class TurboWebhooks
             $params['isDelivered'] = $params['isDelivered'] ? 'true' : 'false';
         }
         return self::getClient()->get(
-            '/api/webhooks/' . self::encodeName($name) . '/deliveries',
+            '/api/webhooks/' . self::SIGNATURE_NAME . '/deliveries',
             $params,
         );
     }
@@ -282,10 +234,10 @@ final class TurboWebhooks
      *
      * @return array<string, mixed>
      */
-    public static function replayWebhookDelivery(string $name, string $deliveryId): array
+    public static function replayWebhookDelivery(string $deliveryId): array
     {
         $envelope = self::getClient()->post(
-            '/api/webhooks/' . self::encodeName($name) . '/replay',
+            '/api/webhooks/' . self::SIGNATURE_NAME . '/replay',
             ['deliveryId' => $deliveryId],
         );
         return $envelope['data'];
@@ -301,25 +253,25 @@ final class TurboWebhooks
      *
      * @return array<string, mixed> {id, secret, regeneratedAt, message}
      */
-    public static function regenerateWebhookSecret(string $name): array
+    public static function regenerateWebhookSecret(): array
     {
         $envelope = self::getClient()->post(
-            '/api/webhooks/' . self::encodeName($name) . '/regenerate',
+            '/api/webhooks/' . self::SIGNATURE_NAME . '/regenerate',
             null,
         );
         return $envelope['data'];
     }
 
     /**
-     * Aggregate delivery stats for the webhook over a sliding window.
+     * Aggregate delivery stats for the signature webhook over a sliding window.
      *
      * @return array<string, mixed>
      */
-    public static function getWebhookStats(string $name, ?int $days = null): array
+    public static function getWebhookStats(?int $days = null): array
     {
         $params = $days !== null ? ['days' => $days] : [];
         return self::getClient()->get(
-            '/api/webhooks/' . self::encodeName($name) . '/stats',
+            '/api/webhooks/' . self::SIGNATURE_NAME . '/stats',
             $params,
         );
     }

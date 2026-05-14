@@ -414,10 +414,12 @@ logs = await TurboPartner.get_partner_audit_logs(limit=10)
 
 ---
 
-### TurboWebhooks (Event Subscriptions)
+### TurboWebhooks (Signature Webhook)
 
-The `TurboWebhooks` module manages organization-scoped webhook subscriptions for TurboDocx events (e.g. `signature.document.completed`). It also exposes a `verify_webhook_signature` helper for incoming webhook receivers.
+The `TurboWebhooks` module manages your organization's **signature webhook** — a single subscription to TurboDocx signature events (`signature.document.completed`, `signature.document.voided`). It also exposes a `verify_webhook_signature` helper for incoming webhook receivers.
 
+> **One webhook per org.** The SDK manages a single fixed-name webhook (`signature`) per org so SDK-managed and UI-managed webhooks stay in sync — what you create here also appears in the dashboard's Signature Webhooks settings page. To manage multiple webhooks per org, call the REST API directly.
+>
 > **Requires administrator role.** All webhook routes require an admin TDX- API key.
 
 #### Configuration
@@ -435,11 +437,10 @@ TurboWebhooks.configure(
 
 Unlike `TurboSign`, `TurboWebhooks` does NOT require `sender_email` — webhook routes don't send signature emails.
 
-#### Create a webhook (save the secret immediately)
+#### Create the signature webhook (save the secret immediately)
 
 ```python
 created = await TurboWebhooks.create_webhook(
-    name="order-fulfillment",
     urls=["https://your-server.example.com/webhooks/turbodocx"],  # HTTPS only
     events=["signature.document.completed", "signature.document.voided"],
 )
@@ -447,45 +448,42 @@ created = await TurboWebhooks.create_webhook(
 print(f"Save this secret: {created['secret']}")
 ```
 
-#### List, get, update, delete
+If the signature webhook already exists, `create_webhook` raises `ValidationError`. Either update the existing one with `update_webhook` or `delete_webhook` first.
+
+#### Get, update, delete
 
 ```python
-all_webhooks = await TurboWebhooks.list_webhooks(limit=25)
+webhook = await TurboWebhooks.get_webhook()
+# `webhook["deliveryStats"]` and `webhook["availableEvents"]` are included
 
-one = await TurboWebhooks.get_webhook("order-fulfillment")
-# `one["deliveryStats"]` and `one["availableEvents"]` are included
-
-await TurboWebhooks.update_webhook("order-fulfillment", is_active=False)
-await TurboWebhooks.delete_webhook("order-fulfillment")
+await TurboWebhooks.update_webhook(is_active=False)
+await TurboWebhooks.delete_webhook()
 ```
 
 #### Test deliveries and replay
 
 ```python
 tested = await TurboWebhooks.test_webhook(
-    "order-fulfillment",
     event_type="signature.document.completed",
     payload={"documentId": "doc-xyz", "status": "completed"},
 )
 print(tested["summary"])  # {"total": ..., "successful": ..., "failed": ...}
 
-deliveries = await TurboWebhooks.list_webhook_deliveries("order-fulfillment", limit=10)
-replayed = await TurboWebhooks.replay_webhook_delivery(
-    "order-fulfillment", deliveries["results"][0]["id"]
-)
+deliveries = await TurboWebhooks.list_webhook_deliveries(limit=10)
+replayed = await TurboWebhooks.replay_webhook_delivery(deliveries["results"][0]["id"])
 ```
 
 #### Rotate the secret
 
 ```python
-rotated = await TurboWebhooks.regenerate_webhook_secret("order-fulfillment")
+rotated = await TurboWebhooks.regenerate_webhook_secret()
 # `rotated["secret"]` is the new secret. Old signatures will fail immediately.
 ```
 
 #### Aggregate stats
 
 ```python
-stats = await TurboWebhooks.get_webhook_stats("order-fulfillment", days=30)
+stats = await TurboWebhooks.get_webhook_stats(days=30)
 print(stats["summary"]["successRate"], stats["eventBreakdown"])
 ```
 

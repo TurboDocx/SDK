@@ -278,6 +278,8 @@ public class HttpClient {
                 throw new TurboDocxException.ValidationException(message, code);
             case 401:
                 throw new TurboDocxException.AuthenticationException(message, code);
+            case 403:
+                throw new TurboDocxException.AuthorizationException(message, code);
             case 404:
                 throw new TurboDocxException.NotFoundException(message, code);
             case 429:
