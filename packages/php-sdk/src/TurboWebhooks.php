@@ -72,7 +72,8 @@ final class TurboWebhooks
      */
     private static function getClient(): HttpClient
     {
-        if (self::$client === null) {
+        $client = self::$client;
+        if ($client === null) {
             $apiKey = getenv('TURBODOCX_API_KEY') ?: null;
             $orgId = getenv('TURBODOCX_ORG_ID') ?: null;
             if ($apiKey === null || $orgId === null) {
@@ -81,13 +82,15 @@ final class TurboWebhooks
                     . 'or set TURBODOCX_API_KEY and TURBODOCX_ORG_ID environment variables.'
                 );
             }
-            self::configureFromCredentials(
+            $client = new HttpClient(new HttpClientConfig(
                 apiKey: $apiKey,
-                orgId: $orgId,
                 baseUrl: getenv('TURBODOCX_BASE_URL') ?: 'https://api.turbodocx.com',
-            );
+                orgId: $orgId,
+                skipSenderValidation: true,
+            ));
+            self::$client = $client;
         }
-        return self::$client;
+        return $client;
     }
 
     // ============================================
