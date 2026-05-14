@@ -11,6 +11,7 @@ use Psr\Http\Message\ResponseInterface;
 use TurboDocx\Config\HttpClientConfig;
 use TurboDocx\Config\PartnerClientConfig;
 use TurboDocx\Exceptions\AuthenticationException;
+use TurboDocx\Exceptions\AuthorizationException;
 use TurboDocx\Exceptions\NetworkException;
 use TurboDocx\Exceptions\NotFoundException;
 use TurboDocx\Exceptions\RateLimitException;
@@ -235,6 +236,7 @@ final class HttpClient
                 throw match ($statusCode) {
                     400 => new ValidationException($message),
                     401 => new AuthenticationException($message),
+                    403 => new AuthorizationException($message),
                     404 => new NotFoundException($message),
                     429 => new RateLimitException($message),
                     default => new TurboDocxException($message, $statusCode),
