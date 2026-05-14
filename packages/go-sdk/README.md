@@ -519,6 +519,120 @@ logs, err := partner.GetPartnerAuditLogs(ctx, &turbodocx.ListAuditLogsRequest{
 
 ---
 
+### TurboWebhooks (Signature Webhook)
+
+The `WebhooksClient` manages your organization's **signature webhook** — a single subscription to TurboDocx signature events (`signature.document.completed`, `signature.document.voided`). The package also exposes `VerifyWebhookSignature` for incoming webhook receivers.
+
+> **One webhook per org.** The SDK manages a single fixed-name webhook (`signature`) per org so SDK-managed and UI-managed webhooks stay in sync — what you create here also appears in the dashboard's Signature Webhooks settings page. To manage multiple webhooks per org, call the REST API directly.
+>
+> **Requires administrator role.** All webhook routes require an admin TDX- API key.
+
+#### Configuration
+
+```go
+import turbodocx "github.com/TurboDocx/SDK/packages/go-sdk"
+
+client, err := turbodocx.NewWebhooksClientWithConfig(turbodocx.ClientConfig{
+    APIKey:  os.Getenv("TURBODOCX_API_KEY"),
+    OrgID:   os.Getenv("TURBODOCX_ORG_ID"),
+    // BaseURL: "http://localhost:3000", // optional; defaults to https://api.turbodocx.com
+})
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+Unlike the main `NewClientWithConfig`, this constructor does NOT require `SenderEmail` — webhook routes don't send signature emails.
+
+#### Create the signature webhook (save the secret immediately)
+
+```go
+ctx := context.Background()
+created, err := client.CreateWebhook(ctx, turbodocx.CreateWebhookRequest{
+    URLs:   []string{"https://your-server.example.com/webhooks/turbodocx"}, // HTTPS only
+    Events: []string{"signature.document.completed", "signature.document.voided"},
+})
+// `created.Secret` is shown ONCE here. Store it securely.
+fmt.Println("Save this secret:", created.Secret)
+```
+
+#### Get, update, delete
+
+```go
+webhook, err := client.GetWebhook(ctx)
+// webhook["deliveryStats"] and webhook["availableEvents"] are included
+
+isActive := false
+client.UpdateWebhook(ctx, turbodocx.UpdateWebhookRequest{IsActive: &isActive})
+
+client.DeleteWebhook(ctx)
+```
+
+#### Test deliveries and replay
+
+```go
+tested, _ := client.TestWebhook(ctx, turbodocx.TestWebhookRequest{
+    EventType: "signature.document.completed",
+    Payload:   map[string]interface{}{"documentId": "doc-xyz", "status": "completed"},
+})
+
+deliveries, _ := client.ListWebhookDeliveries(ctx, turbodocx.ListDeliveriesRequest{})
+results := deliveries["results"].([]interface{})
+firstID := results[0].(map[string]interface{})["id"].(string)
+replayed, _ := client.ReplayWebhookDelivery(ctx, firstID)
+```
+
+#### Rotate the secret
+
+```go
+rotated, _ := client.RegenerateWebhookSecret(ctx)
+// rotated["secret"] is the new secret. Old signatures will fail immediately.
+```
+
+#### Aggregate stats
+
+```go
+stats, _ := client.GetWebhookStats(ctx, 30) // last 30 days
+// stats["summary"], stats["eventBreakdown"]
+```
+
+#### Verify incoming webhook signatures (`net/http` example)
+
+Webhook deliveries from TurboDocx are signed with HMAC-SHA256 over `timestamp + "." + rawBody` using your webhook secret. Use `VerifyWebhookSignature` in your receiver:
+
+```go
+import (
+    "io"
+    "net/http"
+    "os"
+
+    turbodocx "github.com/TurboDocx/SDK/packages/go-sdk"
+)
+
+func webhookHandler(w http.ResponseWriter, r *http.Request) {
+    rawBody, err := io.ReadAll(r.Body) // raw bytes; do NOT parse JSON first
+    if err != nil {
+        http.Error(w, "bad body", http.StatusBadRequest)
+        return
+    }
+    signature := r.Header.Get("X-TurboDocx-Signature")
+    timestamp := r.Header.Get("X-TurboDocx-Timestamp")
+    secret := os.Getenv("TURBODOCX_WEBHOOK_SECRET")
+
+    if !turbodocx.VerifyWebhookSignature(rawBody, signature, timestamp, secret, nil) {
+        http.Error(w, "invalid signature", http.StatusUnauthorized)
+        return
+    }
+
+    // Now safe to parse and process
+    w.WriteHeader(http.StatusOK)
+}
+```
+
+By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Override via `&turbodocx.VerifyWebhookSignatureOptions{ToleranceSeconds: N}` (a negative value disables the check — not recommended in production).
+
+---
+
 ## Field Types
 
 | Type | Description |
