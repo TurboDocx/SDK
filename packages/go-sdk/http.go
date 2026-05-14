@@ -109,6 +109,12 @@ type AuthenticationError struct {
 	TurboDocxError
 }
 
+// AuthorizationError is raised when the caller is authenticated but lacks
+// the permissions required by the route (HTTP 403).
+type AuthorizationError struct {
+	TurboDocxError
+}
+
 // ValidationError is raised when validation fails (HTTP 400)
 type ValidationError struct {
 	TurboDocxError
@@ -183,6 +189,8 @@ func (c *HTTPClient) handleResponse(resp *http.Response, result interface{}) err
 				return &ValidationError{TurboDocxError: baseErr}
 			case 401:
 				return &AuthenticationError{TurboDocxError: baseErr}
+			case 403:
+				return &AuthorizationError{TurboDocxError: baseErr}
 			case 404:
 				return &NotFoundError{TurboDocxError: baseErr}
 			case 429:
@@ -282,6 +290,8 @@ func (c *HTTPClient) GetRaw(ctx context.Context, path string) ([]byte, error) {
 			return nil, &ValidationError{TurboDocxError: baseErr}
 		case 401:
 			return nil, &AuthenticationError{TurboDocxError: baseErr}
+		case 403:
+			return nil, &AuthorizationError{TurboDocxError: baseErr}
 		case 404:
 			return nil, &NotFoundError{TurboDocxError: baseErr}
 		case 429:
