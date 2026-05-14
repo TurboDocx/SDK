@@ -350,6 +350,109 @@ The audit trail includes a cryptographic hash chain for tamper-evidence verifica
 
 ---
 
+### TurboWebhooks (Event Subscriptions)
+
+The `TurboWebhooks` class manages organization-scoped webhook subscriptions for TurboDocx events (e.g. `signature.document.completed`). It also exposes a `verifyWebhookSignature` helper for incoming webhook receivers.
+
+> **Requires administrator role.** All webhook routes require an admin TDX- API key.
+
+#### Configuration
+
+```php
+use TurboDocx\TurboWebhooks;
+
+TurboWebhooks::configureFromCredentials(
+    apiKey: getenv('TURBODOCX_API_KEY'),
+    orgId: getenv('TURBODOCX_ORG_ID'),
+    // baseUrl: 'http://localhost:3000', // optional, defaults to https://api.turbodocx.com
+);
+```
+
+Unlike `TurboSign`, `TurboWebhooks` does NOT require `senderEmail` — webhook routes don't send signature emails.
+
+#### Create a webhook (save the secret immediately)
+
+```php
+$created = TurboWebhooks::createWebhook(
+    name: 'order-fulfillment',
+    urls: ['https://your-server.example.com/webhooks/turbodocx'],  // HTTPS only
+    events: ['signature.document.completed', 'signature.document.voided'],
+);
+// `secret` is shown ONCE here. Store it securely; it cannot be retrieved later.
+echo "Save this secret: {$created['secret']}";
+```
+
+#### List, get, update, delete
+
+```php
+$all = TurboWebhooks::listWebhooks(limit: 25);
+
+$one = TurboWebhooks::getWebhook('order-fulfillment');
+// $one['deliveryStats'] and $one['availableEvents'] are included
+
+TurboWebhooks::updateWebhook('order-fulfillment', isActive: false);
+TurboWebhooks::deleteWebhook('order-fulfillment');
+```
+
+#### Test deliveries and replay
+
+```php
+$tested = TurboWebhooks::testWebhook(
+    'order-fulfillment',
+    eventType: 'signature.document.completed',
+    payload: ['documentId' => 'doc-xyz', 'status' => 'completed'],
+);
+// $tested['summary']: ['total' => N, 'successful' => N, 'failed' => N]
+
+$deliveries = TurboWebhooks::listWebhookDeliveries('order-fulfillment', limit: 10);
+$replayed = TurboWebhooks::replayWebhookDelivery(
+    'order-fulfillment',
+    $deliveries['results'][0]['id'],
+);
+```
+
+#### Rotate the secret
+
+```php
+$rotated = TurboWebhooks::regenerateWebhookSecret('order-fulfillment');
+// $rotated['secret'] is the new secret. Old signatures will fail immediately.
+```
+
+#### Aggregate stats
+
+```php
+$stats = TurboWebhooks::getWebhookStats('order-fulfillment', days: 30);
+// $stats['summary']['successRate'], $stats['eventBreakdown']
+```
+
+#### Verify incoming webhook signatures
+
+Webhook deliveries from TurboDocx are signed with HMAC-SHA256 over `"{$timestamp}.{$rawBody}"` using your webhook secret. Use `verifyWebhookSignature` to verify them in your receiver:
+
+```php
+use function TurboDocx\Utils\verifyWebhookSignature;
+
+// In your webhook endpoint:
+$rawBody = file_get_contents('php://input');  // CRITICAL: raw bytes only.
+                                              // Do NOT json_decode first; the
+                                              // signature is over the exact bytes.
+$signature = $_SERVER['HTTP_X_TURBODOCX_SIGNATURE'] ?? '';
+$timestamp = $_SERVER['HTTP_X_TURBODOCX_TIMESTAMP'] ?? '';
+$secret = getenv('TURBODOCX_WEBHOOK_SECRET');
+
+if (!verifyWebhookSignature($rawBody, $signature, $timestamp, $secret)) {
+    http_response_code(401);
+    exit('invalid signature');
+}
+
+$event = json_decode($rawBody, true);
+// ... process event ...
+```
+
+By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Pass `toleranceSeconds: N` (0 disables the check — not recommended in production).
+
+---
+
 ## Field Types
 
 TurboSign supports 11 different field types:
