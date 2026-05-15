@@ -31,7 +31,6 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 |---|---|---|---|---|---|
 | configure | `configure()` | `configure()` | `Configure()` | `configure()` | `configure()` |
 | createWebhook | `createWebhook()` | `create_webhook()` | `CreateWebhook()` | `createWebhook()` | `createWebhook()` |
-| listWebhooks | `listWebhooks()` | `list_webhooks()` | `ListWebhooks()` | `listWebhooks()` | `listWebhooks()` |
 | getWebhook | `getWebhook()` | `get_webhook()` | `GetWebhook()` | `getWebhook()` | `getWebhook()` |
 | updateWebhook | `updateWebhook()` | `update_webhook()` | `UpdateWebhook()` | `updateWebhook()` | `updateWebhook()` |
 | deleteWebhook | `deleteWebhook()` | `delete_webhook()` | `DeleteWebhook()` | `deleteWebhook()` | `deleteWebhook()` |
@@ -41,11 +40,14 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 | listWebhookDeliveries | `listWebhookDeliveries()` | `list_webhook_deliveries()` | `ListWebhookDeliveries()` | `listWebhookDeliveries()` | `listWebhookDeliveries()` |
 | replayWebhookDelivery | `replayWebhookDelivery()` | `replay_webhook_delivery()` | `ReplayWebhookDelivery()` | `replayWebhookDelivery()` | `replayWebhookDelivery()` |
 | getWebhookStats | `getWebhookStats()` | `get_webhook_stats()` | `GetWebhookStats()` | `getWebhookStats()` | `getWebhookStats()` |
-| verifyWebhookSignature (free function helper) | `verifyWebhookSignature()` | `verify_webhook_signature()` | `VerifyWebhookSignature()` | `verifyWebhookSignature()` | `verifyWebhookSignature()` |
+| verifyWebhookSignature (free function helper) | `verifyWebhookSignature()` | `verify_webhook_signature()` | `VerifyWebhookSignature()` | `verifyWebhookSignature()` | `WebhookSignatureVerifier.verify()` |
 
 **Notes:**
 - All TurboWebhooks methods require an **administrator** TDX- key (the backend route gate is `requireOrgRole(administrator)`).
+- **No `listWebhooks` by design.** The SDK is locked to a single fixed-name webhook per org (`signature`) so it stays in sync with the UI's Signature Webhooks settings page. A list method would either return `[]` / `[the-one-webhook]` (useless) or surface webhooks the SDK can't act on (the other methods are hardcoded to `/api/webhooks/signature`). Users who need multi-webhook management call the REST API directly.
 - `verifyWebhookSignature` is a free function, not a method on `TurboWebhooks` — it has no `apiKey` / `orgId` dependency and is used by webhook *receivers*.
+- **Java has no free functions.** The webhook signature helper is exposed as `WebhookSignatureVerifier.verify(...)`, a static method on a final utility class. Semantically equivalent to the free-function form used in JS / Py / Go / PHP — just expressed in idiomatic Java.
+- **PHP `TurboWebhooks::configure()` takes a typed config object** (`HttpClientConfig`), matching the SDK-wide PHP convention used by `TurboSign`, `TurboPartner`, and `Deliverable`. For the flat-args form (`$apiKey`, `$orgId`, …) used in the quickstart, call `TurboWebhooks::configureFromCredentials(...)` instead.
 - `testWebhook` and `notifyWebhook` currently route through the same backend handler and return identical shapes. Both are exposed for symmetry with the backend surface; prefer `testWebhook` in new code.
 - The HMAC format the helper must verify: header `X-TurboDocx-Signature: sha256=<hex>`, signed string `${timestamp}.${rawBody}`, HMAC-SHA256, with a configurable timestamp tolerance (default 300s) to prevent replay attacks. Use the language's constant-time comparison primitive (`crypto.timingSafeEqual` / `hmac.compare_digest` / `hmac.Equal` / `hash_equals` / `MessageDigest.isEqual`).
 
