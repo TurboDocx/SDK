@@ -208,6 +208,8 @@ func (c *HTTPClient) handleResponse(resp *http.Response, result interface{}) err
 			return &ValidationError{TurboDocxError: baseErr}
 		case 401:
 			return &AuthenticationError{TurboDocxError: baseErr}
+		case 403:
+			return &AuthorizationError{TurboDocxError: baseErr}
 		case 404:
 			return &NotFoundError{TurboDocxError: baseErr}
 		case 429:
