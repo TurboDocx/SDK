@@ -79,6 +79,20 @@ public class TurboDocxException extends RuntimeException {
     }
 
     /**
+     * Exception thrown when a request conflicts with the current state of
+     * the resource (HTTP 409). For example, attempting to create a webhook
+     * with a name that already exists.
+     */
+    public static class ConflictException extends TurboDocxException {
+        public ConflictException(String message, String code) {
+            super(message, 409, code);
+        }
+        public ConflictException(String message) {
+            super(message, 409, null);
+        }
+    }
+
+    /**
      * Exception thrown when rate limit is exceeded (HTTP 429)
      */
     public static class RateLimitException extends TurboDocxException {

@@ -125,6 +125,14 @@ type NotFoundError struct {
 	TurboDocxError
 }
 
+// ConflictError is raised when a request conflicts with the current state of
+// the target resource (HTTP 409). The most common case for the webhook routes
+// is attempting to create or rename a webhook to a name that already exists
+// for the org.
+type ConflictError struct {
+	TurboDocxError
+}
+
 // RateLimitError is raised when rate limit is exceeded (HTTP 429)
 type RateLimitError struct {
 	TurboDocxError
@@ -193,6 +201,8 @@ func (c *HTTPClient) handleResponse(resp *http.Response, result interface{}) err
 				return &AuthorizationError{TurboDocxError: baseErr}
 			case 404:
 				return &NotFoundError{TurboDocxError: baseErr}
+			case 409:
+				return &ConflictError{TurboDocxError: baseErr}
 			case 429:
 				return &RateLimitError{TurboDocxError: baseErr}
 			default:
@@ -212,6 +222,8 @@ func (c *HTTPClient) handleResponse(resp *http.Response, result interface{}) err
 			return &AuthorizationError{TurboDocxError: baseErr}
 		case 404:
 			return &NotFoundError{TurboDocxError: baseErr}
+		case 409:
+			return &ConflictError{TurboDocxError: baseErr}
 		case 429:
 			return &RateLimitError{TurboDocxError: baseErr}
 		default:
@@ -296,6 +308,8 @@ func (c *HTTPClient) GetRaw(ctx context.Context, path string) ([]byte, error) {
 			return nil, &AuthorizationError{TurboDocxError: baseErr}
 		case 404:
 			return nil, &NotFoundError{TurboDocxError: baseErr}
+		case 409:
+			return nil, &ConflictError{TurboDocxError: baseErr}
 		case 429:
 			return nil, &RateLimitError{TurboDocxError: baseErr}
 		default:

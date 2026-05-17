@@ -84,6 +84,11 @@ class NotFoundError(TurboDocxError):
     pass
 
 
+class ConflictError(TurboDocxError):
+    """Raised when a request conflicts with current resource state (HTTP 409)"""
+    pass
+
+
 class RateLimitError(TurboDocxError):
     """Raised when rate limit is exceeded (HTTP 429)"""
     pass
@@ -207,6 +212,8 @@ class HttpClient:
             raise AuthorizationError(error_message, response.status_code, error_code)
         if response.status_code == 404:
             raise NotFoundError(error_message, response.status_code, error_code)
+        if response.status_code == 409:
+            raise ConflictError(error_message, response.status_code, error_code)
         if response.status_code == 429:
             raise RateLimitError(error_message, response.status_code, error_code)
 
@@ -482,6 +489,8 @@ class PartnerHttpClient:
             raise AuthorizationError(error_message, response.status_code, error_code)
         if response.status_code == 404:
             raise NotFoundError(error_message, response.status_code, error_code)
+        if response.status_code == 409:
+            raise ConflictError(error_message, response.status_code, error_code)
         if response.status_code == 429:
             raise RateLimitError(error_message, response.status_code, error_code)
 

@@ -111,7 +111,8 @@ class TurboWebhooks:
             immediately on receipt.
 
         Raises:
-            ValidationError: if URLs are not HTTPS, if a webhook already exists
+            ValidationError: if URLs are not HTTPS (HTTP 400)
+            ConflictError: if a webhook with this name already exists (HTTP 409)
             AuthorizationError: if the API key lacks admin role
         """
         envelope = await cls._get_client().post(

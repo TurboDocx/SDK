@@ -282,6 +282,8 @@ public class HttpClient {
                 throw new TurboDocxException.AuthorizationException(message, code);
             case 404:
                 throw new TurboDocxException.NotFoundException(message, code);
+            case 409:
+                throw new TurboDocxException.ConflictException(message, code);
             case 429:
                 throw new TurboDocxException.RateLimitException(message, code);
             default:

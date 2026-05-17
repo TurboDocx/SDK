@@ -50,6 +50,8 @@ public class TurboWebhooks {
      * @param events Event types (e.g. "signature.document.completed")
      * @return JsonObject with {@code id} and {@code secret}
      * @throws IOException if the request fails
+     * @throws TurboDocxException.ConflictException if a webhook with the
+     *     reserved {@code signature} name already exists for this org (HTTP 409)
      */
     public JsonObject createWebhook(List<String> urls, List<String> events) throws IOException {
         Map<String, Object> body = new LinkedHashMap<>();
@@ -71,6 +73,10 @@ public class TurboWebhooks {
     /**
      * Patch one or more fields on the signature webhook. Pass null for
      * fields you don't want to change. Renaming is not supported.
+     *
+     * @throws TurboDocxException.ConflictException if the patch would
+     *     result in a webhook-name conflict with an existing webhook
+     *     (HTTP 409)
      */
     public JsonObject updateWebhook(List<String> urls, List<String> events, Boolean isActive) throws IOException {
         Map<String, Object> body = new LinkedHashMap<>();

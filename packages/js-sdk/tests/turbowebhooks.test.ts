@@ -17,6 +17,7 @@ import { verifyWebhookSignature } from "../src/utils/verifyWebhookSignature";
 import {
   AuthenticationError,
   AuthorizationError,
+  ConflictError,
   NotFoundError,
   ValidationError,
 } from "../src/utils/errors";
@@ -208,10 +209,12 @@ describe("TurboWebhooks Module", () => {
 
   describe("testWebhook", () => {
     it("should POST /api/webhooks/signature/test with eventType + payload and unwrap envelope", async () => {
+      // Mock mirrors backend TestWebhookResult.summary shape — including the
+      // `errors: string[]` array the SDK type previously omitted.
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
         data: {
           deliveries: [],
-          summary: { total: 1, successful: 1, failed: 0 },
+          summary: { total: 1, successful: 1, failed: 0, errors: [] },
         },
         message: "Test webhook sent successfully to all URLs",
       });
@@ -230,6 +233,32 @@ describe("TurboWebhooks Module", () => {
         },
       );
       expect(result.summary.successful).toBe(1);
+      // The summary now exposes per-URL failure messages.
+      expect(result.summary.errors).toEqual([]);
+    });
+
+    it("should surface per-URL error strings in summary.errors on partial failure", async () => {
+      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+        data: {
+          deliveries: [],
+          summary: {
+            total: 2,
+            successful: 1,
+            failed: 1,
+            errors: ["https://broken.example.com: 502 Bad Gateway"],
+          },
+        },
+        message: "Test webhook sent",
+      });
+      configure();
+
+      const result = await TurboWebhooks.testWebhook({
+        eventType: "signature.document.completed",
+        payload: {},
+      });
+
+      expect(result.summary.errors).toHaveLength(1);
+      expect(result.summary.errors[0]).toMatch(/502 Bad Gateway/);
     });
   });
 
@@ -283,14 +312,23 @@ describe("TurboWebhooks Module", () => {
   });
 
   describe("replayWebhookDelivery", () => {
-    it("should POST /api/webhooks/signature/replay with deliveryId and unwrap envelope", async () => {
+    it("should POST /api/webhooks/signature/replay with deliveryId and return the full WebhookDelivery", async () => {
+      // Mock mirrors the actual backend route: `{ data: WebhookDelivery, message }`.
+      // The SDK extracts `data`, so the caller receives the entire delivery row.
+      const newDelivery = {
+        id: "delivery-2",
+        webhookId: "wh-1",
+        eventType: "signature.document.completed",
+        payload: { documentId: "doc-1" },
+        httpStatus: 200,
+        isDelivered: true,
+        attemptCount: 1,
+        deliveredAt: "2026-05-13T12:00:00Z",
+        createdOn: "2026-05-13T11:59:59Z",
+      };
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
-        data: {
-          id: "delivery-1",
-          httpStatus: 200,
-          message: "Delivery replayed",
-        },
-        message: "Delivery replayed",
+        data: newDelivery,
+        message: "Webhook delivery replayed successfully - new delivery attempt created",
       });
       configure();
 
@@ -300,7 +338,12 @@ describe("TurboWebhooks Module", () => {
         "/api/webhooks/signature/replay",
         { deliveryId: "delivery-1" },
       );
-      expect(result.httpStatus).toBe(200);
+      // Returned shape is the full WebhookDelivery, not just an id/httpStatus pair.
+      expect(result.id).toBe("delivery-2");
+      expect(result.webhookId).toBe("wh-1");
+      expect(result.eventType).toBe("signature.document.completed");
+      expect(result.attemptCount).toBe(1);
+      expect(result.isDelivered).toBe(true);
     });
   });
 
@@ -309,13 +352,15 @@ describe("TurboWebhooks Module", () => {
   // ============================================
 
   describe("regenerateWebhookSecret", () => {
-    it("should POST /api/webhooks/signature/regenerate and unwrap envelope", async () => {
+    it("should POST /api/webhooks/signature/regenerate and return data without envelope message field", async () => {
+      // Backend envelope is `{ data: { id, secret, regeneratedAt }, message }`
+      // — `message` lives at the envelope, not inside `data`. The SDK extracts
+      // `data`, so the response shape is { id, secret, regeneratedAt } only.
       MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
         data: {
           id: "wh-1",
           secret: "whsec_newRotated",
           regeneratedAt: "2026-05-13T12:00:00Z",
-          message: "Webhook secret regenerated successfully.",
         },
         message: "Webhook secret regenerated successfully. Save the new secret - it won't be shown again.",
       });
@@ -327,6 +372,10 @@ describe("TurboWebhooks Module", () => {
         "/api/webhooks/signature/regenerate",
       );
       expect(result.secret).toBe("whsec_newRotated");
+      expect(result.id).toBe("wh-1");
+      expect(result.regeneratedAt).toBe("2026-05-13T12:00:00Z");
+      // The envelope message field is intentionally absent from the data shape.
+      expect((result as unknown as Record<string, unknown>).message).toBeUndefined();
     });
   });
 
@@ -418,6 +467,37 @@ describe("TurboWebhooks Module", () => {
           events: ["signature.document.completed"],
         }),
       ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it("should propagate ConflictError on 409 from createWebhook", async () => {
+      MockedHttpClient.prototype.post = jest
+        .fn()
+        .mockRejectedValue(
+          new ConflictError("Webhook with name signature already exists"),
+        );
+      configure();
+
+      await expect(
+        TurboWebhooks.createWebhook({
+          urls: ["https://example.com/hook"],
+          events: ["signature.document.completed"],
+        }),
+      ).rejects.toBeInstanceOf(ConflictError);
+    });
+
+    it("should propagate ConflictError on 409 from updateWebhook", async () => {
+      MockedHttpClient.prototype.patch = jest
+        .fn()
+        .mockRejectedValue(
+          new ConflictError("Webhook name conflict"),
+        );
+      configure();
+
+      await expect(
+        TurboWebhooks.updateWebhook({
+          urls: ["https://example.com/hook"],
+        }),
+      ).rejects.toBeInstanceOf(ConflictError);
     });
   });
 });

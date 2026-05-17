@@ -45,6 +45,13 @@ export class NotFoundError extends TurboDocxError {
   }
 }
 
+export class ConflictError extends TurboDocxError {
+  constructor(message: string = 'Resource conflict') {
+    super(message, 409, 'CONFLICT');
+    this.name = 'ConflictError';
+  }
+}
+
 export class RateLimitError extends TurboDocxError {
   constructor(message: string = 'Rate limit exceeded') {
     super(message, 429, 'RATE_LIMIT_EXCEEDED');

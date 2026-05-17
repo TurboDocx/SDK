@@ -104,6 +104,9 @@ final class TurboWebhooks
      * @param array<int, string> $urls HTTPS URLs (HTTP returns 400)
      * @param array<int, string> $events Event types (e.g. "signature.document.completed")
      * @return array<string, mixed> {id: string, secret: string}
+     * @throws \TurboDocx\Exceptions\ConflictException HTTP 409 when the
+     *         signature webhook already exists. Update or delete the existing
+     *         webhook before retrying.
      */
     public static function createWebhook(array $urls, array $events): array
     {
@@ -133,6 +136,8 @@ final class TurboWebhooks
      * @param array<int, string>|null $urls
      * @param array<int, string>|null $events
      * @return array<string, mixed>
+     * @throws \TurboDocx\Exceptions\ConflictException HTTP 409 when the patch
+     *         would collide with an existing webhook name.
      */
     public static function updateWebhook(
         ?array $urls = null,

@@ -46,6 +46,7 @@ from .http import (
     AuthorizationError,
     ValidationError,
     NotFoundError,
+    ConflictError,
     RateLimitError,
     NetworkError
 )
@@ -95,6 +96,7 @@ __all__ = [
     "AuthorizationError",
     "ValidationError",
     "NotFoundError",
+    "ConflictError",
     "RateLimitError",
     "NetworkError",
     "__version__",
