@@ -379,6 +379,42 @@ func TestWebhooksErrorPropagation(t *testing.T) {
 		require.True(t, ok, "expected NotFoundError, got %T", err)
 	})
 
+	t.Run("409 on CreateWebhook propagates ConflictError", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(409)
+			w.Write([]byte(`{"message":"Webhook with name 'signature' already exists"}`))
+		}))
+		defer server.Close()
+
+		client := newTestWebhooksClient(t, server.URL)
+		_, err := client.CreateWebhook(context.Background(), CreateWebhookRequest{
+			URLs:   []string{"https://example.com/sink"},
+			Events: []string{"signature.document.completed"},
+		})
+		require.Error(t, err)
+		ce, ok := err.(*ConflictError)
+		require.True(t, ok, "expected ConflictError, got %T", err)
+		assert.Equal(t, 409, ce.StatusCode)
+		assert.Contains(t, ce.Message, "already exists")
+	})
+
+	t.Run("409 on UpdateWebhook propagates ConflictError", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(409)
+			w.Write([]byte(`{"message":"Webhook name conflict"}`))
+		}))
+		defer server.Close()
+
+		client := newTestWebhooksClient(t, server.URL)
+		isActive := true
+		_, err := client.UpdateWebhook(context.Background(), UpdateWebhookRequest{IsActive: &isActive})
+		require.Error(t, err)
+		_, ok := err.(*ConflictError)
+		require.True(t, ok, "expected ConflictError, got %T", err)
+	})
+
 	t.Run("400 propagates ValidationError", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")

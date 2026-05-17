@@ -6,6 +6,7 @@ namespace TurboDocx\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use TurboDocx\Exceptions\AuthenticationException;
+use TurboDocx\Exceptions\ConflictException;
 use TurboDocx\Exceptions\NetworkException;
 use TurboDocx\Exceptions\NotFoundException;
 use TurboDocx\Exceptions\RateLimitException;
@@ -62,6 +63,22 @@ final class ExceptionTest extends TestCase
         $exception = new NotFoundException();
 
         $this->assertEquals('Resource not found', $exception->getMessage());
+    }
+
+    public function testConflictException(): void
+    {
+        $exception = new ConflictException('Webhook already exists');
+
+        $this->assertEquals('Webhook already exists', $exception->getMessage());
+        $this->assertEquals(409, $exception->statusCode);
+        $this->assertEquals('CONFLICT', $exception->errorCode);
+    }
+
+    public function testConflictExceptionDefaultMessage(): void
+    {
+        $exception = new ConflictException();
+
+        $this->assertEquals('Conflict with existing resource', $exception->getMessage());
     }
 
     public function testRateLimitException(): void

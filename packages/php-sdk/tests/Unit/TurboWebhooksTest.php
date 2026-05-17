@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 namespace TurboDocx\Tests\Unit;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use RuntimeException;
 use TurboDocx\Config\HttpClientConfig;
 use TurboDocx\Exceptions\AuthenticationException;
 use TurboDocx\Exceptions\AuthorizationException;
+use TurboDocx\Exceptions\ConflictException;
 use TurboDocx\Exceptions\TurboDocxException;
+use TurboDocx\HttpClient;
 use TurboDocx\TurboWebhooks;
 
 use function TurboDocx\Utils\verifyWebhookSignature;
@@ -132,6 +138,56 @@ final class TurboWebhooksTest extends TestCase
         $client = $method->invoke(null);
 
         $this->assertNotNull($client);
+    }
+
+    // ============================================
+    // 409 ConflictException on createWebhook / updateWebhook
+    // ============================================
+
+    private function installMockClient(int $status, string $body): void
+    {
+        $config = new HttpClientConfig(
+            apiKey: 'TDX-test',
+            orgId: 'org-1',
+            skipSenderValidation: true,
+        );
+        $http = new HttpClient($config);
+
+        $mock = new MockHandler([new Response($status, [], $body)]);
+        $stack = HandlerStack::create($mock);
+        $guzzle = new Client(['handler' => $stack, 'base_uri' => 'http://localhost/']);
+
+        $httpRef = new ReflectionClass($http);
+        $guzzleProp = $httpRef->getProperty('client');
+        $guzzleProp->setAccessible(true);
+        $guzzleProp->setValue($http, $guzzle);
+
+        $whRef = new ReflectionClass(TurboWebhooks::class);
+        $clientProp = $whRef->getProperty('client');
+        $clientProp->setAccessible(true);
+        $clientProp->setValue(null, $http);
+    }
+
+    public function testCreateWebhookThrowsConflictExceptionOn409(): void
+    {
+        $this->installMockClient(409, '{"message":"Webhook name already in use"}');
+
+        $this->expectException(ConflictException::class);
+        $this->expectExceptionMessage('Webhook name already in use');
+
+        TurboWebhooks::createWebhook(
+            urls: ['https://example.com/hook'],
+            events: ['signature.document.completed'],
+        );
+    }
+
+    public function testUpdateWebhookThrowsConflictExceptionOn409(): void
+    {
+        $this->installMockClient(409, '{"message":"name conflict"}');
+
+        $this->expectException(ConflictException::class);
+
+        TurboWebhooks::updateWebhook(isActive: false);
     }
 
     // ============================================

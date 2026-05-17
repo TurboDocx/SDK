@@ -91,8 +91,8 @@ export class TurboWebhooks {
    * Create the org's signature webhook. The returned `secret` is shown ONCE;
    * store it on receipt — it cannot be retrieved later.
    *
-   * If a webhook named `signature` already exists, the backend returns 400
-   * ValidationError. Update the existing webhook with `updateWebhook` or
+   * If a webhook named `signature` already exists, the backend returns 409
+   * ConflictError. Update the existing webhook with `updateWebhook` or
    * delete it first.
    */
   static async createWebhook(input: CreateWebhookRequest): Promise<CreateWebhookResponse> {

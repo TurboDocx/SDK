@@ -383,7 +383,7 @@ $created = TurboWebhooks::createWebhook(
 echo "Save this secret: {$created['secret']}";
 ```
 
-If the signature webhook already exists, `createWebhook` throws `ValidationException`. Either update the existing one with `updateWebhook` or `deleteWebhook` first.
+If the signature webhook already exists, `createWebhook` throws `ConflictException` (HTTP 409). Either update the existing one with `updateWebhook` or `deleteWebhook` first.
 
 #### Get, update, delete
 

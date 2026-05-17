@@ -95,6 +95,9 @@ type createWebhookEnvelope struct {
 
 // CreateWebhook creates the org's signature webhook. The returned Secret is
 // shown ONCE; store it on receipt — it cannot be retrieved later.
+//
+// Returns *ConflictError (HTTP 409) if a webhook with the signature name
+// already exists for the org.
 func (c *WebhooksClient) CreateWebhook(ctx context.Context, req CreateWebhookRequest) (*CreateWebhookResponse, error) {
 	body := map[string]interface{}{
 		"name":   SignatureWebhookName,
@@ -129,6 +132,9 @@ type UpdateWebhookRequest struct {
 }
 
 // UpdateWebhook patches one or more fields on the signature webhook.
+//
+// Returns *ConflictError (HTTP 409) if the patch conflicts with an existing
+// webhook name for the org.
 func (c *WebhooksClient) UpdateWebhook(ctx context.Context, req UpdateWebhookRequest) (map[string]interface{}, error) {
 	var envelope struct {
 		Data    map[string]interface{} `json:"data"`

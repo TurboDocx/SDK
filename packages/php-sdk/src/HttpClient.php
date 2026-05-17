@@ -12,6 +12,7 @@ use TurboDocx\Config\HttpClientConfig;
 use TurboDocx\Config\PartnerClientConfig;
 use TurboDocx\Exceptions\AuthenticationException;
 use TurboDocx\Exceptions\AuthorizationException;
+use TurboDocx\Exceptions\ConflictException;
 use TurboDocx\Exceptions\NetworkException;
 use TurboDocx\Exceptions\NotFoundException;
 use TurboDocx\Exceptions\RateLimitException;
@@ -238,6 +239,7 @@ final class HttpClient
                     401 => new AuthenticationException($message),
                     403 => new AuthorizationException($message),
                     404 => new NotFoundException($message),
+                    409 => new ConflictException($message),
                     429 => new RateLimitException($message),
                     default => new TurboDocxException($message, $statusCode),
                 };

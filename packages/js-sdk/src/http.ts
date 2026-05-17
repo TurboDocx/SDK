@@ -4,7 +4,7 @@
 
 import * as fs from 'fs';
 import * as nodePath from 'path';
-import { TurboDocxError, AuthenticationError, AuthorizationError, ValidationError, NotFoundError, RateLimitError, NetworkError } from './utils/errors';
+import { TurboDocxError, AuthenticationError, AuthorizationError, ValidationError, NotFoundError, ConflictError, RateLimitError, NetworkError } from './utils/errors';
 
 /**
  * Configuration for the TurboDocx HTTP client
@@ -325,6 +325,9 @@ export class HttpClient {
     }
     if (response.status === 404) {
       throw new NotFoundError(errorMessage);
+    }
+    if (response.status === 409) {
+      throw new ConflictError(errorMessage);
     }
     if (response.status === 429) {
       throw new RateLimitError(errorMessage);

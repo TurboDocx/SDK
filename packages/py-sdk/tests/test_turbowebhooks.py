@@ -18,6 +18,7 @@ import pytest
 from turbodocx_sdk import (
     AuthenticationError,
     AuthorizationError,
+    ConflictError,
     NotFoundError,
     TurboWebhooks,
     ValidationError,
@@ -415,6 +416,41 @@ class TestErrorPropagation:
                     urls=["http://insecure.example.com"],
                     events=["signature.document.completed"],
                 )
+
+    @pytest.mark.asyncio
+    async def test_create_webhook_propagates_conflict_error_on_409(self):
+        """Backend returns 409 when a webhook with the same name already exists."""
+        with patch.object(TurboWebhooks, "_get_client") as mock_get:
+            mock_client = MagicMock()
+            mock_client.post = AsyncMock(
+                side_effect=ConflictError(
+                    "Webhook with this name already exists", 409, "CONFLICT"
+                )
+            )
+            mock_get.return_value = mock_client
+
+            with pytest.raises(ConflictError) as exc_info:
+                await TurboWebhooks.create_webhook(
+                    urls=["https://example.com/sink"],
+                    events=["signature.document.completed"],
+                )
+            assert exc_info.value.status_code == 409
+
+    @pytest.mark.asyncio
+    async def test_update_webhook_propagates_conflict_error_on_409(self):
+        """Backend returns 409 when an update would conflict with another webhook name."""
+        with patch.object(TurboWebhooks, "_get_client") as mock_get:
+            mock_client = MagicMock()
+            mock_client.patch = AsyncMock(
+                side_effect=ConflictError(
+                    "Webhook name conflict", 409, "CONFLICT"
+                )
+            )
+            mock_get.return_value = mock_client
+
+            with pytest.raises(ConflictError) as exc_info:
+                await TurboWebhooks.update_webhook(is_active=False)
+            assert exc_info.value.status_code == 409
 
 
 # ============================================

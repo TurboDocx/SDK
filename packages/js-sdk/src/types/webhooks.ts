@@ -90,7 +90,13 @@ export interface TestWebhookRequest {
 
 export interface TestWebhookResponse {
   deliveries: WebhookDelivery[];
-  summary: { total: number; successful: number; failed: number };
+  summary: {
+    total: number;
+    successful: number;
+    failed: number;
+    /** Per-URL failure messages; empty array on success. Mirrors backend TestWebhookResult.summary.errors. */
+    errors: string[];
+  };
 }
 
 /**
@@ -100,17 +106,23 @@ export interface TestWebhookResponse {
  */
 export type NotifyWebhookResponse = TestWebhookResponse;
 
-export interface ReplayDeliveryResponse {
-  id: string;
-  httpStatus: number;
-  message: string;
-}
+/**
+ * Replay returns a freshly-created delivery row. The backend route returns
+ * `{ data: WebhookDelivery, message }`; the SDK extracts `data` so callers
+ * receive the full delivery shape, not just the id/httpStatus pair.
+ */
+export type ReplayDeliveryResponse = WebhookDelivery;
 
+/**
+ * Returned by `regenerateWebhookSecret()`. The backend envelope is
+ * `{ data: { id, secret, regeneratedAt }, message }`; the SDK extracts `data`,
+ * so the response does NOT include a `message` field. Save `secret` on receipt
+ * — it is shown ONCE and any subsequent call will rotate it again.
+ */
 export interface RegenerateSecretResponse {
   id: string;
   secret: string;
   regeneratedAt: string;
-  message: string;
 }
 
 export interface WebhookStatsRequest {

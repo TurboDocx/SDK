@@ -359,6 +359,33 @@ class TurboWebhooksTest {
     }
 
     @Test
+    void createWebhook_propagatesConflictExceptionOn409() {
+        server.enqueue(new MockResponse()
+                .setResponseCode(409)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"message\":\"Webhook with this name already exists\",\"code\":\"CONFLICT\"}"));
+
+        assertThrows(TurboDocxException.ConflictException.class, () ->
+                webhooks.createWebhook(
+                        List.of("https://example.com/sink"),
+                        List.of("signature.document.completed")));
+    }
+
+    @Test
+    void updateWebhook_propagatesConflictExceptionOn409() {
+        server.enqueue(new MockResponse()
+                .setResponseCode(409)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"message\":\"Webhook with this name already exists\",\"code\":\"CONFLICT\"}"));
+
+        assertThrows(TurboDocxException.ConflictException.class, () ->
+                webhooks.updateWebhook(
+                        List.of("https://example.com/new-sink"),
+                        null,
+                        null));
+    }
+
+    @Test
     void propagatesValidationExceptionOn400() {
         server.enqueue(new MockResponse()
                 .setResponseCode(400)
