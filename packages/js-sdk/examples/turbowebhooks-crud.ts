@@ -42,8 +42,12 @@ import {
 /**
  * The URL the webhook will POST to when an event fires. The backend
  * enforces HTTPS-only — non-HTTPS URLs return 400 ValidationError.
+ *
+ * Override via TURBODOCX_RECEIVER_URL when live-testing against an actual
+ * receiver (e.g. webhook.site, ngrok).
  */
-const RECEIVER_URL = 'https://your-server.example.com/webhooks/turbodocx';
+const RECEIVER_URL =
+  process.env.TURBODOCX_RECEIVER_URL ?? 'https://your-server.example.com/webhooks/turbodocx';
 
 const EVENT_DOCUMENT_COMPLETED = 'signature.document.completed';
 const EVENT_DOCUMENT_VOIDED = 'signature.document.voided';
