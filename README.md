@@ -11,10 +11,33 @@
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord&logoColor=white)](https://discord.gg/NYKwz4BcpX)
 [![X](https://img.shields.io/badge/X-@TurboDocx-000?logo=x&logoColor=white)](https://twitter.com/TurboDocx)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Agent Skills](https://img.shields.io/badge/Agent%20Skills-agentskills.io-8A2BE2)](https://agentskills.io)
+[![Quickstart Skill](https://skills.sh/b/TurboDocx/quickstart)](https://github.com/TurboDocx/quickstart)
 
 [Documentation](https://docs.turbodocx.com/docs) • [API Reference](https://docs.turbodocx.com/docs/SDKs/) • [Discord](https://discord.gg/NYKwz4BcpX) • [Blog](https://www.turbodocx.com/blog)
 
 </div>
+
+---
+
+## ⚡ Skip the boilerplate — let an agent scaffold it for you
+
+Have an AI coding agent (Claude Code, Cursor, Copilot, Codex, Gemini CLI, OpenCode) install the right TurboDocx SDK for your language, configure your env, write working route handlers, and wire them into your app:
+
+```bash
+npx skills add TurboDocx/quickstart
+```
+
+Then run `/turbodocx-sdk` inside your agent — or one of the focused shortcuts:
+
+| Shortcut | What it scaffolds |
+|---|---|
+| `/turbodocx-sdk turbosign` | Send documents for e-signature, check status, download signed PDF |
+| `/turbodocx-sdk deliverable` | Generate documents from templates with variable substitution |
+| `/turbodocx-sdk turbopartner` | Provision and manage customer organizations (partner accounts) |
+| `/turbodocx-sdk turbowebhooks` | Subscribe to `signature.document.completed` events + verify HMAC |
+
+The skill auto-detects your framework (Express, NestJS, Next.js, FastAPI, Django, Spring Boot, Laravel, Gin, …) and follows your existing project conventions. Source: [github.com/TurboDocx/quickstart](https://github.com/TurboDocx/quickstart).
 
 ---
 
