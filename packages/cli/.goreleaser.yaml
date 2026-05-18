@@ -1,0 +1,50 @@
+version: 2
+project_name: turbodocx
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: .
+    binary: turbodocx
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+
+archives:
+  - format: tar.gz
+    name_template: "turbodocx_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+brews:
+  - name: cli
+    repository:
+      owner: TurboDocx
+      name: homebrew-tap
+    homepage: https://turbodocx.com
+    description: TurboDocx CLI - Digital signatures and partner management
+    install: |
+      bin.install "turbodocx"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

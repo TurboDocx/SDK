@@ -26,6 +26,7 @@ All SDKs must have equivalent test coverage. When adding a test case in one SDK,
 | php-sdk | `composer test` | PHPUnit |
 | java-sdk | `mvn test -B` | JUnit (Maven Surefire) |
 | ruby-sdk | `bundle exec rspec` | RSpec |
+| cli | `go test -v ./...` | go test + testify |
 
 ## Mock HTTP Responses, Not SDK Internals
 
@@ -34,3 +35,11 @@ All SDKs must have equivalent test coverage. When adding a test case in one SDK,
 - Test error mapping: mock HTTP 401 → verify AuthenticationError is thrown
 - Never make real HTTP calls in unit tests
 - Keep mocks minimal — only mock what's needed for the specific test case
+
+## CLI Testing
+
+The CLI is different from SDKs — it mocks at the **SDK client level**, not HTTP:
+- Define `SignClient` interface matching SDK methods, inject mock via package var
+- Test flag parsing, config resolution, output formatting, and error handling
+- Use `bytes.Buffer` to capture stdout/stderr
+- Use `t.TempDir()` for config file tests

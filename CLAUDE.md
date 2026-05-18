@@ -6,6 +6,7 @@ Multi-language SDK monorepo for TurboDocx API (TurboSign digital signatures + Tu
 
 ```
 packages/
+├── cli/         # Go CLI wrapping go-sdk (Cobra, single binary)
 ├── js-sdk/      # TypeScript/JavaScript (@turbodocx/sdk)
 ├── py-sdk/      # Python (turbodocx-sdk)
 ├── go-sdk/      # Go (github.com/TurboDocx/SDK/packages/go-sdk)
@@ -19,6 +20,7 @@ packages/
 
 | SDK | Install | Build | Test |
 |-----|---------|-------|------|
+| cli | `go mod tidy` | `go build -v .` | `go test -v ./...` |
 | js-sdk | `npm ci` | `npm run build` | `npm test` |
 | py-sdk | `pip install -e ".[dev]"` | — | `pytest -v` |
 | go-sdk | `go mod tidy` | — | `go test -v ./...` |
@@ -39,6 +41,7 @@ feat|fix|docs|test|refactor: description
 
 - All SDKs must maintain **feature parity** — see `.claude/rules/cross-sdk-parity.md`
 - Two modules per SDK: **TurboSign** (signatures) and **TurboPartner** (partner portal)
+- CLI wraps the Go SDK — sign commands today, partner commands planned
 - Follow each language's idiomatic naming (camelCase JS, snake_case Py, PascalCase Go)
 - Shared error hierarchy: `TurboDocxError > Auth | Validation | NotFound | RateLimit | Network`
 - Config pattern: explicit config → env var fallback → error
@@ -51,4 +54,5 @@ See @docs/ARCHITECTURE.md for HTTP client design, file input abstraction, error 
 
 - `.claude/rules/cross-sdk-parity.md` — feature parity requirements
 - `.claude/rules/js-sdk.md` — JS/TS-specific conventions
+- `.claude/rules/cli.md` — CLI-specific conventions
 - `.claude/rules/testing.md` — TDD workflow and test patterns
