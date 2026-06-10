@@ -38,6 +38,7 @@ Then run `/turbodocx-sdk` inside your agent — or one of the focused shortcuts:
 | `/turbodocx-sdk deliverable` | Generate documents from templates with variable substitution |
 | `/turbodocx-sdk turbopartner` | Provision and manage customer organizations (partner accounts) |
 | `/turbodocx-sdk turbowebhooks` | Subscribe to `signature.document.completed` events + verify HMAC |
+| `/turbodocx-sdk turboquote` | Build and send sales quotes with line items, bundles, and price books |
 
 The skill auto-detects your framework (Express, NestJS, Next.js, Fastify, …) and follows your existing project conventions. Source: [github.com/TurboDocx/quickstart](https://github.com/TurboDocx/quickstart).
 
@@ -603,6 +604,84 @@ app.post(
 ```
 
 By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Override with `{ toleranceSeconds: N }` (0 disables the check — not recommended in production).
+
+---
+
+### TurboQuote (Sales Quoting)
+
+The `TurboQuote` module provides end-to-end sales quoting: build quote templates, manage your product catalog, assemble quotes with line items, and send them to customers.
+
+#### Configuration
+
+```typescript
+import { TurboQuote } from '@turbodocx/sdk';
+
+TurboQuote.configure({
+  apiKey: process.env.TURBODOCX_API_KEY,  // REQUIRED (or accessToken)
+  orgId: process.env.TURBODOCX_ORG_ID,   // REQUIRED
+  // baseUrl: 'https://api.turbodocx.com' // optional
+});
+```
+
+`TurboQuote` does **not** require `senderEmail` — use `apiKey` + `orgId` only.
+
+#### Methods
+
+| Group | Methods |
+|---|---|
+| **Configuration** | `configure()` |
+| **Quotes** | `createQuote()`, `getQuote()`, `listQuotes()`, `updateQuote()`, `deleteQuote()` |
+| **Quote status transitions** | `sendQuote()`, `declineQuote()`, `voidQuote()`, `handleExpiredQuote()`, `duplicateQuote()` |
+| **Quote downloads** | `downloadPdf()`, `getPublicQuoteLink()` |
+| **Line items** | `addLineItems()`, `listLineItems()`, `updateLineItem()`, `removeLineItem()` |
+| **Products** | `createProduct()`, `getProduct()`, `listProducts()`, `updateProduct()`, `deleteProduct()` |
+| **Product images** | `addProductImages()`, `deleteProductImage()`, `getProductPrimaryImages()` |
+| **Bundles** | `createBundle()`, `getBundle()`, `listBundles()`, `updateBundle()`, `deleteBundle()` |
+| **Price books** | `createPriceBook()`, `getPriceBook()`, `listPriceBooks()`, `updatePriceBook()`, `deletePriceBook()` |
+| **Price book products** | `listPriceBookProducts()`, `addProductsToPriceBook()`, `updatePriceBookProduct()`, `removeProductFromPriceBook()` |
+| **Quote template** | `getTemplate()`, `createTemplate()`, `updateTemplate()`, `deleteTemplate()` |
+| **Types / categories** | `createType()`, `listTypes()`, `updateType()`, `deleteType()` |
+| **Companies** | `createCompany()`, `getCompany()`, `listCompanies()`, `updateCompany()`, `deleteCompany()` |
+| **Contacts** | `createContact()`, `listCompanyContacts()`, `updateContact()`, `deleteContact()` |
+
+#### Create a quote, add line items, and send
+
+```typescript
+// 1. Create the quote
+const quote = await TurboQuote.createQuote({
+  name: 'Professional Services — Q3 2026',
+  companyId: 'company-uuid',
+  contactId: 'contact-uuid',
+  currency: 'USD',
+  validUntil: '2026-09-30',
+});
+console.log('Quote number:', quote.quoteNumber);
+
+// 2. Add a product line item
+const items = await TurboQuote.addLineItems(quote.id, {
+  productId: 'product-uuid',
+  productName: 'Consulting Service',
+  unitPrice: 500,
+  billingFrequency: 'monthly',
+  quantity: 3,
+  discountType: 'percent',
+  discountPercent: 10,
+});
+console.log('Line item ID:', items[0].id);
+
+// 3. Send the quote to the customer
+const sent = await TurboQuote.sendQuote(quote.id);
+console.log(sent.message);
+```
+
+#### Download a quote as PDF
+
+```typescript
+import { writeFileSync } from 'fs';
+
+const pdfBuffer = await TurboQuote.downloadPdf(quote.id);
+writeFileSync('quote.pdf', pdfBuffer);
+```
 
 ---
 

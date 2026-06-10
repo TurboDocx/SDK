@@ -6,6 +6,10 @@ namespace TurboDocx\Types\Requests\Quote;
 
 /**
  * Request for updating a company
+ *
+ * `industryId` supports null-clear semantics: pass `null` + `includeIndustryId: true`
+ * to explicitly clear the field on the server. Omitting `industryId` (or not setting
+ * `includeIndustryId`) leaves the server value unchanged.
  */
 final class UpdateCompanyRequest
 {
@@ -15,7 +19,10 @@ final class UpdateCompanyRequest
         public readonly ?string $city = null,
         public readonly ?string $state = null,
         public readonly ?string $country = null,
+        // industryId is nullable/null-clearable — use includeIndustryId: true to
+        // explicitly send null (clears the value on the server).
         public readonly ?string $industryId = null,
+        public readonly bool $includeIndustryId = false,
     ) {}
 
     /**
@@ -40,7 +47,9 @@ final class UpdateCompanyRequest
         if ($this->country !== null) {
             $data['country'] = $this->country;
         }
-        if ($this->industryId !== null) {
+        if ($this->includeIndustryId) {
+            $data['industryId'] = $this->industryId;
+        } elseif ($this->industryId !== null) {
             $data['industryId'] = $this->industryId;
         }
 

@@ -58,4 +58,10 @@ module TurboDocxSdk
     CURRENCY_MISMATCH = "currency_mismatch"
     ALL = [ACTIVE, PRODUCT_DELETED, PRODUCT_UNAVAILABLE, CURRENCY_MISMATCH].freeze
   end
+
+  module DiscountType
+    PERCENT = "percent"
+    AMOUNT = "amount"
+    ALL = [PERCENT, AMOUNT].freeze
+  end
 end

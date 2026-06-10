@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from typing_extensions import TypedDict
 
 from .product import Product
+from .quote_shared import DiscountType
 
 
 class PriceBookProductPricing(TypedDict, total=False):
@@ -46,7 +47,9 @@ class PriceBook(TypedDict, total=False):
 
 class PriceBookProductPricingInput(TypedDict, total=False):
     productId: str
+    discountType: DiscountType
     discountPercent: float
+    discountAmount: float
     finalPrice: float
 
 

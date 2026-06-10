@@ -22,6 +22,8 @@ Currency = Literal["USD", "EUR", "GBP", "CAD", "AUD", "INR"]
 
 CategoryType = Literal["product_category", "pricebook_type", "company_industry", "bundle_category"]
 
+DiscountType = Literal["percent", "amount"]
+
 
 class PaginationParams(TypedDict, total=False):
     limit: int

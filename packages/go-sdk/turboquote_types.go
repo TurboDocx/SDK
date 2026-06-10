@@ -78,6 +78,14 @@ const (
 	BundleItemStatusCurrencyMismatch   BundleItemStatus = "currency_mismatch"
 )
 
+// DiscountType represents the type of discount applied to a line item or bundle
+type DiscountType string
+
+const (
+	DiscountTypePercent DiscountType = "percent"
+	DiscountTypeAmount  DiscountType = "amount"
+)
+
 // ============================================
 // Shared Types
 // ============================================
@@ -386,42 +394,49 @@ type LineItem struct {
 
 // AddLineItemRequest is the request to add a product line item
 type AddLineItemRequest struct {
-	ProductID          *string  `json:"productId"`
-	ProductName        string   `json:"productName"`
-	UnitPrice          float64  `json:"unitPrice"`
-	BillingFrequency   string   `json:"billingFrequency"`
-	Quantity           *int     `json:"quantity,omitempty"`
-	DiscountPercent    *float64 `json:"discountPercent,omitempty"`
-	CategoryID         *string  `json:"categoryId,omitempty"`
-	CategoryName       *string  `json:"categoryName,omitempty"`
-	Cost               *float64 `json:"cost,omitempty"`
-	ProductSku         *string  `json:"productSku,omitempty"`
-	ProductDescription *string  `json:"productDescription,omitempty"`
+	ProductID          *string      `json:"productId"`
+	ProductName        string       `json:"productName"`
+	UnitPrice          float64      `json:"unitPrice"`
+	BillingFrequency   string       `json:"billingFrequency"`
+	Quantity           *int         `json:"quantity,omitempty"`
+	DiscountPercent    *float64     `json:"discountPercent,omitempty"`
+	DiscountType       *DiscountType `json:"discountType,omitempty"`
+	DiscountAmount     *float64     `json:"discountAmount,omitempty"`
+	CategoryID         *string      `json:"categoryId,omitempty"`
+	CategoryName       *string      `json:"categoryName,omitempty"`
+	Cost               *float64     `json:"cost,omitempty"`
+	ProductSku         *string      `json:"productSku,omitempty"`
+	ProductDescription *string      `json:"productDescription,omitempty"`
 }
 
 // AddBundleLineItemRequest is the request to add a bundle line item
 type AddBundleLineItemRequest struct {
-	BundleID           string  `json:"bundleId"`
-	BundleName         string  `json:"bundleName"`
-	Quantity           *int    `json:"quantity,omitempty"`
-	DiscountPercent    *float64 `json:"discountPercent,omitempty"`
-	BundleDescription  *string  `json:"bundleDescription,omitempty"`
-	ShowItemsToEndUser *bool    `json:"showItemsToEndUser,omitempty"`
+	BundleID           string       `json:"bundleId"`
+	BundleName         string       `json:"bundleName"`
+	Quantity           *int         `json:"quantity,omitempty"`
+	DiscountPercent    *float64     `json:"discountPercent,omitempty"`
+	DiscountType       *DiscountType `json:"discountType,omitempty"`
+	DiscountAmount     *float64     `json:"discountAmount,omitempty"`
+	BundleDescription  *string      `json:"bundleDescription,omitempty"`
+	ShowItemsToEndUser *bool        `json:"showItemsToEndUser,omitempty"`
 }
 
 // UpdateLineItemRequest is the request to update a line item
 type UpdateLineItemRequest struct {
-	Quantity           *int     `json:"quantity,omitempty"`
-	UnitPrice          *float64 `json:"unitPrice,omitempty"`
-	DiscountPercent    *float64 `json:"discountPercent,omitempty"`
-	BillingFrequency   *string  `json:"billingFrequency,omitempty"`
-	CategoryID         *string  `json:"categoryId,omitempty"`
-	CategoryName       *string  `json:"categoryName,omitempty"`
-	Cost               *float64 `json:"cost,omitempty"`
-	ShowItemsToEndUser *bool    `json:"showItemsToEndUser,omitempty"`
-	ProductName        *string  `json:"productName,omitempty"`
-	ProductSku         *string  `json:"productSku,omitempty"`
-	ProductDescription *string  `json:"productDescription,omitempty"`
+	Quantity           *int          `json:"quantity,omitempty"`
+	UnitPrice          *float64      `json:"unitPrice,omitempty"`
+	DiscountPercent    *float64      `json:"discountPercent,omitempty"`
+	DiscountType       *DiscountType `json:"discountType,omitempty"`
+	DiscountAmount     *float64      `json:"discountAmount,omitempty"`
+	DisplayOrder       *int          `json:"displayOrder,omitempty"`
+	BillingFrequency   *string       `json:"billingFrequency,omitempty"`
+	CategoryID         *string       `json:"categoryId,omitempty"`
+	CategoryName       *string       `json:"categoryName,omitempty"`
+	Cost               *float64      `json:"cost,omitempty"`
+	ShowItemsToEndUser *bool         `json:"showItemsToEndUser,omitempty"`
+	ProductName        *string       `json:"productName,omitempty"`
+	ProductSku         *string       `json:"productSku,omitempty"`
+	ProductDescription *string       `json:"productDescription,omitempty"`
 	nullFields         map[string]bool `json:"-"`
 }
 
@@ -458,6 +473,13 @@ func (r *UpdateLineItemRequest) ClearProductDescription() {
 	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
 	r.nullFields["productDescription"] = true
 	r.ProductDescription = nil
+}
+
+// ClearDisplayOrder explicitly sets displayOrder to null in the JSON payload.
+func (r *UpdateLineItemRequest) ClearDisplayOrder() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["displayOrder"] = true
+	r.DisplayOrder = nil
 }
 
 // MarshalJSON implements custom JSON marshaling to include explicitly-nulled fields.
@@ -705,9 +727,11 @@ type PriceBook struct {
 
 // PriceBookProductPricingInput represents a product pricing entry for create/update
 type PriceBookProductPricingInput struct {
-	ProductID       string   `json:"productId"`
-	DiscountPercent *float64 `json:"discountPercent,omitempty"`
-	FinalPrice      *float64 `json:"finalPrice,omitempty"`
+	ProductID       string       `json:"productId"`
+	DiscountPercent *float64     `json:"discountPercent,omitempty"`
+	DiscountType    *DiscountType `json:"discountType,omitempty"`
+	DiscountAmount  *float64     `json:"discountAmount,omitempty"`
+	FinalPrice      *float64     `json:"finalPrice,omitempty"`
 }
 
 // CreatePriceBookRequest is the request to create a price book
@@ -855,13 +879,15 @@ type Bundle struct {
 
 // BundleItemInput represents a bundle item entry for create/update
 type BundleItemInput struct {
-	ProductID       string   `json:"productId"`
-	UnitPrice       float64  `json:"unitPrice"`
-	BillingFrequency string  `json:"billingFrequency"`
-	Quantity        *int     `json:"quantity,omitempty"`
-	DiscountPercent *float64 `json:"discountPercent,omitempty"`
-	FinalPrice      *float64 `json:"finalPrice,omitempty"`
-	Cost            *float64 `json:"cost,omitempty"`
+	ProductID        string       `json:"productId"`
+	UnitPrice        float64      `json:"unitPrice"`
+	BillingFrequency string       `json:"billingFrequency"`
+	Quantity         *int         `json:"quantity,omitempty"`
+	DiscountPercent  *float64     `json:"discountPercent,omitempty"`
+	DiscountType     *DiscountType `json:"discountType,omitempty"`
+	DiscountAmount   *float64     `json:"discountAmount,omitempty"`
+	FinalPrice       *float64     `json:"finalPrice,omitempty"`
+	Cost             *float64     `json:"cost,omitempty"`
 }
 
 // CreateBundleRequest is the request to create a bundle
@@ -872,6 +898,8 @@ type CreateBundleRequest struct {
 	Description           *string           `json:"description,omitempty"`
 	Sku                   *string           `json:"sku,omitempty"`
 	BundleDiscountPercent *float64          `json:"bundleDiscountPercent,omitempty"`
+	BundleDiscountType    *DiscountType     `json:"bundleDiscountType,omitempty"`
+	BundleDiscountAmount  *float64          `json:"bundleDiscountAmount,omitempty"`
 	CurrencyCode          *string           `json:"currency,omitempty"`
 	ShowItemsToEndUser    *bool             `json:"showItemsToEndUser,omitempty"`
 	ShowInCatalog         *bool             `json:"showInCatalog,omitempty"`
@@ -886,6 +914,8 @@ type UpdateBundleRequest struct {
 	Sku                   *string           `json:"sku,omitempty"`
 	CategoryID            *string           `json:"categoryId,omitempty"`
 	BundleDiscountPercent *float64          `json:"bundleDiscountPercent,omitempty"`
+	BundleDiscountType    *DiscountType     `json:"bundleDiscountType,omitempty"`
+	BundleDiscountAmount  *float64          `json:"bundleDiscountAmount,omitempty"`
 	CurrencyCode          *string           `json:"currency,omitempty"`
 	ShowItemsToEndUser    *bool             `json:"showItemsToEndUser,omitempty"`
 	ShowInCatalog         *bool             `json:"showInCatalog,omitempty"`

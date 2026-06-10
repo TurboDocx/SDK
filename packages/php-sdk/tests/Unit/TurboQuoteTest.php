@@ -65,6 +65,7 @@ use TurboDocx\Types\Responses\Quote\MessageResponse;
 use TurboDocx\Types\Responses\Quote\CreateAndSendResponse;
 use TurboDocx\Types\Enums\QuoteStatus;
 use TurboDocx\Types\Enums\BundleItemStatus;
+use TurboDocx\Types\Enums\DiscountType;
 use TurboDocx\Types\Quote\QuoteListStats;
 use TurboDocx\Types\Quote\CurrencyTotal;
 
@@ -518,6 +519,23 @@ final class TurboQuoteTest extends TestCase
         $this->assertSame([['bundleId' => 'bun-1', 'bundleName' => 'Starter Pack']], $this->mockClient->lastPostData);
     }
 
+    public function testAddBundleLineItemWithDiscountTypeAndAmount(): void
+    {
+        $this->mockClient->setPostReturn(['results' => [['id' => 'li-4', 'bundleId' => 'bun-1', 'discountType' => 'amount', 'discountAmount' => 10.00]], 'message' => '1 bundle(s) added successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::addBundleLineItems('q-1', new AddBundleLineItemRequest(
+            bundleId: 'bun-1',
+            bundleName: 'Starter Pack',
+            discountType: 'amount',
+            discountAmount: 10.00,
+        ));
+
+        $sentItem = $this->mockClient->lastPostData[0];
+        $this->assertSame('amount', $sentItem['discountType']);
+        $this->assertSame(10.00, $sentItem['discountAmount']);
+    }
+
     public function testUpdateLineItemAndUnwrapResult(): void
     {
         $this->mockClient->setPatchReturn(['result' => ['id' => 'li-1', 'quantity' => 10, 'unitPrice' => 50], 'message' => 'Line item updated successfully']);
@@ -529,6 +547,141 @@ final class TurboQuoteTest extends TestCase
         $this->assertSame(10.0, $result->quantity);
         $this->assertSame('/v1/quotes/q-1/items/li-1', $this->mockClient->lastPatchPath);
         $this->assertSame(['quantity' => 10, 'unitPrice' => 50.0], $this->mockClient->lastPatchData);
+    }
+
+    public function testAddLineItemWithDiscountTypeAndAmount(): void
+    {
+        $this->mockClient->setPostReturn(['results' => [['id' => 'li-2', 'productId' => 'prod-1', 'discountType' => 'amount', 'discountAmount' => 5.00]], 'message' => '1 line item(s) added successfully']);
+        $this->injectMockClient();
+
+        $result = TurboQuote::addLineItems('q-1', new AddLineItemRequest(
+            productId: 'prod-1',
+            productName: 'Widget',
+            unitPrice: 50,
+            billingFrequency: 'monthly',
+            discountType: 'amount',
+            discountAmount: 5.00,
+        ));
+
+        $this->assertCount(1, $result);
+        $this->assertSame('/v1/quotes/q-1/items', $this->mockClient->lastPostPath);
+        $sentItem = $this->mockClient->lastPostData[0];
+        $this->assertSame('amount', $sentItem['discountType']);
+        $this->assertSame(5.00, $sentItem['discountAmount']);
+        $this->assertArrayNotHasKey('discountPercent', $sentItem);
+    }
+
+    public function testUpdateLineItemWithNewDiscountFields(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'li-1', 'quantity' => 5, 'discountType' => 'percent', 'discountAmount' => 0], 'message' => 'Line item updated successfully']);
+        $this->injectMockClient();
+
+        $result = TurboQuote::updateLineItem('q-1', 'li-1', new UpdateLineItemRequest(
+            quantity: 5,
+            discountType: 'percent',
+            discountAmount: 0,
+        ));
+
+        $this->assertInstanceOf(LineItem::class, $result);
+        $this->assertSame('/v1/quotes/q-1/items/li-1', $this->mockClient->lastPatchPath);
+        $this->assertSame('percent', $this->mockClient->lastPatchData['discountType']);
+        $this->assertSame(0.0, $this->mockClient->lastPatchData['discountAmount']);
+    }
+
+    public function testUpdateLineItemDisplayOrderNullClear(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'li-1', 'displayOrder' => null], 'message' => 'Line item updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateLineItem('q-1', 'li-1', new UpdateLineItemRequest(
+            displayOrder: null,
+            includeDisplayOrder: true,
+        ));
+
+        $this->assertSame('/v1/quotes/q-1/items/li-1', $this->mockClient->lastPatchPath);
+        $this->assertArrayHasKey('displayOrder', $this->mockClient->lastPatchData);
+        $this->assertNull($this->mockClient->lastPatchData['displayOrder']);
+    }
+
+    public function testUpdateLineItemDisplayOrderOmittedWhenNotIncluded(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'li-1', 'quantity' => 3], 'message' => 'Line item updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateLineItem('q-1', 'li-1', new UpdateLineItemRequest(quantity: 3));
+
+        $this->assertArrayNotHasKey('displayOrder', $this->mockClient->lastPatchData);
+    }
+
+    public function testUpdateLineItemDisplayOrderPositiveValue(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'li-1', 'displayOrder' => 2], 'message' => 'Line item updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateLineItem('q-1', 'li-1', new UpdateLineItemRequest(
+            displayOrder: 2,
+            includeDisplayOrder: true,
+        ));
+
+        $this->assertSame(2, $this->mockClient->lastPatchData['displayOrder']);
+    }
+
+    public function testUpdateLineItemCategoryIdNullClear(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'li-1', 'categoryId' => null], 'message' => 'Line item updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateLineItem('q-1', 'li-1', new UpdateLineItemRequest(
+            categoryId: null,
+            includeCategoryId: true,
+        ));
+
+        $this->assertArrayHasKey('categoryId', $this->mockClient->lastPatchData);
+        $this->assertNull($this->mockClient->lastPatchData['categoryId']);
+    }
+
+    public function testUpdateLineItemCategoryIdOmittedWhenNotIncluded(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'li-1', 'quantity' => 3], 'message' => 'Line item updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateLineItem('q-1', 'li-1', new UpdateLineItemRequest(quantity: 3));
+
+        $this->assertArrayNotHasKey('categoryId', $this->mockClient->lastPatchData);
+    }
+
+    public function testUpdateLineItemCategoryIdNonNullStillEmittedWithoutFlag(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'li-1', 'categoryId' => 'cat-1'], 'message' => 'Line item updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateLineItem('q-1', 'li-1', new UpdateLineItemRequest(categoryId: 'cat-1'));
+
+        $this->assertSame('cat-1', $this->mockClient->lastPatchData['categoryId']);
+    }
+
+    public function testUpdateLineItemCostNullClear(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'li-1', 'cost' => null], 'message' => 'Line item updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateLineItem('q-1', 'li-1', new UpdateLineItemRequest(
+            cost: null,
+            includeCost: true,
+        ));
+
+        $this->assertArrayHasKey('cost', $this->mockClient->lastPatchData);
+        $this->assertNull($this->mockClient->lastPatchData['cost']);
+    }
+
+    public function testUpdateLineItemCostOmittedWhenNotIncluded(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'li-1', 'quantity' => 3], 'message' => 'Line item updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateLineItem('q-1', 'li-1', new UpdateLineItemRequest(quantity: 3));
+
+        $this->assertArrayNotHasKey('cost', $this->mockClient->lastPatchData);
     }
 
     public function testRemoveLineItem(): void
@@ -804,6 +957,30 @@ final class TurboQuoteTest extends TestCase
         $this->assertSame(20.0, $result->discountPercent);
     }
 
+    public function testUpdatePriceBookValidToNullClear(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'pb-1', 'validTo' => null], 'message' => 'PriceBook updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updatePriceBook('pb-1', new UpdatePriceBookRequest(
+            validTo: null,
+            includeValidTo: true,
+        ));
+
+        $this->assertArrayHasKey('validTo', $this->mockClient->lastPatchData);
+        $this->assertNull($this->mockClient->lastPatchData['validTo']);
+    }
+
+    public function testUpdatePriceBookValidToOmittedWhenNotIncluded(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'pb-1', 'name' => 'Promo'], 'message' => 'PriceBook updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updatePriceBook('pb-1', new UpdatePriceBookRequest(name: 'Promo'));
+
+        $this->assertArrayNotHasKey('validTo', $this->mockClient->lastPatchData);
+    }
+
     public function testDeletePriceBook(): void
     {
         $this->mockClient->setDeleteReturn(['message' => 'PriceBook deleted successfully']);
@@ -870,6 +1047,36 @@ final class TurboQuoteTest extends TestCase
         $this->assertSame('Starter Pack', $result->name);
         $this->assertSame('Starter Pack', $this->mockClient->lastPostData['name']);
         $this->assertSame('cat-1', $this->mockClient->lastPostData['categoryId']);
+    }
+
+    public function testCreateBundleWithDiscountTypeAndAmount(): void
+    {
+        $this->mockClient->setPostReturn(['result' => ['id' => 'b-2', 'name' => 'Discounted Pack', 'items' => []], 'message' => 'Bundle created successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::createBundle(new CreateBundleRequest(
+            name: 'Discounted Pack',
+            categoryId: 'cat-1',
+            bundleDiscountType: 'amount',
+            bundleDiscountAmount: 25.00,
+        ));
+
+        $this->assertSame('amount', $this->mockClient->lastPostData['bundleDiscountType']);
+        $this->assertSame(25.00, $this->mockClient->lastPostData['bundleDiscountAmount']);
+    }
+
+    public function testUpdateBundleWithDiscountTypeAndAmount(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'b-1', 'name' => 'Pro Pack'], 'message' => 'Bundle updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateBundle('b-1', new UpdateBundleRequest(
+            bundleDiscountType: 'percent',
+            bundleDiscountAmount: 15.00,
+        ));
+
+        $this->assertSame('percent', $this->mockClient->lastPatchData['bundleDiscountType']);
+        $this->assertSame(15.00, $this->mockClient->lastPatchData['bundleDiscountAmount']);
     }
 
     public function testGetBundleByIdAndUnwrapResult(): void
@@ -982,6 +1189,30 @@ final class TurboQuoteTest extends TestCase
         $this->assertSame('Acme Inc', $result->name);
     }
 
+    public function testUpdateCompanyIndustryIdNullClear(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'c-1', 'industryId' => null], 'message' => 'Company updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateCompany('c-1', new UpdateCompanyRequest(
+            industryId: null,
+            includeIndustryId: true,
+        ));
+
+        $this->assertArrayHasKey('industryId', $this->mockClient->lastPatchData);
+        $this->assertNull($this->mockClient->lastPatchData['industryId']);
+    }
+
+    public function testUpdateCompanyIndustryIdOmittedWhenNotIncluded(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'c-1', 'name' => 'Acme'], 'message' => 'Company updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateCompany('c-1', new UpdateCompanyRequest(name: 'Acme'));
+
+        $this->assertArrayNotHasKey('industryId', $this->mockClient->lastPatchData);
+    }
+
     public function testDeleteCompany(): void
     {
         $this->mockClient->setDeleteReturn(['message' => 'Company deleted successfully']);
@@ -1050,6 +1281,69 @@ final class TurboQuoteTest extends TestCase
 
         $this->assertInstanceOf(Contact::class, $result);
         $this->assertSame('Jane Doe', $result->name);
+    }
+
+    public function testUpdateContactEmailNullClear(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'ct-1', 'email' => null], 'message' => 'Contact updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateContact('ct-1', new UpdateContactRequest(
+            email: null,
+            includeEmail: true,
+        ));
+
+        $this->assertArrayHasKey('email', $this->mockClient->lastPatchData);
+        $this->assertNull($this->mockClient->lastPatchData['email']);
+    }
+
+    public function testUpdateContactEmailOmittedWhenNotIncluded(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'ct-1', 'name' => 'Jane'], 'message' => 'Contact updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateContact('ct-1', new UpdateContactRequest(name: 'Jane'));
+
+        $this->assertArrayNotHasKey('email', $this->mockClient->lastPatchData);
+    }
+
+    public function testUpdateContactPhoneNullClear(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'ct-1', 'phone' => null], 'message' => 'Contact updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateContact('ct-1', new UpdateContactRequest(
+            phone: null,
+            includePhone: true,
+        ));
+
+        $this->assertArrayHasKey('phone', $this->mockClient->lastPatchData);
+        $this->assertNull($this->mockClient->lastPatchData['phone']);
+    }
+
+    public function testUpdateContactTitleNullClear(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'ct-1', 'title' => null], 'message' => 'Contact updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateContact('ct-1', new UpdateContactRequest(
+            title: null,
+            includeTitle: true,
+        ));
+
+        $this->assertArrayHasKey('title', $this->mockClient->lastPatchData);
+        $this->assertNull($this->mockClient->lastPatchData['title']);
+    }
+
+    public function testUpdateContactPhoneAndTitleOmittedWhenNotIncluded(): void
+    {
+        $this->mockClient->setPatchReturn(['result' => ['id' => 'ct-1', 'name' => 'Jane'], 'message' => 'Contact updated successfully']);
+        $this->injectMockClient();
+
+        TurboQuote::updateContact('ct-1', new UpdateContactRequest(name: 'Jane'));
+
+        $this->assertArrayNotHasKey('phone', $this->mockClient->lastPatchData);
+        $this->assertArrayNotHasKey('title', $this->mockClient->lastPatchData);
     }
 
     public function testDeleteContact(): void
@@ -1329,6 +1623,13 @@ final class TurboQuoteTest extends TestCase
         $this->assertEquals('product_unavailable', BundleItemStatus::PRODUCT_UNAVAILABLE->value);
         $this->assertEquals('currency_mismatch', BundleItemStatus::CURRENCY_MISMATCH->value);
         $this->assertCount(4, BundleItemStatus::cases());
+    }
+
+    public function testDiscountTypeEnumValues(): void
+    {
+        $this->assertSame('percent', DiscountType::PERCENT->value);
+        $this->assertSame('amount', DiscountType::AMOUNT->value);
+        $this->assertCount(2, DiscountType::cases());
     }
 
     // ============================================

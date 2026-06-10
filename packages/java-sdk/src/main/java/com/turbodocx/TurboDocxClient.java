@@ -159,7 +159,8 @@ public final class TurboDocxClient implements AutoCloseable {
             if (orgId == null || orgId.isEmpty()) {
                 throw new TurboDocxException.AuthenticationException("Organization ID (orgId) is required for authentication");
             }
-            HttpClient httpClient = new HttpClient(baseUrl, apiKey, accessToken, orgId, senderEmail, senderName);
+            HttpClient httpClient = new HttpClient(baseUrl, apiKey, accessToken, orgId, senderEmail, senderName,
+                    connectTimeoutSeconds, readTimeoutSeconds, writeTimeoutSeconds);
             return new DeliverableClient(httpClient);
         }
 
@@ -174,7 +175,8 @@ public final class TurboDocxClient implements AutoCloseable {
             if (orgId == null || orgId.isEmpty()) {
                 throw new TurboDocxException.AuthenticationException("Organization ID (orgId) is required for authentication");
             }
-            HttpClient httpClient = new HttpClient(baseUrl, apiKey, accessToken, orgId, senderEmail, senderName);
+            HttpClient httpClient = new HttpClient(baseUrl, apiKey, accessToken, orgId, senderEmail, senderName,
+                    connectTimeoutSeconds, readTimeoutSeconds, writeTimeoutSeconds);
             return new TurboWebhooks(httpClient);
         }
     }

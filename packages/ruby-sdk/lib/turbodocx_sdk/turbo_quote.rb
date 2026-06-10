@@ -260,7 +260,15 @@ module TurboDocxSdk
       # Add product line items to a quote.
       #
       # @param quote_id [String]
-      # @param items [Hash, Array<Hash>] single item or array of items
+      # @param items [Hash, Array<Hash>] single item or array of items. Each item may include:
+      #   - +productId+ [String] — catalog product ID (optional)
+      #   - +productName+ [String] — display name
+      #   - +unitPrice+ [Numeric] — price per unit
+      #   - +billingFrequency+ [String] — one of BillingFrequency::ALL
+      #   - +quantity+ [Integer]
+      #   - +discountType+ [String, nil] — +"percent"+ or +"amount"+ (default +"percent"+);
+      #     see DiscountType
+      #   - +discountAmount+ [Numeric, nil] — discount value (min 0, 2 decimal places, default 0)
       # @return [Array<Hash>] the created line items
       # @raise [NotFoundError] if the quote does not exist
       # @raise [ValidationError] on invalid request data
@@ -276,7 +284,13 @@ module TurboDocxSdk
       # Add bundle line items to a quote.
       #
       # @param quote_id [String]
-      # @param items [Hash, Array<Hash>] single item or array of items
+      # @param items [Hash, Array<Hash>] single item or array of items. Each item may include:
+      #   - +bundleId+ [String] — catalog bundle ID
+      #   - +bundleName+ [String] — display name
+      #   - +quantity+ [Integer]
+      #   - +discountType+ [String, nil] — +"percent"+ or +"amount"+ (default +"percent"+);
+      #     see DiscountType
+      #   - +discountAmount+ [Numeric, nil] — discount value (min 0, 2 decimal places, default 0)
       # @return [Array<Hash>] the created line items
       # @raise [NotFoundError] if the quote does not exist
       # @raise [ValidationError] on invalid request data
@@ -293,7 +307,12 @@ module TurboDocxSdk
       #
       # @param quote_id [String]
       # @param item_id [String]
-      # @param request [Hash] fields to update
+      # @param request [Hash] fields to update. May include:
+      #   - +unitPrice+ [Numeric]
+      #   - +quantity+ [Integer]
+      #   - +discountType+ [String, nil] — +"percent"+ or +"amount"+; see DiscountType
+      #   - +discountAmount+ [Numeric, nil] — discount value (min 0, 2 decimal places)
+      #   - +displayOrder+ [Integer, nil] — sort order (integer >=0); pass +nil+ to clear
       # @return [Hash] the updated line item
       # @raise [NotFoundError] if the quote or line item does not exist
       # @raise [ValidationError] on invalid request data
@@ -437,7 +456,15 @@ module TurboDocxSdk
 
       # Create a price book.
       #
-      # @param request [Hash]
+      # @param request [Hash] price book fields. May include:
+      #   - +name+ [String]
+      #   - +priceBookTypeId+ [String]
+      #   - +discountPercent+ [Numeric] — default discount for all products in this book
+      #   - +validFrom+ [String] — ISO date
+      #   - +validTo+ [String] — ISO date
+      #   - +showInQuoteBuilder+ [Boolean]
+      #   - +productPricing+ [Array<Hash>] — per-product overrides; each entry may include:
+      #       +:productId+, +:discountType+ (+"percent"+|+"amount"+), +:discountAmount+ (Numeric)
       # @return [Hash] the created price book
       # @raise [ValidationError] on invalid request data
       # @raise [AuthenticationError] on invalid credentials
@@ -462,7 +489,9 @@ module TurboDocxSdk
       # Update a price book.
       #
       # @param id [String]
-      # @param request [Hash]
+      # @param request [Hash] fields to update. May include:
+      #   - +productPricing+ [Array<Hash>] — per-product overrides; each entry may include:
+      #       +:productId+, +:discountType+ (+"percent"+|+"amount"+), +:discountAmount+ (Numeric)
       # @return [Hash] the updated price book
       # @raise [NotFoundError] if the price book does not exist
       # @raise [ValidationError] on invalid request data
@@ -527,7 +556,17 @@ module TurboDocxSdk
 
       # Create a bundle.
       #
-      # @param request [Hash]
+      # @param request [Hash] bundle fields. Required: +:categoryId+. Optional fields include:
+      #   - +name+ [String]
+      #   - +categoryId+ [String] — REQUIRED; bundle category ID
+      #   - +sku+ [String]
+      #   - +description+ [String]
+      #   - +currency+ [String] — see Currency
+      #   - +bundleDiscountType+ [String, nil] — +"percent"+ or +"amount"+; see DiscountType
+      #   - +bundleDiscountAmount+ [Numeric, nil] — bundle-level discount value (min 0, 2 decimal places)
+      #   - +showInCatalog+ [Boolean]
+      #   - +showItemsToEndUser+ [Boolean]
+      #   - +items+ [Array<Hash>] — bundle item inputs; each may include +discountType+, +discountAmount+
       # @return [Hash] the created bundle
       # @raise [ValidationError] on invalid request data
       # @raise [AuthenticationError] on invalid credentials
@@ -552,7 +591,9 @@ module TurboDocxSdk
       # Update a bundle.
       #
       # @param id [String]
-      # @param request [Hash]
+      # @param request [Hash] fields to update. May include:
+      #   - +bundleDiscountType+ [String, nil] — +"percent"+ or +"amount"+; see DiscountType
+      #   - +bundleDiscountAmount+ [Numeric, nil] — bundle-level discount value (min 0, 2 decimal places)
       # @return [Hash] the updated bundle
       # @raise [NotFoundError] if the bundle does not exist
       # @raise [ValidationError] on invalid request data
@@ -929,19 +970,36 @@ module TurboDocxSdk
             file_parts << {
               io: StringIO.new(content),
               filename: File.basename(image),
-              content_type: "application/octet-stream"
+              content_type: detect_image_type(content)
             }
           elsif image.respond_to?(:read)
             content = image.read
             file_parts << {
               io: StringIO.new(content),
-              filename: "image.jpg",
-              content_type: "application/octet-stream"
+              filename: "image.bin",
+              content_type: detect_image_type(content)
             }
           end
         end
         form_data["images"] = file_parts unless file_parts.empty?
         form_data
+      end
+
+      # Detect MIME type for product images from magic bytes.
+      # Supports PNG, JPEG, GIF, and WEBP; falls back to application/octet-stream.
+      def detect_image_type(content)
+        bytes = content.bytes
+        # PNG: \x89PNG
+        return "image/png" if bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47
+        # JPEG: \xFF\xD8\xFF
+        return "image/jpeg" if bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF
+        # GIF: GIF8
+        return "image/gif" if bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x38
+        # WEBP: RIFF????WEBP
+        if bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46
+          return "image/webp" if content.length >= 12 && content[8, 4] == "WEBP"
+        end
+        "application/octet-stream"
       end
     end
   end

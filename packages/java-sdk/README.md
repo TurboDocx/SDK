@@ -36,6 +36,7 @@ Then run `/turbodocx-sdk` inside your agent — or one of the focused shortcuts:
 | `/turbodocx-sdk deliverable` | Generate documents from templates with variable substitution |
 | `/turbodocx-sdk turbopartner` | Provision and manage customer organizations (partner accounts) |
 | `/turbodocx-sdk turbowebhooks` | Subscribe to `signature.document.completed` events + verify HMAC |
+| `/turbodocx-sdk turboquote` | Create and send quotes, manage products, bundles, and pricebooks |
 
 The skill auto-detects your framework (Spring Boot, Servlet, Jakarta EE, …) and follows your existing project conventions. Source: [github.com/TurboDocx/quickstart](https://github.com/TurboDocx/quickstart).
 
@@ -623,6 +624,94 @@ if (!WebhookSignatureVerifier.verify(rawBody, signature, timestamp, secret)) {
 ```
 
 By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Use the full 6-arg overload to override `toleranceSeconds` (0 disables the check — not recommended in production) or to inject a `now` supplier for testing.
+
+---
+
+## TurboQuote (CPQ / Quoting)
+
+The `TurboQuote` module provides end-to-end quoting operations: create and send professional quotes, manage your product catalog and bundles, apply pricebooks, and handle the full quote lifecycle (draft, sent, accepted, declined, voided).
+
+### Configuration
+
+Build a client via `TurboQuoteClient.Builder()` — no `senderEmail` required (quotes do not send signature emails through TurboSign).
+
+```java
+import com.turbodocx.TurboQuoteClient;
+import com.turbodocx.TurboQuote;
+
+TurboQuote tq = new TurboQuoteClient.Builder()
+        .apiKey(System.getenv("TURBODOCX_API_KEY"))
+        .orgId(System.getenv("TURBODOCX_ORG_ID"))
+        // .baseUrl("http://localhost:3000")  // optional
+        .build()
+        .turboQuote();
+```
+
+**Environment variables:**
+
+```bash
+export TURBODOCX_API_KEY=your-api-key
+export TURBODOCX_ORG_ID=your-org-id
+```
+
+### Create a quote, add line items, and send
+
+```java
+// 1. Create the quote
+CreateQuoteRequest quoteReq = new CreateQuoteRequest();
+quoteReq.setName("Q1 Software Proposal");
+quoteReq.setCompanyId(companyId);
+quoteReq.setContactId(contactId);
+quoteReq.setTermDays(30);
+quoteReq.setCurrency(Currency.USD);
+
+Quote quote = tq.createQuote(quoteReq);
+
+// 2. Add a line item
+AddLineItemRequest item = new AddLineItemRequest();
+item.setProductName("Enterprise License");
+item.setProductId(null);          // null = custom line item
+item.setUnitPrice(1200.00);
+item.setQuantity(5.0);
+item.setBillingFrequency("annual");
+item.setDiscountType(DiscountType.PERCENT);
+item.setDiscountPercent(10.0);
+
+tq.addLineItems(quote.getId(), item);
+
+// 3. Send the quote
+SendQuoteResponse sent = tq.sendQuote(quote.getId());
+System.out.println("Status: " + sent.getQuote().getStatus()); // "sent"
+```
+
+### Download a quote PDF
+
+```java
+byte[] pdf = tq.downloadQuotePdf(quoteId);
+Files.write(Paths.get("quote.pdf"), pdf);
+```
+
+### All 47 methods
+
+| Group | Methods |
+|:------|:--------|
+| **Quotes** | `listQuotes`, `createQuote`, `getQuote`, `updateQuote`, `deleteQuote`, `duplicateQuote`, `applyPriceBook`, `removePriceBook`, `downloadQuotePdf` |
+| **Quote status** | `sendQuote`, `sendQuoteWithDeliverable`, `declineQuote`, `voidQuote`, `handleExpiredQuote` |
+| **Line items** | `listLineItems`, `addLineItems`, `addBundleLineItems`, `updateLineItem`, `removeLineItem` |
+| **Products** | `listProducts`, `createProduct`, `getProduct`, `updateProduct`, `deleteProduct`, `duplicateProduct`, `getProductPrimaryImages` |
+| **Pricebooks** | `listPriceBooks`, `createPriceBook`, `getPriceBook`, `updatePriceBook`, `deletePriceBook`, `duplicatePriceBook`, `listPriceBookProducts` |
+| **Bundles** | `listBundles`, `createBundle`, `getBundle`, `updateBundle`, `deleteBundle`, `duplicateBundle` |
+| **Companies** | `listCompanies`, `createCompany`, `getCompany`, `updateCompany`, `deleteCompany`, `listCompanyContacts` |
+| **Contacts** | `listContacts`, `createContact`, `updateContact`, `deleteContact` |
+| **Templates** | `listTemplates`, `getTemplate`, `getTemplateById`, `createTemplate`, `updateTemplate`, `deleteTemplate` |
+| **Types** | `listTypes`, `createType`, `updateType`, `deleteType` |
+| **Convenience** | `createAndSend` |
+
+### Examples
+
+- [`TurboQuoteBasic.java`](./examples/TurboQuoteBasic.java) — Full quote lifecycle: create company, quote, line items, send, download PDF
+- [`TurboQuoteProducts.java`](./examples/TurboQuoteProducts.java) — Product and bundle catalog management
+- [`TurboQuotePricebooks.java`](./examples/TurboQuotePricebooks.java) — Pricebook CRUD, apply to quote, optional send-with-deliverable
 
 ---
 

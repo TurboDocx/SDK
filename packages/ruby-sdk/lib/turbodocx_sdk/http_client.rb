@@ -349,7 +349,9 @@ module TurboDocxSdk
       case code
       when 400 then raise ValidationError, message
       when 401 then raise AuthenticationError, message
+      when 403 then raise AuthorizationError, message
       when 404 then raise NotFoundError, message
+      when 409 then raise ConflictError, message
       when 429 then raise RateLimitError, message
       else raise TurboDocxError.new(message, status_code: code)
       end

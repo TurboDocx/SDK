@@ -36,6 +36,7 @@ Then run `/turbodocx-sdk` inside your agent — or one of the focused shortcuts:
 | `/turbodocx-sdk deliverable` | Generate documents from templates with variable substitution |
 | `/turbodocx-sdk turbopartner` | Provision and manage customer organizations (partner accounts) |
 | `/turbodocx-sdk turbowebhooks` | Subscribe to `signature.document.completed` events + verify HMAC |
+| `/turbodocx-sdk turboquote` | Create and send quotes, manage products, price books, and bundles |
 
 The skill auto-detects your framework (net/http, Gin, Echo, Fiber, …) and follows your existing project conventions. Source: [github.com/TurboDocx/quickstart](https://github.com/TurboDocx/quickstart).
 
@@ -416,45 +417,45 @@ _, err := partner.ResendOrganizationInvitationToUser(ctx, orgID, userID)
 
 ```go
 // Create API key
-key, err := partner.CreateOrganizationApiKey(ctx, orgID, &turbodocx.CreateOrgApiKeyRequest{
+key, err := partner.CreateOrganizationAPIKey(ctx, orgID, &turbodocx.CreateOrgAPIKeyRequest{
     Name: "Production Key",
     Role: "admin",
 })
 fmt.Printf("API Key: %s\n", key.Data.Key)
 
 // List API keys
-keys, err := partner.ListOrganizationApiKeys(ctx, orgID, nil)
+keys, err := partner.ListOrganizationAPIKeys(ctx, orgID, nil)
 
 // Update API key
-_, err := partner.UpdateOrganizationApiKey(ctx, orgID, keyID, &turbodocx.UpdateOrgApiKeyRequest{
+_, err := partner.UpdateOrganizationAPIKey(ctx, orgID, keyID, &turbodocx.UpdateOrgAPIKeyRequest{
     Name: "Updated Key Name",
 })
 
 // Revoke API key
-_, err := partner.RevokeOrganizationApiKey(ctx, orgID, keyID)
+_, err := partner.RevokeOrganizationAPIKey(ctx, orgID, keyID)
 ```
 
 #### Partner API Key Management
 
 ```go
 // Create scoped partner API key
-key, err := partner.CreatePartnerApiKey(ctx, &turbodocx.CreatePartnerApiKeyRequest{
+key, err := partner.CreatePartnerAPIKey(ctx, &turbodocx.CreatePartnerAPIKeyRequest{
     Name:        "Monitoring Key",
     Description: "Read-only access for dashboard",
     Scopes:      []string{turbodocx.ScopeOrgRead, turbodocx.ScopeAuditRead},
 })
 
 // List partner API keys
-keys, err := partner.ListPartnerApiKeys(ctx, nil)
+keys, err := partner.ListPartnerAPIKeys(ctx, nil)
 
 // Update partner API key
-_, err := partner.UpdatePartnerApiKey(ctx, keyID, &turbodocx.UpdatePartnerApiKeyRequest{
+_, err := partner.UpdatePartnerAPIKey(ctx, keyID, &turbodocx.UpdatePartnerAPIKeyRequest{
     Name:   "Updated Key",
     Scopes: []string{turbodocx.ScopeOrgRead, turbodocx.ScopeOrgUpdate},
 })
 
 // Revoke partner API key
-_, err := partner.RevokePartnerApiKey(ctx, keyID)
+_, err := partner.RevokePartnerAPIKey(ctx, keyID)
 ```
 
 #### Partner User Management
@@ -656,6 +657,85 @@ By default the helper enforces a 300-second timestamp tolerance to prevent repla
 
 ---
 
+### TurboQuote (CPQ — Configure, Price, Quote)
+
+The `QuoteClient` manages your organization's **quoting workflow** — companies, contacts, products, bundles, price books, and quotes. Create quotes, attach line items, apply price-book discounts, and send to prospects.
+
+#### Configuration
+
+```go
+import turbodocx "github.com/TurboDocx/SDK/packages/go-sdk"
+
+client, err := turbodocx.NewQuoteClient(turbodocx.QuoteClientConfig{
+    APIKey: os.Getenv("TURBODOCX_API_KEY"),
+    OrgID:  os.Getenv("TURBODOCX_ORG_ID"),
+    // BaseURL: "http://localhost:3000", // optional; defaults to https://api.turbodocx.com
+})
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+No `SenderEmail` required — quote operations do not send signature emails.
+
+#### Method Groups
+
+| Group | Methods |
+|---|---|
+| **Quotes** | `ListQuotes`, `CreateQuote`, `GetQuote`, `UpdateQuote`, `DeleteQuote`, `DuplicateQuote`, `DownloadQuotePdf` |
+| **Quote status** | `SendQuote`, `SendQuoteWithDeliverable`, `DeclineQuote`, `VoidQuote`, `HandleExpiredQuote` |
+| **Price book application** | `ApplyPriceBook`, `RemovePriceBook` |
+| **Line items** | `ListLineItems`, `AddLineItems`, `AddBundleLineItems`, `UpdateLineItem`, `RemoveLineItem` |
+| **Products** | `ListProducts`, `CreateProduct`, `GetProduct`, `UpdateProduct`, `DeleteProduct`, `DuplicateProduct`, `GetProductPrimaryImages` |
+| **Price books** | `ListPriceBooks`, `CreatePriceBook`, `GetPriceBook`, `UpdatePriceBook`, `DeletePriceBook`, `DuplicatePriceBook`, `ListPriceBookProducts` |
+| **Bundles** | `ListBundles`, `CreateBundle`, `GetBundle`, `UpdateBundle`, `DeleteBundle`, `DuplicateBundle` |
+| **Companies** | `ListCompanies`, `CreateCompany`, `GetCompany`, `UpdateCompany`, `DeleteCompany`, `ListCompanyContacts` |
+| **Contacts** | `ListContacts`, `CreateContact`, `UpdateContact`, `DeleteContact` |
+| **Templates** | `ListTemplates`, `GetTemplate`, `GetTemplateByID`, `CreateTemplate`, `UpdateTemplate`, `DeleteTemplate` |
+| **Types/categories** | `ListTypes`, `CreateType`, `UpdateType`, `DeleteType` |
+| **Convenience** | `CreateAndSend` |
+
+#### Create a quote and add line items
+
+```go
+ctx := context.Background()
+
+// Create the quote
+quote, err := client.CreateQuote(ctx, &turbodocx.CreateQuoteRequest{
+    Name:      "Acme Annual Subscription",
+    CompanyID: companyID,
+    ContactID: contactID,
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+// Add product line items (variadic — pass one or many)
+qty := 3
+items, err := client.AddLineItems(ctx, quote.ID, turbodocx.AddLineItemRequest{
+    ProductName:      "Professional License",
+    UnitPrice:        499.00,
+    BillingFrequency: "annual",
+    Quantity:         &qty,
+})
+```
+
+#### Apply a price book and download the PDF
+
+```go
+// Apply an existing price book to get discounted pricing
+applyResp, err := client.ApplyPriceBook(ctx, quote.ID, priceBookID)
+fmt.Printf("Updated %d items, skipped %d\n", applyResp.UpdatedCount, applyResp.SkippedCount)
+
+// Download as PDF
+pdf, err := client.DownloadQuotePdf(ctx, quote.ID)
+if err == nil {
+    os.WriteFile("quote.pdf", pdf, 0600)
+}
+```
+
+---
+
 ## Field Types
 
 | Type | Description |
@@ -831,6 +911,11 @@ For complete, working examples see the [`examples/`](./examples/) directory:
 **TurboPartner:**
 - [`turbopartner_basic.go`](./examples/turbopartner_basic.go) - Full organization lifecycle (create, users, API keys)
 - [`turbopartner_api_keys.go`](./examples/turbopartner_api_keys.go) - Partner API keys, portal users, and audit logs
+
+**TurboQuote:**
+- [`turboquote_basic.go`](./examples/turboquote_basic.go) - Full quote lifecycle (company, contact, quote, line items, PDF download)
+- [`turboquote_products.go`](./examples/turboquote_products.go) - Product catalog and bundle management
+- [`turboquote_pricebooks.go`](./examples/turboquote_pricebooks.go) - Price book CRUD and apply to quote
 
 ### Sequential Signing
 

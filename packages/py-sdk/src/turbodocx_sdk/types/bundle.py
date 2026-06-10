@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from typing_extensions import Literal, TypedDict
 
 from .product import Product
+from .quote_shared import DiscountType
 
 BundleItemStatus = Literal["active", "product_deleted", "product_unavailable", "currency_mismatch"]
 
@@ -59,21 +60,25 @@ class BundleItemInput(TypedDict, total=False):
     unitPrice: float
     billingFrequency: str  # BillingFrequency literal
     quantity: int
+    discountType: DiscountType
     discountPercent: float
+    discountAmount: float
     finalPrice: float
     cost: Optional[float]
 
 
 class _CreateBundleRequestRequired(TypedDict):
     name: str
+    categoryId: str
 
 
 class CreateBundleRequest(_CreateBundleRequestRequired, total=False):
-    categoryId: str
     items: List[BundleItemInput]
     description: Optional[str]
     sku: Optional[str]
+    bundleDiscountType: DiscountType
     bundleDiscountPercent: float
+    bundleDiscountAmount: float
     currency: str  # Currency literal
     showItemsToEndUser: bool
     showInCatalog: bool
@@ -86,7 +91,9 @@ class UpdateBundleRequest(TypedDict, total=False):
     description: Optional[str]
     sku: Optional[str]
     categoryId: str
+    bundleDiscountType: DiscountType
     bundleDiscountPercent: float
+    bundleDiscountAmount: float
     currency: str  # Currency literal
     showItemsToEndUser: bool
     showInCatalog: bool

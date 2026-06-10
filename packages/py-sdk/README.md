@@ -37,6 +37,7 @@ Then run `/turbodocx-sdk` inside your agent — or one of the focused shortcuts:
 | `/turbodocx-sdk deliverable` | Generate documents from templates with variable substitution |
 | `/turbodocx-sdk turbopartner` | Provision and manage customer organizations (partner accounts) |
 | `/turbodocx-sdk turbowebhooks` | Subscribe to `signature.document.completed` events + verify HMAC |
+| `/turbodocx-sdk turboquote` | Build and send interactive price quotes with line items and price books |
 
 The skill auto-detects your framework (FastAPI, Flask, Django, …) and follows your existing project conventions. Source: [github.com/TurboDocx/quickstart](https://github.com/TurboDocx/quickstart).
 
@@ -548,6 +549,84 @@ By default the helper enforces a 300-second timestamp tolerance to prevent repla
 
 ---
 
+### TurboQuote (CPQ — Configure, Price, Quote)
+
+The `TurboQuote` module manages your organization's full quoting workflow: products, bundles, price books, companies, contacts, and interactive PDF quotes.
+
+> **No `sender_email` required.** Unlike `TurboSign`, `TurboQuote` does not send signature emails. Only `api_key` and `org_id` are needed.
+
+#### Configuration
+
+```python
+import os
+from turbodocx_sdk import TurboQuote
+
+TurboQuote.configure(
+    api_key=os.environ["TURBODOCX_API_KEY"],
+    org_id=os.environ["TURBODOCX_ORG_ID"],
+    # base_url="http://localhost:3000",  # optional
+)
+```
+
+#### Create a quote, add line items, and send
+
+```python
+import asyncio
+
+async def main():
+    # 1. Create a quote
+    quote = await TurboQuote.create_quote({
+        "name": "Enterprise License Q3",
+        "companyId": "company-uuid",
+        "contactId": "contact-uuid",
+        "currency": "USD",
+        "termDays": 30,
+    })
+
+    # 2. Add product line items (single dict auto-wrapped to array)
+    items = await TurboQuote.add_line_items(quote["id"], {
+        "productName": "Platform License",
+        "unitPrice": 500.00,
+        "billingFrequency": "monthly",
+        "quantity": 10,
+        "discountType": "percent",
+        "discountPercent": 15,
+    })
+
+    # 3. Send the quote
+    result = await TurboQuote.send_quote(quote["id"])
+    print(f"Sent: {result['quote']['status']}")  # sent
+
+asyncio.run(main())
+```
+
+#### Download the quote as PDF
+
+```python
+pdf_bytes = await TurboQuote.download_quote_pdf(quote_id)
+with open("quote.pdf", "wb") as f:
+    f.write(pdf_bytes)
+```
+
+#### All 47 methods
+
+| Group | Methods |
+|:------|:--------|
+| **Quotes** | `list_quotes()`, `create_quote()`, `get_quote()`, `update_quote()`, `delete_quote()`, `duplicate_quote()` |
+| **Quote status** | `send_quote()`, `send_quote_with_deliverable()`, `decline_quote()`, `void_quote()`, `handle_expired_quote()` |
+| **Price book ops** | `apply_price_book()`, `remove_price_book()`, `download_quote_pdf()` |
+| **Line items** | `list_line_items()`, `add_line_items()`, `add_bundle_line_items()`, `update_line_item()`, `remove_line_item()` |
+| **Products** | `list_products()`, `create_product()`, `get_product()`, `update_product()`, `delete_product()`, `duplicate_product()`, `get_product_primary_images()` |
+| **Price books** | `list_price_books()`, `create_price_book()`, `get_price_book()`, `update_price_book()`, `delete_price_book()`, `duplicate_price_book()`, `list_price_book_products()` |
+| **Bundles** | `list_bundles()`, `create_bundle()`, `get_bundle()`, `update_bundle()`, `delete_bundle()`, `duplicate_bundle()` |
+| **Companies** | `list_companies()`, `create_company()`, `get_company()`, `update_company()`, `delete_company()`, `list_company_contacts()` |
+| **Contacts** | `list_contacts()`, `create_contact()`, `update_contact()`, `delete_contact()` |
+| **Templates** | `list_templates()`, `get_template()`, `get_template_by_id()`, `create_template()`, `update_template()`, `delete_template()` |
+| **Types** | `list_types()`, `create_type()`, `update_type()`, `delete_type()` |
+| **Convenience** | `create_and_send()` |
+
+---
+
 ## Field Types
 
 | Type | Description |
@@ -575,6 +654,9 @@ For complete, working examples including template anchors, advanced field types,
 - [`turbosign_advanced.py`](./examples/turbosign_advanced.py) - Advanced field types (checkbox, readonly, multiline text, etc.)
 - [`turbopartner_basic.py`](./examples/turbopartner_basic.py) - Full organization lifecycle (create org, add users, create API keys)
 - [`turbopartner_api_keys.py`](./examples/turbopartner_api_keys.py) - Partner API keys, portal users, and audit logs
+- [`turboquote_basic.py`](./examples/turboquote_basic.py) - Full quote lifecycle (company, contact, quote, line items, PDF download)
+- [`turboquote_products.py`](./examples/turboquote_products.py) - Product and bundle catalog management
+- [`turboquote_pricebooks.py`](./examples/turboquote_pricebooks.py) - Price book CRUD, apply to quote, optional send-with-deliverable
 
 ### Sequential Signing
 
