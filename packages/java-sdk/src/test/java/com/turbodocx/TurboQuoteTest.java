@@ -541,6 +541,33 @@ class TurboQuoteTest {
         }
 
         @Test
+        @DisplayName("should serialize explicit productId:null for a custom (ad-hoc) line item")
+        void addCustomLineItemSerializesNullProductId() throws Exception {
+            // Backend joiAddProductLineItemSchema declares productId as `.allow(null).required()`:
+            // the key MUST be present even when null (that's how a custom/ad-hoc line item is
+            // expressed). Default Gson drops null fields, so the omitted productId 400s the request
+            // and custom line items become impossible from the Java SDK. Regression guard for that.
+            Map<String, Object> response = new HashMap<>();
+            response.put("results", Collections.singletonList(new HashMap<>()));
+            response.put("message", "1 line item(s) added successfully");
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            AddLineItemRequest custom = new AddLineItemRequest();
+            custom.setProductId(null);            // custom/ad-hoc line item — no product reference
+            custom.setProductName("Custom Service");
+            custom.setUnitPrice(500.0);
+            custom.setBillingFrequency("one-time");
+            custom.setQuantity(1.0);
+
+            client.turboQuote().addLineItems("q-1", custom);
+
+            RecordedRequest recorded = server.takeRequest();
+            String body = recorded.getBody().readUtf8();
+            assertTrue(body.contains("\"productId\":null"),
+                    "custom line item must send explicit productId:null (backend requires the key present); got: " + body);
+        }
+
+        @Test
         @DisplayName("should add a single bundle line item and unwrap results")
         void addBundleLineItem() throws Exception {
             Map<String, Object> itemMap = new HashMap<>();

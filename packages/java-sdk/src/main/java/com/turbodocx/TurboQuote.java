@@ -2,6 +2,8 @@ package com.turbodocx;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.turbodocx.models.quote.*;
@@ -25,6 +27,10 @@ import java.util.*;
 public final class TurboQuote {
     private final HttpClient httpClient;
     private final Gson gson;
+    // Used only to serialize an already-curated line-item tree where the sole null member is the
+    // intentional productId:null. serializeNulls() lets that explicit null reach the wire; every
+    // other null was already dropped by {@code gson} (no serializeNulls) when building the tree.
+    private static final Gson NULL_PRESERVING_GSON = new GsonBuilder().serializeNulls().create();
 
     public TurboQuote(HttpClient httpClient) {
         this.httpClient = httpClient;
@@ -216,8 +222,27 @@ public final class TurboQuote {
      * Add product line items to a quote (single or batch).
      */
     public List<LineItem> addLineItems(String quoteId, List<AddLineItemRequest> items) throws IOException {
+        // Build the body as a JsonArray so productId is sent even when null. The backend's
+        // joiAddProductLineItemSchema declares productId `.allow(null).required()` — the KEY must
+        // be present even when null (that is how a custom/ad-hoc line item, one with no product
+        // reference, is expressed). Default Gson omits null fields, and a registered serializer is
+        // not reliably applied to elements of a type-erased List, so we materialize each item to a
+        // JsonObject here and guarantee productId is present. Other null fields stay omitted and
+        // @SerializedName enum encoding (e.g. DiscountType) is preserved.
+        JsonArray payload = new JsonArray();
+        for (AddLineItemRequest item : items) {
+            JsonObject obj = gson.toJsonTree(item).getAsJsonObject();
+            if (!obj.has("productId")) {
+                obj.add("productId", JsonNull.INSTANCE);
+            }
+            payload.add(obj);
+        }
+        // Serialize with serializeNulls so the explicit productId:null survives to the wire. The
+        // tree above already omits every other null, so only productId:null is emitted and optional
+        // fields (e.g. discountPercent) stay absent and keep their server-side defaults.
+        String body = NULL_PRESERVING_GSON.toJson(payload);
         Type type = new TypeToken<ResultsEnvelope<LineItem>>(){}.getType();
-        ResultsEnvelope<LineItem> envelope = httpClient.post("/v1/quotes/" + quoteId + "/items", items, type);
+        ResultsEnvelope<LineItem> envelope = httpClient.postRawJson("/v1/quotes/" + quoteId + "/items", body, type);
         return envelope.getResults();
     }
 
