@@ -27,9 +27,10 @@ import java.util.*;
 public final class TurboQuote {
     private final HttpClient httpClient;
     private final Gson gson;
-    // Used only to serialize an already-curated line-item tree where the sole null member is the
-    // intentional productId:null. serializeNulls() lets that explicit null reach the wire; every
-    // other null was already dropped by {@code gson} (no serializeNulls) when building the tree.
+    // Serializes an already-curated JSON tree, emitting explicit nulls (serializeNulls). Used for
+    // the line-item array (sole null is the intentional productId:null) and for buildPatchBody
+    // (explicit nulls = fields the caller cleared). Other nulls are dropped earlier by {@code gson}
+    // (no serializeNulls) when the tree is built. Gson is thread-safe, so one shared instance.
     private static final Gson NULL_PRESERVING_GSON = new GsonBuilder().serializeNulls().create();
 
     public TurboQuote(HttpClient httpClient) {
@@ -803,8 +804,8 @@ public final class TurboQuote {
      * @return a JSON string containing only the explicitly set fields
      */
     private String buildPatchBody(TrackableRequest request) {
-        // Use serializeNulls so that fields explicitly set to null appear in the tree AND output
-        Gson nullGson = new GsonBuilder().serializeNulls().create();
+        // serializeNulls so fields explicitly set to null appear in the tree AND output.
+        Gson nullGson = NULL_PRESERVING_GSON;
         JsonObject full = nullGson.toJsonTree(request).getAsJsonObject();
         JsonObject filtered = new JsonObject();
         for (String field : request.getSetFields()) {

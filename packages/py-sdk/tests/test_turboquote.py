@@ -797,6 +797,25 @@ class TestPriceBooks:
         )
 
     @pytest.mark.asyncio
+    async def test_create_price_book_coerces_explicit_none_discount_percent_to_zero(self):
+        """An explicit discountPercent=None must become 0 (backend rejects null), matching JS/PHP/Go/Java"""
+        self.mock_client.post = AsyncMock(
+            return_value={"result": {"id": "pb-3", "name": "Null Disc"}, "message": "ok"}
+        )
+
+        await TurboQuote.create_price_book({
+            "name": "Null Disc",
+            "priceBookTypeId": "pbt-1",
+            "validFrom": "2026-01-01",
+            "discountPercent": None,
+        })
+
+        self.mock_client.post.assert_called_once_with(
+            "/v1/pricebooks",
+            {"name": "Null Disc", "priceBookTypeId": "pbt-1", "validFrom": "2026-01-01", "discountPercent": 0},
+        )
+
+    @pytest.mark.asyncio
     async def test_get_price_book_by_id_and_unwrap_result(self):
         """Should get a price book by ID and unwrap result"""
         mock_price_book = {"id": "pb-1", "name": "Standard"}

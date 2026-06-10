@@ -402,7 +402,10 @@ class TurboQuote:
     async def create_price_book(cls, request: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new price book."""
         client = cls._get_client()
-        body = {**request, "discountPercent": request.get("discountPercent", 0)}
+        # Backend requires discountPercent on POST (omitting it 400s) and rejects null; coerce a
+        # missing OR explicit-None value to the documented default 0 (matches JS/Go/PHP/Java).
+        dp = request.get("discountPercent")
+        body = {**request, "discountPercent": 0 if dp is None else dp}
         return cls._unwrap(await client.post("/v1/pricebooks", body))
 
     @classmethod
