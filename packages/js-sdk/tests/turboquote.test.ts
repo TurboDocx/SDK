@@ -427,6 +427,42 @@ describe("TurboQuote Module", () => {
       );
     });
 
+    it("addLineItems custom line item sends explicit productId null", async () => {
+      // Backend joiAddProductLineItemSchema declares productId as .allow(null).required():
+      // the key MUST be present even when null (that's how a custom/ad-hoc line item is
+      // expressed). If a serializer drops the null key, the backend 400s. This locks the
+      // JS SDK's wire format to emit an explicit "productId":null.
+      const mockFetch = jest.fn();
+      global.fetch = mockFetch as any;
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: { get: () => "application/json" },
+        json: async () => ({
+          data: { results: [{ id: "li-1" }], message: "1 line item(s) added successfully" },
+        }),
+      });
+
+      // Use the real HttpClient (the file-level jest.mock otherwise swaps in mockClient,
+      // so global.fetch would never be reached) to exercise actual JSON.stringify serialization.
+      const ActualHttpClient = jest.requireActual("../src/http").HttpClient;
+      MockedHttpClient.mockImplementation((...args: any[]) => new ActualHttpClient(...args));
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+
+      const customItem = {
+        productId: null as string | null,
+        productName: "Custom Service",
+        unitPrice: 500,
+        billingFrequency: "one-time" as const,
+        quantity: 1,
+      };
+
+      await TurboQuote.addLineItems("q-1", customItem);
+
+      const sentBody = mockFetch.mock.calls[0][1].body as string;
+      expect(sentBody).toContain('"productId":null');
+    });
+
     it("should add multiple product line items as batch", async () => {
       const mockItems = [{ id: "li-1" }, { id: "li-2" }];
       mockClient.post.mockResolvedValue({ results: mockItems, message: "2 line item(s) added successfully" });

@@ -506,6 +506,28 @@ final class TurboQuoteTest extends TestCase
         $this->assertSame($expected, $this->mockClient->lastPostData);
     }
 
+    public function testAddLineItemsCustomLineItemSendsExplicitProductIdNull(): void
+    {
+        // Backend joiAddProductLineItemSchema declares productId as .allow(null).required():
+        // a custom (ad-hoc) line item MUST send the key present with an explicit null value,
+        // otherwise the API 400s. This locks the wire format so PHP can't regress to omitting it.
+        $mockItems = [['id' => 'li-1', 'productId' => null, 'productName' => 'Custom Service']];
+        $item = new AddLineItemRequest(productId: null, productName: 'Custom Service', unitPrice: 500, billingFrequency: 'one-time', quantity: 1);
+        $this->mockClient->setPostReturn(['results' => $mockItems, 'message' => '1 line item(s) added successfully']);
+        $this->injectMockClient();
+
+        $result = TurboQuote::addLineItems('q-1', $item);
+
+        $this->assertCount(1, $result);
+        $this->assertSame('/v1/quotes/q-1/items', $this->mockClient->lastPostPath);
+        $sentItem = $this->mockClient->lastPostData[0];
+        // The 'productId' key must be present with a null value, not absent.
+        $this->assertArrayHasKey('productId', $sentItem);
+        $this->assertNull($sentItem['productId']);
+        // Assert the actual JSON wire format the SDK serializes carries "productId":null.
+        $this->assertStringContainsString('"productId":null', json_encode($this->mockClient->lastPostData));
+    }
+
     public function testAddBundleLineItemAndUnwrapResults(): void
     {
         $this->mockClient->setPostReturn(['results' => [['id' => 'li-3', 'bundleId' => 'bun-1', 'lineItemType' => 'bundle']], 'message' => '1 bundle(s) added successfully']);

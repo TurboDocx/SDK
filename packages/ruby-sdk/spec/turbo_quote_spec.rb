@@ -367,6 +367,22 @@ RSpec.describe TurboDocxSdk::TurboQuote do
       )
     end
 
+    it "adds a custom line item and sends explicit productId null on the wire" do
+      # Backend joiAddProductLineItemSchema declares productId as .allow(null).required():
+      # the key MUST be present even when null — that's how a custom (ad-hoc) line item is expressed.
+      captured = nil
+      allow(mock_client).to receive(:post) do |_path, data|
+        captured = data
+        { "results" => [{ "id" => "li-custom" }], "message" => "1 line item(s) added successfully" }
+      end
+
+      item = { "productId" => nil, "productName" => "Custom Service", "unitPrice" => 500, "billingFrequency" => "one-time", "quantity" => 1 }
+      described_class.add_line_items("q-1", item)
+
+      # Assert the SERIALIZED wire format keeps the key present with a null value.
+      expect(JSON.generate(captured)).to include('"productId":null')
+    end
+
     it "adds a single bundle line item and unwraps results" do
       mock_items = [{ "id" => "li-3", "bundleId" => "bun-1", "lineItemType" => "bundle" }]
       allow(mock_client).to receive(:post).and_return({ "results" => mock_items, "message" => "1 bundle(s) added successfully" })

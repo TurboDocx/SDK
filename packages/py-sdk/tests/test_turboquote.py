@@ -501,6 +501,61 @@ class TestLineItems:
         assert result["message"] == "Line item removed successfully"
         self.mock_client.delete.assert_called_once_with("/v1/quotes/q-1/items/li-1")
 
+    @pytest.mark.asyncio
+    async def test_add_line_items_custom_item_sends_explicit_product_id_null(self):
+        """A custom (ad-hoc) line item with no product reference must serialize
+        productId as an EXPLICIT JSON null on the wire (key present, value null).
+
+        Backend joiAddProductLineItemSchema declares productId as
+        `.allow(null).required()` -- the key MUST be present even when null;
+        that is exactly how a custom line item is expressed. Dropping the null
+        (e.g. via a "strip None values" serializer) makes the backend 400.
+        This locks in that Python keeps the explicit null. (The Java SDK
+        regressed here; cross-SDK parity requires this guard in every SDK.)
+        """
+        # Use a REAL HttpClient so the request reaches httpx (the autouse
+        # fixture's AsyncMock would otherwise short-circuit before the wire).
+        TurboQuote.configure(api_key="test-key", org_id="test-org")
+
+        custom_item = {
+            "productId": None,  # custom / ad-hoc item -> no product reference
+            "productName": "Custom Service",
+            "unitPrice": 500,
+            "billingFrequency": "one-time",
+            "quantity": 1,
+        }
+
+        with patch("httpx.AsyncClient") as mock_httpx:
+            mock_http_client = AsyncMock()
+            mock_response = MagicMock()
+            mock_response.is_success = True
+            mock_response.headers = {"content-type": "application/json"}
+            mock_response.json.return_value = {
+                "results": [{"id": "li-1", "productName": "Custom Service"}],
+                "message": "1 line item(s) added successfully",
+            }
+            mock_http_client.post = AsyncMock(return_value=mock_response)
+            mock_httpx.return_value.__aenter__.return_value = mock_http_client
+
+            await TurboQuote.add_line_items("q-1", custom_item)
+
+        # Capture the body the SDK handed to httpx (sent on the wire as json=).
+        _, kwargs = mock_http_client.post.call_args
+        payload = kwargs["json"]
+
+        # 1) Dict-level guard: the key is present and is None (the only way this
+        #    regresses in Python is a serializer that strips None keys).
+        assert "productId" in payload[0]
+        assert payload[0]["productId"] is None
+
+        # 2) Wire-format guard: it serializes to an explicit JSON null, not an
+        #    omitted key. Whitespace-tolerant to match any serializer separators.
+        import json as _json
+        import re as _re
+
+        serialized = _json.dumps(payload)
+        assert _re.search(r'"productId"\s*:\s*null', serialized) is not None
+
 
 # ============================================
 # PRODUCTS
