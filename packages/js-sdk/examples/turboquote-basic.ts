@@ -121,17 +121,34 @@ async function quoteLifecycleExample(): Promise<void> {
     // =============================================
     console.log('4. Creating quote...');
 
+    // Term modes:
+    //   - Fixed term:   termDays 1–3650, renewalPeriod omitted (null)
+    //   - One-time:     termDays 0
+    //   - Auto-renewal: termDays -1 AND renewalPeriod ('monthly' | 'quarterly' | 'annually')
+    // renewalPeriod is ONLY valid with termDays: -1 — pairing it with a fixed term is rejected (400).
     const quote = await TurboQuote.createQuote({
       name: 'Acme Corp - Q3 Enterprise License',
       companyId: company.id,
       contactId: contact.id,
       currency: 'USD',
-      termDays: 30,
-      renewalPeriod: 'annually',
+      termDays: 30, // 30-day fixed term (no renewalPeriod)
     });
 
     console.log(`  Number: ${quote.quoteNumber}`);
     console.log(`  Status: ${quote.status}`);
+
+    // Auto-renewal variant: termDays -1 + renewalPeriod. Shown here, then removed so the rest of
+    // the example continues on the fixed-term quote above.
+    const autoRenewQuote = await TurboQuote.createQuote({
+      name: 'Acme Corp - Auto-Renewing Subscription',
+      companyId: company.id,
+      contactId: contact.id,
+      currency: 'USD',
+      termDays: -1, // -1 = auto-renewal
+      renewalPeriod: 'annually',
+    });
+    console.log(`  Auto-renewal quote: ${autoRenewQuote.quoteNumber} (renews ${autoRenewQuote.renewalPeriod})`);
+    await TurboQuote.deleteQuote(autoRenewQuote.id);
 
     const quoteDetails = await TurboQuote.getQuote(quote.id);
     console.log(`  Term: ${quoteDetails.termDays} days`);
