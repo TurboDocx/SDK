@@ -69,8 +69,11 @@ async def main():
 
         # 5. Add product line items
         print("Adding line items...")
+        # Custom/ad-hoc line items (no catalog product): productId must be
+        # present and explicitly None.
         line_items = await TurboQuote.add_line_items(quote_id, [
             {
+                "productId": None,
                 "productName": "Platform License",
                 "unitPrice": 500.00,
                 "billingFrequency": "monthly",
@@ -79,6 +82,7 @@ async def main():
                 "discountPercent": 15,
             },
             {
+                "productId": None,
                 "productName": "Support Add-on",
                 "unitPrice": 200.00,
                 "billingFrequency": "monthly",

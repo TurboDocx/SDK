@@ -583,8 +583,10 @@ async def main():
         "termDays": 30,
     })
 
-    # 2. Add product line items (single dict auto-wrapped to array)
+    # 2. Add a custom line item (single dict auto-wrapped to array)
+    #    No catalog product → productId must be present and explicitly None
     items = await TurboQuote.add_line_items(quote["id"], {
+        "productId": None,
         "productName": "Platform License",
         "unitPrice": 500.00,
         "billingFrequency": "monthly",

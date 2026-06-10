@@ -66,6 +66,7 @@ begin
   puts "Adding line items..."
   line_items = TurboDocxSdk::TurboQuote.add_line_items(quote_id, [
     {
+      "productId"        => nil,
       "productName"      => "Platform License",
       "unitPrice"        => 500.00,
       "billingFrequency" => "monthly",
@@ -74,6 +75,7 @@ begin
       "discountPercent"  => 15
     },
     {
+      "productId"        => nil,
       "productName"      => "Support Add-on",
       "unitPrice"        => 200.00,
       "billingFrequency" => "monthly",
