@@ -471,8 +471,13 @@ module TurboDocxSdk
       # @raise [NetworkError] on connection failure
       def create_price_book(request)
         client = get_client
+        # Backend requires discountPercent on POST (omitting it 400s) and rejects null; coerce a
+        # missing OR explicit-nil value to the documented default 0 (matches JS/Go/PHP/Java).
         data = request.dup
-        unless data.key?("discountPercent") || data.key?(:discountPercent)
+        dp = data["discountPercent"]
+        dp = data[:discountPercent] if dp.nil?
+        if dp.nil?
+          data.delete(:discountPercent)
           data["discountPercent"] = 0
         end
         unwrap(client.post("/v1/pricebooks", data))
