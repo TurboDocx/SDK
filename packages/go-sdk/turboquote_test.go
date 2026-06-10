@@ -3,6 +3,7 @@ package turbodocx
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -782,6 +783,40 @@ func TestQuoteClient_AddLineItems(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Len(t, result, 2)
+	})
+
+	t.Run("custom line item sends explicit productId null", func(t *testing.T) {
+		// Backend joiAddProductLineItemSchema declares productId as
+		// .allow(null).required() — for a custom (ad-hoc) line item the key
+		// MUST be present on the wire as an explicit null, never omitted.
+		var rawBody string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			b, _ := io.ReadAll(r.Body)
+			rawBody = string(b)
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"results": []map[string]interface{}{
+					{"id": "li-custom", "productName": "Custom Service"},
+				},
+				"message": "1 line item(s) added successfully",
+			})
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		qty := 1
+		result, err := client.AddLineItems(context.Background(), "q-1", AddLineItemRequest{
+			ProductID:        nil, // custom item: no product reference
+			ProductName:      "Custom Service",
+			UnitPrice:        500,
+			BillingFrequency: "one-time",
+			Quantity:         &qty,
+		})
+
+		require.NoError(t, err)
+		assert.Len(t, result, 1)
+		assert.Contains(t, rawBody, `"productId":null`)
 	})
 }
 
