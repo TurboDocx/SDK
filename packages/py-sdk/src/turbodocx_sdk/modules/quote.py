@@ -402,7 +402,8 @@ class TurboQuote:
     async def create_price_book(cls, request: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new price book."""
         client = cls._get_client()
-        return cls._unwrap(await client.post("/v1/pricebooks", request))
+        body = {**request, "discountPercent": request.get("discountPercent", 0)}
+        return cls._unwrap(await client.post("/v1/pricebooks", body))
 
     @classmethod
     async def get_price_book(cls, id: str) -> Dict[str, Any]:

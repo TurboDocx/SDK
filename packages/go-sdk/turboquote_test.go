@@ -1377,6 +1377,39 @@ func TestQuoteClient_CreatePriceBook(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "Partner Pricing", result.Name)
 	})
+
+	t.Run("defaults discountPercent to 0 when omitted", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "POST", r.Method)
+			assert.Equal(t, "/v1/pricebooks", r.URL.Path)
+
+			var body map[string]interface{}
+			json.NewDecoder(r.Body).Decode(&body)
+			assert.Equal(t, "Partner Pricing", body["name"])
+			assert.Equal(t, "pbt-1", body["priceBookTypeId"])
+			assert.Equal(t, "2026-01-01", body["validFrom"])
+			assert.Equal(t, float64(0), body["discountPercent"])
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"result": map[string]interface{}{
+					"id":   "pb-1",
+					"name": "Partner Pricing",
+				},
+			})
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		result, err := client.CreatePriceBook(context.Background(), &CreatePriceBookRequest{
+			Name:            "Partner Pricing",
+			PriceBookTypeID: "pbt-1",
+			ValidFrom:       "2026-01-01",
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, "Partner Pricing", result.Name)
+	})
 }
 
 func TestQuoteClient_GetPriceBook(t *testing.T) {

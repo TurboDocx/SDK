@@ -575,7 +575,10 @@ final class TurboQuote
     public static function createPriceBook(CreatePriceBookRequest $request): PriceBook
     {
         $client = self::getClient();
-        return PriceBook::fromArray(self::unwrap($client->post('/v1/pricebooks', $request->toArray())));
+        $body = $request->toArray();
+        // Backend requires discountPercent; fill the documented default when the caller omits it.
+        $body['discountPercent'] ??= 0.0;
+        return PriceBook::fromArray(self::unwrap($client->post('/v1/pricebooks', $body)));
     }
 
     /**

@@ -956,6 +956,22 @@ final class TurboQuoteTest extends TestCase
         $this->assertSame(['name' => 'Partner Pricing', 'priceBookTypeId' => 'pbt-1', 'validFrom' => '2026-01-01', 'discountPercent' => 15.0], $this->mockClient->lastPostData);
     }
 
+    public function testCreatePriceBookDefaultsDiscountPercentToZeroWhenOmitted(): void
+    {
+        $this->mockClient->setPostReturn(['result' => ['id' => 'pb-2', 'name' => 'No Discount'], 'message' => 'PriceBook created successfully']);
+        $this->injectMockClient();
+
+        $result = TurboQuote::createPriceBook(new CreatePriceBookRequest(
+            name: 'No Discount',
+            priceBookTypeId: 'pbt-1',
+            validFrom: '2026-01-01',
+        ));
+
+        $this->assertInstanceOf(PriceBook::class, $result);
+        $this->assertSame('/v1/pricebooks', $this->mockClient->lastPostPath);
+        $this->assertSame(['name' => 'No Discount', 'priceBookTypeId' => 'pbt-1', 'validFrom' => '2026-01-01', 'discountPercent' => 0.0], $this->mockClient->lastPostData);
+    }
+
     public function testGetPriceBookByIdAndUnwrapResult(): void
     {
         $this->mockClient->setGetReturn(['result' => ['id' => 'pb-1', 'name' => 'Standard']]);

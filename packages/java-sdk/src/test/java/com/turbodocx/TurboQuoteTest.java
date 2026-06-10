@@ -812,6 +812,34 @@ class TurboQuoteTest {
         }
 
         @Test
+        @DisplayName("should default discountPercent to 0 when omitted on create")
+        void createPriceBookDefaultsDiscountPercent() throws Exception {
+            // Backend joiPriceBook POST schema requires discountPercent (omitting it returns 400).
+            // The SDK fills the backend's documented default (0) so a pricebook with per-product
+            // pricing (no blanket discount) can be created without forcing the caller to pass 0.
+            Map<String, Object> response = new HashMap<>();
+            response.put("result", createPriceBookMap("pb-1", "No Discount"));
+            response.put("message", "PriceBook created successfully");
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            CreatePriceBookRequest request = new CreatePriceBookRequest();
+            request.setName("No Discount");
+            request.setPriceBookTypeId("pbt-1");
+            request.setValidFrom("2026-01-01");
+            // discountPercent intentionally NOT set
+            client.turboQuote().createPriceBook(request);
+
+            RecordedRequest recorded = server.takeRequest();
+            assertEquals("POST", recorded.getMethod());
+            assertTrue(recorded.getPath().endsWith("/v1/pricebooks"));
+            String body = recorded.getBody().readUtf8();
+            JsonObject json = new Gson().fromJson(body, JsonObject.class);
+            assertTrue(json.has("discountPercent"),
+                    "discountPercent should be sent even when the caller omits it");
+            assertEquals(0.0, json.get("discountPercent").getAsDouble(), 0.001);
+        }
+
+        @Test
         @DisplayName("should get a price book by ID and unwrap result")
         void getPriceBook() throws Exception {
             Map<String, Object> response = new HashMap<>();

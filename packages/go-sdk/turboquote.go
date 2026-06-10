@@ -506,7 +506,14 @@ func (c *QuoteClient) CreatePriceBook(ctx context.Context, request *CreatePriceB
 	var resp struct {
 		Result PriceBook `json:"result"`
 	}
-	if err := c.http.Post(ctx, "/v1/pricebooks", request, &resp); err != nil {
+	// Backend requires discountPercent on POST; fill its documented default of 0
+	// when the caller omits it. Copy the request to avoid mutating the caller's struct.
+	body := *request
+	if body.DiscountPercent == nil {
+		zero := 0.0
+		body.DiscountPercent = &zero
+	}
+	if err := c.http.Post(ctx, "/v1/pricebooks", &body, &resp); err != nil {
 		return nil, err
 	}
 	return &resp.Result, nil

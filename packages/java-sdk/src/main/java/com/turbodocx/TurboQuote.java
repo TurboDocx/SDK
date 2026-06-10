@@ -406,7 +406,14 @@ public final class TurboQuote {
      */
     public PriceBook createPriceBook(CreatePriceBookRequest request) throws IOException {
         Type type = new TypeToken<ResultEnvelope<PriceBook>>(){}.getType();
-        ResultEnvelope<PriceBook> envelope = httpClient.post("/v1/pricebooks", request, type);
+        // The backend joiPriceBook POST schema requires discountPercent (omitting it returns 400),
+        // even though it documents a default of 0. Fill the documented default when the caller
+        // omits it, without mutating the caller's request object.
+        JsonObject body = gson.toJsonTree(request).getAsJsonObject();
+        if (!body.has("discountPercent")) {
+            body.addProperty("discountPercent", 0);
+        }
+        ResultEnvelope<PriceBook> envelope = httpClient.post("/v1/pricebooks", body, type);
         return envelope.getResult();
     }
 

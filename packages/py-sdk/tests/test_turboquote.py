@@ -778,6 +778,25 @@ class TestPriceBooks:
         )
 
     @pytest.mark.asyncio
+    async def test_create_price_book_defaults_discount_percent_to_zero_when_omitted(self):
+        """Should default discountPercent to 0 when the caller omits it"""
+        mock_price_book = {"id": "pb-2", "name": "Default Pricing", "discountPercent": 0}
+        self.mock_client.post = AsyncMock(
+            return_value={"result": mock_price_book, "message": "PriceBook created successfully"}
+        )
+
+        await TurboQuote.create_price_book({
+            "name": "Default Pricing",
+            "priceBookTypeId": "pbt-1",
+            "validFrom": "2026-01-01",
+        })
+
+        self.mock_client.post.assert_called_once_with(
+            "/v1/pricebooks",
+            {"name": "Default Pricing", "priceBookTypeId": "pbt-1", "validFrom": "2026-01-01", "discountPercent": 0},
+        )
+
+    @pytest.mark.asyncio
     async def test_get_price_book_by_id_and_unwrap_result(self):
         """Should get a price book by ID and unwrap result"""
         mock_price_book = {"id": "pb-1", "name": "Standard"}
