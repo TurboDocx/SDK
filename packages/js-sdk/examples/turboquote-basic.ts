@@ -124,7 +124,7 @@ async function quoteLifecycleExample(): Promise<void> {
     // Term modes:
     //   - Fixed term:   termDays 1–3650, renewalPeriod omitted (null)
     //   - One-time:     termDays 0
-    //   - Auto-renewal: termDays -1 AND renewalPeriod ('monthly' | 'quarterly' | 'annually')
+    //   - Auto-renewal: termDays -1 AND renewalPeriod ('weekly' | 'monthly' | 'quarterly' | 'annually')
     // renewalPeriod is ONLY valid with termDays: -1 — pairing it with a fixed term is rejected (400).
     const quote = await TurboQuote.createQuote({
       name: 'Acme Corp - Q3 Enterprise License',

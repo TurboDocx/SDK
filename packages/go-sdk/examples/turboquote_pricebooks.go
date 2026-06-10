@@ -102,6 +102,7 @@ func main() {
 		Name:            "Enterprise 15% Off",
 		PriceBookTypeID: pbType.ID,
 		ValidFrom:       "2025-01-01",
+		DiscountPercent: &discountPct,
 		ProductPricing: []turbodocx.PriceBookProductPricingInput{
 			{
 				ProductID:       product.ID,

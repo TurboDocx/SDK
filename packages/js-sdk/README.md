@@ -631,15 +631,13 @@ TurboQuote.configure({
 |---|---|
 | **Configuration** | `configure()` |
 | **Quotes** | `createQuote()`, `getQuote()`, `listQuotes()`, `updateQuote()`, `deleteQuote()` |
-| **Quote status transitions** | `sendQuote()`, `declineQuote()`, `voidQuote()`, `handleExpiredQuote()`, `duplicateQuote()` |
-| **Quote downloads** | `downloadPdf()`, `getPublicQuoteLink()` |
-| **Line items** | `addLineItems()`, `listLineItems()`, `updateLineItem()`, `removeLineItem()` |
-| **Products** | `createProduct()`, `getProduct()`, `listProducts()`, `updateProduct()`, `deleteProduct()` |
-| **Product images** | `addProductImages()`, `deleteProductImage()`, `getProductPrimaryImages()` |
-| **Bundles** | `createBundle()`, `getBundle()`, `listBundles()`, `updateBundle()`, `deleteBundle()` |
-| **Price books** | `createPriceBook()`, `getPriceBook()`, `listPriceBooks()`, `updatePriceBook()`, `deletePriceBook()` |
-| **Price book products** | `listPriceBookProducts()`, `addProductsToPriceBook()`, `updatePriceBookProduct()`, `removeProductFromPriceBook()` |
-| **Quote template** | `getTemplate()`, `createTemplate()`, `updateTemplate()`, `deleteTemplate()` |
+| **Quote status transitions** | `sendQuote()`, `sendQuoteWithDeliverable()`, `declineQuote()`, `voidQuote()`, `handleExpiredQuote()`, `duplicateQuote()` |
+| **Quote downloads** | `downloadQuotePdf()` |
+| **Line items** | `addLineItems()`, `addBundleLineItems()`, `listLineItems()`, `updateLineItem()`, `removeLineItem()` |
+| **Products** | `createProduct()`, `getProduct()`, `listProducts()`, `updateProduct()`, `deleteProduct()`, `duplicateProduct()`, `getProductPrimaryImages()` |
+| **Bundles** | `createBundle()`, `getBundle()`, `listBundles()`, `updateBundle()`, `deleteBundle()`, `duplicateBundle()` |
+| **Price books** | `createPriceBook()`, `getPriceBook()`, `listPriceBooks()`, `updatePriceBook()`, `deletePriceBook()`, `duplicatePriceBook()`, `applyPriceBook()`, `removePriceBook()`, `listPriceBookProducts()` |
+| **Quote template** | `getTemplate()`, `getTemplateById()`, `listTemplates()`, `createTemplate()`, `updateTemplate()`, `deleteTemplate()` |
 | **Types / categories** | `createType()`, `listTypes()`, `updateType()`, `deleteType()` |
 | **Companies** | `createCompany()`, `getCompany()`, `listCompanies()`, `updateCompany()`, `deleteCompany()` |
 | **Contacts** | `createContact()`, `listCompanyContacts()`, `updateContact()`, `deleteContact()` |
@@ -679,8 +677,8 @@ console.log(sent.message);
 ```typescript
 import { writeFileSync } from 'fs';
 
-const pdfBuffer = await TurboQuote.downloadPdf(quote.id);
-writeFileSync('quote.pdf', pdfBuffer);
+const pdf = await TurboQuote.downloadQuotePdf(quote.id);  // returns ArrayBuffer
+writeFileSync('quote.pdf', Buffer.from(pdf));
 ```
 
 ---
