@@ -1,5 +1,5 @@
 /**
- * TurboQuote Example: Templates, Workflows, Approvals & Status Transitions
+ * TurboQuote Example: Templates, Types, CRM & Quote Status Transitions
  *
  * Fully self-contained — creates all data it needs, then cleans up.
  * Just add your API key and run.
@@ -10,11 +10,8 @@
  * - createType(), listTypes(), updateType(), deleteType()
  * - createCompany(), getCompany(), updateCompany(), listCompanyContacts(), deleteCompany()
  * - createContact(), updateContact(), deleteContact()
- * - createWorkflow(), listWorkflows(), getWorkflow(), updateWorkflow()
- * - activateWorkflow(), deactivateWorkflow(), deleteWorkflow()
- * - approveQuote(), listApprovalRequests(), getApprovalActivity()
  * - createProduct(), deleteProduct()
- * - createQuote(), addLineItems(), removeLineItem()
+ * - createQuote(), addLineItems(), updateLineItem(), removeLineItem()
  * - sendQuote(), declineQuote(), voidQuote(), handleExpiredQuote()
  * - duplicateQuote(), deleteQuote()
  *
@@ -138,83 +135,9 @@ async function advancedExample(): Promise<void> {
     console.log(`  Product: ${product.name} — $${product.listPrice}/mo\n`);
 
     // =============================================
-    // 5. APPROVAL WORKFLOWS
+    // 5. QUOTE STATUS TRANSITIONS
     // =============================================
-    console.log('5. Creating approval workflow...');
-
-    const workflow = await TurboQuote.createWorkflow({
-      name: 'High-Value Quote Approval',
-      description: 'Requires manager approval for quotes over $10,000',
-      nodes: [
-        {
-          id: 'start-1',
-          type: 'start',
-          data: { label: 'Quote Submitted' },
-          position: { x: 0, y: 100 },
-        },
-        {
-          id: 'cond-1',
-          type: 'condition',
-          data: {
-            label: 'Grand Total > $10,000?',
-            condition: { field: 'price', operator: '>', value: 10000 },
-          },
-          position: { x: 250, y: 100 },
-        },
-        {
-          id: 'approve-1',
-          type: 'approval',
-          data: {
-            label: 'Sales Manager Approval',
-            approvers: ['manager@yourcompany.com'],
-            requireAll: true,
-            timeoutHours: 48,
-          },
-          position: { x: 500, y: 100 },
-        },
-      ],
-      edges: [
-        { id: 'e1', source: 'start-1', target: 'cond-1' },
-        { id: 'e2', source: 'cond-1', target: 'approve-1' },
-      ],
-      viewport: { x: 0, y: 0, zoom: 1 },
-    });
-
-    console.log(`  ${workflow.name}: ${workflow.nodes.length} nodes, ${workflow.edges.length} edges\n`);
-
-    // =============================================
-    // 6. ACTIVATE & INSPECT WORKFLOW
-    // =============================================
-    console.log('6. Activating and inspecting workflow...');
-
-    const activeWorkflow = await TurboQuote.activateWorkflow(workflow.id);
-    console.log(`  Active: ${activeWorkflow.isActive}`);
-
-    const workflows = await TurboQuote.listWorkflows({ limit: 10 });
-    console.log(`  ${workflows.totalRecords} workflow(s) in org`);
-
-    const wfDetail = await TurboQuote.getWorkflow(workflow.id);
-    for (const node of wfDetail.nodes) {
-      console.log(`    Node: "${node.data.label}" (${node.type})`);
-    }
-
-    const updatedWorkflow = await TurboQuote.updateWorkflow(workflow.id, {
-      description: 'Updated threshold — requires approval for high-value quotes',
-    });
-    console.log(`  Description updated: ${updatedWorkflow.description}\n`);
-
-    // =============================================
-    // 7. APPROVAL REQUESTS
-    // =============================================
-    console.log('7. Checking approval requests...');
-
-    const approvalRequests = await TurboQuote.listApprovalRequests({ limit: 10 });
-    console.log(`  ${approvalRequests.totalRecords} pending approval request(s)\n`);
-
-    // =============================================
-    // 8. QUOTE STATUS TRANSITIONS
-    // =============================================
-    console.log('8. Demonstrating quote status transitions...');
+    console.log('5. Demonstrating quote status transitions...');
 
     // --- Decline flow ---
     const quote1 = await TurboQuote.createQuote({
@@ -235,6 +158,14 @@ async function advancedExample(): Promise<void> {
     });
     console.log(`  Added line item: ${lineItems[0].id}`);
 
+    // Update line item — set a flat-dollar discount and display order
+    const updatedItem = await TurboQuote.updateLineItem(quote1.id, lineItems[0].id, {
+      discountType: 'amount',
+      discountAmount: 50,
+      displayOrder: 0,
+    });
+    console.log(`  Discount updated: ${updatedItem.discountType} $${updatedItem.discountAmount}`);
+
     await TurboQuote.removeLineItem(quote1.id, lineItems[0].id);
     console.log(`  Removed line item: ${lineItems[0].id}`);
 
@@ -250,18 +181,6 @@ async function advancedExample(): Promise<void> {
     const sent1 = await TurboQuote.sendQuote(quote1.id);
     console.log(`  Sent: ${sent1.message}`);
 
-    // Check approval activity
-    const activity = await TurboQuote.getApprovalActivity(quote1.id);
-    console.log(`  Approval state: ${activity.approvalState?.status || 'none'}`);
-
-    if (activity.approvalState?.status === 'pending') {
-      const approvalResult = await TurboQuote.approveQuote(quote1.id, {
-        action: 'approved',
-        comments: 'Looks good, approved.',
-      });
-      console.log(`  Approved: ${approvalResult.message}`);
-    }
-
     const declined = await TurboQuote.declineQuote(quote1.id, { reason: 'Budget not approved' });
     console.log(`  Declined: ${declined.status}`);
 
@@ -273,11 +192,19 @@ async function advancedExample(): Promise<void> {
       currency: 'USD',
     });
 
+    await TurboQuote.addLineItems(quote2.id, {
+      productId: product.id,
+      productName: product.name,
+      quantity: 2,
+      unitPrice: product.listPrice,
+      billingFrequency: 'monthly',
+    });
+
     await TurboQuote.sendQuote(quote2.id);
     const voided = await TurboQuote.voidQuote(quote2.id, { reason: 'Replaced by updated pricing' });
     console.log(`  Voided: ${voided.status}`);
 
-    // Handle expired quote (may fail if quote isn't in expired state)
+    // Handle expired quote (may fail if quote is not in expired state)
     try {
       await TurboQuote.handleExpiredQuote(quote1.id, {
         action: 'void',
@@ -291,29 +218,18 @@ async function advancedExample(): Promise<void> {
     console.log();
 
     // =============================================
-    // 9. DUPLICATE A QUOTE
+    // 6. DUPLICATE A QUOTE
     // =============================================
-    console.log('9. Duplicating voided quote...');
+    console.log('6. Duplicating voided quote...');
 
     const duplicated = await TurboQuote.duplicateQuote(quote2.id);
     console.log(`  Original: ${quote2.quoteNumber} (${voided.status})`);
     console.log(`  Copy: ${duplicated.quoteNumber} (${duplicated.status})\n`);
 
     // =============================================
-    // 10. DEACTIVATE & DELETE WORKFLOW
+    // 7. CLEANUP
     // =============================================
-    console.log('10. Deactivating and deleting workflow...');
-
-    const deactivated = await TurboQuote.deactivateWorkflow(workflow.id);
-    console.log(`  Active: ${deactivated.isActive}`);
-
-    await TurboQuote.deleteWorkflow(workflow.id);
-    console.log('  Workflow deleted\n');
-
-    // =============================================
-    // 11. CLEANUP
-    // =============================================
-    console.log('11. Cleaning up...');
+    console.log('7. Cleaning up...');
 
     await TurboQuote.deleteQuote(duplicated.id);
     await TurboQuote.deleteQuote(quote2.id);
@@ -325,7 +241,7 @@ async function advancedExample(): Promise<void> {
     await TurboQuote.deleteType(productCategory.id);
     await TurboQuote.deleteType(industryType.id);
 
-    console.log('  ✅ All test data removed');
+    console.log('  All test data removed');
     console.log('\n=== Advanced example completed successfully! ===');
   } catch (error: any) {
     console.error(`Error: ${error.message}`);

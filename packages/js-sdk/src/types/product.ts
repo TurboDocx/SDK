@@ -80,7 +80,7 @@ export interface UpdateProductRequest {
 }
 
 export interface ListProductsOptions extends PaginationParams {
-  categoryIds?: string[];
+  categoryIds?: string | string[];
   billingFrequency?: BillingFrequency;
   currency?: Currency;
   showInCatalog?: boolean;

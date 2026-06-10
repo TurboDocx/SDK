@@ -14,6 +14,8 @@ export type Currency = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'INR';
 
 export type CategoryType = 'product_category' | 'pricebook_type' | 'company_industry' | 'bundle_category';
 
+export type DiscountType = 'percent' | 'amount';
+
 export interface PaginationParams {
   limit?: number;
   offset?: number;

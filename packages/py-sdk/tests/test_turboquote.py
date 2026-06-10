@@ -1418,7 +1418,7 @@ class TestTypedDictRequiredFields:
         from turbodocx_sdk.types.bundle import CreateBundleRequest
 
         assert "name" in CreateBundleRequest.__required_keys__
-        assert "categoryId" in CreateBundleRequest.__optional_keys__
+        assert "categoryId" in CreateBundleRequest.__required_keys__
         assert "items" in CreateBundleRequest.__optional_keys__
 
     def test_add_line_item_request_required_keys(self):
@@ -1428,7 +1428,9 @@ class TestTypedDictRequiredFields:
         assert "unitPrice" in AddLineItemRequest.__required_keys__
         assert "billingFrequency" in AddLineItemRequest.__required_keys__
         assert "quantity" in AddLineItemRequest.__optional_keys__
+        assert "discountType" in AddLineItemRequest.__optional_keys__
         assert "discountPercent" in AddLineItemRequest.__optional_keys__
+        assert "discountAmount" in AddLineItemRequest.__optional_keys__
 
     def test_add_bundle_line_item_request_required_keys(self):
         from turbodocx_sdk.types.quote_line_item import AddBundleLineItemRequest
@@ -1436,7 +1438,9 @@ class TestTypedDictRequiredFields:
         assert "bundleId" in AddBundleLineItemRequest.__required_keys__
         assert "bundleName" in AddBundleLineItemRequest.__required_keys__
         assert "quantity" in AddBundleLineItemRequest.__optional_keys__
+        assert "discountType" in AddBundleLineItemRequest.__optional_keys__
         assert "discountPercent" in AddBundleLineItemRequest.__optional_keys__
+        assert "discountAmount" in AddBundleLineItemRequest.__optional_keys__
 
     def test_send_quote_with_deliverable_request_required_keys(self):
         from turbodocx_sdk.types.quote import SendQuoteWithDeliverableRequest

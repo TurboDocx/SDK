@@ -545,6 +545,61 @@ RSpec.describe TurboDocxSdk::TurboQuote do
       expect(request).to eq(original_request)
     end
 
+    it "detects PNG content type from magic bytes (not octet-stream)" do
+      mock_product = { "id" => "p-1", "name" => "Widget", "listPrice" => 99 }
+      allow(mock_client).to receive(:post_form_data).and_return({ "result" => mock_product, "message" => "Product created successfully" })
+
+      # \x89PNG magic bytes for a PNG file
+      png_bytes = "\x89PNG\r\n\x1A\n".b
+      png_image = StringIO.new(png_bytes)
+
+      described_class.create_product(
+        "name" => "Widget",
+        "listPrice" => 99,
+        "images" => [png_image]
+      )
+
+      expect(mock_client).to have_received(:post_form_data) do |_path, form_data|
+        image_parts = form_data["images"]
+        expect(image_parts).not_to be_nil
+        expect(image_parts.first[:content_type]).to eq("image/png")
+        expect(image_parts.first[:content_type]).not_to eq("application/octet-stream")
+      end
+    end
+
+    it "detects JPEG content type from magic bytes" do
+      mock_product = { "id" => "p-1", "name" => "Widget" }
+      allow(mock_client).to receive(:post_form_data).and_return({ "result" => mock_product, "message" => "Product created successfully" })
+
+      jpeg_bytes = "\xFF\xD8\xFF\xE0".b
+      jpeg_image = StringIO.new(jpeg_bytes)
+
+      described_class.create_product(
+        "name" => "Widget",
+        "images" => [jpeg_image]
+      )
+
+      expect(mock_client).to have_received(:post_form_data) do |_path, form_data|
+        expect(form_data["images"].first[:content_type]).to eq("image/jpeg")
+      end
+    end
+
+    it "falls back to octet-stream for unknown image bytes" do
+      mock_product = { "id" => "p-1", "name" => "Widget" }
+      allow(mock_client).to receive(:post_form_data).and_return({ "result" => mock_product, "message" => "Product created successfully" })
+
+      unknown_image = StringIO.new("fake-image")
+
+      described_class.create_product(
+        "name" => "Widget",
+        "images" => [unknown_image]
+      )
+
+      expect(mock_client).to have_received(:post_form_data) do |_path, form_data|
+        expect(form_data["images"].first[:content_type]).to eq("application/octet-stream")
+      end
+    end
+
     it "gets primary images and unwraps results" do
       mock_image_map = { "p-1" => { "id" => "img-1", "productId" => "p-1" }, "p-2" => nil }
       allow(mock_client).to receive(:post).and_return({ "results" => mock_image_map })

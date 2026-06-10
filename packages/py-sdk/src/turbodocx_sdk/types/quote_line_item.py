@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from typing_extensions import TypedDict
 
 from .product import Product
+from .quote_shared import DiscountType
 
 
 class LineItem(TypedDict, total=False):
@@ -50,7 +51,9 @@ class _AddLineItemRequestRequired(TypedDict):
 class AddLineItemRequest(_AddLineItemRequestRequired, total=False):
     productId: Optional[str]
     quantity: int
+    discountType: DiscountType
     discountPercent: float
+    discountAmount: float
     categoryId: Optional[str]
     categoryName: Optional[str]
     cost: Optional[float]
@@ -65,7 +68,9 @@ class _AddBundleLineItemRequestRequired(TypedDict):
 
 class AddBundleLineItemRequest(_AddBundleLineItemRequestRequired, total=False):
     quantity: int
+    discountType: DiscountType
     discountPercent: float
+    discountAmount: float
     bundleDescription: Optional[str]
     showItemsToEndUser: bool
 
@@ -73,7 +78,10 @@ class AddBundleLineItemRequest(_AddBundleLineItemRequestRequired, total=False):
 class UpdateLineItemRequest(TypedDict, total=False):
     quantity: int
     unitPrice: float
+    discountType: DiscountType
     discountPercent: float
+    discountAmount: float
+    displayOrder: Optional[int]
     billingFrequency: str  # BillingFrequency literal
     categoryId: Optional[str]
     categoryName: Optional[str]

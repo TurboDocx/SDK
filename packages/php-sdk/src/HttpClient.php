@@ -87,9 +87,13 @@ class HttpClient
     public function get(string $path, array $params = []): mixed
     {
         try {
-            $response = $this->client->get($path, [
-                'query' => $params,
-            ]);
+            $options = [];
+            if (!empty($params)) {
+                // Use Query::build for repeated-key serialization of array values
+                // (e.g. statuses[]=draft&statuses[]=sent becomes statuses=draft&statuses=sent).
+                $options['query'] = \GuzzleHttp\Psr7\Query::build($params);
+            }
+            $response = $this->client->get($path, $options);
 
             return ResponseNormalizer::normalizeResponse(
                 $this->smartUnwrap($this->parseResponse($response))

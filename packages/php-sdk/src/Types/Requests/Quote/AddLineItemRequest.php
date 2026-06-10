@@ -16,6 +16,8 @@ final class AddLineItemRequest
         public readonly string $billingFrequency,
         public readonly ?int $quantity = null,
         public readonly ?float $discountPercent = null,
+        public readonly ?string $discountType = null,
+        public readonly ?float $discountAmount = null,
         public readonly ?string $categoryId = null,
         public readonly ?string $categoryName = null,
         public readonly ?float $cost = null,
@@ -40,6 +42,12 @@ final class AddLineItemRequest
         }
         if ($this->discountPercent !== null) {
             $data['discountPercent'] = $this->discountPercent;
+        }
+        if ($this->discountType !== null) {
+            $data['discountType'] = $this->discountType;
+        }
+        if ($this->discountAmount !== null) {
+            $data['discountAmount'] = $this->discountAmount;
         }
         if ($this->categoryId !== null) {
             $data['categoryId'] = $this->categoryId;

@@ -2,7 +2,7 @@
  * TypeScript types for TurboQuote — Bundle entity and request/response types
  */
 
-import type { BillingFrequency, Currency, PaginationParams, PaginatedResponse } from './quote-shared';
+import type { BillingFrequency, Currency, DiscountType, PaginationParams, PaginatedResponse } from './quote-shared';
 import type { Product } from './product';
 
 // ============================================
@@ -19,6 +19,8 @@ export interface BundleItem {
   quantity: number;
   unitPrice: number;
   discountPercent: number;
+  discountType: DiscountType | null;
+  discountAmount: number | null;
   finalPrice: number;
   cost: number | null;
   billingFrequency: BillingFrequency;
@@ -38,6 +40,8 @@ export interface Bundle {
   sku: string | null;
   categoryId: string | null;
   bundleDiscountPercent: number;
+  bundleDiscountType: DiscountType | null;
+  bundleDiscountAmount: number | null;
   totalListPrice: number;
   totalFinalPrice: number;
   totalCost: number;
@@ -63,6 +67,8 @@ export interface BundleItemInput {
   billingFrequency: BillingFrequency;
   quantity?: number;
   discountPercent?: number;
+  discountType?: DiscountType;
+  discountAmount?: number;
   finalPrice?: number;
   cost?: number | null;
 }
@@ -74,6 +80,8 @@ export interface CreateBundleRequest {
   description?: string | null;
   sku?: string | null;
   bundleDiscountPercent?: number;
+  bundleDiscountType?: DiscountType;
+  bundleDiscountAmount?: number;
   currency?: Currency;
   showItemsToEndUser?: boolean;
   showInCatalog?: boolean;
@@ -87,6 +95,8 @@ export interface UpdateBundleRequest {
   sku?: string | null;
   categoryId?: string;
   bundleDiscountPercent?: number;
+  bundleDiscountType?: DiscountType;
+  bundleDiscountAmount?: number;
   currency?: Currency;
   showItemsToEndUser?: boolean;
   showInCatalog?: boolean;

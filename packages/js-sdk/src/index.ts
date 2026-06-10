@@ -21,6 +21,7 @@ export {
   type RenewalPeriod,
   type Currency,
   type CategoryType,
+  type DiscountType,
   type PaginationParams,
   type PaginatedResponse,
   type SuccessResponse,

@@ -19,6 +19,8 @@ final class CreateBundleRequest
         public readonly ?string $description = null,
         public readonly ?string $sku = null,
         public readonly ?float $bundleDiscountPercent = null,
+        public readonly ?string $bundleDiscountType = null,
+        public readonly ?float $bundleDiscountAmount = null,
         public readonly ?string $currency = null,
         public readonly ?bool $showItemsToEndUser = null,
         public readonly ?bool $showInCatalog = null,
@@ -46,6 +48,12 @@ final class CreateBundleRequest
         }
         if ($this->bundleDiscountPercent !== null) {
             $data['bundleDiscountPercent'] = $this->bundleDiscountPercent;
+        }
+        if ($this->bundleDiscountType !== null) {
+            $data['bundleDiscountType'] = $this->bundleDiscountType;
+        }
+        if ($this->bundleDiscountAmount !== null) {
+            $data['bundleDiscountAmount'] = $this->bundleDiscountAmount;
         }
         if ($this->currency !== null) {
             $data['currency'] = $this->currency;

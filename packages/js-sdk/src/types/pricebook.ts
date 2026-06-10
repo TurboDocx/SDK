@@ -2,7 +2,7 @@
  * TypeScript types for TurboQuote — PriceBook entity and request/response types
  */
 
-import type { PaginationParams, PaginatedResponse } from './quote-shared';
+import type { DiscountType, PaginationParams, PaginatedResponse } from './quote-shared';
 import type { Product } from './product';
 
 // ============================================
@@ -50,6 +50,8 @@ export interface PriceBook {
 export interface PriceBookProductPricingInput {
   productId: string;
   discountPercent?: number;
+  discountType?: DiscountType;
+  discountAmount?: number;
   finalPrice?: number;
 }
 

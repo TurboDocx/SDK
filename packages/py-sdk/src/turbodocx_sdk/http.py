@@ -5,6 +5,7 @@ HTTP client for TurboDocx API
 import json
 import os
 from typing import Any, Dict, List, Optional, Tuple, Union
+from urllib.parse import quote
 
 import httpx
 
@@ -232,6 +233,26 @@ class HttpClient:
 
         raise TurboDocxError(error_message, response.status_code, error_code)
 
+    @staticmethod
+    def _build_query_string(params: Optional[Dict[str, Any]]) -> str:
+        """
+        Build a URL-encoded query string from params. None values are skipped;
+        list values become repeated keys (e.g. statuses=draft&statuses=sent).
+        Keys and values are percent-encoded so special chars don't corrupt the URL.
+        """
+        if not params:
+            return ""
+        query_parts: List[str] = []
+        for key, value in params.items():
+            if value is None:
+                continue
+            values = value if isinstance(value, list) else [value]
+            for item in values:
+                if item is None:
+                    continue
+                query_parts.append(f"{quote(str(key), safe='')}={quote(str(item), safe='')}")
+        return "?" + "&".join(query_parts) if query_parts else ""
+
     async def get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Any:
         """
         Make GET request to API
@@ -244,19 +265,7 @@ class HttpClient:
         Returns:
             Response data
         """
-        url = f"{self.base_url}{path}"
-        if params:
-            query_parts: List[str] = []
-            for key, value in params.items():
-                if value is None:
-                    continue
-                if isinstance(value, list):
-                    for item in value:
-                        query_parts.append(f"{key}={item}")
-                else:
-                    query_parts.append(f"{key}={value}")
-            if query_parts:
-                url += "?" + "&".join(query_parts)
+        url = f"{self.base_url}{path}{self._build_query_string(params)}"
 
         headers = self._get_headers()
 
@@ -280,36 +289,6 @@ class HttpClient:
                 raise
             except Exception as e:
                 raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}") from e
-
-    async def get_raw(self, path: str) -> bytes:
-        """
-        Make GET request and return raw binary response (for file downloads)
-
-        Args:
-            path: API endpoint path
-
-        Returns:
-            Raw response content as bytes
-        """
-        url = f"{self.base_url}{path}"
-        headers = self._get_headers(include_content_type=False)
-
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            try:
-                response = await client.get(url, headers=headers)
-
-                if not response.is_success:
-                    await self._handle_error_response(response)
-
-                return response.content
-            except httpx.TimeoutException as e:
-                raise NetworkError(f"Request timed out after 60 seconds: {str(e) or 'Timeout'}")
-            except httpx.NetworkError as e:
-                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}")
-            except TurboDocxError:
-                raise
-            except Exception as e:
-                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}")
 
     async def post(self, path: str, data: Any = None) -> Any:
         """
@@ -418,19 +397,7 @@ class HttpClient:
         Returns:
             Raw response bytes
         """
-        url = f"{self.base_url}{path}"
-        if params:
-            query_parts: List[str] = []
-            for key, value in params.items():
-                if value is None:
-                    continue
-                if isinstance(value, list):
-                    for item in value:
-                        query_parts.append(f"{key}={item}")
-                else:
-                    query_parts.append(f"{key}={value}")
-            if query_parts:
-                url += "?" + "&".join(query_parts)
+        url = f"{self.base_url}{path}{self._build_query_string(params)}"
 
         headers = self._get_headers(include_content_type=False)
 

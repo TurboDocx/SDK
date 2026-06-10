@@ -32,6 +32,7 @@ Then run `/turbodocx-sdk` inside your agent — or one of the focused shortcuts:
 | `/turbodocx-sdk deliverable` | Generate documents from templates with variable substitution |
 | `/turbodocx-sdk turbopartner` | Provision and manage customer organizations (partner accounts) |
 | `/turbodocx-sdk turbowebhooks` | Subscribe to `signature.document.completed` events + verify HMAC |
+| `/turbodocx-sdk turboquote` | Create and send quotes, manage products, bundles, and price books |
 
 The skill auto-detects your framework (Laravel, Symfony, …) and follows your existing project conventions. Source: [github.com/TurboDocx/quickstart](https://github.com/TurboDocx/quickstart).
 
@@ -1127,6 +1128,224 @@ For more TurboPartner examples, see:
 - [`examples/turbopartner-organizations.php`](./examples/turbopartner-organizations.php)
 - [`examples/turbopartner-users.php`](./examples/turbopartner-users.php)
 - [`examples/turbopartner-api-keys.php`](./examples/turbopartner-api-keys.php)
+
+---
+
+## TurboQuote (Quoting)
+
+TurboQuote provides a complete quoting workflow: manage companies, contacts, products, bundles, price books, and quotes — then send them to customers for acceptance.
+
+### Quote Configuration
+
+```php
+use TurboDocx\TurboQuote;
+use TurboDocx\Config\QuoteClientConfig;
+
+TurboQuote::configure(new QuoteClientConfig(
+    apiKey: getenv('TURBODOCX_API_KEY'),  // REQUIRED
+    orgId: getenv('TURBODOCX_ORG_ID'),    // REQUIRED
+    // baseUrl: 'https://api.turbodocx.com', // Optional
+));
+
+// Or auto-configure from environment
+TurboQuote::configure(QuoteClientConfig::fromEnvironment());
+```
+
+Unlike `TurboSign`, `TurboQuote` does NOT require `senderEmail`.
+
+### Quote Environment Variables
+
+```bash
+# .env
+TURBODOCX_API_KEY=your-api-key
+TURBODOCX_ORG_ID=your-org-id
+```
+
+### Method Reference
+
+| Group | Method | Description |
+|-------|--------|-------------|
+| **Quotes** | `listQuotes(?ListQuotesRequest)` | List quotes with pagination, filters, and stats |
+| | `createQuote(CreateQuoteRequest)` | Create a new quote |
+| | `getQuote(id)` | Get quote by ID (includes statusInfo) |
+| | `updateQuote(id, UpdateQuoteRequest)` | Update quote fields |
+| | `deleteQuote(id)` | Delete a quote |
+| | `duplicateQuote(id)` | Duplicate a quote |
+| | `downloadQuotePdf(id)` | Download quote as PDF (raw bytes) |
+| **Quote Actions** | `sendQuote(id, ?SendQuoteRequest)` | Send a quote to the contact |
+| | `sendQuoteWithDeliverable(id, SendQuoteWithDeliverableRequest)` | Send with a TurboDocx-generated document attached |
+| | `declineQuote(id, DeclineQuoteRequest)` | Mark a quote as declined |
+| | `voidQuote(id, VoidQuoteRequest)` | Void a quote |
+| | `handleExpiredQuote(id, HandleExpiredQuoteRequest)` | Re-send or void an expired quote |
+| | `applyPriceBook(quoteId, priceBookId)` | Apply a price book, repricing line items |
+| | `removePriceBook(quoteId)` | Remove the applied price book |
+| **Line Items** | `listLineItems(quoteId, ?ListLineItemsRequest)` | List items on a quote |
+| | `addLineItems(quoteId, AddLineItemRequest\|array)` | Add one or more product line items |
+| | `addBundleLineItems(quoteId, AddBundleLineItemRequest\|array)` | Add one or more bundle line items |
+| | `updateLineItem(quoteId, itemId, UpdateLineItemRequest)` | Update a line item |
+| | `removeLineItem(quoteId, itemId)` | Remove a line item |
+| **Products** | `listProducts(?ListProductsRequest)` | List catalog products |
+| | `createProduct(CreateProductRequest)` | Create a product (supports image upload) |
+| | `getProduct(id)` | Get product by ID |
+| | `updateProduct(id, UpdateProductRequest)` | Update a product |
+| | `deleteProduct(id)` | Delete a product |
+| | `duplicateProduct(id)` | Duplicate a product |
+| | `getProductPrimaryImages(productIds[])` | Batch-fetch primary images for product IDs |
+| **Price Books** | `listPriceBooks(?ListPriceBooksRequest)` | List price books |
+| | `createPriceBook(CreatePriceBookRequest)` | Create a price book |
+| | `getPriceBook(id)` | Get price book by ID |
+| | `updatePriceBook(id, UpdatePriceBookRequest)` | Update a price book |
+| | `deletePriceBook(id)` | Delete a price book |
+| | `duplicatePriceBook(id)` | Duplicate a price book |
+| | `listPriceBookProducts(id, ?ListPriceBookProductsRequest)` | List products with custom pricing in a price book |
+| **Bundles** | `listBundles(?ListBundlesRequest)` | List catalog bundles |
+| | `createBundle(CreateBundleRequest)` | Create a bundle |
+| | `getBundle(id)` | Get bundle by ID |
+| | `updateBundle(id, UpdateBundleRequest)` | Update a bundle |
+| | `deleteBundle(id)` | Delete a bundle |
+| | `duplicateBundle(id)` | Duplicate a bundle |
+| **Companies** | `listCompanies(?ListCompaniesRequest)` | List companies |
+| | `createCompany(CreateCompanyRequest)` | Create a company |
+| | `getCompany(id)` | Get company by ID |
+| | `updateCompany(id, UpdateCompanyRequest)` | Update a company |
+| | `deleteCompany(id)` | Delete a company |
+| | `listCompanyContacts(companyId, ?ListContactsRequest)` | List contacts for a company |
+| **Contacts** | `listContacts(?ListContactsRequest)` | List contacts |
+| | `createContact(CreateContactRequest)` | Create a contact |
+| | `updateContact(id, UpdateContactRequest)` | Update a contact |
+| | `deleteContact(id)` | Delete a contact |
+| **Templates** | `listTemplates(?ListTemplatesRequest)` | List quote templates |
+| | `getTemplate()` | Get the org's active quote template |
+| | `getTemplateById(id)` | Get a template by ID |
+| | `createTemplate(CreateQuoteTemplateRequest)` | Create a quote template |
+| | `updateTemplate(id, UpdateQuoteTemplateRequest)` | Update a quote template |
+| | `deleteTemplate(id)` | Delete a quote template |
+| **Types** | `listTypes(?ListTypesRequest)` | List quote types/categories |
+| | `createType(CreateQuoteTypeRequest)` | Create a type/category |
+| | `updateType(id, UpdateQuoteTypeRequest)` | Update a type/category |
+| | `deleteType(id)` | Delete a type/category |
+| **Convenience** | `createAndSend(CreateAndSendRequest)` | Create quote + add items + send in one call |
+
+### Basic Usage
+
+```php
+use TurboDocx\TurboQuote;
+use TurboDocx\Config\QuoteClientConfig;
+use TurboDocx\Types\Requests\Quote\CreateCompanyRequest;
+use TurboDocx\Types\Requests\Quote\CreateContactRequest;
+use TurboDocx\Types\Requests\Quote\CreateQuoteRequest;
+use TurboDocx\Types\Requests\Quote\AddLineItemRequest;
+use TurboDocx\Types\Requests\Quote\SendQuoteRequest;
+
+TurboQuote::configure(new QuoteClientConfig(
+    apiKey: getenv('TURBODOCX_API_KEY'),
+    orgId: getenv('TURBODOCX_ORG_ID'),
+));
+
+// Create company + contact
+$company = TurboQuote::createCompany(new CreateCompanyRequest(
+    name: 'Acme Corp',
+    contacts: [['name' => 'Jane Smith', 'email' => 'jane@acme.com']],
+));
+$contact = TurboQuote::createContact(new CreateContactRequest(
+    name: 'Jane Smith',
+    companyId: $company->id,
+    email: 'jane@acme.com',
+));
+
+// Create quote
+$quote = TurboQuote::createQuote(new CreateQuoteRequest(
+    name: 'Enterprise License Q3',
+    companyId: $company->id,
+    contactId: $contact->id,
+    currency: 'USD',
+    termDays: 30,
+));
+
+// Add line items
+TurboQuote::addLineItems($quote->id, [
+    new AddLineItemRequest(
+        productId: null,
+        productName: 'Platform Subscription',
+        unitPrice: 499.00,
+        billingFrequency: 'monthly',
+        quantity: 1,
+    ),
+    new AddLineItemRequest(
+        productId: null,
+        productName: 'Professional Services',
+        unitPrice: 2500.00,
+        billingFrequency: 'one-time',
+        quantity: 5,
+        discountType: 'percent',
+        discountPercent: 10,
+    ),
+]);
+
+// Send to customer
+$result = TurboQuote::sendQuote($quote->id, new SendQuoteRequest(
+    validUntil: date('Y-m-d', strtotime('+30 days')),
+));
+
+echo "Quote sent! Status: {$result->quote->status}\n";
+```
+
+### Discount Types
+
+Line items, bundle line items, and bundles support two discount modes:
+
+```php
+use TurboDocx\Types\Enums\DiscountType;
+
+// Percent discount (default)
+new AddLineItemRequest(
+    productId: 'prod-uuid',
+    productName: 'Widget',
+    unitPrice: 100.00,
+    billingFrequency: 'monthly',
+    discountType: DiscountType::PERCENT->value,  // 'percent'
+    discountPercent: 15,                          // 15% off
+);
+
+// Fixed-dollar discount
+new AddLineItemRequest(
+    productId: 'prod-uuid',
+    productName: 'Widget',
+    unitPrice: 100.00,
+    billingFrequency: 'monthly',
+    discountType: DiscountType::AMOUNT->value,    // 'amount'
+    discountAmount: 25.00,                        // $25 off per unit
+);
+```
+
+### Price Books
+
+```php
+use TurboDocx\Types\Requests\Quote\CreatePriceBookRequest;
+
+$priceBook = TurboQuote::createPriceBook(new CreatePriceBookRequest(
+    name: 'Partner Tier A',
+    priceBookTypeId: 'pbt-uuid-here',
+    validFrom: '2026-01-01',
+    discountPercent: 15.0,
+    productPricing: [
+        // Per-product overrides
+        [
+            'productId' => 'prod-uuid',
+            'discountType' => 'amount',
+            'discountAmount' => 50.00,
+        ],
+    ],
+));
+
+// Apply to a quote
+TurboQuote::applyPriceBook($quote->id, $priceBook->id);
+```
+
+For more examples, see:
+- [`examples/turboquote-basic.php`](./examples/turboquote-basic.php) — full quote lifecycle
+- [`examples/turboquote-products.php`](./examples/turboquote-products.php) — products and bundles catalog CRUD
+- [`examples/turboquote-pricebooks.php`](./examples/turboquote-pricebooks.php) — price book management
 
 ---
 

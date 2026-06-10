@@ -11,7 +11,9 @@ public class UpdateBundleRequest extends TrackableRequest {
     private String description;
     private String sku;
     private String categoryId;
+    private DiscountType bundleDiscountType;
     private Double bundleDiscountPercent;
+    private Double bundleDiscountAmount;
     private String currency;
     private Boolean showItemsToEndUser;
     private Boolean showInCatalog;
@@ -27,8 +29,12 @@ public class UpdateBundleRequest extends TrackableRequest {
     public void setSku(String sku) { this.sku = sku; markFieldSet("sku"); }
     public String getCategoryId() { return categoryId; }
     public void setCategoryId(String categoryId) { this.categoryId = categoryId; markFieldSet("categoryId"); }
+    public DiscountType getBundleDiscountType() { return bundleDiscountType; }
+    public void setBundleDiscountType(DiscountType bundleDiscountType) { this.bundleDiscountType = bundleDiscountType; markFieldSet("bundleDiscountType"); }
     public Double getBundleDiscountPercent() { return bundleDiscountPercent; }
     public void setBundleDiscountPercent(Double bundleDiscountPercent) { this.bundleDiscountPercent = bundleDiscountPercent; markFieldSet("bundleDiscountPercent"); }
+    public Double getBundleDiscountAmount() { return bundleDiscountAmount; }
+    public void setBundleDiscountAmount(Double bundleDiscountAmount) { this.bundleDiscountAmount = bundleDiscountAmount; markFieldSet("bundleDiscountAmount"); }
     public String getCurrency() { return currency; }
     public void setCurrency(String currency) { this.currency = currency; markFieldSet("currency"); }
     public Boolean getShowItemsToEndUser() { return showItemsToEndUser; }

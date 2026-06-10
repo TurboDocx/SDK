@@ -6,6 +6,10 @@ namespace TurboDocx\Types\Requests\Quote;
 
 /**
  * Request for updating a price book
+ *
+ * `validTo` supports null-clear semantics: pass `null` + `includeValidTo: true`
+ * to explicitly clear the field on the server. Omitting `validTo` (or not setting
+ * `includeValidTo`) leaves the server value unchanged.
  */
 final class UpdatePriceBookRequest
 {
@@ -18,10 +22,13 @@ final class UpdatePriceBookRequest
         public readonly ?string $description = null,
         public readonly ?float $discountPercent = null,
         public readonly ?string $validFrom = null,
+        // validTo is nullable/null-clearable — use includeValidTo: true to
+        // explicitly send null (clears the value on the server).
         public readonly ?string $validTo = null,
         public readonly ?bool $isDefault = null,
         public readonly ?bool $showInQuoteBuilder = null,
         public readonly ?array $productPricing = null,
+        public readonly bool $includeValidTo = false,
     ) {}
 
     /**
@@ -46,7 +53,9 @@ final class UpdatePriceBookRequest
         if ($this->validFrom !== null) {
             $data['validFrom'] = $this->validFrom;
         }
-        if ($this->validTo !== null) {
+        if ($this->includeValidTo) {
+            $data['validTo'] = $this->validTo;
+        } elseif ($this->validTo !== null) {
             $data['validTo'] = $this->validTo;
         }
         if ($this->isDefault !== null) {

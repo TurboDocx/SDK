@@ -19,6 +19,13 @@ module TurboDocxSdk
     end
   end
 
+  # Raised when the caller is authenticated but lacks the required permissions (HTTP 403).
+  class AuthorizationError < TurboDocxError
+    def initialize(message = "Forbidden: API key lacks required permissions")
+      super(message, status_code: 403, code: "AUTHORIZATION_ERROR")
+    end
+  end
+
   # Raised when request validation fails (HTTP 400).
   class ValidationError < TurboDocxError
     def initialize(message)
@@ -30,6 +37,13 @@ module TurboDocxSdk
   class NotFoundError < TurboDocxError
     def initialize(message = "Resource not found")
       super(message, status_code: 404, code: "NOT_FOUND")
+    end
+  end
+
+  # Raised when a request conflicts with the current resource state (HTTP 409).
+  class ConflictError < TurboDocxError
+    def initialize(message = "Conflict with existing resource")
+      super(message, status_code: 409, code: "CONFLICT")
     end
   end
 

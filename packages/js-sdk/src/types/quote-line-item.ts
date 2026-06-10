@@ -4,6 +4,7 @@
 
 import type {
   BillingFrequency,
+  DiscountType,
   LineItemType,
   PaginatedResponse,
 } from './quote-shared';
@@ -29,6 +30,9 @@ export interface LineItem {
   quantity: number;
   unitPrice: number;
   discountPercent: number;
+  discountType: DiscountType | null;
+  discountAmount: number | null;
+  displayOrder: number | null;
   subtotal: number;
   cost: number | null;
   marginPercent: number | null;
@@ -55,6 +59,8 @@ export interface AddLineItemRequest {
   billingFrequency: BillingFrequency;
   quantity?: number;
   discountPercent?: number;
+  discountType?: DiscountType;
+  discountAmount?: number;
   categoryId?: string | null;
   categoryName?: string | null;
   cost?: number | null;
@@ -67,6 +73,8 @@ export interface AddBundleLineItemRequest {
   bundleName: string;
   quantity?: number;
   discountPercent?: number;
+  discountType?: DiscountType;
+  discountAmount?: number;
   bundleDescription?: string | null;
   showItemsToEndUser?: boolean;
 }
@@ -75,6 +83,9 @@ export interface UpdateLineItemRequest {
   quantity?: number;
   unitPrice?: number;
   discountPercent?: number;
+  discountType?: DiscountType;
+  discountAmount?: number;
+  displayOrder?: number | null;
   billingFrequency?: BillingFrequency;
   categoryId?: string | null;
   categoryName?: string | null;
