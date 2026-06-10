@@ -666,6 +666,22 @@ RSpec.describe TurboDocxSdk::TurboQuote do
       )
     end
 
+    it "defaults discountPercent to 0 when the caller omits it" do
+      mock_price_book = { "id" => "pb-1", "name" => "No Discount", "discountPercent" => 0 }
+      allow(mock_client).to receive(:post).and_return({ "result" => mock_price_book, "message" => "PriceBook created successfully" })
+
+      described_class.create_price_book(
+        "name" => "No Discount",
+        "priceBookTypeId" => "pbt-1",
+        "validFrom" => "2026-01-01"
+      )
+
+      expect(mock_client).to have_received(:post).with(
+        "/v1/pricebooks",
+        { "name" => "No Discount", "priceBookTypeId" => "pbt-1", "validFrom" => "2026-01-01", "discountPercent" => 0 }
+      )
+    end
+
     it "gets a price book by ID and unwraps result" do
       mock_price_book = { "id" => "pb-1", "name" => "Standard" }
       allow(mock_client).to receive(:get).and_return({ "result" => mock_price_book })

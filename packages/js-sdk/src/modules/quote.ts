@@ -342,7 +342,11 @@ export class TurboQuote {
 
   static async createPriceBook(request: CreatePriceBookRequest): Promise<PriceBook> {
     const client = this.getClient();
-    return this.unwrap(await client.post<{ result: PriceBook }>('/v1/pricebooks', request));
+    // Backend requires discountPercent on POST (omitting it returns 400) even though its
+    // schema documents a default of 0. Fill that default when the caller omits it so a
+    // pricebook with per-product pricing (no blanket discount) just works.
+    const body = { ...request, discountPercent: request.discountPercent ?? 0 };
+    return this.unwrap(await client.post<{ result: PriceBook }>('/v1/pricebooks', body));
   }
 
   static async getPriceBook(id: string): Promise<PriceBook> {

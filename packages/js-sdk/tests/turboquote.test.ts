@@ -736,6 +736,24 @@ describe("TurboQuote Module", () => {
       );
     });
 
+    it("should default discountPercent to 0 when omitted (backend requires it on POST)", async () => {
+      // Backend joiPriceBook POST schema requires discountPercent (omitting it returns 400).
+      // The SDK fills the backend's documented default (0) so a pricebook with per-product
+      // pricing (no blanket discount) can be created without forcing the caller to pass 0.
+      mockClient.post.mockResolvedValue({ result: { id: "pb-1", name: "No Discount" } });
+
+      await TurboQuote.createPriceBook({
+        name: "No Discount",
+        priceBookTypeId: "pbt-1",
+        validFrom: "2026-01-01",
+      });
+
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/v1/pricebooks",
+        expect.objectContaining({ discountPercent: 0 })
+      );
+    });
+
     it("should get a price book by ID and unwrap result", async () => {
       const mockPriceBook = { id: "pb-1", name: "Standard" };
       mockClient.get.mockResolvedValue({ result: mockPriceBook });

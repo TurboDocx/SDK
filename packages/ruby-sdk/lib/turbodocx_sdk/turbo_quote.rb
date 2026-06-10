@@ -471,7 +471,11 @@ module TurboDocxSdk
       # @raise [NetworkError] on connection failure
       def create_price_book(request)
         client = get_client
-        unwrap(client.post("/v1/pricebooks", request))
+        data = request.dup
+        unless data.key?("discountPercent") || data.key?(:discountPercent)
+          data["discountPercent"] = 0
+        end
+        unwrap(client.post("/v1/pricebooks", data))
       end
 
       # Get a price book by ID.
