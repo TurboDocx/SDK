@@ -90,3 +90,6 @@ Gemfile.lock
 convert-template.js
 generate-all-pdfs.js
 test-php-sdk/
+
+# Compiled CLI binary (build artifact — do not commit)
+packages/cli/cli
