@@ -7,6 +7,8 @@ require_relative "turbodocx_sdk/http_client"
 require_relative "turbodocx_sdk/turbo_sign"
 require_relative "turbodocx_sdk/turbo_partner"
 require_relative "turbodocx_sdk/turbo_quote"
+require_relative "turbodocx_sdk/deliverable"
+require_relative "turbodocx_sdk/turbo_webhooks"
 
 module TurboDocxSdk
   VERSION = "0.1.0"

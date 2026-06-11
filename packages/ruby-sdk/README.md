@@ -351,7 +351,12 @@ signature = request.get_header("HTTP_X_TURBODOCX_SIGNATURE") || ""
 timestamp = request.get_header("HTTP_X_TURBODOCX_TIMESTAMP") || ""
 secret    = ENV["TURBODOCX_WEBHOOK_SECRET"]
 
-unless TurboDocxSdk.verify_webhook_signature(raw_body, signature, timestamp, secret)
+unless TurboDocxSdk.verify_webhook_signature(
+  payload: raw_body,
+  signature_header: signature,
+  timestamp_header: timestamp,
+  secret: secret
+)
   return [401, {}, ["invalid signature"]]
 end
 
