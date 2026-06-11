@@ -13,6 +13,13 @@ on:
 jobs:
   publish:
     name: Publish to Maven Central
+    # Only publish on a java-sdk-v* release (or a manual dispatch). Without this
+    # guard the job runs on EVERY release event, so cutting js/py/go/php/ruby
+    # releases together fires concurrent Maven deployments of the same
+    # com.turbodocx:turbodocx-sdk coordinate, which collide ("currently being
+    # published in another deployment"). The other publish workflows already
+    # filter this way.
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'java-sdk-v')
     runs-on: ubuntu-latest
     defaults:
       run:
