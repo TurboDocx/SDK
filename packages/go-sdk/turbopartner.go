@@ -165,13 +165,13 @@ type PartnerUser struct {
 
 // PartnerPermissions represents the permissions for a partner portal user
 type PartnerPermissions struct {
-	CanManageOrgs          bool `json:"canManageOrgs"`
-	CanManageOrgUsers      bool `json:"canManageOrgUsers"`
-	CanManagePartnerUsers  bool `json:"canManagePartnerUsers"`
-	CanManageOrgAPIKeys    bool `json:"canManageOrgAPIKeys"`
+	CanManageOrgs           bool `json:"canManageOrgs"`
+	CanManageOrgUsers       bool `json:"canManageOrgUsers"`
+	CanManagePartnerUsers   bool `json:"canManagePartnerUsers"`
+	CanManageOrgAPIKeys     bool `json:"canManageOrgAPIKeys"`
 	CanManagePartnerAPIKeys bool `json:"canManagePartnerAPIKeys"`
-	CanUpdateEntitlements  bool `json:"canUpdateEntitlements"`
-	CanViewAuditLogs       bool `json:"canViewAuditLogs"`
+	CanUpdateEntitlements   bool `json:"canUpdateEntitlements"`
+	CanViewAuditLogs        bool `json:"canViewAuditLogs"`
 }
 
 // Features represents settable entitlement limits for an organization
@@ -236,28 +236,28 @@ type AuditLogEntry struct {
 // =============================================
 
 const (
-	ScopeOrgCreate           = "org:create"
-	ScopeOrgRead             = "org:read"
-	ScopeOrgUpdate           = "org:update"
-	ScopeOrgDelete           = "org:delete"
-	ScopeEntitlementsUpdate  = "entitlements:update"
-	ScopeOrgUsersCreate      = "org-users:create"
-	ScopeOrgUsersRead        = "org-users:read"
-	ScopeOrgUsersUpdate      = "org-users:update"
-	ScopeOrgUsersDelete      = "org-users:delete"
-	ScopePartnerUsersCreate  = "partner-users:create"
-	ScopePartnerUsersRead    = "partner-users:read"
-	ScopePartnerUsersUpdate  = "partner-users:update"
-	ScopePartnerUsersDelete  = "partner-users:delete"
-	ScopeOrgAPIKeysCreate    = "org-apikeys:create"
-	ScopeOrgAPIKeysRead      = "org-apikeys:read"
-	ScopeOrgAPIKeysUpdate    = "org-apikeys:update"
-	ScopeOrgAPIKeysDelete    = "org-apikeys:delete"
+	ScopeOrgCreate            = "org:create"
+	ScopeOrgRead              = "org:read"
+	ScopeOrgUpdate            = "org:update"
+	ScopeOrgDelete            = "org:delete"
+	ScopeEntitlementsUpdate   = "entitlements:update"
+	ScopeOrgUsersCreate       = "org-users:create"
+	ScopeOrgUsersRead         = "org-users:read"
+	ScopeOrgUsersUpdate       = "org-users:update"
+	ScopeOrgUsersDelete       = "org-users:delete"
+	ScopePartnerUsersCreate   = "partner-users:create"
+	ScopePartnerUsersRead     = "partner-users:read"
+	ScopePartnerUsersUpdate   = "partner-users:update"
+	ScopePartnerUsersDelete   = "partner-users:delete"
+	ScopeOrgAPIKeysCreate     = "org-apikeys:create"
+	ScopeOrgAPIKeysRead       = "org-apikeys:read"
+	ScopeOrgAPIKeysUpdate     = "org-apikeys:update"
+	ScopeOrgAPIKeysDelete     = "org-apikeys:delete"
 	ScopePartnerAPIKeysCreate = "partner-apikeys:create"
-	ScopePartnerAPIKeysRead  = "partner-apikeys:read"
+	ScopePartnerAPIKeysRead   = "partner-apikeys:read"
 	ScopePartnerAPIKeysUpdate = "partner-apikeys:update"
 	ScopePartnerAPIKeysDelete = "partner-apikeys:delete"
-	ScopeAuditRead           = "audit:read"
+	ScopeAuditRead            = "audit:read"
 )
 
 // =============================================
@@ -455,7 +455,9 @@ type OrgAPIKeyResponse struct {
 type OrgAPIKeyUpdateResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message,omitempty"`
-	APIKey struct {
+	// ApiKey keeps the v0.3.0 field name (not APIKey) — a struct-field rename is a breaking
+	// change that a type alias cannot bridge. The JSON tag is unchanged.
+	ApiKey struct {
 		ID        string `json:"id"`
 		Name      string `json:"name"`
 		Role      string `json:"role,omitempty"`
@@ -485,7 +487,9 @@ type PartnerAPIKeyResponse struct {
 type PartnerAPIKeyUpdateResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message,omitempty"`
-	APIKey struct {
+	// ApiKey keeps the v0.3.0 field name (not APIKey) — a struct-field rename is a breaking
+	// change that a type alias cannot bridge. The JSON tag is unchanged.
+	ApiKey struct {
 		ID          string   `json:"id"`
 		Name        string   `json:"name"`
 		Description string   `json:"description,omitempty"`

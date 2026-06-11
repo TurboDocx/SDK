@@ -134,4 +134,29 @@ func TestDeprecatedApiKeyAliases(t *testing.T) {
 		var _ *PartnerAPIKeyUpdateResponse = &PartnerApiKeyUpdateResponse{}
 		var _ *PartnerAPIKeyListResponse = &PartnerApiKeyListResponse{}
 	})
+
+	// The v0.3.0 apikey scope constants must still resolve to the same values.
+	t.Run("deprecated apikey scope constants resolve to the same values", func(t *testing.T) {
+		assert.Equal(t, ScopeOrgAPIKeysCreate, ScopeOrgApikeysCreate)
+		assert.Equal(t, ScopeOrgAPIKeysRead, ScopeOrgApikeysRead)
+		assert.Equal(t, ScopeOrgAPIKeysUpdate, ScopeOrgApikeysUpdate)
+		assert.Equal(t, ScopeOrgAPIKeysDelete, ScopeOrgApikeysDelete)
+		assert.Equal(t, ScopePartnerAPIKeysCreate, ScopePartnerApikeysCreate)
+		assert.Equal(t, ScopePartnerAPIKeysRead, ScopePartnerApikeysRead)
+		assert.Equal(t, ScopePartnerAPIKeysUpdate, ScopePartnerApikeysUpdate)
+		assert.Equal(t, ScopePartnerAPIKeysDelete, ScopePartnerApikeysDelete)
+	})
+
+	// v0.3.0 code reads the update-response key via the `.ApiKey` field; that field name must
+	// remain accessible (a struct-field rename cannot be bridged by a type alias).
+	t.Run("update responses keep the v0.3.0 ApiKey field", func(t *testing.T) {
+		var org OrgApiKeyUpdateResponse
+		org.ApiKey.ID = "k1"
+		org.ApiKey.Name = "n1"
+		assert.Equal(t, "k1", org.ApiKey.ID)
+
+		var partner PartnerApiKeyUpdateResponse
+		partner.ApiKey.ID = "k2"
+		assert.Equal(t, "k2", partner.ApiKey.ID)
+	})
 }

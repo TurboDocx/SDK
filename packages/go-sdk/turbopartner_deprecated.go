@@ -11,6 +11,33 @@ import "context"
 // and the methods are thin forwarders to the new implementations. Prefer the new "API" names;
 // these will be removed in a future major release.
 
+// ---- Scope constant aliases ----
+// In v0.3.0 these were spelled "Apikeys"; renamed to "APIKeys". Same string values.
+
+// Deprecated: use ScopeOrgAPIKeysCreate.
+const ScopeOrgApikeysCreate = ScopeOrgAPIKeysCreate
+
+// Deprecated: use ScopeOrgAPIKeysRead.
+const ScopeOrgApikeysRead = ScopeOrgAPIKeysRead
+
+// Deprecated: use ScopeOrgAPIKeysUpdate.
+const ScopeOrgApikeysUpdate = ScopeOrgAPIKeysUpdate
+
+// Deprecated: use ScopeOrgAPIKeysDelete.
+const ScopeOrgApikeysDelete = ScopeOrgAPIKeysDelete
+
+// Deprecated: use ScopePartnerAPIKeysCreate.
+const ScopePartnerApikeysCreate = ScopePartnerAPIKeysCreate
+
+// Deprecated: use ScopePartnerAPIKeysRead.
+const ScopePartnerApikeysRead = ScopePartnerAPIKeysRead
+
+// Deprecated: use ScopePartnerAPIKeysUpdate.
+const ScopePartnerApikeysUpdate = ScopePartnerAPIKeysUpdate
+
+// Deprecated: use ScopePartnerAPIKeysDelete.
+const ScopePartnerApikeysDelete = ScopePartnerAPIKeysDelete
+
 // ---- Type aliases (identical types; zero cost) ----
 
 // Deprecated: use OrgAPIKey.
