@@ -525,7 +525,8 @@ final class TurboQuoteTest extends TestCase
         $this->assertArrayHasKey('productId', $sentItem);
         $this->assertNull($sentItem['productId']);
         // Assert the actual JSON wire format the SDK serializes carries "productId":null.
-        $this->assertStringContainsString('"productId":null', json_encode($this->mockClient->lastPostData));
+        // JSON_THROW_ON_ERROR makes json_encode return string (not string|false) so PHPStan level 8 is satisfied.
+        $this->assertStringContainsString('"productId":null', json_encode($this->mockClient->lastPostData, JSON_THROW_ON_ERROR));
     }
 
     public function testAddBundleLineItemAndUnwrapResults(): void
