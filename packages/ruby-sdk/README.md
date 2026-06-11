@@ -78,17 +78,20 @@ TurboDocxSdk::TurboSign.configure(
 
 # 2. Send a document for signature
 result = TurboDocxSdk::TurboSign.send_signature(
-  file_link:     "https://example.com/contract.pdf",
-  document_name: "Partnership Agreement",
+  # Request-hash keys are camelCase — the SDK forwards the hash to the API
+  # as-is and does NOT convert snake_case. (Only method keyword args like
+  # configure(api_key:, sender_email:) are snake_case.)
+  fileLink:     "https://example.com/contract.pdf",
+  documentName: "Partnership Agreement",
   recipients: [
-    { name: "John Doe", email: "john@example.com", signing_order: 1 }
+    { name: "John Doe", email: "john@example.com", signingOrder: 1 }
   ],
   fields: [
     {
-      type:             "signature",
-      recipient_email:  "john@example.com",
-      template:         { anchor: "{signature1}", placement: "replace",
-                          size: { width: 100, height: 30 } }
+      type:           "signature",
+      recipientEmail: "john@example.com",
+      template:       { anchor: "{signature1}", placement: "replace",
+                        size: { width: 100, height: 30 } }
     }
   ]
 )
@@ -135,18 +138,18 @@ Configure the TurboSign module. `sender_email` is required.
 
 #### `send_signature(options)`
 
-Upload a document and send signature request emails.
+Upload a document and send signature request emails. The request hash uses **camelCase** keys (`fileLink`, `documentName`, and inner `recipients`/`fields` keys like `signingOrder`/`recipientEmail`) — the SDK forwards them to the API unchanged and does not convert snake_case. Fields bind to a recipient via `recipientEmail`.
 
 ```ruby
 result = TurboDocxSdk::TurboSign.send_signature(
-  file_link:  "https://example.com/contract.pdf",
+  fileLink:   "https://example.com/contract.pdf",
   recipients: [
-    { name: "Alice", email: "alice@example.com", order: 1 },
-    { name: "Bob",   email: "bob@example.com",   order: 2 }
+    { name: "Alice", email: "alice@example.com", signingOrder: 1 },
+    { name: "Bob",   email: "bob@example.com",   signingOrder: 2 }
   ],
   fields: [
-    { type: "signature", page: 1, x: 100, y: 500, width: 200, height: 50, recipient_order: 1 },
-    { type: "signature", page: 1, x: 100, y: 600, width: 200, height: 50, recipient_order: 2 }
+    { type: "signature", page: 1, x: 100, y: 500, width: 200, height: 50, recipientEmail: "alice@example.com" },
+    { type: "signature", page: 1, x: 100, y: 600, width: 200, height: 50, recipientEmail: "bob@example.com" }
   ]
 )
 
