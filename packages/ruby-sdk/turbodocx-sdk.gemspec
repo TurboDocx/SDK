@@ -4,7 +4,7 @@ Gem::Specification.new do |spec|
   spec.name          = "turbodocx-sdk"
   spec.version       = "0.1.0"
   spec.authors       = ["TurboDocx"]
-  spec.email         = ["support@turbodocx.com"]
+  spec.email         = ["team@turbodocx.com"]
 
   spec.summary       = "Ruby SDK for the TurboDocx API"
   spec.description   = "Official Ruby SDK for TurboDocx — digital signatures (TurboSign), " \
