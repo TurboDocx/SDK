@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |spec|
   spec.name          = "turbodocx-sdk"
-  spec.version       = "0.1.0"
+  spec.version       = "0.3.0"
   spec.authors       = ["TurboDocx"]
   spec.email         = ["team@turbodocx.com"]
 
