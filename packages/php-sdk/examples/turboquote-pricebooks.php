@@ -209,24 +209,44 @@ function turboquotePricebooksExample(): void
         echo "Cleaning up...\n";
 
         if ($quoteId !== null) {
-            try { TurboQuote::deleteQuote($quoteId); echo "  Deleted quote {$quoteId}\n"; }
-            catch (\Throwable $e) { echo "  Could not delete quote: {$e->getMessage()}\n"; }
+            try {
+                TurboQuote::deleteQuote($quoteId);
+                echo "  Deleted quote {$quoteId}\n";
+            } catch (\Throwable $e) {
+                echo "  Could not delete quote: {$e->getMessage()}\n";
+            }
         }
         if ($contactId !== null) {
-            try { TurboQuote::deleteContact($contactId); echo "  Deleted contact {$contactId}\n"; }
-            catch (\Throwable $e) { echo "  Could not delete contact: {$e->getMessage()}\n"; }
+            try {
+                TurboQuote::deleteContact($contactId);
+                echo "  Deleted contact {$contactId}\n";
+            } catch (\Throwable $e) {
+                echo "  Could not delete contact: {$e->getMessage()}\n";
+            }
         }
         if ($companyId !== null) {
-            try { TurboQuote::deleteCompany($companyId); echo "  Deleted company {$companyId}\n"; }
-            catch (\Throwable $e) { echo "  Could not delete company: {$e->getMessage()}\n"; }
+            try {
+                TurboQuote::deleteCompany($companyId);
+                echo "  Deleted company {$companyId}\n";
+            } catch (\Throwable $e) {
+                echo "  Could not delete company: {$e->getMessage()}\n";
+            }
         }
         if ($duplicateId !== null) {
-            try { TurboQuote::deletePriceBook($duplicateId); echo "  Deleted duplicate price book {$duplicateId}\n"; }
-            catch (\Throwable $e) { echo "  Could not delete duplicate price book: {$e->getMessage()}\n"; }
+            try {
+                TurboQuote::deletePriceBook($duplicateId);
+                echo "  Deleted duplicate price book {$duplicateId}\n";
+            } catch (\Throwable $e) {
+                echo "  Could not delete duplicate price book: {$e->getMessage()}\n";
+            }
         }
         if ($priceBookId !== null) {
-            try { TurboQuote::deletePriceBook($priceBookId); echo "  Deleted price book {$priceBookId}\n"; }
-            catch (\Throwable $e) { echo "  Could not delete price book: {$e->getMessage()}\n"; }
+            try {
+                TurboQuote::deletePriceBook($priceBookId);
+                echo "  Deleted price book {$priceBookId}\n";
+            } catch (\Throwable $e) {
+                echo "  Could not delete price book: {$e->getMessage()}\n";
+            }
         }
 
         echo "Done.\n";
