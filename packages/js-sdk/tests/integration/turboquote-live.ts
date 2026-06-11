@@ -9,9 +9,18 @@
 
 import { TurboQuote } from '../../src/modules/quote';
 
-const API_KEY = 'TDX-b708c06a364d49da88a1f2c8daf4bc0e-04c7695298d927240d066adfcfd1b848318631f2816f222b28b858e87ff7ceb5';
-const ORG_ID = 'b5a5c6b4-80c9-4ad8-bea8-4fb75c3e988c';
-const BASE_URL = 'http://localhost:3000';
+// Credentials come from the environment — never hardcode keys in source.
+//   export TURBODOCX_API_KEY=TDX-...
+//   export TURBODOCX_ORG_ID=...
+//   export TURBODOCX_BASE_URL=http://localhost:3000   # optional
+const API_KEY = process.env.TURBODOCX_API_KEY || '';
+const ORG_ID = process.env.TURBODOCX_ORG_ID || '';
+const BASE_URL = process.env.TURBODOCX_BASE_URL || 'http://localhost:3000';
+
+if (!API_KEY || !ORG_ID) {
+  console.error('Set TURBODOCX_API_KEY and TURBODOCX_ORG_ID before running this live test.');
+  process.exit(1);
+}
 
 let passed = 0;
 let failed = 0;
