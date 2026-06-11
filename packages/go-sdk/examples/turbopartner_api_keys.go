@@ -38,7 +38,7 @@ func main() {
 
 	// Create a scoped partner API key (read-only for orgs and audit)
 	fmt.Println("Creating scoped partner API key...")
-	key, err := partner.CreatePartnerApiKey(ctx, &turbodocx.CreatePartnerApiKeyRequest{
+	key, err := partner.CreatePartnerAPIKey(ctx, &turbodocx.CreatePartnerAPIKeyRequest{
 		Name:        "Read-Only Monitoring Key",
 		Description: "For monitoring dashboard - read-only access",
 		Scopes: []string{
@@ -57,7 +57,7 @@ func main() {
 
 	// List all partner API keys
 	fmt.Println("Listing partner API keys...")
-	keys, err := partner.ListPartnerApiKeys(ctx, nil)
+	keys, err := partner.ListPartnerAPIKeys(ctx, nil)
 	if err != nil {
 		fmt.Printf("Error listing keys: %v\n", err)
 		return

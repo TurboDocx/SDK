@@ -72,7 +72,7 @@ func main() {
 
 	// 4. Create an API key for the organization
 	fmt.Println("Creating organization API key...")
-	apiKey, err := partner.CreateOrganizationApiKey(ctx, orgID, &turbodocx.CreateOrgApiKeyRequest{
+	apiKey, err := partner.CreateOrganizationAPIKey(ctx, orgID, &turbodocx.CreateOrgAPIKeyRequest{
 		Name: "Production Key",
 		Role: "admin",
 	})
