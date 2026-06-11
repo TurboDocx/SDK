@@ -401,6 +401,11 @@ module TurboDocxSdk
           case value
           when true, false
             params[str_key] = value ? "true" : "false"
+          when Array
+            # Preserve as a string array so HttpClient#build_url emits repeated
+            # keys (?k=a&k=b) rather than a JSON-stringified blob. Mirrors
+            # TurboQuote#to_query_params.
+            params[str_key] = value.map(&:to_s)
           else
             params[str_key] = value.to_s
           end

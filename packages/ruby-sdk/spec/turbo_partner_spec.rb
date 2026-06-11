@@ -770,6 +770,23 @@ RSpec.describe TurboDocxSdk::TurboPartner do
           { "success" => "false" }
         )
       end
+
+      it "passes an array filter as a string array (repeated query keys, not comma/JSON-joined)" do
+        mock_response = {
+          "success" => true,
+          "data" => { "results" => [], "totalRecords" => 0, "limit" => 50, "offset" => 0 }
+        }
+        allow(mock_client).to receive(:get).and_return(mock_response)
+
+        described_class.get_partner_audit_logs("action" => %w[org.created org.updated])
+
+        # Array preserved (not stringified to '["org.created", "org.updated"]'),
+        # so HttpClient#build_url emits repeated ?action=org.created&action=org.updated.
+        expect(mock_client).to have_received(:get).with(
+          "/partner/#{partner_id}/audit-logs",
+          { "action" => %w[org.created org.updated] }
+        )
+      end
     end
   end
 
