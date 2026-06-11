@@ -519,8 +519,8 @@ func TestUpdateOrganizationAPIKey(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "key-123", result.APIKey.ID)
-		assert.Equal(t, "Updated Key", result.APIKey.Name)
+		assert.Equal(t, "key-123", result.ApiKey.ID)
+		assert.Equal(t, "Updated Key", result.ApiKey.Name)
 	})
 }
 
@@ -625,7 +625,7 @@ func TestUpdatePartnerAPIKey(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "pkey-123", result.APIKey.ID)
+		assert.Equal(t, "pkey-123", result.ApiKey.ID)
 	})
 }
 
