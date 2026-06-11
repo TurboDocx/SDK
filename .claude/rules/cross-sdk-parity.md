@@ -62,6 +62,27 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 | Java | camelCase | PascalCase | PascalCase | UPPER_SNAKE |
 | Ruby | snake_case | PascalCase | snake_case | UPPER_SNAKE |
 
+### Same operation, different casing — the canonical method-name mapping
+
+Every public method is the **same logical operation across all SDKs**; only the casing changes to match each language's idiom. When you add or rename a method, name it the idiomatic form in **every** SDK, and use the same form in that SDK's docs/examples. A reader switching languages should be able to translate a method name mechanically.
+
+The transform from the canonical (JS camelCase) name:
+
+| Canonical (JS/TS, PHP, Java) | Python / Ruby (snake_case) | Go (exported PascalCase) |
+|---|---|---|
+| `generateDeliverable` | `generate_deliverable` | `GenerateDeliverable` |
+| `sendSignature` | `send_signature` | `SendSignature` |
+| `createWebhook` | `create_webhook` | `CreateWebhook` |
+| `getWebhookStats` | `get_webhook_stats` | `GetWebhookStats` |
+| `sendQuoteWithDeliverable` | `send_quote_with_deliverable` | `SendQuoteWithDeliverable` |
+
+Rules:
+- **Acronyms follow the language, not the canonical spelling.** Go exports initialisms upper-cased (`ID`, `API`, `PDF`, `URL`): `downloadQuotePdf` → Go `DownloadQuotePDF`, `documentId` (field) → Go `DocumentID`. JS/PHP/Java keep `Pdf`/`Id`; Python/Ruby use `pdf`/`id`.
+- **Request-body keys do NOT get re-cased.** Method *names* are idiomatic per language, but the keys inside a request hash/object are passed to the API verbatim, so they stay **camelCase** (`documentName`, `recipientEmail`, `signingOrder`) in every language — including Python/Ruby. The SDKs do not snake→camel-convert request payloads. (This is a common doc bug: a Python example writing `document_name=` silently drops the value.)
+- **Free functions** follow the same casing rule (`verifyWebhookSignature` / `verify_webhook_signature` / `VerifyWebhookSignature`); Java exposes it as a static method on a utility class (`WebhookSignatureVerifier.verify`) since Java has no free functions.
+
+When documenting a method on a language page, use that language's form throughout — never copy a JS camelCase call into a Python/Ruby/Go example.
+
 ## Source of Truth: The Backend
 
 The backend (`/home/nicolas/repos/RapidDocxBackend`) is the single source of truth — not the JS SDK. When porting or auditing:
