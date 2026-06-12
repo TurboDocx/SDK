@@ -7,6 +7,12 @@ import * as nodePath from 'path';
 import { HttpClient, QuoteClientConfig, detectFileType } from '../http';
 import type { PaginationParams, SuccessResponse } from '../types/quote-shared';
 import type {
+  CreatePaymentLinkOptions,
+  QuotePaymentConnectionStatus,
+  QuotePaymentLink,
+  QuotePaymentStatus,
+} from '../types/quote-payment';
+import type {
   Quote,
   QuoteStatusInfo,
   CreateQuoteRequest,
@@ -547,5 +553,35 @@ export class TurboQuote {
     return {
       quote: sendResponse.result,
     };
+  }
+
+  // ── Payments ─────────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Create a hosted pay link for a quote. Returns the checkout URL to send the buyer to and the
+   * stable payment id. Requires the org to have a connected payment provider that can charge — see
+   * {@link getPaymentConnectionStatus}.
+   */
+  static async createPaymentLink(quoteId: string, options?: CreatePaymentLinkOptions): Promise<QuotePaymentLink> {
+    const client = this.getClient();
+    const response = await client.post<{ results: QuotePaymentLink }>(
+      `/v1/quotes/${quoteId}/payment/checkout`,
+      options?.buyerEmail ? { buyerEmail: options.buyerEmail } : {}
+    );
+    return response.results;
+  }
+
+  /** Get a quote's current payment status (the latest active payment), or `status: 'none'` if unpaid. */
+  static async getPaymentStatus(quoteId: string): Promise<QuotePaymentStatus> {
+    const client = this.getClient();
+    const response = await client.get<{ results: QuotePaymentStatus }>(`/v1/quotes/${quoteId}/payment`);
+    return response.results;
+  }
+
+  /** Check whether the org is set up to collect payments, plus the active provider's capabilities. */
+  static async getPaymentConnectionStatus(): Promise<QuotePaymentConnectionStatus> {
+    const client = this.getClient();
+    const response = await client.get<{ results: QuotePaymentConnectionStatus }>(`/v1/quote-payments/status`);
+    return response.results;
   }
 }
