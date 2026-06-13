@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import * as nodePath from 'path';
 import { TurboDocxError, AuthenticationError, AuthorizationError, ValidationError, NotFoundError, ConflictError, RateLimitError, NetworkError } from './utils/errors';
 import { normalizeResponse } from './utils/response-normalizer';
+import { ClientContext, resolveClientContextHeaders } from './utils/client-context';
 
 /**
  * Configuration for the TurboDocx HTTP client
@@ -26,6 +27,14 @@ export interface HttpClientConfig {
   senderEmail?: string;
   senderName?: string;
   skipSenderValidation?: boolean;
+  /**
+   * Describes the calling environment for the signature audit trail. The SDK
+   * auto-detects a descriptive User-Agent, timezone, and device fingerprint
+   * from the host; supply this to override them or to report a client IP
+   * (`ipAddress`) so the audit trail can geolocate the caller. See
+   * {@link ClientContext}.
+   */
+  clientContext?: ClientContext;
 }
 
 /**
@@ -122,6 +131,8 @@ export class HttpClient {
   private orgId?: string;
   private senderEmail?: string;
   private senderName?: string;
+  /** Resolved client-context headers (User-Agent, X-Timezone, ...), computed once. */
+  private contextHeaders: Record<string, string>;
 
   constructor(config: HttpClientConfig = {}) {
     this.apiKey = config.apiKey || process.env.TURBODOCX_API_KEY;
@@ -130,6 +141,7 @@ export class HttpClient {
     this.orgId = config.orgId || process.env.TURBODOCX_ORG_ID;
     this.senderEmail = config.senderEmail || process.env.TURBODOCX_SENDER_EMAIL;
     this.senderName = config.senderName || process.env.TURBODOCX_SENDER_NAME;
+    this.contextHeaders = resolveClientContextHeaders(config.clientContext);
 
     if (!this.apiKey && !this.accessToken) {
       throw new AuthenticationError('API key or access token is required');
@@ -166,7 +178,13 @@ export class HttpClient {
   }
 
   private getHeaders(): Record<string, string> {
+    // Client-context headers (User-Agent, X-Timezone, X-Forwarded-For,
+    // X-Device-Fingerprint) describe the calling environment so the signature
+    // audit trail records real device/location instead of "node"/"Unknown".
+    // Spread them first so the SDK's own protocol headers (Content-Type,
+    // Authorization, org id) always win over caller-supplied context.
     const headers: Record<string, string> = {
+      ...this.contextHeaders,
       'Content-Type': 'application/json',
     };
 
@@ -182,6 +200,16 @@ export class HttpClient {
       headers['x-rapiddocx-org-id'] = this.orgId;
     }
 
+    return headers;
+  }
+
+  /**
+   * Headers for multipart/form-data requests: same as {@link getHeaders} but
+   * without `Content-Type` so `fetch` can set the multipart boundary itself.
+   */
+  private getMultipartHeaders(): Record<string, string> {
+    const headers = this.getHeaders();
+    delete headers['Content-Type'];
     return headers;
   }
 
@@ -260,15 +288,7 @@ export class HttpClient {
       }
 
       // Make request for browser File
-      const headers: Record<string, string> = {};
-      if (this.accessToken) {
-        headers['Authorization'] = `Bearer ${this.accessToken}`;
-      } else if (this.apiKey) {
-        headers['Authorization'] = `Bearer ${this.apiKey}`;
-      }
-      if (this.orgId) {
-        headers['x-rapiddocx-org-id'] = this.orgId;
-      }
+      const headers = this.getMultipartHeaders();
 
       try {
         const response = await fetch(url, {
@@ -303,17 +323,7 @@ export class HttpClient {
       });
     }
 
-    const headers: Record<string, string> = {};
-    // API key is sent as Bearer token (backend expects Authorization header)
-    if (this.accessToken) {
-      headers['Authorization'] = `Bearer ${this.accessToken}`;
-    } else if (this.apiKey) {
-      headers['Authorization'] = `Bearer ${this.apiKey}`;
-    }
-    // Organization ID header (required by backend)
-    if (this.orgId) {
-      headers['x-rapiddocx-org-id'] = this.orgId;
-    }
+    const headers = this.getMultipartHeaders();
 
     try {
       const response = await fetch(url, {
@@ -438,8 +448,7 @@ export class HttpClient {
     }
 
     const fullUrl = `${this.baseUrl}${url}`;
-    const headers = this.getHeaders();
-    delete headers['Content-Type'];
+    const headers = this.getMultipartHeaders();
 
     try {
       const response = await fetch(fullUrl, { method: 'GET', headers });
@@ -465,15 +474,7 @@ export class HttpClient {
 
   private async requestFormData<T>(method: string, path: string, formData: FormData): Promise<T> {
     const url = `${this.baseUrl}${path}`;
-    const headers: Record<string, string> = {};
-    if (this.accessToken) {
-      headers['Authorization'] = `Bearer ${this.accessToken}`;
-    } else if (this.apiKey) {
-      headers['Authorization'] = `Bearer ${this.apiKey}`;
-    }
-    if (this.orgId) {
-      headers['x-rapiddocx-org-id'] = this.orgId;
-    }
+    const headers = this.getMultipartHeaders();
 
     try {
       const response = await fetch(url, { method, headers, body: formData });
