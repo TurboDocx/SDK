@@ -27,14 +27,16 @@ module TurboDocxSdk
       # @raise [AuthenticationError] if no API key or access token is provided
       # @raise [ValidationError] if senderEmail is missing
       def configure(api_key: nil, access_token: nil, org_id: nil,
-                    sender_email: nil, sender_name: nil, base_url: nil)
+                    sender_email: nil, sender_name: nil, base_url: nil,
+                    client_context: nil)
         @client = HttpClient.new(
           api_key: api_key,
           access_token: access_token,
           org_id: org_id,
           sender_email: sender_email,
           sender_name: sender_name,
-          base_url: base_url
+          base_url: base_url,
+          client_context: client_context
         )
       end
 

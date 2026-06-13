@@ -7,6 +7,7 @@ require "securerandom"
 require "stringio"
 require_relative "errors"
 require_relative "response_normalizer"
+require_relative "client_context"
 
 module TurboDocxSdk
   # Low-level HTTP client for the TurboDocx API.
@@ -32,7 +33,8 @@ module TurboDocxSdk
       org_id: nil,
       sender_email: nil,
       sender_name: nil,
-      skip_sender_validation: false
+      skip_sender_validation: false,
+      client_context: nil
     )
       @api_key = api_key || ENV["TURBODOCX_API_KEY"]
       @access_token = access_token
@@ -40,6 +42,8 @@ module TurboDocxSdk
       @org_id = org_id || ENV["TURBODOCX_ORG_ID"]
       @sender_email = sender_email || ENV["TURBODOCX_SENDER_EMAIL"]
       @sender_name = sender_name || ENV["TURBODOCX_SENDER_NAME"]
+      # Resolved client-context headers (User-Agent, X-Timezone, ...), computed once.
+      @context_headers = ClientContext.resolve_headers(client_context)
 
       unless @api_key || @access_token
         raise AuthenticationError, "API key or access token is required"
@@ -219,6 +223,12 @@ module TurboDocxSdk
     end
 
     def apply_headers(request, content_type: true)
+      # Client-context headers (User-Agent, X-Timezone, Accept-Language,
+      # X-Forwarded-For, X-Device-Fingerprint) describe the calling environment so
+      # the signature audit trail records real device/location. Set them first so
+      # the SDK's own protocol headers below always win over caller context.
+      @context_headers.each { |key, value| request[key] = value }
+
       request["Content-Type"] = "application/json" if content_type
       if @access_token
         request["Authorization"] = "Bearer #{@access_token}"
@@ -269,13 +279,10 @@ module TurboDocxSdk
 
       klass = method == "PATCH" ? Net::HTTP::Patch : Net::HTTP::Post
       request = klass.new(url)
+      # Reuse apply_headers (context + auth + org) without its JSON Content-Type,
+      # then set the multipart Content-Type with the boundary.
+      apply_headers(request, content_type: false)
       request["Content-Type"] = "multipart/form-data; boundary=#{boundary}"
-      if @access_token
-        request["Authorization"] = "Bearer #{@access_token}"
-      elsif @api_key
-        request["Authorization"] = "Bearer #{@api_key}"
-      end
-      request["x-rapiddocx-org-id"] = @org_id if @org_id
       request.body = body
 
       execute_multipart(request, url)
