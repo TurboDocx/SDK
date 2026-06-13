@@ -51,6 +51,26 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 - `testWebhook` and `notifyWebhook` currently route through the same backend handler and return identical shapes. Both are exposed for symmetry with the backend surface; prefer `testWebhook` in new code.
 - The HMAC format the helper must verify: header `X-TurboDocx-Signature: sha256=<hex>`, signed string `${timestamp}.${rawBody}`, HMAC-SHA256, with a configurable timestamp tolerance (default 300s) to prevent replay attacks. Use the language's constant-time comparison primitive (`crypto.timingSafeEqual` / `hmac.compare_digest` / `hmac.Equal` / `hash_equals` / `MessageDigest.isEqual`).
 
+## Client Context (Audit-Trail Device/Location Headers)
+
+Every SDK auto-attaches request headers describing the calling environment so the
+TurboSign **audit trail** records real device/location instead of "Unknown" when
+the caller is a container/VM. This is wired into the shared HTTP client (so it
+covers JSON, multipart upload, and raw-download paths) and exposed for overrides
+via a `clientContext` option on the TurboSign config/constructor.
+
+| Header | Source | Notes |
+|---|---|---|
+| `User-Agent` | auto | **Must** start with the canonical `@turbodocx/sdk/<version>` token — the backend `parseTurboDocxSdkUserAgent` only classifies a request as an SDK call on that exact prefix. Suffix is language-specific: `(Runtime/x; OS; arch; host=<hostname>)`. |
+| `X-Timezone` | auto | Host timezone (IANA where available, abbreviation otherwise). |
+| `Accept-Language` | auto | Host BCP-47 tag (e.g. `en-US`). Backend surfaces it as audit `language` for SDK calls (validated as a BCP-47 tag server-side; non-language `C`/`POSIX` locales are dropped). |
+| `X-Device-Fingerprint` | auto | Stable SHA-256 of hostname/OS/arch. |
+| `X-Forwarded-For` | **opt-in** | Sent only when the caller sets `ipAddress`. Never auto-filled: the host only sees a private IP, and sending it would override the real public IP the backend already extracts from the connection (XFF is leftmost-wins). |
+
+Override fields (idiomatic casing per language): `userAgent` / `user_agent`, `ipAddress` / `ip_address`, `timezone`, `language`, `deviceFingerprint` / `device_fingerprint`. The auto-generated values are computed once at client construction. In browsers, `User-Agent` is a forbidden fetch header, so the JS SDK's value is dropped and the real browser UA is sent (and handled by the backend's normal UA path).
+
+Per-SDK location: `client-context.ts` (JS), `utils/client_context.py` (Py), `client_context.go` (Go), `Utils/ClientContext.php` (PHP), `ClientContext.java` (Java), `client_context.rb` (Ruby).
+
 ## Naming Conventions by Language
 
 | Language | Methods | Classes | Files | Constants |
