@@ -185,6 +185,14 @@ func mapStatusToError(baseErr TurboDocxError) error {
 }
 
 func (c *HTTPClient) setHeaders(req *http.Request, contentType string) {
+	// Client-context headers (User-Agent, X-Timezone, Accept-Language,
+	// X-Forwarded-For, X-Device-Fingerprint) describe the calling environment so
+	// the signature audit trail records real device/location. Set them first so
+	// the SDK's own protocol headers below always win over caller context.
+	for k, v := range resolveClientContextHeaders(c.config.ClientContext) {
+		req.Header.Set(k, v)
+	}
+
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}

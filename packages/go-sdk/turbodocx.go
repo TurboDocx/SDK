@@ -63,6 +63,12 @@ type ClientConfig struct {
 	// This name will appear in signature request emails. Without this, the sender will
 	// appear as "API Service User".
 	SenderName string
+
+	// ClientContext describes the calling environment for the signature audit
+	// trail. The SDK auto-detects a descriptive User-Agent, timezone, language,
+	// and device fingerprint from the host; set its fields to override them or
+	// to report a client IP (IPAddress) for geolocation. See ClientContext.
+	ClientContext ClientContext
 }
 
 // NewClient creates a new TurboDocx client with the given API key and org ID
