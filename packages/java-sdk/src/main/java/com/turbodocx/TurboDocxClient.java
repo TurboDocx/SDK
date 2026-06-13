@@ -12,7 +12,8 @@ public final class TurboDocxClient implements AutoCloseable {
         this.httpClient = new HttpClient(
                 builder.baseUrl, builder.apiKey, builder.accessToken,
                 builder.orgId, builder.senderEmail, builder.senderName,
-                builder.connectTimeoutSeconds, builder.readTimeoutSeconds, builder.writeTimeoutSeconds
+                builder.connectTimeoutSeconds, builder.readTimeoutSeconds, builder.writeTimeoutSeconds,
+                builder.clientContext
         );
         this.turboSign = new TurboSign(this.httpClient);
         this.deliverable = new DeliverableClient(this.httpClient);
@@ -61,6 +62,7 @@ public final class TurboDocxClient implements AutoCloseable {
         private int connectTimeoutSeconds = 60;
         private int readTimeoutSeconds = 120;
         private int writeTimeoutSeconds = 60;
+        private ClientContext clientContext;
 
         /**
          * Set the API key (required)
@@ -108,6 +110,17 @@ public final class TurboDocxClient implements AutoCloseable {
          */
         public Builder senderName(String senderName) {
             this.senderName = senderName;
+            return this;
+        }
+
+        /**
+         * Describe the calling environment for the signature audit trail
+         * (optional). The SDK auto-detects a descriptive User-Agent, timezone,
+         * language, and device fingerprint from the host; supply this to
+         * override them or to report a client IP (ipAddress) for geolocation.
+         */
+        public Builder clientContext(ClientContext clientContext) {
+            this.clientContext = clientContext;
             return this;
         }
 

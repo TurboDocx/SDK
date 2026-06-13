@@ -93,6 +93,7 @@ public class HttpClient {
     private final String orgId;
     private final String senderEmail;
     private final String senderName;
+    private final ClientContext clientContext;
     private final Gson gson;
 
     public HttpClient(String baseUrl, String apiKey, String accessToken, String orgId, String senderEmail, String senderName) {
@@ -101,6 +102,13 @@ public class HttpClient {
 
     public HttpClient(String baseUrl, String apiKey, String accessToken, String orgId, String senderEmail, String senderName,
                        int connectTimeoutSeconds, int readTimeoutSeconds, int writeTimeoutSeconds) {
+        this(baseUrl, apiKey, accessToken, orgId, senderEmail, senderName,
+                connectTimeoutSeconds, readTimeoutSeconds, writeTimeoutSeconds, ClientContext.autoDetect());
+    }
+
+    public HttpClient(String baseUrl, String apiKey, String accessToken, String orgId, String senderEmail, String senderName,
+                       int connectTimeoutSeconds, int readTimeoutSeconds, int writeTimeoutSeconds, ClientContext clientContext) {
+        this.clientContext = clientContext != null ? clientContext : ClientContext.autoDetect();
         this.client = new OkHttpClient.Builder()
                 .connectTimeout(connectTimeoutSeconds, TimeUnit.SECONDS)
                 .readTimeout(readTimeoutSeconds, TimeUnit.SECONDS)
@@ -534,6 +542,14 @@ public class HttpClient {
 
     private Headers buildHeaders() {
         Headers.Builder builder = new Headers.Builder();
+
+        // Client-context headers (User-Agent, X-Timezone, Accept-Language,
+        // X-Forwarded-For, X-Device-Fingerprint) describe the calling environment
+        // so the signature audit trail records real device/location. Added first
+        // so the SDK's own protocol headers below always win over caller context.
+        for (Map.Entry<String, String> entry : ClientContext.resolveHeaders(clientContext).entrySet()) {
+            builder.add(entry.getKey(), entry.getValue());
+        }
 
         // API key is sent as Bearer token (backend expects Authorization header)
         if (accessToken != null && !accessToken.isEmpty()) {
