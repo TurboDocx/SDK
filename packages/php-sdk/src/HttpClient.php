@@ -11,6 +11,7 @@ use Psr\Http\Message\ResponseInterface;
 use TurboDocx\Config\HttpClientConfig;
 use TurboDocx\Config\PartnerClientConfig;
 use TurboDocx\Config\QuoteClientConfig;
+use TurboDocx\Utils\ClientContext;
 use TurboDocx\Utils\ResponseNormalizer;
 use TurboDocx\Exceptions\AuthenticationException;
 use TurboDocx\Exceptions\AuthorizationException;
@@ -347,10 +348,22 @@ class HttpClient
      */
     private function getHeaders(HttpClientConfig|PartnerClientConfig|QuoteClientConfig $config): array
     {
+        // Client-context headers (User-Agent, X-Timezone, Accept-Language,
+        // X-Forwarded-For, X-Device-Fingerprint) describe the calling environment
+        // so the signature audit trail records real device/location. Merge them
+        // first so the SDK's own protocol headers below always win over caller
+        // context. TurboSign uses HttpClientConfig (the audit-trail path).
         $headers = [
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ];
+
+        if ($config instanceof HttpClientConfig) {
+            $headers = array_merge(
+                ClientContext::resolveHeaders($config->clientContext),
+                $headers
+            );
+        }
 
         if ($config instanceof PartnerClientConfig) {
             $headers['Authorization'] = "Bearer {$config->partnerApiKey}";
