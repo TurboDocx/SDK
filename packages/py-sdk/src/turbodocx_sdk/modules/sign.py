@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, Union
 import httpx
 
 from ..http import HttpClient, NetworkError
+from ..utils.client_context import ClientContext
 
 
 class TurboSign:
@@ -32,7 +33,8 @@ class TurboSign:
         base_url: str = "https://api.turbodocx.com",
         org_id: Optional[str] = None,
         sender_email: Optional[str] = None,
-        sender_name: Optional[str] = None
+        sender_name: Optional[str] = None,
+        client_context: Optional[ClientContext] = None
     ) -> None:
         """
         Configure the TurboSign module with API credentials
@@ -64,7 +66,8 @@ class TurboSign:
             base_url=base_url,
             org_id=org_id,
             sender_email=sender_email,
-            sender_name=sender_name
+            sender_name=sender_name,
+            client_context=client_context
         )
 
     @classmethod

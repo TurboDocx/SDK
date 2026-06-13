@@ -9,6 +9,7 @@ from urllib.parse import quote
 
 import httpx
 
+from .utils.client_context import ClientContext, resolve_client_context_headers
 from .utils.response_normalizer import normalize_response
 
 
@@ -126,7 +127,8 @@ class HttpClient:
         org_id: Optional[str] = None,
         sender_email: Optional[str] = None,
         sender_name: Optional[str] = None,
-        skip_sender_validation: bool = False
+        skip_sender_validation: bool = False,
+        client_context: Optional[ClientContext] = None
     ):
         """
         Initialize HTTP client
@@ -153,6 +155,8 @@ class HttpClient:
         self.org_id = org_id or os.environ.get("TURBODOCX_ORG_ID")
         self.sender_email = sender_email or os.environ.get("TURBODOCX_SENDER_EMAIL")
         self.sender_name = sender_name or os.environ.get("TURBODOCX_SENDER_NAME")
+        # Resolved client-context headers (User-Agent, X-Timezone, ...), computed once.
+        self._context_headers = resolve_client_context_headers(client_context)
 
         if not self.api_key and not self.access_token:
             raise AuthenticationError("API key or access token is required")
@@ -178,7 +182,11 @@ class HttpClient:
 
     def _get_headers(self, include_content_type: bool = True) -> Dict[str, str]:
         """Get default headers for requests"""
-        headers: Dict[str, str] = {}
+        # Client-context headers (User-Agent, X-Timezone, Accept-Language,
+        # X-Forwarded-For, X-Device-Fingerprint) describe the calling environment
+        # so the signature audit trail records real device/location. Copy them
+        # first so the SDK's own protocol headers always win over caller context.
+        headers: Dict[str, str] = dict(self._context_headers)
 
         if include_content_type:
             headers["Content-Type"] = "application/json"
