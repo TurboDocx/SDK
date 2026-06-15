@@ -55,6 +55,7 @@ def get_sdk_version() -> str:
         if __version__:
             return __version__
     except Exception:
+        # Best-effort: fall through to package metadata below.
         pass
     try:
         from importlib.metadata import version

@@ -7,8 +7,6 @@ classifies it as an SDK call instead of "Unknown"/"API Client"), a timezone, a
 language, an optional client IP (X-Forwarded-For -> geolocation), and a device
 fingerprint. These tests pin the header contract the backend reads.
 """
-import pytest
-
 from turbodocx_sdk.http import HttpClient
 from turbodocx_sdk.utils.client_context import (
     ClientContext,
