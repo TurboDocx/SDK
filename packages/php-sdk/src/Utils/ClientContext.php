@@ -39,8 +39,7 @@ final class ClientContext
         public ?string $timezone = null,
         public ?string $language = null,
         public ?string $deviceFingerprint = null,
-    ) {
-    }
+    ) {}
 
     /**
      * Resolve the effective client-context request headers, applying caller
