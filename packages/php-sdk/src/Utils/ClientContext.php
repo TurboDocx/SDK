@@ -121,11 +121,7 @@ final class ClientContext
     /** Detect the host timezone (IANA, e.g. "UTC"); "" if unavailable. */
     private static function detectTimezone(): string
     {
-        try {
-            return date_default_timezone_get() ?: '';
-        } catch (\Throwable) {
-            return '';
-        }
+        return date_default_timezone_get() ?: '';
     }
 
     /** Detect the host BCP-47 language tag (e.g. "en-US"); "" if unavailable. */
