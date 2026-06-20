@@ -12,6 +12,8 @@ use TurboDocx\Types\Quote\LineItem;
 use TurboDocx\Types\Quote\PriceBook;
 use TurboDocx\Types\Quote\Product;
 use TurboDocx\Types\Quote\Quote;
+use TurboDocx\Types\Quote\QuoteNumberConfig;
+use TurboDocx\Types\Quote\QuoteNumberFormat;
 use TurboDocx\Types\Quote\QuoteTemplate;
 use TurboDocx\Types\Quote\QuoteType;
 use TurboDocx\Types\Requests\Quote\AddBundleLineItemRequest;
@@ -992,6 +994,35 @@ final class TurboQuote
     {
         $client = self::getClient();
         return MessageResponse::fromArray($client->delete("/v1/types/{$id}"));
+    }
+
+    // ============================================
+    // QUOTE NUMBER CONFIG
+    // ============================================
+
+    /**
+     * Get the org's quote number configuration (admin only).
+     *
+     * @return QuoteNumberConfig
+     */
+    public static function getQuoteNumberConfig(): QuoteNumberConfig
+    {
+        $client = self::getClient();
+        $response = $client->get('/v1/quotes/number-config');
+        return QuoteNumberConfig::fromArray($response['results']);
+    }
+
+    /**
+     * Update the org's quote number configuration (admin only).
+     *
+     * @param QuoteNumberFormat $format The full quote number format (all 8 fields)
+     * @return QuoteNumberConfig
+     */
+    public static function updateQuoteNumberConfig(QuoteNumberFormat $format): QuoteNumberConfig
+    {
+        $client = self::getClient();
+        $response = $client->patch('/v1/quotes/number-config', $format->toArray());
+        return QuoteNumberConfig::fromArray($response['results']);
     }
 
     // ============================================

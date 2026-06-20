@@ -17,6 +17,8 @@ use TurboDocx\Types\Quote\Company;
 use TurboDocx\Types\Quote\Contact;
 use TurboDocx\Types\Quote\QuoteTemplate;
 use TurboDocx\Types\Quote\QuoteType;
+use TurboDocx\Types\Quote\QuoteNumberConfig;
+use TurboDocx\Types\Quote\QuoteNumberFormat;
 use TurboDocx\Types\Requests\Quote\CreateQuoteRequest;
 use TurboDocx\Types\Requests\Quote\UpdateQuoteRequest;
 use TurboDocx\Types\Requests\Quote\ListQuotesRequest;
@@ -1835,6 +1837,77 @@ final class TurboQuoteTest extends TestCase
 
         $arr = $ct->toArray();
         $this->assertSame(['currency' => 'USD', 'total' => 100.0], $arr);
+    }
+
+    // ============================================
+    // QUOTE NUMBER CONFIG
+    // ============================================
+
+    public function testGetQuoteNumberConfigUnwrapsResults(): void
+    {
+        $mockFormat = [
+            'prefix' => 'Q-',
+            'yearToken' => 'four',
+            'monthToken' => 'two',
+            'separator' => '-',
+            'padWidth' => 5,
+            'suffix' => '',
+            'startNumber' => 1,
+            'resetCadence' => 'yearly',
+        ];
+        $this->mockClient->setGetReturn(['results' => ['format' => $mockFormat, 'currentFloor' => 42]]);
+        $this->injectMockClient();
+
+        $result = TurboQuote::getQuoteNumberConfig();
+
+        $this->assertInstanceOf(QuoteNumberConfig::class, $result);
+        $this->assertInstanceOf(QuoteNumberFormat::class, $result->format);
+        $this->assertSame('Q-', $result->format->prefix);
+        $this->assertSame('four', $result->format->yearToken);
+        $this->assertSame('two', $result->format->monthToken);
+        $this->assertSame('-', $result->format->separator);
+        $this->assertSame(5, $result->format->padWidth);
+        $this->assertSame('', $result->format->suffix);
+        $this->assertSame(1, $result->format->startNumber);
+        $this->assertSame('yearly', $result->format->resetCadence);
+        $this->assertSame(42, $result->currentFloor);
+        $this->assertSame('/v1/quotes/number-config', $this->mockClient->lastGetPath);
+    }
+
+    public function testUpdateQuoteNumberConfigSendsFormatBodyAndUnwrapsResults(): void
+    {
+        $sentFormat = [
+            'prefix' => 'INV-',
+            'yearToken' => 'two',
+            'monthToken' => 'off',
+            'separator' => '/',
+            'padWidth' => 4,
+            'suffix' => '-X',
+            'startNumber' => 100,
+            'resetCadence' => 'monthly',
+        ];
+        $this->mockClient->setPatchReturn(['results' => ['format' => $sentFormat, 'currentFloor' => 7]]);
+        $this->injectMockClient();
+
+        $result = TurboQuote::updateQuoteNumberConfig(new QuoteNumberFormat(
+            prefix: 'INV-',
+            yearToken: 'two',
+            monthToken: 'off',
+            separator: '/',
+            padWidth: 4,
+            suffix: '-X',
+            startNumber: 100,
+            resetCadence: 'monthly',
+        ));
+
+        $this->assertInstanceOf(QuoteNumberConfig::class, $result);
+        $this->assertSame('INV-', $result->format->prefix);
+        $this->assertSame(7, $result->currentFloor);
+        $this->assertSame('/v1/quotes/number-config', $this->mockClient->lastPatchPath);
+        // Request body keys are camelCase verbatim; padWidth/startNumber are integers.
+        $this->assertSame($sentFormat, $this->mockClient->lastPatchData);
+        $this->assertSame(4, $this->mockClient->lastPatchData['padWidth']);
+        $this->assertSame(100, $this->mockClient->lastPatchData['startNumber']);
     }
 
     // ============================================

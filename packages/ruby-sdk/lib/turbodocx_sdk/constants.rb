@@ -64,4 +64,27 @@ module TurboDocxSdk
     AMOUNT = "amount"
     ALL = [PERCENT, AMOUNT].freeze
   end
+
+  # Year token included in a generated quote number.
+  module QuoteNumberYearToken
+    NONE = "none"
+    TWO = "two"
+    FOUR = "four"
+    ALL = [NONE, TWO, FOUR].freeze
+  end
+
+  # Month token included in a generated quote number.
+  module QuoteNumberMonthToken
+    OFF = "off"
+    TWO = "two"
+    ALL = [OFF, TWO].freeze
+  end
+
+  # Cadence on which the quote number sequence resets.
+  module QuoteNumberResetCadence
+    NEVER = "never"
+    YEARLY = "yearly"
+    MONTHLY = "monthly"
+    ALL = [NEVER, YEARLY, MONTHLY].freeze
+  end
 end

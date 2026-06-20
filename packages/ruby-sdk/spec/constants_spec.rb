@@ -72,4 +72,30 @@ RSpec.describe "TurboDocxSdk Constants" do
       expect(TurboDocxSdk::BundleItemStatus::CURRENCY_MISMATCH).to eq("currency_mismatch")
     end
   end
+
+  describe "QuoteNumberYearToken" do
+    it "defines all 3 year tokens" do
+      expect(TurboDocxSdk::QuoteNumberYearToken::NONE).to eq("none")
+      expect(TurboDocxSdk::QuoteNumberYearToken::TWO).to eq("two")
+      expect(TurboDocxSdk::QuoteNumberYearToken::FOUR).to eq("four")
+      expect(TurboDocxSdk::QuoteNumberYearToken::ALL).to eq(%w[none two four])
+    end
+  end
+
+  describe "QuoteNumberMonthToken" do
+    it "defines all 2 month tokens" do
+      expect(TurboDocxSdk::QuoteNumberMonthToken::OFF).to eq("off")
+      expect(TurboDocxSdk::QuoteNumberMonthToken::TWO).to eq("two")
+      expect(TurboDocxSdk::QuoteNumberMonthToken::ALL).to eq(%w[off two])
+    end
+  end
+
+  describe "QuoteNumberResetCadence" do
+    it "defines all 3 reset cadences" do
+      expect(TurboDocxSdk::QuoteNumberResetCadence::NEVER).to eq("never")
+      expect(TurboDocxSdk::QuoteNumberResetCadence::YEARLY).to eq("yearly")
+      expect(TurboDocxSdk::QuoteNumberResetCadence::MONTHLY).to eq("monthly")
+      expect(TurboDocxSdk::QuoteNumberResetCadence::ALL).to eq(%w[never yearly monthly])
+    end
+  end
 end

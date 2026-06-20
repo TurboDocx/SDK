@@ -786,6 +786,34 @@ public final class TurboQuote {
     }
 
     // ============================================
+    // QUOTE NUMBER CONFIG (admin only)
+    // ============================================
+
+    /**
+     * Get the org's quote numbering configuration (format + current floor).
+     *
+     * <p>Admin only. Unwraps the inner {@code results} object.</p>
+     */
+    public QuoteNumberConfig getQuoteNumberConfig() throws IOException {
+        QuoteNumberConfigEnvelope envelope =
+                httpClient.get("/v1/quotes/number-config", QuoteNumberConfigEnvelope.class);
+        return envelope.getResults();
+    }
+
+    /**
+     * Update the org's quote numbering format. The request body is the full
+     * {@link QuoteNumberFormat} (all eight fields). Returns the updated config
+     * (format + current floor).
+     *
+     * <p>Admin only. Unwraps the inner {@code results} object.</p>
+     */
+    public QuoteNumberConfig updateQuoteNumberConfig(QuoteNumberFormat format) throws IOException {
+        QuoteNumberConfigEnvelope envelope =
+                httpClient.patch("/v1/quotes/number-config", format, QuoteNumberConfigEnvelope.class);
+        return envelope.getResults();
+    }
+
+    // ============================================
     // PRIVATE HELPERS
     // ============================================
 

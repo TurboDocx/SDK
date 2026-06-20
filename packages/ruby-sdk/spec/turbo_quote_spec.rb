@@ -1198,6 +1198,60 @@ RSpec.describe TurboDocxSdk::TurboQuote do
     end
   end
 
+  describe "Quote Number Config" do
+    before { described_class.configure(api_key: "test-key", org_id: "org-1") }
+
+    let(:mock_format) do
+      {
+        "prefix" => "Q",
+        "yearToken" => "four",
+        "monthToken" => "two",
+        "separator" => "-",
+        "padWidth" => 5,
+        "suffix" => "",
+        "startNumber" => 1000,
+        "resetCadence" => "yearly"
+      }
+    end
+    let(:mock_config) { { "format" => mock_format, "currentFloor" => 1042 } }
+
+    it "gets the quote number config and unwraps results" do
+      allow(mock_client).to receive(:get).and_return({ "results" => mock_config })
+
+      result = described_class.get_quote_number_config
+
+      expect(result).to eq(mock_config)
+      expect(result["format"]).to eq(mock_format)
+      expect(result["currentFloor"]).to eq(1042)
+      expect(mock_client).to have_received(:get).with("/v1/quotes/number-config")
+    end
+
+    it "updates the quote number config with the format body and unwraps results" do
+      allow(mock_client).to receive(:patch).and_return({ "results" => mock_config })
+
+      result = described_class.update_quote_number_config(mock_format)
+
+      expect(result).to eq(mock_config)
+      expect(mock_client).to have_received(:patch).with("/v1/quotes/number-config", mock_format)
+    end
+
+    it "passes the format hash verbatim (camelCase keys, integer numeric fields)" do
+      allow(mock_client).to receive(:patch).and_return({ "results" => mock_config })
+
+      described_class.update_quote_number_config(mock_format)
+
+      expect(mock_client).to have_received(:patch) do |path, body|
+        expect(path).to eq("/v1/quotes/number-config")
+        expect(body.keys).to contain_exactly(
+          "prefix", "yearToken", "monthToken", "separator",
+          "padWidth", "suffix", "startNumber", "resetCadence"
+        )
+        expect(body["padWidth"]).to be_an(Integer)
+        expect(body["startNumber"]).to be_an(Integer)
+      end
+    end
+  end
+
   # ============================================
   # ERROR HANDLING
   # ============================================

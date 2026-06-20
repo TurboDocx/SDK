@@ -1985,6 +1985,108 @@ class TurboQuoteTest {
     }
 
     // ============================================
+    // QUOTE NUMBER CONFIG
+    // ============================================
+
+    @Nested
+    @DisplayName("Quote Number Config")
+    class QuoteNumberConfigTests {
+
+        /**
+         * Build a sample format map mirroring the JS test fixture.
+         */
+        private Map<String, Object> sampleFormatMap() {
+            Map<String, Object> format = new HashMap<>();
+            format.put("prefix", "Q");
+            format.put("yearToken", "four");
+            format.put("monthToken", "off");
+            format.put("separator", "-");
+            format.put("padWidth", 5);
+            format.put("suffix", "");
+            format.put("startNumber", 1);
+            format.put("resetCadence", "yearly");
+            return format;
+        }
+
+        @Test
+        @DisplayName("should get the quote number config and unwrap results")
+        void getQuoteNumberConfig() throws Exception {
+            Map<String, Object> results = new HashMap<>();
+            results.put("format", sampleFormatMap());
+            results.put("currentFloor", 1);
+            Map<String, Object> response = new HashMap<>();
+            response.put("results", results);
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            QuoteNumberConfig result = client.turboQuote().getQuoteNumberConfig();
+
+            assertEquals("Q", result.getFormat().getPrefix());
+            assertEquals(QuoteNumberYearToken.FOUR, result.getFormat().getYearToken());
+            assertEquals(QuoteNumberMonthToken.OFF, result.getFormat().getMonthToken());
+            assertEquals("-", result.getFormat().getSeparator());
+            assertEquals(5, result.getFormat().getPadWidth());
+            assertEquals(1, result.getFormat().getStartNumber());
+            assertEquals(QuoteNumberResetCadence.YEARLY, result.getFormat().getResetCadence());
+            assertEquals(1, result.getCurrentFloor());
+
+            RecordedRequest recorded = server.takeRequest();
+            assertEquals("GET", recorded.getMethod());
+            assertTrue(recorded.getPath().endsWith("/v1/quotes/number-config"));
+        }
+
+        @Test
+        @DisplayName("should update the quote number config via PATCH and unwrap results")
+        void updateQuoteNumberConfig() throws Exception {
+            Map<String, Object> formatMap = sampleFormatMap();
+            formatMap.put("prefix", "INV");
+            formatMap.put("yearToken", "none");
+            formatMap.put("padWidth", 4);
+            formatMap.put("startNumber", 1000);
+            formatMap.put("resetCadence", "never");
+
+            Map<String, Object> results = new HashMap<>();
+            results.put("format", formatMap);
+            results.put("currentFloor", 1000);
+            Map<String, Object> response = new HashMap<>();
+            response.put("results", results);
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            QuoteNumberFormat format = new QuoteNumberFormat();
+            format.setPrefix("INV");
+            format.setYearToken(QuoteNumberYearToken.NONE);
+            format.setMonthToken(QuoteNumberMonthToken.OFF);
+            format.setSeparator("-");
+            format.setPadWidth(4);
+            format.setSuffix("");
+            format.setStartNumber(1000);
+            format.setResetCadence(QuoteNumberResetCadence.NEVER);
+
+            QuoteNumberConfig result = client.turboQuote().updateQuoteNumberConfig(format);
+
+            assertEquals("INV", result.getFormat().getPrefix());
+            assertEquals(QuoteNumberYearToken.NONE, result.getFormat().getYearToken());
+            assertEquals(1000, result.getCurrentFloor());
+
+            RecordedRequest recorded = server.takeRequest();
+            assertEquals("PATCH", recorded.getMethod());
+            assertTrue(recorded.getPath().endsWith("/v1/quotes/number-config"));
+
+            String body = recorded.getBody().readUtf8();
+            // Request-body keys stay camelCase verbatim.
+            assertTrue(body.contains("\"prefix\":\"INV\""), "got: " + body);
+            // Enum values serialize to their backend string values, not the Java enum names.
+            assertTrue(body.contains("\"yearToken\":\"none\""), "got: " + body);
+            assertTrue(body.contains("\"monthToken\":\"off\""), "got: " + body);
+            assertTrue(body.contains("\"resetCadence\":\"never\""), "got: " + body);
+            // padWidth / startNumber must serialize as integers, not as 4.0 / 1000.0.
+            assertTrue(body.contains("\"padWidth\":4"), "got: " + body);
+            assertFalse(body.contains("\"padWidth\":4.0"), "padWidth must be an integer; got: " + body);
+            assertTrue(body.contains("\"startNumber\":1000"), "got: " + body);
+            assertFalse(body.contains("\"startNumber\":1000.0"), "startNumber must be an integer; got: " + body);
+        }
+    }
+
+    // ============================================
     // TEST HELPERS
     // ============================================
 

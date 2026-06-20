@@ -2842,3 +2842,123 @@ func TestUpdateQuoteRequestClearMultipleFields(t *testing.T) {
 		t.Error("validUntil should be null")
 	}
 }
+
+// =============================================
+// Quote Number Config Tests
+// =============================================
+
+func TestQuoteClient_GetQuoteNumberConfig(t *testing.T) {
+	t.Run("gets the quote number config and unwraps results", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "GET", r.Method)
+			assert.Equal(t, "/v1/quotes/number-config", r.URL.Path)
+			assert.Equal(t, "Bearer test-api-key", r.Header.Get("Authorization"))
+			assert.Equal(t, "test-org-id", r.Header.Get("x-rapiddocx-org-id"))
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"results": map[string]interface{}{
+					"format": map[string]interface{}{
+						"prefix":       "Q-",
+						"yearToken":    "four",
+						"monthToken":   "two",
+						"separator":    "-",
+						"padWidth":     5,
+						"suffix":       "",
+						"startNumber":  100,
+						"resetCadence": "yearly",
+					},
+					"currentFloor": 42,
+				},
+			})
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		result, err := client.GetQuoteNumberConfig(context.Background())
+
+		require.NoError(t, err)
+		assert.Equal(t, "Q-", result.Format.Prefix)
+		assert.Equal(t, QuoteNumberYearTokenFour, result.Format.YearToken)
+		assert.Equal(t, QuoteNumberMonthTokenTwo, result.Format.MonthToken)
+		assert.Equal(t, "-", result.Format.Separator)
+		assert.Equal(t, 5, result.Format.PadWidth)
+		assert.Equal(t, "", result.Format.Suffix)
+		assert.Equal(t, 100, result.Format.StartNumber)
+		assert.Equal(t, QuoteNumberResetCadenceYearly, result.Format.ResetCadence)
+		assert.Equal(t, 42, result.CurrentFloor)
+	})
+}
+
+func TestQuoteClient_UpdateQuoteNumberConfig(t *testing.T) {
+	t.Run("updates the quote number config and unwraps results", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "PATCH", r.Method)
+			assert.Equal(t, "/v1/quotes/number-config", r.URL.Path)
+
+			body, _ := io.ReadAll(r.Body)
+			var sent map[string]interface{}
+			require.NoError(t, json.Unmarshal(body, &sent))
+
+			// All eight format fields must be present verbatim (camelCase),
+			// including zero-valued ones (padWidth: 0, startNumber: 0, empty suffix).
+			for _, key := range []string{
+				"prefix", "yearToken", "monthToken", "separator",
+				"padWidth", "suffix", "startNumber", "resetCadence",
+			} {
+				_, ok := sent[key]
+				assert.True(t, ok, "request body missing key %q", key)
+			}
+			assert.Equal(t, "INV", sent["prefix"])
+			assert.Equal(t, "none", sent["yearToken"])
+			assert.Equal(t, "off", sent["monthToken"])
+			assert.Equal(t, float64(0), sent["padWidth"])
+			assert.Equal(t, float64(0), sent["startNumber"])
+			assert.Equal(t, "", sent["suffix"])
+			assert.Equal(t, "never", sent["resetCadence"])
+			// currentFloor must NOT be part of the PATCH body.
+			_, hasFloor := sent["currentFloor"]
+			assert.False(t, hasFloor, "currentFloor should not be in the request body")
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"results": map[string]interface{}{
+					"format": map[string]interface{}{
+						"prefix":       "INV",
+						"yearToken":    "none",
+						"monthToken":   "off",
+						"separator":    "/",
+						"padWidth":     0,
+						"suffix":       "",
+						"startNumber":  0,
+						"resetCadence": "never",
+					},
+					"currentFloor": 7,
+				},
+			})
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		result, err := client.UpdateQuoteNumberConfig(context.Background(), &QuoteNumberFormat{
+			Prefix:       "INV",
+			YearToken:    QuoteNumberYearTokenNone,
+			MonthToken:   QuoteNumberMonthTokenOff,
+			Separator:    "/",
+			PadWidth:     0,
+			Suffix:       "",
+			StartNumber:  0,
+			ResetCadence: QuoteNumberResetCadenceNever,
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, "INV", result.Format.Prefix)
+		assert.Equal(t, QuoteNumberYearTokenNone, result.Format.YearToken)
+		assert.Equal(t, QuoteNumberMonthTokenOff, result.Format.MonthToken)
+		assert.Equal(t, "/", result.Format.Separator)
+		assert.Equal(t, 0, result.Format.PadWidth)
+		assert.Equal(t, 0, result.Format.StartNumber)
+		assert.Equal(t, QuoteNumberResetCadenceNever, result.Format.ResetCadence)
+		assert.Equal(t, 7, result.CurrentFloor)
+	})
+}

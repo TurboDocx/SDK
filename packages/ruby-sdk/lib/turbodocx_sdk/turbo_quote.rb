@@ -897,6 +897,43 @@ module TurboDocxSdk
       end
 
       # ============================================
+      # QUOTE NUMBER CONFIG
+      # ============================================
+
+      # Get the org's quote-number configuration (admin only).
+      #
+      # @return [Hash] { "format" => {...}, "currentFloor" => Integer } where +format+ has the
+      #   keys +prefix+, +yearToken+ (see QuoteNumberYearToken), +monthToken+ (see
+      #   QuoteNumberMonthToken), +separator+, +padWidth+ (Integer), +suffix+,
+      #   +startNumber+ (Integer), and +resetCadence+ (see QuoteNumberResetCadence)
+      # @raise [AuthorizationError] if the caller is not an admin
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def get_quote_number_config
+        client = get_client
+        response = client.get("/v1/quotes/number-config")
+        response["results"]
+      end
+
+      # Update the org's quote-number configuration (admin only).
+      #
+      # @param format [Hash] the full format object; all keys are required and passed verbatim
+      #   (camelCase): +prefix+ [String], +yearToken+ [String] (see QuoteNumberYearToken),
+      #   +monthToken+ [String] (see QuoteNumberMonthToken), +separator+ [String],
+      #   +padWidth+ [Integer] (0-12), +suffix+ [String], +startNumber+ [Integer] (>= 0),
+      #   +resetCadence+ [String] (see QuoteNumberResetCadence)
+      # @return [Hash] { "format" => {...}, "currentFloor" => Integer } (same shape as +get_quote_number_config+)
+      # @raise [AuthorizationError] if the caller is not an admin
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def update_quote_number_config(format)
+        client = get_client
+        response = client.patch("/v1/quotes/number-config", format)
+        response["results"]
+      end
+
+      # ============================================
       # CONVENIENCE
       # ============================================
 

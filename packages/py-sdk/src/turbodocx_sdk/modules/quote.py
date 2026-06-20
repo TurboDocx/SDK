@@ -4,6 +4,7 @@ TurboQuote Module -- Quoting operations
 Provides quote lifecycle management:
 - Quotes CRUD (list, create, get, update, delete, duplicate)
 - Quote status transitions (send, decline, void, handle expired)
+- Quote number config (get / update org-wide quote numbering format)
 - Line items (list, add product items, add bundle items, update, remove)
 - Products (list, create, get, update, delete, duplicate, primary images)
 - Price books (list, create, get, update, delete, duplicate, list products)
@@ -216,6 +217,39 @@ class TurboQuote:
         """Download a quote as PDF bytes."""
         client = cls._get_client()
         return await client.get_raw(f"/v1/quotes/{id}/pdf")
+
+    # ============================================
+    # QUOTE NUMBER CONFIG
+    # ============================================
+
+    @classmethod
+    async def get_quote_number_config(cls) -> Dict[str, Any]:
+        """
+        Get the organization's quote numbering configuration (admin only).
+
+        Returns a dict with keys: format (the numbering format) and currentFloor
+        (the per-period issued floor). The backend wraps the payload in
+        { results: { format, currentFloor } } after smartUnwrap strips { data: ... }.
+        """
+        client = cls._get_client()
+        response = await client.get("/v1/quotes/number-config")
+        return response["results"]
+
+    @classmethod
+    async def update_quote_number_config(cls, format: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Update the organization's quote numbering format (admin only).
+
+        Args:
+            format: The quote number format object. All 8 keys are sent verbatim
+                in camelCase (prefix, yearToken, monthToken, separator, padWidth,
+                suffix, startNumber, resetCadence); padWidth and startNumber are ints.
+
+        Returns a dict with keys: format and currentFloor.
+        """
+        client = cls._get_client()
+        response = await client.patch("/v1/quotes/number-config", format)
+        return response["results"]
 
     # ============================================
     # QUOTES -- STATUS TRANSITIONS

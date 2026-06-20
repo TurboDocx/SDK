@@ -275,6 +275,72 @@ class TestQuotesCrud:
 
 
 # ============================================
+# QUOTE NUMBER CONFIG
+# ============================================
+
+
+class TestQuoteNumberConfig:
+    """Test quote number config operations"""
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        TurboQuote._client = None
+        self.mock_client = AsyncMock()
+        TurboQuote._client = self.mock_client
+
+    @pytest.mark.asyncio
+    async def test_get_quote_number_config_and_unwrap_results(self):
+        """Should GET /v1/quotes/number-config and unwrap inner .results"""
+        mock_config = {
+            "format": {
+                "prefix": "Q-",
+                "yearToken": "four",
+                "monthToken": "off",
+                "separator": "-",
+                "padWidth": 5,
+                "suffix": "",
+                "startNumber": 1,
+                "resetCadence": "yearly",
+            },
+            "currentFloor": 42,
+        }
+        self.mock_client.get = AsyncMock(return_value={"results": mock_config})
+
+        result = await TurboQuote.get_quote_number_config()
+
+        assert result == mock_config
+        assert result["format"]["padWidth"] == 5
+        assert result["currentFloor"] == 42
+        self.mock_client.get.assert_called_once_with("/v1/quotes/number-config")
+
+    @pytest.mark.asyncio
+    async def test_update_quote_number_config_and_unwrap_results(self):
+        """Should PATCH /v1/quotes/number-config with the format body and unwrap .results"""
+        format_body = {
+            "prefix": "INV-",
+            "yearToken": "two",
+            "monthToken": "two",
+            "separator": "/",
+            "padWidth": 4,
+            "suffix": "-A",
+            "startNumber": 100,
+            "resetCadence": "monthly",
+        }
+        mock_config = {"format": format_body, "currentFloor": 0}
+        self.mock_client.patch = AsyncMock(return_value={"results": mock_config})
+
+        result = await TurboQuote.update_quote_number_config(format_body)
+
+        assert result == mock_config
+        assert result["format"]["prefix"] == "INV-"
+        assert result["currentFloor"] == 0
+        self.mock_client.patch.assert_called_once_with(
+            "/v1/quotes/number-config",
+            format_body,
+        )
+
+
+# ============================================
 # QUOTES -- STATUS TRANSITIONS
 # ============================================
 

@@ -910,3 +910,32 @@ func (c *QuoteClient) CreateAndSend(ctx context.Context, request *CreateAndSendR
 		Quote: sendResp.Result,
 	}, nil
 }
+
+// ============================================
+// QUOTE NUMBER CONFIG (admin only)
+// ============================================
+
+// GetQuoteNumberConfig retrieves the per-org quote numbering configuration
+// (format + currentFloor). Requires an administrator API key.
+func (c *QuoteClient) GetQuoteNumberConfig(ctx context.Context) (*QuoteNumberConfig, error) {
+	var resp struct {
+		Results QuoteNumberConfig `json:"results"`
+	}
+	if err := c.http.Get(ctx, "/v1/quotes/number-config", &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Results, nil
+}
+
+// UpdateQuoteNumberConfig updates the per-org quote numbering format and returns
+// the resulting configuration (format + currentFloor). The full format object
+// (all eight fields) is sent as the request body. Requires an administrator API key.
+func (c *QuoteClient) UpdateQuoteNumberConfig(ctx context.Context, format *QuoteNumberFormat) (*QuoteNumberConfig, error) {
+	var resp struct {
+		Results QuoteNumberConfig `json:"results"`
+	}
+	if err := c.http.Patch(ctx, "/v1/quotes/number-config", format, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Results, nil
+}
