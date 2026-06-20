@@ -23,6 +23,8 @@ import type {
   DeclineQuoteRequest,
   VoidQuoteRequest,
   ApplyPriceBookResponse,
+  QuoteNumberConfig,
+  QuoteNumberFormat,
 } from '../types/quote';
 import type {
   LineItem,
@@ -150,6 +152,22 @@ export class TurboQuote {
   // after smartUnwrap strips the outer { data: ... } wrapper.
   private static unwrap<T>(response: { result: T }): T {
     return response.result;
+  }
+
+  // ============================================
+  // QUOTE NUMBER CONFIG (admin only)
+  // ============================================
+
+  static async getQuoteNumberConfig(): Promise<QuoteNumberConfig> {
+    const client = this.getClient();
+    const response = await client.get<{ results: QuoteNumberConfig }>('/v1/quotes/number-config');
+    return response.results;
+  }
+
+  static async updateQuoteNumberConfig(format: QuoteNumberFormat): Promise<QuoteNumberConfig> {
+    const client = this.getClient();
+    const response = await client.patch<{ results: QuoteNumberConfig }>('/v1/quotes/number-config', format);
+    return response.results;
   }
 
   // ============================================

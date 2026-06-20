@@ -109,6 +109,44 @@ describe("TurboQuote Module", () => {
   });
 
   // ============================================
+  // QUOTE NUMBER CONFIG
+  // ============================================
+
+  describe("quote number config", () => {
+    const sampleFormat = {
+      prefix: "Q",
+      yearToken: "four" as const,
+      monthToken: "off" as const,
+      separator: "-",
+      padWidth: 5,
+      suffix: "",
+      startNumber: 1,
+      resetCadence: "yearly" as const,
+    };
+
+    it("should get the quote number config and unwrap results", async () => {
+      mockClient.get.mockResolvedValue({ results: { format: sampleFormat, currentFloor: 1 } });
+
+      const result = await TurboQuote.getQuoteNumberConfig();
+
+      expect(result.format.prefix).toBe("Q");
+      expect(result.currentFloor).toBe(1);
+      expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/number-config");
+    });
+
+    it("should update the quote number config via PATCH and unwrap results", async () => {
+      const format = { ...sampleFormat, prefix: "INV", yearToken: "none" as const, padWidth: 4, startNumber: 1000, resetCadence: "never" as const };
+      mockClient.patch.mockResolvedValue({ results: { format, currentFloor: 1000 } });
+
+      const result = await TurboQuote.updateQuoteNumberConfig(format);
+
+      expect(result.format.prefix).toBe("INV");
+      expect(result.currentFloor).toBe(1000);
+      expect(mockClient.patch).toHaveBeenCalledWith("/v1/quotes/number-config", format);
+    });
+  });
+
+  // ============================================
   // QUOTES — CRUD
   // ============================================
 
