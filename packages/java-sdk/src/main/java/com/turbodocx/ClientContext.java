@@ -117,6 +117,13 @@ public final class ClientContext {
         return s != null && !s.isEmpty();
     }
 
+    // Lockstep SDK version, kept in sync with pom.xml <version> and the other SDKs
+    // (see .claude/rules/versioning.md). Used as the source of truth for the
+    // User-Agent because the JAR manifest's Implementation-Version is only present
+    // in a packaged jar built with the manifest entry — it is null when running
+    // from classes/ (tests) or a jar built without it, which silently reported 0.0.0.
+    static final String VERSION = "0.4.0";
+
     private static String getSdkVersion() {
         try {
             String v = ClientContext.class.getPackage().getImplementationVersion();
@@ -126,7 +133,7 @@ public final class ClientContext {
         } catch (Exception ignored) {
             // fall through
         }
-        return "0.0.0";
+        return VERSION;
     }
 
     static String buildDefaultUserAgent() {

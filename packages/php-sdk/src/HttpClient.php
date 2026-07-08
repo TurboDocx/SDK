@@ -352,18 +352,19 @@ class HttpClient
         // X-Forwarded-For, X-Device-Fingerprint) describe the calling environment
         // so the signature audit trail records real device/location. Merge them
         // first so the SDK's own protocol headers below always win over caller
-        // context. TurboSign uses HttpClientConfig (the audit-trail path).
+        // context. Attached for every module (matching the other SDKs) — only
+        // HttpClientConfig (TurboSign) carries a caller override; Partner/Quote
+        // get the auto-detected values.
         $headers = [
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ];
 
-        if ($config instanceof HttpClientConfig) {
-            $headers = array_merge(
-                ClientContext::resolveHeaders($config->clientContext),
-                $headers
-            );
-        }
+        $clientContext = $config instanceof HttpClientConfig ? $config->clientContext : null;
+        $headers = array_merge(
+            ClientContext::resolveHeaders($clientContext),
+            $headers
+        );
 
         if ($config instanceof PartnerClientConfig) {
             $headers['Authorization'] = "Bearer {$config->partnerApiKey}";

@@ -82,7 +82,7 @@ export function detectLocale(): string {
 }
 
 /**
- * Stable, non-reversible fingerprint of the host (hostname/platform/arch/mem).
+ * Stable, non-reversible fingerprint of the host (hostname/platform/arch).
  * Identifies the calling container/VM across requests without exposing raw host
  * details. Falls back to "" outside Node.
  */
@@ -92,11 +92,22 @@ export function buildDeviceFingerprint(): string {
     const os = require('os');
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const crypto = require('crypto');
-    const seed = [os.hostname(), os.platform(), os.arch(), String(os.totalmem())].join('|');
+    // Seed is hostname|OS|arch to match the cross-SDK contract and the other five
+    // SDKs. totalmem is deliberately excluded: it shifts on VM resize / cgroup
+    // memory-limit changes, which would make the "stable" fingerprint unstable.
+    const seed = [os.hostname(), os.platform(), os.arch()].join('|');
     return crypto.createHash('sha256').update(seed).digest('hex');
   } catch {
     return '';
   }
+}
+
+// Strip CR/LF and control chars so a hostname/timezone/locale (or caller ipAddress)
+// containing them can't corrupt the header value or be rejected by the transport's
+// header validator at send time — which would throw on every request, defeating the
+// best-effort degradation the detection functions guard with try/catch.
+function sanitizeHeaderValue(value: string): string {
+  return value.replace(/[\r\n\x00-\x1f\x7f]/g, '').trim();
 }
 
 /**
@@ -106,19 +117,22 @@ export function buildDeviceFingerprint(): string {
 export function resolveClientContextHeaders(ctx: ClientContext = {}): Record<string, string> {
   const headers: Record<string, string> = {};
 
-  headers['User-Agent'] = ctx.userAgent || buildDefaultUserAgent();
+  headers['User-Agent'] = sanitizeHeaderValue(ctx.userAgent || buildDefaultUserAgent());
 
-  const timezone = ctx.timezone || detectTimezone();
+  const timezone = sanitizeHeaderValue(ctx.timezone || detectTimezone());
   if (timezone) headers['X-Timezone'] = timezone;
 
-  const language = ctx.language || detectLocale();
+  const language = sanitizeHeaderValue(ctx.language || detectLocale());
   if (language) headers['Accept-Language'] = language;
 
-  const fingerprint = ctx.deviceFingerprint || buildDeviceFingerprint();
+  const fingerprint = sanitizeHeaderValue(ctx.deviceFingerprint || buildDeviceFingerprint());
   if (fingerprint) headers['X-Device-Fingerprint'] = fingerprint;
 
   // Opt-in only (see ClientContext.ipAddress).
-  if (ctx.ipAddress) headers['X-Forwarded-For'] = ctx.ipAddress;
+  if (ctx.ipAddress) {
+    const forwardedFor = sanitizeHeaderValue(ctx.ipAddress);
+    if (forwardedFor) headers['X-Forwarded-For'] = forwardedFor;
+  }
 
   return headers;
 }

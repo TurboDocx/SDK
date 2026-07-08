@@ -55,6 +55,16 @@ class ClientContextTest {
     }
 
     @Test
+    void reportsTheConcreteLockstepVersionInUserAgent() throws Exception {
+        // The manifest's Implementation-Version is absent when running from classes/
+        // (tests) or a jar built without it, which previously made the UA report
+        // 0.0.0. It must report the real lockstep version from ClientContext.VERSION.
+        String ua = fireGet(ClientContext.autoDetect()).getHeader("User-Agent");
+        assertTrue(ua.startsWith("@turbodocx/sdk/" + ClientContext.VERSION), "got " + ua);
+        assertFalse(ua.startsWith("@turbodocx/sdk/0.0.0"), "UA fell back to 0.0.0: " + ua);
+    }
+
+    @Test
     void letsCallerOverrideUserAgent() throws Exception {
         RecordedRequest req = fireGet(ClientContext.builder().userAgent("my-app/9.9 (worker)").build());
         assertEquals("my-app/9.9 (worker)", req.getHeader("User-Agent"));
