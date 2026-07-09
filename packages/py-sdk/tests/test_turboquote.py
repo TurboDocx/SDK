@@ -1369,6 +1369,120 @@ class TestTypesCategories:
 
 
 # ============================================
+# BULK CREATES
+# ============================================
+
+
+class TestBulkCreates:
+    """Test bulk create operations.
+
+    All six bulk endpoints share the same wire contract: POST {resource}/bulk
+    with { rows: [...] }, response { results: { imported, failed, adjusted } }.
+    """
+
+    BULK_RESULT = {
+        "imported": 2,
+        "failed": [{"row": 3, "reason": "A product with this name already exists"}],
+        "adjusted": [],
+    }
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        TurboQuote._client = None
+        self.mock_client = AsyncMock()
+        self.mock_client.post = AsyncMock(return_value={"results": dict(self.BULK_RESULT)})
+        TurboQuote._client = self.mock_client
+
+    @pytest.mark.asyncio
+    async def test_bulk_create_products_wraps_rows_and_unwraps_results(self):
+        """Should POST product rows to /v1/products/bulk wrapped in { rows } and unwrap results"""
+        rows = [
+            {"name": "Widget A", "listPrice": 10, "billingFrequency": "monthly", "categoryId": "cat-1"},
+            {"name": "Widget B", "listPrice": 20, "billingFrequency": "one-time", "categoryId": "cat-1"},
+        ]
+
+        result = await TurboQuote.bulk_create_products(rows)
+
+        self.mock_client.post.assert_called_once_with("/v1/products/bulk", {"rows": rows})
+        assert result["imported"] == 2
+        assert result["failed"] == [{"row": 3, "reason": "A product with this name already exists"}]
+        assert result["adjusted"] == []
+
+    @pytest.mark.asyncio
+    async def test_bulk_create_price_books(self):
+        """Should POST price book rows to /v1/pricebooks/bulk"""
+        rows = [{"name": "EMEA 2026", "currency": "EUR", "discountPercent": 5}]
+
+        await TurboQuote.bulk_create_price_books(rows)
+
+        self.mock_client.post.assert_called_once_with("/v1/pricebooks/bulk", {"rows": rows})
+
+    @pytest.mark.asyncio
+    async def test_bulk_create_bundles(self):
+        """Should POST bundle rows to /v1/bundles/bulk"""
+        rows = [
+            {
+                "name": "Starter Pack",
+                "categoryId": "cat-1",
+                "items": [{"productId": "p-1", "unitPrice": 10, "billingFrequency": "monthly", "quantity": 2}],
+            }
+        ]
+
+        await TurboQuote.bulk_create_bundles(rows)
+
+        self.mock_client.post.assert_called_once_with("/v1/bundles/bulk", {"rows": rows})
+
+    @pytest.mark.asyncio
+    async def test_bulk_create_companies(self):
+        """Should POST company rows (each with contacts) to /v1/companies/bulk"""
+        rows = [{"name": "Acme Corp", "contacts": [{"name": "Jane Doe", "email": "jane@acme.com"}]}]
+
+        await TurboQuote.bulk_create_companies(rows)
+
+        self.mock_client.post.assert_called_once_with("/v1/companies/bulk", {"rows": rows})
+
+    @pytest.mark.asyncio
+    async def test_bulk_create_contacts(self):
+        """Should POST contact rows (each with companyId) to /v1/contacts/bulk"""
+        rows = [{"name": "John Smith", "companyId": "c-1", "email": "john@acme.com"}]
+
+        await TurboQuote.bulk_create_contacts(rows)
+
+        self.mock_client.post.assert_called_once_with("/v1/contacts/bulk", {"rows": rows})
+
+    @pytest.mark.asyncio
+    async def test_bulk_create_types(self):
+        """Should POST type rows to /v1/types/bulk"""
+        rows = [{"name": "Hardware", "categoryType": "product_category"}]
+
+        await TurboQuote.bulk_create_types(rows)
+
+        self.mock_client.post.assert_called_once_with("/v1/types/bulk", {"rows": rows})
+
+    @pytest.mark.asyncio
+    async def test_bulk_partial_success_surfaces_failed_and_adjusted_rows(self):
+        """Should surface partial-success details (failed rows are 1-indexed, not thrown)"""
+        self.mock_client.post = AsyncMock(
+            return_value={
+                "results": {
+                    "imported": 1,
+                    "failed": [{"row": 2, "reason": "Company not found"}],
+                    "adjusted": [{"row": 1, "reason": "Dropped unknown product"}],
+                }
+            }
+        )
+
+        result = await TurboQuote.bulk_create_contacts([
+            {"name": "Ok Row", "companyId": "c-1"},
+            {"name": "Bad Row", "companyId": "missing"},
+        ])
+
+        assert result["imported"] == 1
+        assert result["failed"][0] == {"row": 2, "reason": "Company not found"}
+        assert result["adjusted"][0] == {"row": 1, "reason": "Dropped unknown product"}
+
+
+# ============================================
 # CONVENIENCE -- create_and_send
 # ============================================
 

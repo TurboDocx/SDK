@@ -143,6 +143,20 @@ class TurboQuote:
         """
         return response["result"]
 
+    @classmethod
+    async def _bulk_import(cls, path: str, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Shared bulk-create helper.
+
+        POSTs the rows wrapped in a { rows } envelope and unwraps the
+        { results: { imported, failed, adjusted } } response. Rows are
+        passed verbatim (camelCase keys); the backend validates per row
+        with PARTIAL SUCCESS -- failed rows are reported, not raised.
+        """
+        client = cls._get_client()
+        response = await client.post(path, {"rows": rows})
+        return response["results"]
+
     # ============================================
     # QUOTES -- CRUD
     # ============================================
@@ -379,6 +393,17 @@ class TurboQuote:
         return cls._unwrap(await client.post("/v1/products", request))
 
     @classmethod
+    async def bulk_create_products(cls, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Bulk create products (partial success).
+
+        Rows are sent verbatim in a { rows } envelope; returns a dict with
+        keys imported, failed, adjusted (failed/adjusted carry 1-indexed
+        row + reason).
+        """
+        return await cls._bulk_import("/v1/products/bulk", rows)
+
+    @classmethod
     async def get_product(cls, id: str) -> Dict[str, Any]:
         """Get a product by ID."""
         client = cls._get_client()
@@ -443,6 +468,17 @@ class TurboQuote:
         return cls._unwrap(await client.post("/v1/pricebooks", body))
 
     @classmethod
+    async def bulk_create_price_books(cls, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Bulk create price books (partial success).
+
+        Rows are sent verbatim in a { rows } envelope; returns a dict with
+        keys imported, failed, adjusted (failed/adjusted carry 1-indexed
+        row + reason).
+        """
+        return await cls._bulk_import("/v1/pricebooks/bulk", rows)
+
+    @classmethod
     async def get_price_book(cls, id: str) -> Dict[str, Any]:
         """Get a price book by ID."""
         client = cls._get_client()
@@ -489,6 +525,17 @@ class TurboQuote:
         return cls._unwrap(await client.post("/v1/bundles", request))
 
     @classmethod
+    async def bulk_create_bundles(cls, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Bulk create bundles (partial success).
+
+        Rows are sent verbatim in a { rows } envelope; returns a dict with
+        keys imported, failed, adjusted (failed/adjusted carry 1-indexed
+        row + reason, e.g. a bundle item whose product wasn't found).
+        """
+        return await cls._bulk_import("/v1/bundles/bulk", rows)
+
+    @classmethod
     async def get_bundle(cls, id: str) -> Dict[str, Any]:
         """Get a bundle by ID."""
         client = cls._get_client()
@@ -529,6 +576,18 @@ class TurboQuote:
         return cls._unwrap(await client.post("/v1/companies", request))
 
     @classmethod
+    async def bulk_create_companies(cls, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Bulk create companies (partial success).
+
+        Each row requires a contacts array with at least one contact. Rows
+        are sent verbatim in a { rows } envelope; returns a dict with keys
+        imported, failed, adjusted (failed/adjusted carry 1-indexed
+        row + reason).
+        """
+        return await cls._bulk_import("/v1/companies/bulk", rows)
+
+    @classmethod
     async def get_company(cls, id: str) -> Dict[str, Any]:
         """Get a company by ID."""
         client = cls._get_client()
@@ -567,6 +626,17 @@ class TurboQuote:
         """Create a new contact."""
         client = cls._get_client()
         return cls._unwrap(await client.post("/v1/contacts", request))
+
+    @classmethod
+    async def bulk_create_contacts(cls, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Bulk create contacts (partial success).
+
+        Each row requires a companyId. Rows are sent verbatim in a { rows }
+        envelope; returns a dict with keys imported, failed, adjusted
+        (failed/adjusted carry 1-indexed row + reason).
+        """
+        return await cls._bulk_import("/v1/contacts/bulk", rows)
 
     @classmethod
     async def update_contact(cls, id: str, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -635,6 +705,17 @@ class TurboQuote:
         """Create a new type/category."""
         client = cls._get_client()
         return cls._unwrap(await client.post("/v1/types", request))
+
+    @classmethod
+    async def bulk_create_types(cls, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Bulk create types/categories (partial success).
+
+        Rows are sent verbatim in a { rows } envelope; returns a dict with
+        keys imported, failed, adjusted (failed/adjusted carry 1-indexed
+        row + reason).
+        """
+        return await cls._bulk_import("/v1/types/bulk", rows)
 
     @classmethod
     async def update_type(cls, id: str, request: Dict[str, Any]) -> Dict[str, Any]:

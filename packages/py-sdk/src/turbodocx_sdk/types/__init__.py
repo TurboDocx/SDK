@@ -10,6 +10,8 @@ from .quote_shared import (
     PaginationParams,
     PaginatedResponse,
     SuccessResponse,
+    BulkImportRowIssue,
+    BulkImportResult,
 )
 from .quote import (
     QuoteStatusInfo,
@@ -111,6 +113,8 @@ __all__ = [
     "PaginationParams",
     "PaginatedResponse",
     "SuccessResponse",
+    "BulkImportRowIssue",
+    "BulkImportResult",
     # Quote
     "QuoteStatusInfo",
     "Quote",

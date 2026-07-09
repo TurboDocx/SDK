@@ -321,6 +321,14 @@ public final class TurboQuote {
     }
 
     /**
+     * Bulk create products with partial success. Rows use the same field shapes as
+     * {@link #createProduct(CreateProductRequest)} and are passed through verbatim.
+     */
+    public BulkImportResult bulkCreateProducts(List<CreateProductRequest> rows) throws IOException {
+        return bulkImport("/v1/products/bulk", rows);
+    }
+
+    /**
      * Get a product by ID.
      */
     public Product getProduct(String id) throws IOException {
@@ -419,6 +427,14 @@ public final class TurboQuote {
     }
 
     /**
+     * Bulk create price books with partial success. Rows use the same field shapes as
+     * {@link #createPriceBook(CreatePriceBookRequest)} and are passed through verbatim.
+     */
+    public BulkImportResult bulkCreatePriceBooks(List<CreatePriceBookRequest> rows) throws IOException {
+        return bulkImport("/v1/pricebooks/bulk", rows);
+    }
+
+    /**
      * Get a price book by ID.
      */
     public PriceBook getPriceBook(String id) throws IOException {
@@ -496,6 +512,14 @@ public final class TurboQuote {
     }
 
     /**
+     * Bulk create bundles with partial success. Rows use the same field shapes as
+     * {@link #createBundle(CreateBundleRequest)} and are passed through verbatim.
+     */
+    public BulkImportResult bulkCreateBundles(List<CreateBundleRequest> rows) throws IOException {
+        return bulkImport("/v1/bundles/bulk", rows);
+    }
+
+    /**
      * Get a bundle by ID.
      */
     public Bundle getBundle(String id) throws IOException {
@@ -555,6 +579,15 @@ public final class TurboQuote {
         Type type = new TypeToken<ResultEnvelope<Company>>(){}.getType();
         ResultEnvelope<Company> envelope = httpClient.post("/v1/companies", request, type);
         return envelope.getResult();
+    }
+
+    /**
+     * Bulk create companies with partial success. Rows use the same field shapes as
+     * {@link #createCompany(CreateCompanyRequest)} and are passed through verbatim
+     * (the backend requires each row to have a {@code contacts} array with at least one contact).
+     */
+    public BulkImportResult bulkCreateCompanies(List<CreateCompanyRequest> rows) throws IOException {
+        return bulkImport("/v1/companies/bulk", rows);
     }
 
     /**
@@ -623,6 +656,15 @@ public final class TurboQuote {
         Type type = new TypeToken<ResultEnvelope<Contact>>(){}.getType();
         ResultEnvelope<Contact> envelope = httpClient.post("/v1/contacts", request, type);
         return envelope.getResult();
+    }
+
+    /**
+     * Bulk create contacts with partial success. Rows use the same field shapes as
+     * {@link #createContact(CreateContactRequest)} and are passed through verbatim
+     * (the backend requires {@code companyId} on each row).
+     */
+    public BulkImportResult bulkCreateContacts(List<CreateContactRequest> rows) throws IOException {
+        return bulkImport("/v1/contacts/bulk", rows);
     }
 
     /**
@@ -732,6 +774,14 @@ public final class TurboQuote {
     }
 
     /**
+     * Bulk create types/categories with partial success. Rows use the same field shapes as
+     * {@link #createType(CreateQuoteTypeRequest)} and are passed through verbatim.
+     */
+    public BulkImportResult bulkCreateTypes(List<CreateQuoteTypeRequest> rows) throws IOException {
+        return bulkImport("/v1/types/bulk", rows);
+    }
+
+    /**
      * Update a type/category.
      */
     public QuoteType updateType(String id, UpdateQuoteTypeRequest request) throws IOException {
@@ -816,6 +866,20 @@ public final class TurboQuote {
     // ============================================
     // PRIVATE HELPERS
     // ============================================
+
+    /**
+     * Shared shape for the six bulk-create endpoints: POST {@code { "rows": [...] }}
+     * to the entity's {@code /bulk} path and unwrap the inner {@code results} object.
+     *
+     * <p>Rows are passed through verbatim — no client-side validation (including the
+     * server's 500-row cap, which is enforced server-side with HTTP 400).</p>
+     */
+    private BulkImportResult bulkImport(String path, List<?> rows) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("rows", rows);
+        BulkImportResultEnvelope envelope = httpClient.post(path, body, BulkImportResultEnvelope.class);
+        return envelope.getResults();
+    }
 
     /**
      * Build a JSON body string for PATCH requests using field-tracking.

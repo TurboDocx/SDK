@@ -98,4 +98,22 @@ RSpec.describe "TurboDocxSdk Constants" do
       expect(TurboDocxSdk::QuoteNumberResetCadence::ALL).to eq(%w[never yearly monthly])
     end
   end
+
+  describe "PartnerScope" do
+    it "defines the granular partner API key permission scopes" do
+      expect(TurboDocxSdk::PartnerScope::ORG_CREATE).to eq("org:create")
+      expect(TurboDocxSdk::PartnerScope::ORG_READ).to eq("org:read")
+      expect(TurboDocxSdk::PartnerScope::ENTITLEMENTS_UPDATE).to eq("entitlements:update")
+      expect(TurboDocxSdk::PartnerScope::ORG_USERS_READ).to eq("org-users:read")
+      expect(TurboDocxSdk::PartnerScope::PARTNER_APIKEYS_DELETE).to eq("partner-apikeys:delete")
+      expect(TurboDocxSdk::PartnerScope::AUDIT_READ).to eq("audit:read")
+    end
+
+    it "exposes all 22 scopes via ALL, frozen and unique" do
+      expect(TurboDocxSdk::PartnerScope::ALL.size).to eq(22)
+      expect(TurboDocxSdk::PartnerScope::ALL.uniq.size).to eq(22)
+      expect(TurboDocxSdk::PartnerScope::ALL).to be_frozen
+      expect(TurboDocxSdk::PartnerScope::ALL).to include("org:create", "audit:read")
+    end
+  end
 end

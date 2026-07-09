@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TurboDocx;
 
 use TurboDocx\Config\QuoteClientConfig;
+use TurboDocx\Types\Quote\BulkImportResult;
 use TurboDocx\Types\Quote\Bundle;
 use TurboDocx\Types\Quote\Company;
 use TurboDocx\Types\Quote\Contact;
@@ -175,6 +176,24 @@ final class TurboQuote
         }
 
         return $multipart;
+    }
+
+    /**
+     * POST rows to a bulk-create endpoint and unwrap the results envelope.
+     *
+     * Rows are serialized verbatim (camelCase keys) inside a `{ rows: [...] }`
+     * envelope. The backend processes rows sequentially with partial success —
+     * failed rows are reported in the result, not thrown.
+     *
+     * @param string $path
+     * @param array<int, array<string, mixed>> $rows Serialized request rows
+     * @return BulkImportResult
+     */
+    private static function bulkImport(string $path, array $rows): BulkImportResult
+    {
+        $client = self::getClient();
+        $response = $client->post($path, ['rows' => $rows]);
+        return BulkImportResult::fromArray($response['results']);
     }
 
     // ============================================
@@ -484,6 +503,17 @@ final class TurboQuote
     }
 
     /**
+     * Bulk create products (partial success; failed rows do not throw).
+     *
+     * @param array<CreateProductRequest> $rows
+     * @return BulkImportResult
+     */
+    public static function bulkCreateProducts(array $rows): BulkImportResult
+    {
+        return self::bulkImport('/v1/products/bulk', array_map(fn(CreateProductRequest $row) => $row->toArray(), $rows));
+    }
+
+    /**
      * Get a product by ID.
      *
      * @param string $id
@@ -584,6 +614,17 @@ final class TurboQuote
     }
 
     /**
+     * Bulk create price books (partial success; failed rows do not throw).
+     *
+     * @param array<CreatePriceBookRequest> $rows
+     * @return BulkImportResult
+     */
+    public static function bulkCreatePriceBooks(array $rows): BulkImportResult
+    {
+        return self::bulkImport('/v1/pricebooks/bulk', array_map(fn(CreatePriceBookRequest $row) => $row->toArray(), $rows));
+    }
+
+    /**
      * Get a price book by ID.
      *
      * @param string $id
@@ -678,6 +719,17 @@ final class TurboQuote
     }
 
     /**
+     * Bulk create bundles (partial success; failed rows do not throw).
+     *
+     * @param array<CreateBundleRequest> $rows
+     * @return BulkImportResult
+     */
+    public static function bulkCreateBundles(array $rows): BulkImportResult
+    {
+        return self::bulkImport('/v1/bundles/bulk', array_map(fn(CreateBundleRequest $row) => $row->toArray(), $rows));
+    }
+
+    /**
      * Get a bundle by ID.
      *
      * @param string $id
@@ -754,6 +806,18 @@ final class TurboQuote
     {
         $client = self::getClient();
         return Company::fromArray(self::unwrap($client->post('/v1/companies', $request->toArray())));
+    }
+
+    /**
+     * Bulk create companies (partial success; failed rows do not throw).
+     * Each row requires a contacts array with at least one contact.
+     *
+     * @param array<CreateCompanyRequest> $rows
+     * @return BulkImportResult
+     */
+    public static function bulkCreateCompanies(array $rows): BulkImportResult
+    {
+        return self::bulkImport('/v1/companies/bulk', array_map(fn(CreateCompanyRequest $row) => $row->toArray(), $rows));
     }
 
     /**
@@ -836,6 +900,18 @@ final class TurboQuote
     {
         $client = self::getClient();
         return Contact::fromArray(self::unwrap($client->post('/v1/contacts', $request->toArray())));
+    }
+
+    /**
+     * Bulk create contacts (partial success; failed rows do not throw).
+     * Each row requires a companyId.
+     *
+     * @param array<CreateContactRequest> $rows
+     * @return BulkImportResult
+     */
+    public static function bulkCreateContacts(array $rows): BulkImportResult
+    {
+        return self::bulkImport('/v1/contacts/bulk', array_map(fn(CreateContactRequest $row) => $row->toArray(), $rows));
     }
 
     /**
@@ -969,6 +1045,17 @@ final class TurboQuote
     {
         $client = self::getClient();
         return QuoteType::fromArray(self::unwrap($client->post('/v1/types', $request->toArray())));
+    }
+
+    /**
+     * Bulk create types/categories (partial success; failed rows do not throw).
+     *
+     * @param array<CreateQuoteTypeRequest> $rows
+     * @return BulkImportResult
+     */
+    public static function bulkCreateTypes(array $rows): BulkImportResult
+    {
+        return self::bulkImport('/v1/types/bulk', array_map(fn(CreateQuoteTypeRequest $row) => $row->toArray(), $rows));
     }
 
     /**

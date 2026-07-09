@@ -1184,6 +1184,92 @@ describe("TurboQuote Module", () => {
   });
 
   // ============================================
+  // BULK CREATES (partial-success import endpoints)
+  // ============================================
+
+  describe("Bulk Creates", () => {
+    // All six bulk endpoints share the same wire contract: POST {resource}/bulk
+    // with { rows: [...] }, response { results: { imported, failed, adjusted } }.
+    const bulkResult = {
+      imported: 2,
+      failed: [{ row: 3, reason: "A product with this name already exists" }],
+      adjusted: [],
+    };
+
+    beforeEach(() => {
+      TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
+      mockClient.post.mockResolvedValue({ results: bulkResult });
+    });
+
+    it("should POST product rows to /v1/products/bulk wrapped in { rows } and unwrap results", async () => {
+      const rows = [
+        { name: "Widget A", listPrice: 10, billingFrequency: "monthly" as const, categoryId: "cat-1" },
+        { name: "Widget B", listPrice: 20, billingFrequency: "one-time" as const, categoryId: "cat-1" },
+      ];
+
+      const result = await TurboQuote.bulkCreateProducts(rows);
+
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/products/bulk", { rows });
+      expect(result.imported).toBe(2);
+      expect(result.failed).toEqual([{ row: 3, reason: "A product with this name already exists" }]);
+      expect(result.adjusted).toEqual([]);
+    });
+
+    it("should POST price book rows to /v1/pricebooks/bulk", async () => {
+      const rows = [{ name: "EMEA 2026", currency: "EUR" as const, discountPercent: 5 }];
+      await TurboQuote.bulkCreatePriceBooks(rows);
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/pricebooks/bulk", { rows });
+    });
+
+    it("should POST bundle rows to /v1/bundles/bulk", async () => {
+      const rows = [
+        {
+          name: "Starter Pack",
+          categoryId: "cat-1",
+          items: [{ productId: "p-1", unitPrice: 10, billingFrequency: "monthly" as const, quantity: 2 }],
+        },
+      ];
+      await TurboQuote.bulkCreateBundles(rows);
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/bundles/bulk", { rows });
+    });
+
+    it("should POST company rows (each with contacts) to /v1/companies/bulk", async () => {
+      const rows = [
+        { name: "Acme Corp", contacts: [{ name: "Jane Doe", email: "jane@acme.com" }] },
+      ];
+      await TurboQuote.bulkCreateCompanies(rows);
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/companies/bulk", { rows });
+    });
+
+    it("should POST contact rows (each with companyId) to /v1/contacts/bulk", async () => {
+      const rows = [{ name: "John Smith", companyId: "c-1", email: "john@acme.com" }];
+      await TurboQuote.bulkCreateContacts(rows);
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/contacts/bulk", { rows });
+    });
+
+    it("should POST type rows to /v1/types/bulk", async () => {
+      const rows = [{ name: "Hardware", categoryType: "product_category" as const }];
+      await TurboQuote.bulkCreateTypes(rows);
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/types/bulk", { rows });
+    });
+
+    it("should surface partial-success details (failed rows are 1-indexed, not thrown)", async () => {
+      mockClient.post.mockResolvedValue({
+        results: { imported: 1, failed: [{ row: 2, reason: "Company not found" }], adjusted: [{ row: 1, reason: "Dropped unknown product" }] },
+      });
+
+      const result = await TurboQuote.bulkCreateContacts([
+        { name: "Ok Row", companyId: "c-1" },
+        { name: "Bad Row", companyId: "missing" },
+      ]);
+
+      expect(result.imported).toBe(1);
+      expect(result.failed[0]).toEqual({ row: 2, reason: "Company not found" });
+      expect(result.adjusted[0]).toEqual({ row: 1, reason: "Dropped unknown product" });
+    });
+  });
+
+  // ============================================
   // CONVENIENCE — createAndSend
   // ============================================
 

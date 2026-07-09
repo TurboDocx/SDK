@@ -107,6 +107,22 @@ type QuoteSuccessResponse struct {
 	Message string `json:"message"`
 }
 
+// BulkImportRowIssue describes a per-row problem reported by a bulk create.
+// Row is the 1-indexed position of the row in the request payload.
+type BulkImportRowIssue struct {
+	Row    int    `json:"row"`
+	Reason string `json:"reason"`
+}
+
+// BulkImportResult is the outcome of a bulk create. Rows process sequentially
+// with partial success: Failed rows did not import (no error is returned for
+// them), Adjusted rows imported with a server-side adjustment.
+type BulkImportResult struct {
+	Imported int                  `json:"imported"`
+	Failed   []BulkImportRowIssue `json:"failed"`
+	Adjusted []BulkImportRowIssue `json:"adjusted"`
+}
+
 // ============================================
 // Quote Types
 // ============================================

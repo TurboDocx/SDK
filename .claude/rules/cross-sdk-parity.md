@@ -4,16 +4,25 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 
 ## Required TurboSign Operations
 
-| Operation | JS | Py | Go | PHP | Java |
-|---|---|---|---|---|---|
-| configure | `configure()` | `configure()` | `Configure()` | `configure()` | `configure()` |
-| createSignatureReviewLink | `createSignatureReviewLink()` | `create_signature_review_link()` | `CreateSignatureReviewLink()` | `createSignatureReviewLink()` | `createSignatureReviewLink()` |
-| sendSignature | `sendSignature()` | `send_signature()` | `SendSignature()` | `sendSignature()` | `sendSignature()` |
-| getStatus | `getStatus()` | `get_status()` | `GetStatus()` | `getStatus()` | `getStatus()` |
-| download | `download()` | `download()` | `Download()` | `download()` | `download()` |
-| void | `void()` | `void_document()` | `VoidDocument()` | `voidDocument()` | `voidDocument()` |
-| resend | `resend()` | `resend_email()` | `ResendEmail()` | `resend()` | `resendEmail()` |
-| getAuditTrail | `getAuditTrail()` | `get_audit_trail()` | `GetAuditTrail()` | `getAuditTrail()` | `getAuditTrail()` |
+| Operation | JS | Py | Go | PHP | Java | Ruby |
+|---|---|---|---|---|---|---|
+| configure | `configure()` | `configure()` | constructor (`NewTurboSignClient`) | `configure()` | constructor/builder | `configure()` |
+| createSignatureReviewLink | `createSignatureReviewLink()` | `create_signature_review_link()` | `CreateSignatureReviewLink()` | `createSignatureReviewLink()` | `createSignatureReviewLink()` | `create_signature_review_link()` |
+| sendSignature | `sendSignature()` | `send_signature()` | `SendSignature()` | `sendSignature()` | `sendSignature()` | `send_signature()` |
+| getStatus | `getStatus()` | `get_status()` | `GetStatus()` | `getStatus()` | `getStatus()` | `get_status()` |
+| download | `download()` | `download()` | `Download()` | `download()` | `download()` | `download()` |
+| void | `void()` | `void_document()` | `VoidDocument()` | `void()` | `voidDocument()` | `void_document()` |
+| resend | `resend()` | `resend_email()` | `ResendEmail()` | `resend()` | `resendEmail()` | `resend_email()` |
+| getAuditTrail | `getAuditTrail()` | `get_audit_trail()` | `GetAuditTrail()` | `getAuditTrail()` | `getAuditTrail()` | `get_audit_trail()` |
+
+**Configure note:** Go and Java do NOT expose a named `configure()` — Go configures via per-module
+constructors (`NewTurboSignClient`, `NewQuoteClient`, `NewWebhooksClient`, …) and Java via
+constructors/builders (`new TurboSign(httpClient)`, `TurboQuoteClient.builder()…build()`). That is
+the sanctioned idiomatic form, not a parity gap.
+
+**PHP void note:** PHP ships `TurboSign::void()` (not `voidDocument()`) — `void` is a valid PHP
+method name and the method is published; renaming would break users. The table above reflects the
+shipped name.
 
 ## Required TurboPartner Operations
 
@@ -27,20 +36,20 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 
 ## Required TurboWebhooks Operations
 
-| Operation | JS | Py | Go | PHP | Java |
-|---|---|---|---|---|---|
-| configure | `configure()` | `configure()` | `Configure()` | `configure()` | `configure()` |
-| createWebhook | `createWebhook()` | `create_webhook()` | `CreateWebhook()` | `createWebhook()` | `createWebhook()` |
-| getWebhook | `getWebhook()` | `get_webhook()` | `GetWebhook()` | `getWebhook()` | `getWebhook()` |
-| updateWebhook | `updateWebhook()` | `update_webhook()` | `UpdateWebhook()` | `updateWebhook()` | `updateWebhook()` |
-| deleteWebhook | `deleteWebhook()` | `delete_webhook()` | `DeleteWebhook()` | `deleteWebhook()` | `deleteWebhook()` |
-| testWebhook | `testWebhook()` | `test_webhook()` | `TestWebhook()` | `testWebhook()` | `testWebhook()` |
-| notifyWebhook | `notifyWebhook()` | `notify_webhook()` | `NotifyWebhook()` | `notifyWebhook()` | `notifyWebhook()` |
-| regenerateWebhookSecret | `regenerateWebhookSecret()` | `regenerate_webhook_secret()` | `RegenerateWebhookSecret()` | `regenerateWebhookSecret()` | `regenerateWebhookSecret()` |
-| listWebhookDeliveries | `listWebhookDeliveries()` | `list_webhook_deliveries()` | `ListWebhookDeliveries()` | `listWebhookDeliveries()` | `listWebhookDeliveries()` |
-| replayWebhookDelivery | `replayWebhookDelivery()` | `replay_webhook_delivery()` | `ReplayWebhookDelivery()` | `replayWebhookDelivery()` | `replayWebhookDelivery()` |
-| getWebhookStats | `getWebhookStats()` | `get_webhook_stats()` | `GetWebhookStats()` | `getWebhookStats()` | `getWebhookStats()` |
-| verifyWebhookSignature (free function helper) | `verifyWebhookSignature()` | `verify_webhook_signature()` | `VerifyWebhookSignature()` | `verifyWebhookSignature()` | `WebhookSignatureVerifier.verify()` |
+| Operation | JS | Py | Go | PHP | Java | Ruby |
+|---|---|---|---|---|---|---|
+| configure | `configure()` | `configure()` | constructor (`NewWebhooksClient` / `NewWebhooksClientWithConfig`) | `configure()` / `configureFromCredentials()` | constructor/builder | `configure()` |
+| createWebhook | `createWebhook()` | `create_webhook()` | `CreateWebhook()` | `createWebhook()` | `createWebhook()` | `create_webhook()` |
+| getWebhook | `getWebhook()` | `get_webhook()` | `GetWebhook()` | `getWebhook()` | `getWebhook()` | `get_webhook()` |
+| updateWebhook | `updateWebhook()` | `update_webhook()` | `UpdateWebhook()` | `updateWebhook()` | `updateWebhook()` | `update_webhook()` |
+| deleteWebhook | `deleteWebhook()` | `delete_webhook()` | `DeleteWebhook()` | `deleteWebhook()` | `deleteWebhook()` | `delete_webhook()` |
+| testWebhook | `testWebhook()` | `test_webhook()` | `TestWebhook()` | `testWebhook()` | `testWebhook()` | `test_webhook()` |
+| notifyWebhook | `notifyWebhook()` | `notify_webhook()` | `NotifyWebhook()` | `notifyWebhook()` | `notifyWebhook()` | `notify_webhook()` |
+| regenerateWebhookSecret | `regenerateWebhookSecret()` | `regenerate_webhook_secret()` | `RegenerateWebhookSecret()` | `regenerateWebhookSecret()` | `regenerateWebhookSecret()` | `regenerate_webhook_secret()` |
+| listWebhookDeliveries | `listWebhookDeliveries()` | `list_webhook_deliveries()` | `ListWebhookDeliveries()` | `listWebhookDeliveries()` | `listWebhookDeliveries()` | `list_webhook_deliveries()` |
+| replayWebhookDelivery | `replayWebhookDelivery()` | `replay_webhook_delivery()` | `ReplayWebhookDelivery()` | `replayWebhookDelivery()` | `replayWebhookDelivery()` | `replay_webhook_delivery()` |
+| getWebhookStats | `getWebhookStats()` | `get_webhook_stats()` | `GetWebhookStats()` | `getWebhookStats()` | `getWebhookStats()` | `get_webhook_stats()` |
+| verifyWebhookSignature (free function helper) | `verifyWebhookSignature()` | `verify_webhook_signature()` | `VerifyWebhookSignature()` | `verifyWebhookSignature()` | `WebhookSignatureVerifier.verify()` | `TurboDocxSdk.verify_webhook_signature` |
 
 **Notes:**
 - All TurboWebhooks methods require an **administrator** TDX- key (the backend route gate is `requireOrgRole(administrator)`).
@@ -50,6 +59,74 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 - **PHP `TurboWebhooks::configure()` takes a typed config object** (`HttpClientConfig`), matching the SDK-wide PHP convention used by `TurboSign`, `TurboPartner`, and `Deliverable`. For the flat-args form (`$apiKey`, `$orgId`, …) used in the quickstart, call `TurboWebhooks::configureFromCredentials(...)` instead.
 - `testWebhook` and `notifyWebhook` currently route through the same backend handler and return identical shapes. Both are exposed for symmetry with the backend surface; prefer `testWebhook` in new code.
 - The HMAC format the helper must verify: header `X-TurboDocx-Signature: sha256=<hex>`, signed string `${timestamp}.${rawBody}`, HMAC-SHA256, with a configurable timestamp tolerance (default 300s) to prevent replay attacks. Use the language's constant-time comparison primitive (`crypto.timingSafeEqual` / `hmac.compare_digest` / `hmac.Equal` / `hash_equals` / `MessageDigest.isEqual`).
+
+## Required Deliverable Operations
+
+Canonical (JS) names; every SDK implements all 7 with its idiomatic casing (see the mapping below).
+
+| Operation | Endpoint |
+|---|---|
+| `listDeliverables` | GET `/v1/deliverable` |
+| `generateDeliverable` | POST `/v1/deliverable` |
+| `getDeliverableDetails` | GET `/v1/deliverable/{id}` |
+| `updateDeliverableInfo` | PATCH `/v1/deliverable/{id}` |
+| `deleteDeliverable` | DELETE `/v1/deliverable/{id}` |
+| `downloadSourceFile` | GET `/v1/deliverable/file/{id}` |
+| `downloadPDF` | GET `/v1/deliverable/file/pdf/{id}` |
+
+## Required TurboQuote Operations
+
+Canonical (JS) names grouped by sub-resource; every SDK implements ALL of these with its
+idiomatic casing (Python/Ruby snake_case, Go PascalCase with upper-cased initialisms).
+68 operations total.
+
+- **Number config (admin only):** `getQuoteNumberConfig`, `updateQuoteNumberConfig`
+- **Quotes CRUD:** `listQuotes`, `createQuote`, `getQuote`, `updateQuote`, `deleteQuote`,
+  `duplicateQuote`, `applyPriceBook`, `removePriceBook`, `downloadQuotePdf`
+- **Quote status transitions:** `sendQuote`, `sendQuoteWithDeliverable`, `declineQuote`,
+  `voidQuote`, `handleExpiredQuote`
+- **Line items:** `listLineItems`, `addLineItems`, `addBundleLineItems`, `updateLineItem`,
+  `removeLineItem`
+- **Products:** `listProducts`, `createProduct`, `bulkCreateProducts`, `getProduct`,
+  `updateProduct`, `deleteProduct`, `duplicateProduct`, `getProductPrimaryImages`
+- **Price books:** `listPriceBooks`, `createPriceBook`, `bulkCreatePriceBooks`, `getPriceBook`,
+  `updatePriceBook`, `deletePriceBook`, `duplicatePriceBook`, `listPriceBookProducts`
+- **Bundles:** `listBundles`, `createBundle`, `bulkCreateBundles`, `getBundle`, `updateBundle`,
+  `deleteBundle`, `duplicateBundle`
+- **Companies:** `listCompanies`, `createCompany`, `bulkCreateCompanies`, `getCompany`,
+  `updateCompany`, `deleteCompany`, `listCompanyContacts`
+- **Contacts:** `listContacts`, `createContact`, `bulkCreateContacts`, `updateContact`,
+  `deleteContact`
+- **Quote templates:** `listTemplates`, `getTemplate` (org default, singular endpoint),
+  `getTemplateById`, `createTemplate`, `updateTemplate`, `deleteTemplate`
+- **Types/categories:** `listTypes`, `createType`, `bulkCreateTypes`, `updateType`, `deleteType`
+- **Convenience:** `createAndSend` (composite: create → add items → send)
+
+**Bulk creates** (`bulkCreate*`): POST `{resource}/bulk` with a `{ rows: [...] }` envelope; rows
+use the single-create request shape. Response is a partial-success report
+`{ imported, failed: [{row, reason}], adjusted: [{row, reason}] }` (`row` is 1-indexed); a failed
+row does NOT throw and does not roll back earlier rows. Max 500 rows per request (400 above the
+cap). Admin + contributor roles. SDKs do NOT validate rows or the cap client-side.
+
+## Deliberate Exclusions (do not re-add without a decision)
+
+Backend endpoints in SDK domains that are intentionally NOT wrapped — the UI-flow rule
+(precedent: quote-number `preview-floor`, a frontend live-preview helper):
+
+- **TurboQuote:** `POST /v1/quotes/number-config/preview-floor` (UI preview);
+  `POST /v1/quotes/:id/items/reorder` + `/items/category-order` (drag-and-drop presentation);
+  the **approval workflow** family (`/v1/quotes/workflows*`, `/:id/approve`,
+  `/approval-requests`, `/:id/approval-activity`) — backend feature not yet
+  production-complete; revisit when it ships.
+- **TurboSign:** `GET /turbosign/documents/signature-documents` (list) and the
+  `/turbosign/bulk/*` mail-merge family — deferred to a future pass, not rejected;
+  the two-step prep flow (`upload` / `from-deliverable` / `from-template` /
+  `update-with-recipients` / per-doc `prepare-for-*`) — the single-step endpoints the SDK
+  wraps accept file/fileLink/deliverableId/templateId and cover the API use case.
+- **Deliverable:** `/deliverable-folder` + `/deliverable-item` (unversioned, org-content
+  organization), `previewpdflink`, `pdf/:filename` (UI).
+- **TurboPartner:** `/partner/access` + `/partner/:id/context` (UI bootstrap/dashboard).
+- **TurboWebhooks:** `GET /api/webhooks` list — see the "No `listWebhooks` by design" note.
 
 ## Naming Conventions by Language
 

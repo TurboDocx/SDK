@@ -10,10 +10,10 @@ namespace TurboDocx\Types\Quote;
  * Defines how generated quote numbers are formatted. All eight fields are
  * sent verbatim (camelCase) when updating the org's quote number config.
  *
- * Valid token values:
- * - $yearToken:    'none' | 'two' | 'four'
- * - $monthToken:   'off' | 'two'
- * - $resetCadence: 'never' | 'yearly' | 'monthly'
+ * Valid token values (see the matching enums in TurboDocx\Types\Enums):
+ * - $yearToken:    'none' | 'two' | 'four'          — {@see \TurboDocx\Types\Enums\QuoteNumberYearToken}
+ * - $monthToken:   'off' | 'two'                    — {@see \TurboDocx\Types\Enums\QuoteNumberMonthToken}
+ * - $resetCadence: 'never' | 'yearly' | 'monthly'   — {@see \TurboDocx\Types\Enums\QuoteNumberResetCadence}
  */
 final class QuoteNumberFormat implements \JsonSerializable
 {

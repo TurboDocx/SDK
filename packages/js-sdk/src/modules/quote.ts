@@ -5,7 +5,7 @@
 import * as fs from 'fs';
 import * as nodePath from 'path';
 import { HttpClient, QuoteClientConfig, detectFileType } from '../http';
-import type { PaginationParams, SuccessResponse } from '../types/quote-shared';
+import type { BulkImportResult, PaginationParams, SuccessResponse } from '../types/quote-shared';
 import type {
   Quote,
   QuoteStatusInfo,
@@ -152,6 +152,15 @@ export class TurboQuote {
   // after smartUnwrap strips the outer { data: ... } wrapper.
   private static unwrap<T>(response: { result: T }): T {
     return response.result;
+  }
+
+  // Shared POST for the six bulk-create endpoints. Body is { rows }; response is
+  // { results: BulkImportResult } — partial success (a failed row does not roll
+  // back the rest), max 500 rows per request, admin/contributor only.
+  private static async bulkImport<TRow>(path: string, rows: TRow[]): Promise<BulkImportResult> {
+    const client = this.getClient();
+    const response = await client.post<{ results: BulkImportResult }>(path, { rows });
+    return response.results;
   }
 
   // ============================================
@@ -319,6 +328,10 @@ export class TurboQuote {
     return this.unwrap(await client.post<{ result: Product }>('/v1/products', request));
   }
 
+  static async bulkCreateProducts(rows: CreateProductRequest[]): Promise<BulkImportResult> {
+    return this.bulkImport('/v1/products/bulk', rows);
+  }
+
   static async getProduct(id: string): Promise<Product> {
     const client = this.getClient();
     return this.unwrap(await client.get<{ result: Product }>(`/v1/products/${id}`));
@@ -367,6 +380,10 @@ export class TurboQuote {
     return this.unwrap(await client.post<{ result: PriceBook }>('/v1/pricebooks', body));
   }
 
+  static async bulkCreatePriceBooks(rows: CreatePriceBookRequest[]): Promise<BulkImportResult> {
+    return this.bulkImport('/v1/pricebooks/bulk', rows);
+  }
+
   static async getPriceBook(id: string): Promise<PriceBook> {
     const client = this.getClient();
     return this.unwrap(await client.get<{ result: PriceBook }>(`/v1/pricebooks/${id}`));
@@ -406,6 +423,10 @@ export class TurboQuote {
     return this.unwrap(await client.post<{ result: Bundle }>('/v1/bundles', request));
   }
 
+  static async bulkCreateBundles(rows: CreateBundleRequest[]): Promise<BulkImportResult> {
+    return this.bulkImport('/v1/bundles/bulk', rows);
+  }
+
   static async getBundle(id: string): Promise<Bundle> {
     const client = this.getClient();
     return this.unwrap(await client.get<{ result: Bundle }>(`/v1/bundles/${id}`));
@@ -440,6 +461,10 @@ export class TurboQuote {
     return this.unwrap(await client.post<{ result: Company }>('/v1/companies', request));
   }
 
+  static async bulkCreateCompanies(rows: CreateCompanyRequest[]): Promise<BulkImportResult> {
+    return this.bulkImport('/v1/companies/bulk', rows);
+  }
+
   static async getCompany(id: string): Promise<Company> {
     const client = this.getClient();
     return this.unwrap(await client.get<{ result: Company }>(`/v1/companies/${id}`));
@@ -472,6 +497,10 @@ export class TurboQuote {
   static async createContact(request: CreateContactRequest): Promise<Contact> {
     const client = this.getClient();
     return this.unwrap(await client.post<{ result: Contact }>('/v1/contacts', request));
+  }
+
+  static async bulkCreateContacts(rows: CreateContactRequest[]): Promise<BulkImportResult> {
+    return this.bulkImport('/v1/contacts/bulk', rows);
   }
 
   static async updateContact(id: string, request: UpdateContactRequest): Promise<Contact> {
@@ -530,6 +559,10 @@ export class TurboQuote {
   static async createType(request: CreateQuoteTypeRequest): Promise<QuoteType> {
     const client = this.getClient();
     return this.unwrap(await client.post<{ result: QuoteType }>('/v1/types', request));
+  }
+
+  static async bulkCreateTypes(rows: CreateQuoteTypeRequest[]): Promise<BulkImportResult> {
+    return this.bulkImport('/v1/types/bulk', rows);
   }
 
   static async updateType(id: string, request: UpdateQuoteTypeRequest): Promise<QuoteType> {

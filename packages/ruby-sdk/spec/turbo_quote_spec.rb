@@ -1198,6 +1198,131 @@ RSpec.describe TurboDocxSdk::TurboQuote do
     end
   end
 
+  describe "Bulk Creates" do
+    before { described_class.configure(api_key: "test-key", org_id: "org-1") }
+
+    let(:success_result) { { "imported" => 2, "failed" => [], "adjusted" => [] } }
+    let(:mock_response) { { "results" => success_result } }
+
+    it "bulk creates products with POST /v1/products/bulk and unwraps results" do
+      allow(mock_client).to receive(:post).and_return(mock_response)
+      rows = [
+        { "name" => "Widget", "listPrice" => 99.99, "billingFrequency" => "monthly" },
+        { "name" => "Gadget", "listPrice" => 49.99, "billingFrequency" => "one-time" }
+      ]
+
+      result = described_class.bulk_create_products(rows)
+
+      expect(result).to eq(success_result)
+      expect(mock_client).to have_received(:post).with("/v1/products/bulk", { "rows" => rows })
+    end
+
+    it "bulk creates price books with POST /v1/pricebooks/bulk and unwraps results" do
+      allow(mock_client).to receive(:post).and_return(mock_response)
+      rows = [
+        { "name" => "Partner Pricing", "discountPercent" => 10 },
+        { "name" => "Enterprise Pricing", "discountPercent" => 20 }
+      ]
+
+      result = described_class.bulk_create_price_books(rows)
+
+      expect(result).to eq(success_result)
+      expect(mock_client).to have_received(:post).with("/v1/pricebooks/bulk", { "rows" => rows })
+    end
+
+    it "bulk creates bundles with POST /v1/bundles/bulk and unwraps results" do
+      allow(mock_client).to receive(:post).and_return(mock_response)
+      rows = [
+        { "name" => "Starter Pack", "categoryId" => "cat-1", "items" => [{ "productId" => "p-1", "quantity" => 2 }] },
+        { "name" => "Pro Pack", "categoryId" => "cat-1" }
+      ]
+
+      result = described_class.bulk_create_bundles(rows)
+
+      expect(result).to eq(success_result)
+      expect(mock_client).to have_received(:post).with("/v1/bundles/bulk", { "rows" => rows })
+    end
+
+    it "bulk creates companies with POST /v1/companies/bulk and unwraps results" do
+      allow(mock_client).to receive(:post).and_return(mock_response)
+      rows = [
+        { "name" => "Acme Corp", "contacts" => [{ "name" => "Jane Doe", "email" => "jane@acme.com" }] },
+        { "name" => "Globex", "contacts" => [{ "name" => "Hank Scorpio", "email" => "hank@globex.com" }] }
+      ]
+
+      result = described_class.bulk_create_companies(rows)
+
+      expect(result).to eq(success_result)
+      expect(mock_client).to have_received(:post).with("/v1/companies/bulk", { "rows" => rows })
+    end
+
+    it "bulk creates contacts with POST /v1/contacts/bulk and unwraps results" do
+      allow(mock_client).to receive(:post).and_return(mock_response)
+      rows = [
+        { "name" => "Jane Doe", "companyId" => "c-1", "email" => "jane@acme.com" },
+        { "name" => "John Smith", "companyId" => "c-1", "email" => "john@acme.com" }
+      ]
+
+      result = described_class.bulk_create_contacts(rows)
+
+      expect(result).to eq(success_result)
+      expect(mock_client).to have_received(:post).with("/v1/contacts/bulk", { "rows" => rows })
+    end
+
+    it "bulk creates types with POST /v1/types/bulk and unwraps results" do
+      allow(mock_client).to receive(:post).and_return(mock_response)
+      rows = [
+        { "name" => "Software", "categoryType" => "product" },
+        { "name" => "Hardware", "categoryType" => "product" }
+      ]
+
+      result = described_class.bulk_create_types(rows)
+
+      expect(result).to eq(success_result)
+      expect(mock_client).to have_received(:post).with("/v1/types/bulk", { "rows" => rows })
+    end
+
+    it "wraps rows verbatim in the rows envelope (camelCase row keys untouched)" do
+      allow(mock_client).to receive(:post).and_return(mock_response)
+      rows = [
+        {
+          "name" => "Acme Corp",
+          "industryId" => "ind-1",
+          "contacts" => [{ "name" => "Jane Doe", "email" => "jane@acme.com" }]
+        }
+      ]
+
+      described_class.bulk_create_companies(rows)
+
+      expect(mock_client).to have_received(:post) do |path, body|
+        expect(path).to eq("/v1/companies/bulk")
+        expect(body.keys).to contain_exactly("rows")
+        expect(body["rows"]).to eq(rows)
+        expect(body["rows"][0].keys).to contain_exactly("name", "industryId", "contacts")
+      end
+    end
+
+    it "returns partial-success results without raising (1-indexed row issues)" do
+      partial_result = {
+        "imported" => 1,
+        "failed" => [{ "row" => 2, "reason" => "name is required" }],
+        "adjusted" => [{ "row" => 3, "reason" => "bundle item product not found; item dropped" }]
+      }
+      allow(mock_client).to receive(:post).and_return({ "results" => partial_result })
+      rows = [
+        { "name" => "Starter Pack", "categoryId" => "cat-1" },
+        { "categoryId" => "cat-1" },
+        { "name" => "Pro Pack", "categoryId" => "cat-1", "items" => [{ "productId" => "missing" }] }
+      ]
+
+      result = described_class.bulk_create_bundles(rows)
+
+      expect(result["imported"]).to eq(1)
+      expect(result["failed"]).to eq([{ "row" => 2, "reason" => "name is required" }])
+      expect(result["adjusted"]).to eq([{ "row" => 3, "reason" => "bundle item product not found; item dropped" }])
+    end
+  end
+
   describe "Quote Number Config" do
     before { described_class.configure(api_key: "test-key", org_id: "org-1") }
 

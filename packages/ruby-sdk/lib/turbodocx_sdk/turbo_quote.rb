@@ -370,6 +370,21 @@ module TurboDocxSdk
         end
       end
 
+      # Bulk create products (administrator or contributor). Partial success:
+      # rows that fail are reported in "failed" (1-indexed "row" + "reason")
+      # without aborting the rest; server-adjusted rows appear in "adjusted".
+      #
+      # @param rows [Array<Hash>] product rows, same field shapes as +create_product+
+      # @return [Hash] { "imported" => N, "failed" => [...], "adjusted" => [...] }
+      # @raise [ValidationError] on an invalid request envelope
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def bulk_create_products(rows)
+        client = get_client
+        response = client.post("/v1/products/bulk", { "rows" => rows })
+        response["results"]
+      end
+
       # Get a product by ID.
       #
       # @param id [String]
@@ -483,6 +498,21 @@ module TurboDocxSdk
         unwrap(client.post("/v1/pricebooks", data))
       end
 
+      # Bulk create price books (administrator or contributor). Partial success:
+      # rows that fail are reported in "failed" (1-indexed "row" + "reason")
+      # without aborting the rest; server-adjusted rows appear in "adjusted".
+      #
+      # @param rows [Array<Hash>] price book rows, same field shapes as +create_price_book+
+      # @return [Hash] { "imported" => N, "failed" => [...], "adjusted" => [...] }
+      # @raise [ValidationError] on an invalid request envelope
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def bulk_create_price_books(rows)
+        client = get_client
+        response = client.post("/v1/pricebooks/bulk", { "rows" => rows })
+        response["results"]
+      end
+
       # Get a price book by ID.
       #
       # @param id [String]
@@ -585,6 +615,22 @@ module TurboDocxSdk
         unwrap(client.post("/v1/bundles", request))
       end
 
+      # Bulk create bundles (administrator or contributor). Partial success:
+      # rows that fail are reported in "failed" (1-indexed "row" + "reason")
+      # without aborting the rest; server-adjusted rows appear in "adjusted"
+      # (e.g. a bundle item whose product wasn't found was dropped).
+      #
+      # @param rows [Array<Hash>] bundle rows, same field shapes as +create_bundle+
+      # @return [Hash] { "imported" => N, "failed" => [...], "adjusted" => [...] }
+      # @raise [ValidationError] on an invalid request envelope
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def bulk_create_bundles(rows)
+        client = get_client
+        response = client.post("/v1/bundles/bulk", { "rows" => rows })
+        response["results"]
+      end
+
       # Get a bundle by ID.
       #
       # @param id [String]
@@ -664,6 +710,22 @@ module TurboDocxSdk
         unwrap(client.post("/v1/companies", request))
       end
 
+      # Bulk create companies (administrator or contributor). Each row requires
+      # a +contacts+ array with at least one contact. Partial success: rows
+      # that fail are reported in "failed" (1-indexed "row" + "reason") without
+      # aborting the rest; server-adjusted rows appear in "adjusted".
+      #
+      # @param rows [Array<Hash>] company rows, same field shapes as +create_company+
+      # @return [Hash] { "imported" => N, "failed" => [...], "adjusted" => [...] }
+      # @raise [ValidationError] on an invalid request envelope
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def bulk_create_companies(rows)
+        client = get_client
+        response = client.post("/v1/companies/bulk", { "rows" => rows })
+        response["results"]
+      end
+
       # Get a company by ID.
       #
       # @param id [String]
@@ -740,6 +802,22 @@ module TurboDocxSdk
       def create_contact(request)
         client = get_client
         unwrap(client.post("/v1/contacts", request))
+      end
+
+      # Bulk create contacts (administrator or contributor). Each row requires
+      # a +companyId+. Partial success: rows that fail are reported in "failed"
+      # (1-indexed "row" + "reason") without aborting the rest; server-adjusted
+      # rows appear in "adjusted".
+      #
+      # @param rows [Array<Hash>] contact rows, same field shapes as +create_contact+
+      # @return [Hash] { "imported" => N, "failed" => [...], "adjusted" => [...] }
+      # @raise [ValidationError] on an invalid request envelope
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def bulk_create_contacts(rows)
+        client = get_client
+        response = client.post("/v1/contacts/bulk", { "rows" => rows })
+        response["results"]
       end
 
       # Update a contact.
@@ -868,6 +946,22 @@ module TurboDocxSdk
       def create_type(request)
         client = get_client
         unwrap(client.post("/v1/types", request))
+      end
+
+      # Bulk create types/categories (administrator or contributor). Partial
+      # success: rows that fail are reported in "failed" (1-indexed "row" +
+      # "reason") without aborting the rest; server-adjusted rows appear in
+      # "adjusted".
+      #
+      # @param rows [Array<Hash>] type rows, same field shapes as +create_type+
+      # @return [Hash] { "imported" => N, "failed" => [...], "adjusted" => [...] }
+      # @raise [ValidationError] on an invalid request envelope
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def bulk_create_types(rows)
+        client = get_client
+        response = client.post("/v1/types/bulk", { "rows" => rows })
+        response["results"]
       end
 
       # Update a type/category.
