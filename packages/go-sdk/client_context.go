@@ -1,10 +1,12 @@
 package turbodocx
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
 	"strings"
 	"time"
@@ -42,14 +44,31 @@ type ClientContext struct {
 
 // buildDefaultUserAgent builds a descriptive SDK User-Agent from the host
 // environment, e.g.
-// "@turbodocx/sdk/0.4.0 (Go/go1.24.5; linux; amd64; host=svc-1)".
+// "@turbodocx/sdk/0.4.0 (Go/go1.24.5; Linux 6.6.87.2; amd64; host=svc-1)".
 func buildDefaultUserAgent() string {
 	base := fmt.Sprintf("@turbodocx/sdk/%s", Version)
 	host, err := os.Hostname()
 	if err != nil || host == "" {
 		return base
 	}
-	return fmt.Sprintf("%s (Go/%s; %s; %s; host=%s)", base, runtime.Version(), runtime.GOOS, runtime.GOARCH, host)
+	return fmt.Sprintf("%s (Go/%s; %s; %s; host=%s)", base, runtime.Version(), detectOSString(), runtime.GOARCH, host)
+}
+
+// detectOSString returns the OS name plus version, e.g. "Linux 6.6.87.2-...".
+// Go's runtime.GOOS is only the OS family ("linux"), so the other SDKs (which
+// report name + version via uname/os.version) are more descriptive. This runs
+// `uname -s -r` best-effort to match them, falling back to runtime.GOOS when
+// uname is unavailable (e.g. Windows) or errors — so it never breaks the UA.
+func detectOSString() string {
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "uname", "-s", "-r").Output()
+	if err == nil {
+		if osString := strings.TrimSpace(string(out)); osString != "" {
+			return osString
+		}
+	}
+	return runtime.GOOS
 }
 
 // detectTimezone detects the host timezone name (e.g. "UTC"); "" if unavailable.

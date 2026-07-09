@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -38,6 +39,20 @@ func TestSendsDescriptiveTurboDocxSDKUserAgentByDefault(t *testing.T) {
 	ua := captureHeaders(t, ClientContext{}).Get("User-Agent")
 	require.True(t, strings.HasPrefix(ua, "@turbodocx/sdk/"), "got %q", ua)
 	require.NotContains(t, ua, "Go-http-client")
+}
+
+// The OS token must include the kernel VERSION (e.g. "Linux 6.6.87.2-..."), not
+// just the family ("linux") — this keeps parity with the other SDKs, which
+// report OS name + version. On a Unix host `uname -s -r` yields "<Name> <ver>";
+// where uname is unavailable detectOSString falls back to runtime.GOOS.
+func TestOSStringIncludesVersionOnUnix(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uname is unavailable on Windows; detectOSString falls back to runtime.GOOS")
+	}
+	osString := detectOSString()
+	require.NotEqual(t, runtime.GOOS, osString,
+		"OS string should be more descriptive than bare runtime.GOOS %q, got %q", runtime.GOOS, osString)
+	require.Contains(t, osString, " ", "OS string should contain a name and a version, got %q", osString)
 }
 
 func TestLetsCallerOverrideUserAgent(t *testing.T) {
