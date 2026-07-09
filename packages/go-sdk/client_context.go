@@ -63,10 +63,9 @@ func detectOSString() string {
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 	out, err := exec.CommandContext(ctx, "uname", "-s", "-r").Output()
-	if err == nil {
-		if osString := strings.TrimSpace(string(out)); osString != "" {
-			return osString
-		}
+	osString := strings.TrimSpace(string(out))
+	if err == nil && osString != "" {
+		return osString
 	}
 	return runtime.GOOS
 }
