@@ -1216,7 +1216,7 @@ describe("TurboQuote Module", () => {
     });
 
     it("should POST price book rows to /v1/pricebooks/bulk", async () => {
-      const rows = [{ name: "EMEA 2026", currency: "EUR" as const, discountPercent: 5 }];
+      const rows = [{ name: "EMEA 2026", priceBookTypeId: "type-1", validFrom: "2026-01-01", discountPercent: 5 }];
       await TurboQuote.bulkCreatePriceBooks(rows);
       expect(mockClient.post).toHaveBeenCalledWith("/v1/pricebooks/bulk", { rows });
     });
