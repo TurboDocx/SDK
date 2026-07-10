@@ -102,13 +102,13 @@ Two skills are included:
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg" width="20"/> **PHP** | [turbodocx/sdk](./packages/php-sdk) | `composer require turbodocx/sdk` | [![Packagist](https://img.shields.io/packagist/v/turbodocx/sdk?logo=packagist&logoColor=white)](https://packagist.org/packages/turbodocx/sdk) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg" width="20"/> **Go** | [turbodocx-sdk](./packages/go-sdk) | `go get github.com/TurboDocx/SDK/packages/go-sdk` | [![Go](https://img.shields.io/github/v/tag/TurboDocx/SDK?filter=packages/go-sdk/*&logo=go&logoColor=white&label=go)](./packages/go-sdk) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="20"/> **Java** | [com.turbodocx:turbodocx-sdk](./packages/java-sdk) | `implementation 'com.turbodocx:turbodocx-sdk:0.1.4'` | [![Maven Central](https://img.shields.io/maven-central/v/com.turbodocx/turbodocx-sdk?logo=apachemaven)](https://search.maven.org/artifact/com.turbodocx/turbodocx-sdk) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/ruby/ruby-original.svg" width="20"/> **Ruby** | [turbodocx-sdk](./packages/ruby-sdk) | `gem install turbodocx-sdk` | [![Gem](https://img.shields.io/gem/v/turbodocx-sdk?logo=rubygems&logoColor=white)](https://rubygems.org/gems/turbodocx-sdk) |
 
 ### Coming Soon
 
 | Language | Status |
 |:---------|:-------|
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/csharp/csharp-original.svg" width="20"/> **C# / .NET** | 🚧 In Progress |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/ruby/ruby-original.svg" width="20"/> **Ruby** | 🚧 In Progress |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/powershell/powershell-original.svg" width="20"/> **PowerShell** | 🚧 In Progress |
 
 ## 🌐 Explore the TurboDocx Ecosystem

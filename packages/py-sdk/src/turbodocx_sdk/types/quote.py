@@ -192,3 +192,23 @@ class QuoteListResponse(TypedDict, total=False):
     results: List[Quote]
     totalRecords: int
     stats: QuoteListStats
+
+
+# ============================================
+# QUOTE NUMBER CONFIG
+# ============================================
+
+class QuoteNumberFormat(TypedDict):
+    prefix: str
+    yearToken: Literal["none", "two", "four"]
+    monthToken: Literal["off", "two"]
+    separator: str
+    padWidth: int  # 0-12
+    suffix: str
+    startNumber: int  # >= 0
+    resetCadence: Literal["never", "yearly", "monthly"]
+
+
+class QuoteNumberConfig(TypedDict):
+    format: QuoteNumberFormat
+    currentFloor: int  # per-period issued floor

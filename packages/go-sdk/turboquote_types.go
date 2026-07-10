@@ -107,6 +107,22 @@ type QuoteSuccessResponse struct {
 	Message string `json:"message"`
 }
 
+// BulkImportRowIssue describes a per-row problem reported by a bulk create.
+// Row is the 1-indexed position of the row in the request payload.
+type BulkImportRowIssue struct {
+	Row    int    `json:"row"`
+	Reason string `json:"reason"`
+}
+
+// BulkImportResult is the outcome of a bulk create. Rows process sequentially
+// with partial success: Failed rows did not import (no error is returned for
+// them), Adjusted rows imported with a server-side adjustment.
+type BulkImportResult struct {
+	Imported int                  `json:"imported"`
+	Failed   []BulkImportRowIssue `json:"failed"`
+	Adjusted []BulkImportRowIssue `json:"adjusted"`
+}
+
 // ============================================
 // Quote Types
 // ============================================
@@ -1352,6 +1368,58 @@ type ListTypesOptions struct {
 type QuoteTypeListResponse struct {
 	Results      []QuoteType `json:"results"`
 	TotalRecords int         `json:"totalRecords"`
+}
+
+// ============================================
+// Quote Number Config Types
+// ============================================
+
+// QuoteNumberYearToken represents the year token portion of a quote number format
+type QuoteNumberYearToken string
+
+const (
+	QuoteNumberYearTokenNone QuoteNumberYearToken = "none"
+	QuoteNumberYearTokenTwo  QuoteNumberYearToken = "two"
+	QuoteNumberYearTokenFour QuoteNumberYearToken = "four"
+)
+
+// QuoteNumberMonthToken represents the month token portion of a quote number format
+type QuoteNumberMonthToken string
+
+const (
+	QuoteNumberMonthTokenOff QuoteNumberMonthToken = "off"
+	QuoteNumberMonthTokenTwo QuoteNumberMonthToken = "two"
+)
+
+// QuoteNumberResetCadence represents how often the quote number sequence resets
+type QuoteNumberResetCadence string
+
+const (
+	QuoteNumberResetCadenceNever   QuoteNumberResetCadence = "never"
+	QuoteNumberResetCadenceYearly  QuoteNumberResetCadence = "yearly"
+	QuoteNumberResetCadenceMonthly QuoteNumberResetCadence = "monthly"
+)
+
+// QuoteNumberFormat is the per-org quote numbering format.
+// All eight fields are required by the backend; they are sent verbatim
+// (camelCase) on PATCH, so none use omitempty -- zero values like
+// padWidth: 0 or an empty prefix are meaningful and must be transmitted.
+type QuoteNumberFormat struct {
+	Prefix       string                  `json:"prefix"`
+	YearToken    QuoteNumberYearToken    `json:"yearToken"`
+	MonthToken   QuoteNumberMonthToken   `json:"monthToken"`
+	Separator    string                  `json:"separator"`
+	PadWidth     int                     `json:"padWidth"`
+	Suffix       string                  `json:"suffix"`
+	StartNumber  int                     `json:"startNumber"`
+	ResetCadence QuoteNumberResetCadence `json:"resetCadence"`
+}
+
+// QuoteNumberConfig is the per-org quote numbering configuration.
+type QuoteNumberConfig struct {
+	Format QuoteNumberFormat `json:"format"`
+	// CurrentFloor is the per-period issued floor; startNumber can't be set below this.
+	CurrentFloor int `json:"currentFloor"`
 }
 
 // ============================================

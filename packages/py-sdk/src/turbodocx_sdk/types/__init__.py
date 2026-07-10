@@ -10,6 +10,8 @@ from .quote_shared import (
     PaginationParams,
     PaginatedResponse,
     SuccessResponse,
+    BulkImportRowIssue,
+    BulkImportResult,
 )
 from .quote import (
     QuoteStatusInfo,
@@ -29,6 +31,8 @@ from .quote import (
     CreateAndSendResponse,
     QuoteListStats,
     QuoteListResponse,
+    QuoteNumberFormat,
+    QuoteNumberConfig,
 )
 from .quote_line_item import (
     LineItem,
@@ -109,6 +113,8 @@ __all__ = [
     "PaginationParams",
     "PaginatedResponse",
     "SuccessResponse",
+    "BulkImportRowIssue",
+    "BulkImportResult",
     # Quote
     "QuoteStatusInfo",
     "Quote",
@@ -127,6 +133,8 @@ __all__ = [
     "CreateAndSendResponse",
     "QuoteListStats",
     "QuoteListResponse",
+    "QuoteNumberFormat",
+    "QuoteNumberConfig",
     # Line Item
     "LineItem",
     "AddLineItemRequest",

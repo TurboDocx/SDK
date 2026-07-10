@@ -118,3 +118,22 @@ jobs:
 
       - name: Run tests
         run: mvn test -B
+
+  test-ruby:
+    name: Test Ruby SDK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/ruby-sdk
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: packages/ruby-sdk
+
+      - name: Run tests
+        run: bundle exec rspec

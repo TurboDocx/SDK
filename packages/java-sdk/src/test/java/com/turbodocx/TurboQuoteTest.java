@@ -1985,6 +1985,332 @@ class TurboQuoteTest {
     }
 
     // ============================================
+    // QUOTE NUMBER CONFIG
+    // ============================================
+
+    @Nested
+    @DisplayName("Quote Number Config")
+    class QuoteNumberConfigTests {
+
+        /**
+         * Build a sample format map mirroring the JS test fixture.
+         */
+        private Map<String, Object> sampleFormatMap() {
+            Map<String, Object> format = new HashMap<>();
+            format.put("prefix", "Q");
+            format.put("yearToken", "four");
+            format.put("monthToken", "off");
+            format.put("separator", "-");
+            format.put("padWidth", 5);
+            format.put("suffix", "");
+            format.put("startNumber", 1);
+            format.put("resetCadence", "yearly");
+            return format;
+        }
+
+        @Test
+        @DisplayName("should get the quote number config and unwrap results")
+        void getQuoteNumberConfig() throws Exception {
+            Map<String, Object> results = new HashMap<>();
+            results.put("format", sampleFormatMap());
+            results.put("currentFloor", 1);
+            Map<String, Object> response = new HashMap<>();
+            response.put("results", results);
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            QuoteNumberConfig result = client.turboQuote().getQuoteNumberConfig();
+
+            assertEquals("Q", result.getFormat().getPrefix());
+            assertEquals(QuoteNumberYearToken.FOUR, result.getFormat().getYearToken());
+            assertEquals(QuoteNumberMonthToken.OFF, result.getFormat().getMonthToken());
+            assertEquals("-", result.getFormat().getSeparator());
+            assertEquals(5, result.getFormat().getPadWidth());
+            assertEquals(1, result.getFormat().getStartNumber());
+            assertEquals(QuoteNumberResetCadence.YEARLY, result.getFormat().getResetCadence());
+            assertEquals(1, result.getCurrentFloor());
+
+            RecordedRequest recorded = server.takeRequest();
+            assertEquals("GET", recorded.getMethod());
+            assertTrue(recorded.getPath().endsWith("/v1/quotes/number-config"));
+        }
+
+        @Test
+        @DisplayName("should update the quote number config via PATCH and unwrap results")
+        void updateQuoteNumberConfig() throws Exception {
+            Map<String, Object> formatMap = sampleFormatMap();
+            formatMap.put("prefix", "INV");
+            formatMap.put("yearToken", "none");
+            formatMap.put("padWidth", 4);
+            formatMap.put("startNumber", 1000);
+            formatMap.put("resetCadence", "never");
+
+            Map<String, Object> results = new HashMap<>();
+            results.put("format", formatMap);
+            results.put("currentFloor", 1000);
+            Map<String, Object> response = new HashMap<>();
+            response.put("results", results);
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            QuoteNumberFormat format = new QuoteNumberFormat();
+            format.setPrefix("INV");
+            format.setYearToken(QuoteNumberYearToken.NONE);
+            format.setMonthToken(QuoteNumberMonthToken.OFF);
+            format.setSeparator("-");
+            format.setPadWidth(4);
+            format.setSuffix("");
+            format.setStartNumber(1000);
+            format.setResetCadence(QuoteNumberResetCadence.NEVER);
+
+            QuoteNumberConfig result = client.turboQuote().updateQuoteNumberConfig(format);
+
+            assertEquals("INV", result.getFormat().getPrefix());
+            assertEquals(QuoteNumberYearToken.NONE, result.getFormat().getYearToken());
+            assertEquals(1000, result.getCurrentFloor());
+
+            RecordedRequest recorded = server.takeRequest();
+            assertEquals("PATCH", recorded.getMethod());
+            assertTrue(recorded.getPath().endsWith("/v1/quotes/number-config"));
+
+            String body = recorded.getBody().readUtf8();
+            // Request-body keys stay camelCase verbatim.
+            assertTrue(body.contains("\"prefix\":\"INV\""), "got: " + body);
+            // Enum values serialize to their backend string values, not the Java enum names.
+            assertTrue(body.contains("\"yearToken\":\"none\""), "got: " + body);
+            assertTrue(body.contains("\"monthToken\":\"off\""), "got: " + body);
+            assertTrue(body.contains("\"resetCadence\":\"never\""), "got: " + body);
+            // padWidth / startNumber must serialize as integers, not as 4.0 / 1000.0.
+            assertTrue(body.contains("\"padWidth\":4"), "got: " + body);
+            assertFalse(body.contains("\"padWidth\":4.0"), "padWidth must be an integer; got: " + body);
+            assertTrue(body.contains("\"startNumber\":1000"), "got: " + body);
+            assertFalse(body.contains("\"startNumber\":1000.0"), "startNumber must be an integer; got: " + body);
+        }
+    }
+
+    // ============================================
+    // BULK CREATES
+    // ============================================
+
+    @Nested
+    @DisplayName("Bulk Creates")
+    class BulkCreates {
+
+        /**
+         * Enqueue the shared bulk response shape:
+         * { results: { imported, failed, adjusted } } wrapped in { data: ... }.
+         */
+        private void enqueueBulkResult(int imported,
+                                       List<Map<String, Object>> failed,
+                                       List<Map<String, Object>> adjusted) {
+            Map<String, Object> results = new HashMap<>();
+            results.put("imported", imported);
+            results.put("failed", failed);
+            results.put("adjusted", adjusted);
+            Map<String, Object> response = new HashMap<>();
+            response.put("results", results);
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+        }
+
+        private Map<String, Object> issue(int row, String reason) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("row", row);
+            map.put("reason", reason);
+            return map;
+        }
+
+        @Test
+        @DisplayName("should POST product rows to /v1/products/bulk wrapped in { rows } and unwrap results")
+        void bulkCreateProducts() throws Exception {
+            enqueueBulkResult(2,
+                    Collections.singletonList(issue(3, "A product with this name already exists")),
+                    Collections.emptyList());
+
+            CreateProductRequest rowA = new CreateProductRequest();
+            rowA.setName("Widget A");
+            rowA.setListPrice(10.0);
+            rowA.setBillingFrequency("monthly");
+            rowA.setCategoryId("cat-1");
+            CreateProductRequest rowB = new CreateProductRequest();
+            rowB.setName("Widget B");
+            rowB.setListPrice(20.0);
+            rowB.setBillingFrequency("one-time");
+            rowB.setCategoryId("cat-1");
+
+            BulkImportResult result = client.turboQuote().bulkCreateProducts(Arrays.asList(rowA, rowB));
+
+            assertEquals(2, result.getImported());
+            assertEquals(1, result.getFailed().size());
+            assertEquals(3, result.getFailed().get(0).getRow());
+            assertEquals("A product with this name already exists", result.getFailed().get(0).getReason());
+            assertTrue(result.getAdjusted().isEmpty());
+
+            RecordedRequest recorded = server.takeRequest();
+            assertEquals("POST", recorded.getMethod());
+            assertTrue(recorded.getPath().endsWith("/v1/products/bulk"));
+
+            String body = recorded.getBody().readUtf8();
+            // Rows go verbatim under a "rows" key; field names stay camelCase.
+            assertTrue(body.startsWith("{\"rows\":["), "got: " + body);
+            assertTrue(body.contains("\"name\":\"Widget A\""), "got: " + body);
+            assertTrue(body.contains("\"name\":\"Widget B\""), "got: " + body);
+            assertTrue(body.contains("\"billingFrequency\":\"monthly\""), "got: " + body);
+            assertTrue(body.contains("\"categoryId\":\"cat-1\""), "got: " + body);
+        }
+
+        @Test
+        @DisplayName("should POST price book rows to /v1/pricebooks/bulk")
+        void bulkCreatePriceBooks() throws Exception {
+            enqueueBulkResult(1, Collections.emptyList(), Collections.emptyList());
+
+            CreatePriceBookRequest row = new CreatePriceBookRequest();
+            row.setName("EMEA 2026");
+            row.setDiscountPercent(5.0);
+
+            BulkImportResult result = client.turboQuote().bulkCreatePriceBooks(Collections.singletonList(row));
+
+            assertEquals(1, result.getImported());
+
+            RecordedRequest recorded = server.takeRequest();
+            assertEquals("POST", recorded.getMethod());
+            assertTrue(recorded.getPath().endsWith("/v1/pricebooks/bulk"));
+
+            String body = recorded.getBody().readUtf8();
+            assertTrue(body.startsWith("{\"rows\":["), "got: " + body);
+            assertTrue(body.contains("\"name\":\"EMEA 2026\""), "got: " + body);
+            assertTrue(body.contains("\"discountPercent\":5"), "got: " + body);
+        }
+
+        @Test
+        @DisplayName("should POST bundle rows to /v1/bundles/bulk")
+        void bulkCreateBundles() throws Exception {
+            enqueueBulkResult(1, Collections.emptyList(), Collections.emptyList());
+
+            BundleItemInput item = new BundleItemInput();
+            item.setProductId("p-1");
+            item.setUnitPrice(10.0);
+            item.setBillingFrequency("monthly");
+            item.setQuantity(2.0);
+            CreateBundleRequest row = new CreateBundleRequest();
+            row.setName("Starter Pack");
+            row.setCategoryId("cat-1");
+            row.setItems(Collections.singletonList(item));
+
+            BulkImportResult result = client.turboQuote().bulkCreateBundles(Collections.singletonList(row));
+
+            assertEquals(1, result.getImported());
+
+            RecordedRequest recorded = server.takeRequest();
+            assertEquals("POST", recorded.getMethod());
+            assertTrue(recorded.getPath().endsWith("/v1/bundles/bulk"));
+
+            String body = recorded.getBody().readUtf8();
+            assertTrue(body.startsWith("{\"rows\":["), "got: " + body);
+            assertTrue(body.contains("\"name\":\"Starter Pack\""), "got: " + body);
+            assertTrue(body.contains("\"productId\":\"p-1\""), "got: " + body);
+        }
+
+        @Test
+        @DisplayName("should POST company rows (each with contacts) to /v1/companies/bulk")
+        void bulkCreateCompanies() throws Exception {
+            enqueueBulkResult(1, Collections.emptyList(), Collections.emptyList());
+
+            CreateCompanyContactInput contact = new CreateCompanyContactInput();
+            contact.setName("Jane Doe");
+            contact.setEmail("jane@acme.com");
+            CreateCompanyRequest row = new CreateCompanyRequest();
+            row.setName("Acme Corp");
+            row.setContacts(Collections.singletonList(contact));
+
+            BulkImportResult result = client.turboQuote().bulkCreateCompanies(Collections.singletonList(row));
+
+            assertEquals(1, result.getImported());
+
+            RecordedRequest recorded = server.takeRequest();
+            assertEquals("POST", recorded.getMethod());
+            assertTrue(recorded.getPath().endsWith("/v1/companies/bulk"));
+
+            String body = recorded.getBody().readUtf8();
+            assertTrue(body.startsWith("{\"rows\":["), "got: " + body);
+            assertTrue(body.contains("\"name\":\"Acme Corp\""), "got: " + body);
+            assertTrue(body.contains("\"contacts\":[{"), "got: " + body);
+            assertTrue(body.contains("\"email\":\"jane@acme.com\""), "got: " + body);
+        }
+
+        @Test
+        @DisplayName("should POST contact rows (each with companyId) to /v1/contacts/bulk")
+        void bulkCreateContacts() throws Exception {
+            enqueueBulkResult(1, Collections.emptyList(), Collections.emptyList());
+
+            CreateContactRequest row = new CreateContactRequest();
+            row.setName("John Smith");
+            row.setCompanyId("c-1");
+            row.setEmail("john@acme.com");
+
+            BulkImportResult result = client.turboQuote().bulkCreateContacts(Collections.singletonList(row));
+
+            assertEquals(1, result.getImported());
+
+            RecordedRequest recorded = server.takeRequest();
+            assertEquals("POST", recorded.getMethod());
+            assertTrue(recorded.getPath().endsWith("/v1/contacts/bulk"));
+
+            String body = recorded.getBody().readUtf8();
+            assertTrue(body.startsWith("{\"rows\":["), "got: " + body);
+            assertTrue(body.contains("\"name\":\"John Smith\""), "got: " + body);
+            assertTrue(body.contains("\"companyId\":\"c-1\""), "got: " + body);
+        }
+
+        @Test
+        @DisplayName("should POST type rows to /v1/types/bulk")
+        void bulkCreateTypes() throws Exception {
+            enqueueBulkResult(1, Collections.emptyList(), Collections.emptyList());
+
+            CreateQuoteTypeRequest row = new CreateQuoteTypeRequest();
+            row.setName("Hardware");
+            row.setCategoryType(CategoryType.PRODUCT_CATEGORY);
+
+            BulkImportResult result = client.turboQuote().bulkCreateTypes(Collections.singletonList(row));
+
+            assertEquals(1, result.getImported());
+
+            RecordedRequest recorded = server.takeRequest();
+            assertEquals("POST", recorded.getMethod());
+            assertTrue(recorded.getPath().endsWith("/v1/types/bulk"));
+
+            String body = recorded.getBody().readUtf8();
+            assertTrue(body.startsWith("{\"rows\":["), "got: " + body);
+            assertTrue(body.contains("\"name\":\"Hardware\""), "got: " + body);
+            // Enum values serialize to their backend string values, not the Java enum names.
+            assertTrue(body.contains("\"categoryType\":\"product_category\""), "got: " + body);
+        }
+
+        @Test
+        @DisplayName("should surface partial-success details (failed rows are 1-indexed, not thrown)")
+        void bulkPartialSuccess() throws Exception {
+            enqueueBulkResult(1,
+                    Collections.singletonList(issue(2, "Company not found")),
+                    Collections.singletonList(issue(1, "Dropped unknown product")));
+
+            CreateContactRequest okRow = new CreateContactRequest();
+            okRow.setName("Ok Row");
+            okRow.setCompanyId("c-1");
+            CreateContactRequest badRow = new CreateContactRequest();
+            badRow.setName("Bad Row");
+            badRow.setCompanyId("missing");
+
+            // Must not throw despite the failed row.
+            BulkImportResult result = client.turboQuote().bulkCreateContacts(Arrays.asList(okRow, badRow));
+
+            assertEquals(1, result.getImported());
+            assertEquals(1, result.getFailed().size());
+            assertEquals(2, result.getFailed().get(0).getRow());
+            assertEquals("Company not found", result.getFailed().get(0).getReason());
+            assertEquals(1, result.getAdjusted().size());
+            assertEquals(1, result.getAdjusted().get(0).getRow());
+            assertEquals("Dropped unknown product", result.getAdjusted().get(0).getReason());
+        }
+    }
+
+    // ============================================
     // TEST HELPERS
     // ============================================
 

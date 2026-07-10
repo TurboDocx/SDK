@@ -104,6 +104,22 @@ func quoteQueryParams(opts interface{}) string {
 	return "?" + encoded
 }
 
+// --- Bulk import helper ---
+
+// bulkImport POSTs { "rows": [...] } to the given /bulk path and unwraps the
+// { results: { imported, failed, adjusted } } envelope. Rows are sent verbatim;
+// per-row validation happens server-side with partial success.
+func (c *QuoteClient) bulkImport(ctx context.Context, path string, rows interface{}) (*BulkImportResult, error) {
+	var resp struct {
+		Results BulkImportResult `json:"results"`
+	}
+	body := map[string]interface{}{"rows": rows}
+	if err := c.http.Post(ctx, path, body, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Results, nil
+}
+
 // ============================================
 // QUOTES -- CRUD
 // ============================================
@@ -383,6 +399,12 @@ func (c *QuoteClient) CreateProduct(ctx context.Context, request *CreateProductR
 	return &resp.Result, nil
 }
 
+// BulkCreateProducts imports multiple products in one call with partial
+// success: failed rows are reported in the result, not returned as an error.
+func (c *QuoteClient) BulkCreateProducts(ctx context.Context, rows []CreateProductRequest) (*BulkImportResult, error) {
+	return c.bulkImport(ctx, "/v1/products/bulk", rows)
+}
+
 // GetProduct retrieves a product by ID
 func (c *QuoteClient) GetProduct(ctx context.Context, id string) (*Product, error) {
 	var resp struct {
@@ -519,6 +541,12 @@ func (c *QuoteClient) CreatePriceBook(ctx context.Context, request *CreatePriceB
 	return &resp.Result, nil
 }
 
+// BulkCreatePriceBooks imports multiple price books in one call with partial
+// success: failed rows are reported in the result, not returned as an error.
+func (c *QuoteClient) BulkCreatePriceBooks(ctx context.Context, rows []CreatePriceBookRequest) (*BulkImportResult, error) {
+	return c.bulkImport(ctx, "/v1/pricebooks/bulk", rows)
+}
+
 // GetPriceBook retrieves a price book by ID
 func (c *QuoteClient) GetPriceBook(ctx context.Context, id string) (*PriceBook, error) {
 	var resp struct {
@@ -596,6 +624,13 @@ func (c *QuoteClient) CreateBundle(ctx context.Context, request *CreateBundleReq
 	return &resp.Result, nil
 }
 
+// BulkCreateBundles imports multiple bundles in one call with partial
+// success: failed rows are reported in the result, not returned as an error.
+// A bundle item whose product isn't found is dropped and reported as adjusted.
+func (c *QuoteClient) BulkCreateBundles(ctx context.Context, rows []CreateBundleRequest) (*BulkImportResult, error) {
+	return c.bulkImport(ctx, "/v1/bundles/bulk", rows)
+}
+
 // GetBundle retrieves a bundle by ID
 func (c *QuoteClient) GetBundle(ctx context.Context, id string) (*Bundle, error) {
 	var resp struct {
@@ -663,6 +698,13 @@ func (c *QuoteClient) CreateCompany(ctx context.Context, request *CreateCompanyR
 	return &resp.Result, nil
 }
 
+// BulkCreateCompanies imports multiple companies in one call with partial
+// success: failed rows are reported in the result, not returned as an error.
+// Each row requires a Contacts slice with at least one contact.
+func (c *QuoteClient) BulkCreateCompanies(ctx context.Context, rows []CreateCompanyRequest) (*BulkImportResult, error) {
+	return c.bulkImport(ctx, "/v1/companies/bulk", rows)
+}
+
 // GetCompany retrieves a company by ID
 func (c *QuoteClient) GetCompany(ctx context.Context, id string) (*Company, error) {
 	var resp struct {
@@ -727,6 +769,13 @@ func (c *QuoteClient) CreateContact(ctx context.Context, request *CreateContactR
 		return nil, err
 	}
 	return &resp.Result, nil
+}
+
+// BulkCreateContacts imports multiple contacts in one call with partial
+// success: failed rows are reported in the result, not returned as an error.
+// Each row requires a CompanyID.
+func (c *QuoteClient) BulkCreateContacts(ctx context.Context, rows []CreateContactRequest) (*BulkImportResult, error) {
+	return c.bulkImport(ctx, "/v1/contacts/bulk", rows)
 }
 
 // UpdateContact updates an existing contact
@@ -841,6 +890,12 @@ func (c *QuoteClient) CreateType(ctx context.Context, request *CreateQuoteTypeRe
 	return &resp.Result, nil
 }
 
+// BulkCreateTypes imports multiple quote types/categories in one call with
+// partial success: failed rows are reported in the result, not returned as an error.
+func (c *QuoteClient) BulkCreateTypes(ctx context.Context, rows []CreateQuoteTypeRequest) (*BulkImportResult, error) {
+	return c.bulkImport(ctx, "/v1/types/bulk", rows)
+}
+
 // UpdateType updates an existing quote type/category
 func (c *QuoteClient) UpdateType(ctx context.Context, id string, request *UpdateQuoteTypeRequest) (*QuoteType, error) {
 	var resp struct {
@@ -909,4 +964,33 @@ func (c *QuoteClient) CreateAndSend(ctx context.Context, request *CreateAndSendR
 	return &CreateAndSendResponse{
 		Quote: sendResp.Result,
 	}, nil
+}
+
+// ============================================
+// QUOTE NUMBER CONFIG (admin only)
+// ============================================
+
+// GetQuoteNumberConfig retrieves the per-org quote numbering configuration
+// (format + currentFloor). Requires an administrator API key.
+func (c *QuoteClient) GetQuoteNumberConfig(ctx context.Context) (*QuoteNumberConfig, error) {
+	var resp struct {
+		Results QuoteNumberConfig `json:"results"`
+	}
+	if err := c.http.Get(ctx, "/v1/quotes/number-config", &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Results, nil
+}
+
+// UpdateQuoteNumberConfig updates the per-org quote numbering format and returns
+// the resulting configuration (format + currentFloor). The full format object
+// (all eight fields) is sent as the request body. Requires an administrator API key.
+func (c *QuoteClient) UpdateQuoteNumberConfig(ctx context.Context, format *QuoteNumberFormat) (*QuoteNumberConfig, error) {
+	var resp struct {
+		Results QuoteNumberConfig `json:"results"`
+	}
+	if err := c.http.Patch(ctx, "/v1/quotes/number-config", format, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Results, nil
 }

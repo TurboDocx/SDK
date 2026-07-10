@@ -94,6 +94,7 @@ Runs on push to `main`/`develop` and all PRs. Per-SDK jobs with language-specifi
 - Go: 1.21, `go mod tidy && go test -v ./...`
 - PHP: 8.1, `composer install && composer test && composer phpstan`
 - Java: JDK 11 (Temurin), `mvn test -B`
+- Ruby: 3.2, `bundle install && bundle exec rspec`
 
 ### Publish Workflows
-Separate workflow per SDK (`publish-{js,py,go,php,java}.yml`). Triggered on release or manual dispatch. Each publishes to the language's package registry.
+Separate workflow per SDK (`publish-{js,py,go,php,java,ruby}.yml`). Triggered on release or manual dispatch, guarded to that SDK's `{lang}-sdk-v*` release tag. Each publishes to the language's package registry. **Ruby prerequisite:** `publish-ruby.yml` pushes via the `RUBYGEMS_API_KEY` repo secret — that secret must be configured (RubyGems API key with push scope for `turbodocx-sdk`) before the first gem release.

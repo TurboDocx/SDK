@@ -172,3 +172,29 @@ export interface QuoteListResponse extends PaginatedResponse<Quote> {
   stats: QuoteListStats;
 }
 
+
+// ============================================
+// QUOTE NUMBER CONFIG
+// ============================================
+
+export type QuoteNumberYearToken = 'none' | 'two' | 'four';
+export type QuoteNumberMonthToken = 'off' | 'two';
+export type QuoteNumberResetCadence = 'never' | 'yearly' | 'monthly';
+
+/** Per-org quote numbering format (all fields required by the backend). */
+export interface QuoteNumberFormat {
+  prefix: string;
+  yearToken: QuoteNumberYearToken;
+  monthToken: QuoteNumberMonthToken;
+  separator: string;
+  padWidth: number;
+  suffix: string;
+  startNumber: number;
+  resetCadence: QuoteNumberResetCadence;
+}
+
+export interface QuoteNumberConfig {
+  format: QuoteNumberFormat;
+  /** Per-period issued floor; startNumber can't be set below this. */
+  currentFloor: number;
+}

@@ -38,7 +38,7 @@ feat|fix|docs|test|refactor: description
 ## Cross-SDK Conventions
 
 - All SDKs must maintain **feature parity** — see `.claude/rules/cross-sdk-parity.md`
-- Two modules per SDK: **TurboSign** (signatures) and **TurboPartner** (partner portal)
+- Five modules per SDK: **TurboSign** (signatures), **TurboPartner** (partner portal), **TurboWebhooks** (org signature webhook), **Deliverable** (document generation), **TurboQuote** (CPQ)
 - Follow each language's idiomatic naming (camelCase JS, snake_case Py, PascalCase Go)
 - Shared error hierarchy: `TurboDocxError > Auth | Validation | NotFound | RateLimit | Network`
 - Config pattern: explicit config → env var fallback → error
