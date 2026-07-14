@@ -46,8 +46,10 @@ func TestNormalizeBooleanCoercion(t *testing.T) {
 			"isActive": 1, "isDefault": 0, "showInCatalog": 1,
 			"showInQuoteBuilder": 0, "showItemsToEndUser": 1,
 			"syncWithProducts": 0, "isPrimaryAdmin": 1,
-			"canManageOrgs": 1, "canManageUsers": 0,
-			"canManageBilling": 1, "canViewAuditLog": 0,
+			"canManageOrgs": 1, "canManageOrgUsers": 0,
+			"canManagePartnerUsers": 1, "canManageOrgAPIKeys": 0,
+			"canManagePartnerAPIKeys": 1, "canUpdateEntitlements": 0,
+			"canViewAuditLogs": 1,
 			"hasFileDownload": 1, "hasGDrive": 0, "rdWatermark": 1
 		}`)
 		result := normalizeValue(input).(map[string]interface{})
@@ -59,9 +61,12 @@ func TestNormalizeBooleanCoercion(t *testing.T) {
 		assert.Equal(t, false, result["syncWithProducts"])
 		assert.Equal(t, true, result["isPrimaryAdmin"])
 		assert.Equal(t, true, result["canManageOrgs"])
-		assert.Equal(t, false, result["canManageUsers"])
-		assert.Equal(t, true, result["canManageBilling"])
-		assert.Equal(t, false, result["canViewAuditLog"])
+		assert.Equal(t, false, result["canManageOrgUsers"])
+		assert.Equal(t, true, result["canManagePartnerUsers"])
+		assert.Equal(t, false, result["canManageOrgAPIKeys"])
+		assert.Equal(t, true, result["canManagePartnerAPIKeys"])
+		assert.Equal(t, false, result["canUpdateEntitlements"])
+		assert.Equal(t, true, result["canViewAuditLogs"])
 		assert.Equal(t, true, result["hasFileDownload"])
 		assert.Equal(t, false, result["hasGDrive"])
 		assert.Equal(t, true, result["rdWatermark"])

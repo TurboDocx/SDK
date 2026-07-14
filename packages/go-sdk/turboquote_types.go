@@ -182,26 +182,33 @@ type Quote struct {
 // Quote Request Types
 // ============================================
 
-// CreateQuoteRequest is the request to create a new quote
+// CreateQuoteRequest is the request to create a new quote.
+//
+// TermDays defaults to 60 when omitted (max 3650). The special value -1 means auto-renewal:
+// RenewalPeriod is required when TermDays is -1, and must be omitted for any other term —
+// sending it alongside a fixed term is a 400.
 type CreateQuoteRequest struct {
 	Name          string   `json:"name"`
 	CompanyID     string   `json:"companyId"`
 	ContactID     string   `json:"contactId"`
 	CurrencyCode  *string  `json:"currency,omitempty"`
-	TermDays      *int     `json:"termDays,omitempty"`
-	RenewalPeriod *string  `json:"renewalPeriod,omitempty"`
+	TermDays      *int     `json:"termDays,omitempty"`      // default 60; -1 = auto-renewal
+	RenewalPeriod *string  `json:"renewalPeriod,omitempty"` // weekly|monthly|quarterly|annually; only with TermDays -1
 	ValidUntil    *string  `json:"validUntil,omitempty"`
 	TaxRate       *float64 `json:"taxRate,omitempty"`
 	PriceBookID   *string  `json:"priceBookId,omitempty"`
 }
 
-// UpdateQuoteRequest is the request to update a quote
+// UpdateQuoteRequest is the request to update a quote.
+//
+// RenewalPeriod is required when TermDays is -1 (auto-renewal) and must be absent otherwise.
+// Use ClearRenewalPeriod to explicitly null it out when moving a quote off auto-renewal.
 type UpdateQuoteRequest struct {
 	Name          *string  `json:"name,omitempty"`
 	CompanyID     *string  `json:"companyId,omitempty"`
 	ContactID     *string  `json:"contactId,omitempty"`
-	TermDays      *int     `json:"termDays,omitempty"`
-	RenewalPeriod *string  `json:"renewalPeriod,omitempty"`
+	TermDays      *int     `json:"termDays,omitempty"`      // max 3650; -1 = auto-renewal
+	RenewalPeriod *string  `json:"renewalPeriod,omitempty"` // weekly|monthly|quarterly|annually; only with TermDays -1
 	ValidUntil    *string  `json:"validUntil,omitempty"`
 	TaxRate       *float64 `json:"taxRate,omitempty"`
 	CurrencyCode  *string  `json:"currency,omitempty"`
@@ -285,22 +292,25 @@ type VoidQuoteRequest struct {
 	Reason string `json:"reason"`
 }
 
-// HandleExpiredQuoteRequest is the request to handle an expired sent quote
+// HandleExpiredQuoteRequest is the request to handle an expired sent quote.
+// All three fields are required by the API.
 type HandleExpiredQuoteRequest struct {
-	Action        string `json:"action"`
-	Reason        string `json:"reason"`
-	NewValidUntil string `json:"newValidUntil"`
+	Action        string `json:"action"`        // "void" or "decline" — no other value is accepted
+	Reason        string `json:"reason"`        // max 190 characters
+	NewValidUntil string `json:"newValidUntil"` // ISO date carried onto the reissued duplicate
 }
 
-// CreateAndSendRequest is the convenience request to create, add items, and send a quote
+// CreateAndSendRequest is the convenience request to create, add items, and send a quote.
+//
+// TermDays defaults to 60 when omitted; RenewalPeriod is required only when TermDays is -1.
 type CreateAndSendRequest struct {
 	// Quote fields
 	Name          string   `json:"name"`
 	CompanyID     string   `json:"companyId"`
 	ContactID     string   `json:"contactId"`
 	CurrencyCode  *string  `json:"currency,omitempty"`
-	TermDays      *int     `json:"termDays,omitempty"`
-	RenewalPeriod *string  `json:"renewalPeriod,omitempty"`
+	TermDays      *int     `json:"termDays,omitempty"`      // default 60; -1 = auto-renewal
+	RenewalPeriod *string  `json:"renewalPeriod,omitempty"` // weekly|monthly|quarterly|annually; only with TermDays -1
 	ValidUntil    *string  `json:"validUntil,omitempty"`
 	TaxRate       *float64 `json:"taxRate,omitempty"`
 	PriceBookID   *string  `json:"priceBookId,omitempty"`
@@ -410,6 +420,9 @@ type LineItem struct {
 
 // AddLineItemRequest is the request to add a product line item
 type AddLineItemRequest struct {
+	// ProductID, ProductName, UnitPrice and BillingFrequency are all required by the API.
+	// ProductID is deliberately not omitempty: the key must be present on the wire, but its
+	// value may be null — a nil ProductID means an ad-hoc item with no catalog product behind it.
 	ProductID          *string      `json:"productId"`
 	ProductName        string       `json:"productName"`
 	UnitPrice          float64      `json:"unitPrice"`

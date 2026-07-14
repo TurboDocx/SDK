@@ -9,6 +9,13 @@ namespace TurboDocx\Types\Requests\Quote;
  */
 final class CreateQuoteRequest
 {
+    /**
+     * @param int|null $termDays Quote term in days. Omit to use the API default of 60 (max 3650).
+     *                           Use -1 for auto-renewal, which makes $renewalPeriod required.
+     * @param string|null $renewalPeriod Required when $termDays is -1, and must be null otherwise
+     *                                   (sending it with any other term is a 400).
+     *                                   One of: weekly, monthly, quarterly, annually.
+     */
     public function __construct(
         public readonly string $name,
         public readonly string $companyId,

@@ -400,12 +400,14 @@ Unlike `TurboSign`, `TurboWebhooks` does NOT require `senderEmail` — webhook r
 
 ```php
 $created = TurboWebhooks::createWebhook(
-    urls: ['https://your-server.example.com/webhooks/turbodocx'],  // HTTPS only
-    events: ['signature.document.completed', 'signature.document.voided'],
+    urls: ['https://your-server.example.com/webhooks/turbodocx'],  // HTTPS only; 1-10 URLs
+    events: ['signature.document.completed', 'signature.document.voided'],  // at least 1
 );
 // `secret` is shown ONCE here. Store it securely; it cannot be retrieved later.
 echo "Save this secret: {$created['secret']}";
 ```
+
+`urls` accepts **1 to 10** HTTPS endpoints and `events` requires **at least 1** event. Empty arrays return a 400.
 
 If the signature webhook already exists, `createWebhook` throws `ConflictException` (HTTP 409). Either update the existing one with `updateWebhook` or `deleteWebhook` first.
 
@@ -418,6 +420,10 @@ $webhook = TurboWebhooks::getWebhook();
 TurboWebhooks::updateWebhook(isActive: false);
 TurboWebhooks::deleteWebhook();
 ```
+
+`updateWebhook` patches only the arguments you pass. The `urls` and `events` minimums still apply on
+update — to leave a list unchanged, **omit the argument** (leave it `null`). Passing `urls: []` or
+`events: []` sends an empty array and returns a 400; it does not clear the list.
 
 #### Test deliveries and replay
 
@@ -817,6 +823,11 @@ echo "Success: " . ($result->success ? 'Yes' : 'No') . "\n";
 
 ### Organization User Management
 
+> **Org roles are not partner roles.** Organization users and organization API keys use
+> `OrgUserRole`: `admin | contributor | user | viewer`. Partner portal users use a *different* enum,
+> `PartnerUserRole`: `admin | member | viewer`. `member` is not a valid organization role, and
+> `contributor` / `user` are not valid partner roles — mixing them returns a 400.
+
 #### `addUserToOrganization()`
 
 Add a user to an organization with a specific role.
@@ -829,7 +840,7 @@ $result = TurboPartner::addUserToOrganization(
     'org-uuid-here',
     new AddOrgUserRequest(
         email: 'user@example.com',
-        role: OrgUserRole::ADMIN  // ADMIN, CONTRIBUTOR, or VIEWER
+        role: OrgUserRole::ADMIN  // ADMIN, CONTRIBUTOR, USER, or VIEWER
     )
 );
 
@@ -1176,7 +1187,7 @@ TURBODOCX_ORG_ID=your-org-id
 | | `sendQuoteWithDeliverable(id, SendQuoteWithDeliverableRequest)` | Send with a TurboDocx-generated document attached |
 | | `declineQuote(id, DeclineQuoteRequest)` | Mark a quote as declined |
 | | `voidQuote(id, VoidQuoteRequest)` | Void a quote |
-| | `handleExpiredQuote(id, HandleExpiredQuoteRequest)` | Re-send or void an expired quote |
+| | `handleExpiredQuote(id, HandleExpiredQuoteRequest)` | Void or decline an expired quote and reissue it with a new `validUntil` |
 | | `applyPriceBook(quoteId, priceBookId)` | Apply a price book, repricing line items |
 | | `removePriceBook(quoteId)` | Remove the applied price book |
 | **Line Items** | `listLineItems(quoteId, ?ListLineItemsRequest)` | List items on a quote |
@@ -1259,7 +1270,7 @@ $quote = TurboQuote::createQuote(new CreateQuoteRequest(
     companyId: $company->id,
     contactId: $contact->id,
     currency: 'USD',
-    termDays: 30,
+    termDays: 60,  // Optional — defaults to 60
 ));
 
 // Add line items
@@ -1288,6 +1299,57 @@ $result = TurboQuote::sendQuote($quote->id, new SendQuoteRequest(
 ));
 
 echo "Quote sent! Status: {$result->quote->status}\n";
+```
+
+### Quote Terms and Auto-Renewal
+
+`termDays` is optional and **defaults to 60** (max 3650). The special value `-1` means auto-renewal.
+
+`renewalPeriod` is coupled to `termDays`:
+
+- `termDays: -1` → `renewalPeriod` is **required** (`weekly`, `monthly`, `quarterly`, or `annually`)
+- any other `termDays` → `renewalPeriod` must be **omitted or null**; sending it returns a 400
+
+```php
+use TurboDocx\Types\Requests\Quote\CreateQuoteRequest;
+use TurboDocx\Types\Enums\RenewalPeriod;
+
+// Fixed term (default 60 days) — do NOT send renewalPeriod
+TurboQuote::createQuote(new CreateQuoteRequest(
+    name: 'Fixed Term Quote',
+    companyId: $company->id,
+    contactId: $contact->id,
+    termDays: 90,
+));
+
+// Auto-renewing quote — renewalPeriod is required
+TurboQuote::createQuote(new CreateQuoteRequest(
+    name: 'Auto-Renewing Subscription',
+    companyId: $company->id,
+    contactId: $contact->id,
+    termDays: -1,
+    renewalPeriod: RenewalPeriod::ANNUALLY->value,
+));
+```
+
+### Expired Quotes
+
+`handleExpiredQuote()` resolves a sent quote whose `validUntil` has passed. It closes out the original
+(voiding or declining it) and creates a duplicate carrying the new `validUntil` date.
+
+The only valid actions are **`void`** and **`decline`** — there is no "extend" or "re-send" action.
+`action`, `reason`, and `newValidUntil` are **all three required**.
+
+```php
+use TurboDocx\Types\Requests\Quote\HandleExpiredQuoteRequest;
+
+$reissued = TurboQuote::handleExpiredQuote($quote->id, new HandleExpiredQuoteRequest(
+    action: 'void',                                           // 'void' or 'decline' — nothing else
+    reason: 'Pricing refreshed for the new fiscal year',      // required, max 190 chars
+    newValidUntil: date('Y-m-d', strtotime('+30 days')),      // required, ISO date
+));
+
+echo "Reissued as quote {$reissued->quoteNumber}\n";
 ```
 
 ### Discount Types

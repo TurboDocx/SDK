@@ -101,8 +101,8 @@ final class TurboWebhooks
      * Create the org's signature webhook. The returned `secret` is shown
      * ONCE and must be stored on receipt; it cannot be retrieved later.
      *
-     * @param array<int, string> $urls HTTPS URLs (HTTP returns 400)
-     * @param array<int, string> $events Event types (e.g. "signature.document.completed")
+     * @param array<int, string> $urls HTTPS URLs (HTTP returns 400). Min 1, max 10.
+     * @param array<int, string> $events Event types (e.g. "signature.document.completed"). Min 1.
      * @return array<string, mixed> {id: string, secret: string}
      * @throws \TurboDocx\Exceptions\ConflictException HTTP 409 when the
      *         signature webhook already exists. Update or delete the existing
@@ -133,8 +133,12 @@ final class TurboWebhooks
      * Patch one or more fields on the signature webhook. Renaming is not
      * supported — the SDK manages a fixed name.
      *
-     * @param array<int, string>|null $urls
-     * @param array<int, string>|null $events
+     * Both list fields keep their minimums on update: pass null to leave a list
+     * untouched. An empty array is NOT a clear — `urls: []` / `events: []` is
+     * sent as-is and returns a 400.
+     *
+     * @param array<int, string>|null $urls Min 1, max 10 when provided; null to omit
+     * @param array<int, string>|null $events Min 1 when provided; null to omit
      * @return array<string, mixed>
      * @throws \TurboDocx\Exceptions\ConflictException HTTP 409 when the patch
      *         would collide with an existing webhook name.

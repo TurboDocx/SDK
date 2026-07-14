@@ -36,9 +36,12 @@ describe('normalizeResponse', () => {
         syncWithProducts: 0,
         isPrimaryAdmin: 1,
         canManageOrgs: 1,
-        canManageUsers: 0,
-        canManageBilling: 1,
-        canViewAuditLog: 0,
+        canManageOrgUsers: 0,
+        canManagePartnerUsers: 1,
+        canManageOrgAPIKeys: 0,
+        canManagePartnerAPIKeys: 1,
+        canUpdateEntitlements: 0,
+        canViewAuditLogs: 1,
         hasFileDownload: 1,
         hasGDrive: 0,
         rdWatermark: 1,
@@ -52,9 +55,12 @@ describe('normalizeResponse', () => {
       expect(result.syncWithProducts).toBe(false);
       expect(result.isPrimaryAdmin).toBe(true);
       expect(result.canManageOrgs).toBe(true);
-      expect(result.canManageUsers).toBe(false);
-      expect(result.canManageBilling).toBe(true);
-      expect(result.canViewAuditLog).toBe(false);
+      expect(result.canManageOrgUsers).toBe(false);
+      expect(result.canManagePartnerUsers).toBe(true);
+      expect(result.canManageOrgAPIKeys).toBe(false);
+      expect(result.canManagePartnerAPIKeys).toBe(true);
+      expect(result.canUpdateEntitlements).toBe(false);
+      expect(result.canViewAuditLogs).toBe(true);
       expect(result.hasFileDownload).toBe(true);
       expect(result.hasGDrive).toBe(false);
       expect(result.rdWatermark).toBe(true);

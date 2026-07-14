@@ -51,6 +51,10 @@ module TurboDocxSdk
       #
       # @param request [Hash] :name (required), :companyId (required), :contactId (required),
       #   :currency, :termDays, :renewalPeriod, :validUntil, :taxRate, :priceBookId
+      #
+      #   +termDays+ defaults to 60 and maxes out at 3650. Pass +-1+ for auto-renewal:
+      #   +renewalPeriod+ (one of RenewalPeriod::ALL) is REQUIRED when +termDays+ is +-1+
+      #   and must be omitted/nil for every other +termDays+ value.
       # @return [Hash] the created quote
       # @raise [ValidationError] on invalid request data
       # @raise [AuthenticationError] on invalid credentials
@@ -226,10 +230,14 @@ module TurboDocxSdk
         unwrap(client.post("/v1/quotes/#{id}/void", request))
       end
 
-      # Handle an expired sent quote.
+      # Handle an expired sent quote. Voids or declines the original quote and
+      # creates a duplicate carrying the new +newValidUntil+ date.
       #
       # @param id [String]
-      # @param request [Hash] :action, :reason, :newValidUntil
+      # @param request [Hash] all three keys are required:
+      #   - +action+ [String] — +"void"+ or +"decline"+ (no other value is accepted)
+      #   - +reason+ [String] — max 190 characters
+      #   - +newValidUntil+ [String] — ISO 8601 date for the replacement quote
       # @return [Hash] the processed quote
       # @raise [NotFoundError] if the quote does not exist
       # @raise [ValidationError] on invalid request data
@@ -260,12 +268,13 @@ module TurboDocxSdk
       # Add product line items to a quote.
       #
       # @param quote_id [String]
-      # @param items [Hash, Array<Hash>] single item or array of items. Each item may include:
-      #   - +productId+ [String] — catalog product ID (optional)
-      #   - +productName+ [String] — display name
-      #   - +unitPrice+ [Numeric] — price per unit
-      #   - +billingFrequency+ [String] — one of BillingFrequency::ALL
-      #   - +quantity+ [Integer]
+      # @param items [Hash, Array<Hash>] single item or array of items (1-50). Each item includes:
+      #   - +productId+ [String, nil] — REQUIRED key; catalog product ID (uuid).
+      #     The value may be +nil+ for an ad-hoc item, but the key must be present.
+      #   - +productName+ [String] — REQUIRED; display name
+      #   - +unitPrice+ [Numeric] — REQUIRED; price per unit
+      #   - +billingFrequency+ [String] — REQUIRED; one of BillingFrequency::ALL
+      #   - +quantity+ [Integer] — default 1
       #   - +discountType+ [String, nil] — +"percent"+ or +"amount"+ (default +"percent"+);
       #     see DiscountType
       #   - +discountAmount+ [Numeric, nil] — discount value (min 0, 2 decimal places, default 0)
@@ -281,12 +290,13 @@ module TurboDocxSdk
         response["results"]
       end
 
-      # Add bundle line items to a quote.
+      # Add bundle line items to a quote. The server expands the bundle's children
+      # itself -- do NOT send child products.
       #
       # @param quote_id [String]
-      # @param items [Hash, Array<Hash>] single item or array of items. Each item may include:
-      #   - +bundleId+ [String] — catalog bundle ID
-      #   - +bundleName+ [String] — display name
+      # @param items [Hash, Array<Hash>] single item or array of items (1-50). Each item includes:
+      #   - +bundleId+ [String] — REQUIRED; catalog bundle ID
+      #   - +bundleName+ [String] — REQUIRED; display name
       #   - +quantity+ [Integer]
       #   - +discountType+ [String, nil] — +"percent"+ or +"amount"+ (default +"percent"+);
       #     see DiscountType
@@ -374,7 +384,10 @@ module TurboDocxSdk
       # rows that fail are reported in "failed" (1-indexed "row" + "reason")
       # without aborting the rest; server-adjusted rows appear in "adjusted".
       #
-      # @param rows [Array<Hash>] product rows, same field shapes as +create_product+
+      # @param rows [Array<Hash>] product rows, same field shapes as +create_product+.
+      #   Each row requires +name+, +categoryId+ (a TurboQuote type uuid — there is no
+      #   +categoryName+ shorthand; resolve or create the category first), +listPrice+
+      #   and +billingFrequency+.
       # @return [Hash] { "imported" => N, "failed" => [...], "adjusted" => [...] }
       # @raise [ValidationError] on an invalid request envelope
       # @raise [AuthenticationError] on invalid credentials

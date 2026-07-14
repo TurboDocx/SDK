@@ -391,8 +391,13 @@ _, err := partner.DeleteOrganization(ctx, orgID)
 
 #### Organization User Management
 
+> **Org roles are not partner roles.** Organization users and organization API keys accept
+> `admin`, `contributor`, `user`, or `viewer`. Partner portal users use a *different* enum:
+> `admin`, `member`, or `viewer`. `member` is not a valid organization role, and
+> `contributor` / `user` are not valid partner roles — mixing them returns a 400.
+
 ```go
-// Add user to organization
+// Add user to organization — role: admin | contributor | user | viewer
 user, err := partner.AddUserToOrganization(ctx, orgID, &turbodocx.AddOrgUserRequest{
     Email: "admin@acme.com",
     Role:  "admin",
@@ -403,7 +408,7 @@ users, err := partner.ListOrganizationUsers(ctx, orgID, nil)
 
 // Update user role
 _, err := partner.UpdateOrganizationUserRole(ctx, orgID, userID, &turbodocx.UpdateOrgUserRequest{
-    Role: "member",
+    Role: "contributor",
 })
 
 // Remove user
@@ -416,7 +421,7 @@ _, err := partner.ResendOrganizationInvitationToUser(ctx, orgID, userID)
 #### Organization API Key Management
 
 ```go
-// Create API key
+// Create API key — role: admin | contributor | user | viewer (same enum as org users)
 key, err := partner.CreateOrganizationAPIKey(ctx, orgID, &turbodocx.CreateOrgAPIKeyRequest{
     Name: "Production Key",
     Role: "admin",
@@ -460,15 +465,23 @@ _, err := partner.RevokePartnerAPIKey(ctx, keyID)
 
 #### Partner User Management
 
+> **All 7 permission keys are required.** The API rejects a partial `permissions` object with a 400 —
+> there is no partial update. `PartnerPermissions` is a plain struct, so every key is always sent
+> (omitted fields serialize as `false`); set each one explicitly so the grant is unambiguous.
+
 ```go
-// Add partner portal user
+// Add partner portal user — role: admin | member | viewer
 user, err := partner.AddUserToPartnerPortal(ctx, &turbodocx.AddPartnerUserRequest{
     Email: "ops@yourcompany.com",
     Role:  "member",
     Permissions: turbodocx.PartnerPermissions{
-        CanManageOrgs:     true,
-        CanManageOrgUsers: true,
-        CanViewAuditLogs:  true,
+        CanManageOrgs:           true,
+        CanManageOrgUsers:       true,
+        CanManagePartnerUsers:   false,
+        CanManageOrgAPIKeys:     false,
+        CanManagePartnerAPIKeys: false,
+        CanUpdateEntitlements:   false,
+        CanViewAuditLogs:        true,
     },
 })
 
@@ -573,12 +586,14 @@ Unlike the main `NewClientWithConfig`, this constructor does NOT require `Sender
 ```go
 ctx := context.Background()
 created, err := client.CreateWebhook(ctx, turbodocx.CreateWebhookRequest{
-    URLs:   []string{"https://your-server.example.com/webhooks/turbodocx"}, // HTTPS only
-    Events: []string{"signature.document.completed", "signature.document.voided"},
+    URLs:   []string{"https://your-server.example.com/webhooks/turbodocx"}, // HTTPS only; 1-10 URLs
+    Events: []string{"signature.document.completed", "signature.document.voided"}, // at least 1
 })
 // `created.Secret` is shown ONCE here. Store it securely.
 fmt.Println("Save this secret:", created.Secret)
 ```
+
+`URLs` accepts **1 to 10** HTTPS endpoints and `Events` requires **at least 1** event. Empty lists return a 400.
 
 #### Get, update, delete
 
@@ -591,6 +606,10 @@ client.UpdateWebhook(ctx, turbodocx.UpdateWebhookRequest{IsActive: &isActive})
 
 client.DeleteWebhook(ctx)
 ```
+
+`UpdateWebhook` patches only the fields you set. The `URLs` / `Events` minimums still apply on update —
+leave a field nil to keep it unchanged. An empty list is not a "clear": it cannot be used to remove all
+URLs or events.
 
 #### Test deliveries and replay
 
@@ -683,7 +702,7 @@ No `SenderEmail` required — quote operations do not send signature emails.
 | Group | Methods |
 |---|---|
 | **Quotes** | `ListQuotes`, `CreateQuote`, `GetQuote`, `UpdateQuote`, `DeleteQuote`, `DuplicateQuote`, `DownloadQuotePdf` |
-| **Quote status** | `SendQuote`, `SendQuoteWithDeliverable`, `DeclineQuote`, `VoidQuote`, `HandleExpiredQuote` |
+| **Quote status** | `SendQuote`, `SendQuoteWithDeliverable`, `DeclineQuote`, `VoidQuote`, `HandleExpiredQuote` (void/decline an expired quote and reissue it) |
 | **Price book application** | `ApplyPriceBook`, `RemovePriceBook` |
 | **Line items** | `ListLineItems`, `AddLineItems`, `AddBundleLineItems`, `UpdateLineItem`, `RemoveLineItem` |
 | **Products** | `ListProducts`, `CreateProduct`, `GetProduct`, `UpdateProduct`, `DeleteProduct`, `DuplicateProduct`, `GetProductPrimaryImages` |
@@ -700,7 +719,7 @@ No `SenderEmail` required — quote operations do not send signature emails.
 ```go
 ctx := context.Background()
 
-// Create the quote
+// Create the quote (TermDays defaults to 60 when omitted)
 quote, err := client.CreateQuote(ctx, &turbodocx.CreateQuoteRequest{
     Name:      "Acme Annual Subscription",
     CompanyID: companyID,
@@ -710,13 +729,52 @@ if err != nil {
     log.Fatal(err)
 }
 
-// Add product line items (variadic — pass one or many)
+// Add product line items (variadic — pass one or many, max 50 per call).
+// ProductName, UnitPrice and BillingFrequency are required. ProductID is a required
+// key too, but its value may be nil — that marks an ad-hoc item with no catalog product.
 qty := 3
 items, err := client.AddLineItems(ctx, quote.ID, turbodocx.AddLineItemRequest{
+    ProductID:        nil, // or &productID to link a catalog product
     ProductName:      "Professional License",
     UnitPrice:        499.00,
     BillingFrequency: "annual",
     Quantity:         &qty,
+})
+```
+
+#### Quote terms and auto-renewal
+
+`TermDays` is optional and **defaults to 60** (max 3650). The special value `-1` means auto-renewal.
+`RenewalPeriod` is coupled to it:
+
+- `TermDays: -1` → `RenewalPeriod` is **required** (`weekly`, `monthly`, `quarterly`, or `annually`)
+- any other `TermDays` → `RenewalPeriod` must be **omitted**; sending it returns a 400
+
+```go
+termDays := -1
+renewal := "annually"
+quote, err := client.CreateQuote(ctx, &turbodocx.CreateQuoteRequest{
+    Name:          "Auto-Renewing Subscription",
+    CompanyID:     companyID,
+    ContactID:     contactID,
+    TermDays:      &termDays,
+    RenewalPeriod: &renewal,
+})
+```
+
+#### Resolve an expired quote
+
+`HandleExpiredQuote` closes out a sent quote whose `validUntil` has passed — it voids or declines the
+original and returns a duplicate carrying the new `validUntil` date.
+
+The only valid actions are **`void`** and **`decline`**; there is no "extend" or "re-send" action.
+`Action`, `Reason`, and `NewValidUntil` are **all three required**.
+
+```go
+reissued, err := client.HandleExpiredQuote(ctx, quote.ID, &turbodocx.HandleExpiredQuoteRequest{
+    Action:        "void",                                  // "void" or "decline" — nothing else
+    Reason:        "Pricing refreshed for the new term",    // required, max 190 chars
+    NewValidUntil: time.Now().AddDate(0, 0, 30).Format("2006-01-02"), // required
 })
 ```
 

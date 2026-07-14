@@ -1,14 +1,20 @@
 package com.turbodocx.models.quote;
 
 /**
- * Request to create a new quote.
+ * Request to create a new quote. {@code name}, {@code companyId} and {@code contactId}
+ * are required.
  */
 public class CreateQuoteRequest {
     private String name;
     private String companyId;
     private String contactId;
     private Currency currency;
+    /** Defaults to 60 when unset. Maximum 3650 (10 years). {@code -1} means auto-renewal. */
     private Integer termDays;
+    /**
+     * Required if and only if {@code termDays} is {@code -1} (auto-renewal).
+     * For any other {@code termDays} it must be left null -- sending it is a 400.
+     */
     private RenewalPeriod renewalPeriod;
     private String validUntil;
     private Double taxRate;

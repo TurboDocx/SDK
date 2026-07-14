@@ -30,9 +30,12 @@ RSpec.describe TurboDocxSdk::ResponseNormalizer do
         "syncWithProducts" => 0,
         "isPrimaryAdmin" => 1,
         "canManageOrgs" => 1,
-        "canManageUsers" => 0,
-        "canManageBilling" => 1,
-        "canViewAuditLog" => 0,
+        "canManageOrgUsers" => 0,
+        "canManagePartnerUsers" => 1,
+        "canManageOrgAPIKeys" => 0,
+        "canManagePartnerAPIKeys" => 1,
+        "canUpdateEntitlements" => 0,
+        "canViewAuditLogs" => 1,
         "hasFileDownload" => 1,
         "hasGDrive" => 0,
         "rdWatermark" => 1
@@ -46,9 +49,12 @@ RSpec.describe TurboDocxSdk::ResponseNormalizer do
       expect(result["syncWithProducts"]).to be false
       expect(result["isPrimaryAdmin"]).to be true
       expect(result["canManageOrgs"]).to be true
-      expect(result["canManageUsers"]).to be false
-      expect(result["canManageBilling"]).to be true
-      expect(result["canViewAuditLog"]).to be false
+      expect(result["canManageOrgUsers"]).to be false
+      expect(result["canManagePartnerUsers"]).to be true
+      expect(result["canManageOrgAPIKeys"]).to be false
+      expect(result["canManagePartnerAPIKeys"]).to be true
+      expect(result["canUpdateEntitlements"]).to be false
+      expect(result["canViewAuditLogs"]).to be true
       expect(result["hasFileDownload"]).to be true
       expect(result["hasGDrive"]).to be false
       expect(result["rdWatermark"]).to be true

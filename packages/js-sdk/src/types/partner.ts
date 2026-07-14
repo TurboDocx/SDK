@@ -148,6 +148,8 @@ export interface Tracking {
   storageUsed?: number;
   numGeneratedDeliverables?: number;
   numSignaturesUsed?: number;
+  numQuotesSent?: number;
+  /** -1 means unlimited. Every other counter floors at 0. */
   currentAICredits?: number;
 }
 
@@ -253,7 +255,8 @@ export interface ListPartnerUsersRequest {
 
 export interface UpdatePartnerUserRequest {
   role?: PartnerUserRole;
-  permissions?: Partial<PartnerPermissions>;
+  /** Optional — but if sent, all 7 keys are required by the API. There is no partial update. */
+  permissions?: PartnerPermissions;
 }
 
 export interface ListAuditLogsRequest {

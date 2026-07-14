@@ -49,9 +49,12 @@ final class ResponseNormalizerTest extends TestCase
             'syncWithProducts' => 0,
             'isPrimaryAdmin' => 1,
             'canManageOrgs' => 1,
-            'canManageUsers' => 0,
-            'canManageBilling' => 1,
-            'canViewAuditLog' => 0,
+            'canManageOrgUsers' => 0,
+            'canManagePartnerUsers' => 1,
+            'canManageOrgAPIKeys' => 0,
+            'canManagePartnerAPIKeys' => 1,
+            'canUpdateEntitlements' => 0,
+            'canViewAuditLogs' => 1,
             'hasFileDownload' => 1,
             'hasGDrive' => 0,
             'rdWatermark' => 1,
@@ -66,9 +69,12 @@ final class ResponseNormalizerTest extends TestCase
         $this->assertSame(false, $result['syncWithProducts']);
         $this->assertSame(true, $result['isPrimaryAdmin']);
         $this->assertSame(true, $result['canManageOrgs']);
-        $this->assertSame(false, $result['canManageUsers']);
-        $this->assertSame(true, $result['canManageBilling']);
-        $this->assertSame(false, $result['canViewAuditLog']);
+        $this->assertSame(false, $result['canManageOrgUsers']);
+        $this->assertSame(true, $result['canManagePartnerUsers']);
+        $this->assertSame(false, $result['canManageOrgAPIKeys']);
+        $this->assertSame(true, $result['canManagePartnerAPIKeys']);
+        $this->assertSame(false, $result['canUpdateEntitlements']);
+        $this->assertSame(true, $result['canViewAuditLogs']);
         $this->assertSame(true, $result['hasFileDownload']);
         $this->assertSame(false, $result['hasGDrive']);
         $this->assertSame(true, $result['rdWatermark']);

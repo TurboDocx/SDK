@@ -54,11 +54,15 @@ async def main():
     user = await TurboPartner.add_user_to_partner_portal(
         email="ops@yourcompany.com",
         role="member",
+        # All 7 permission keys are required — a partial object is rejected with a 400.
         permissions={
             "canManageOrgs": True,
             "canManageOrgUsers": True,
+            "canManagePartnerUsers": False,
+            "canManageOrgAPIKeys": False,
+            "canManagePartnerAPIKeys": False,
+            "canUpdateEntitlements": False,
             "canViewAuditLogs": True,
-            # Other permissions default to false
         },
     )
     print(f"Added partner user: {user['data']['email']} (Role: {user['data']['role']})\n")

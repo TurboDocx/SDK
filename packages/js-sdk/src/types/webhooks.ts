@@ -39,8 +39,9 @@ export interface WebhookWithStats extends Webhook {
 }
 
 export interface CreateWebhookRequest {
-  /** Backend enforces HTTPS-only; HTTP URLs return 400 ValidationError. */
+  /** 1–10 URLs. Backend enforces HTTPS-only; HTTP URLs return 400 ValidationError. */
   urls: string[];
+  /** At least one event. */
   events: WebhookEvent[];
 }
 
@@ -51,7 +52,9 @@ export interface CreateWebhookResponse {
 }
 
 export interface UpdateWebhookRequest {
+  /** Optional, but an empty array is a 400 — omit the key instead. Max 10 URLs. */
   urls?: string[];
+  /** Optional, but an empty array is a 400 — omit the key instead. */
   events?: WebhookEvent[];
   isActive?: boolean;
 }

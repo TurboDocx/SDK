@@ -550,14 +550,23 @@ export class TurboPartner {
    * Update a partner user's role and permissions
    *
    * @param userId - User ID
-   * @param request - Updated role and/or permissions
+   * @param request - Updated role and/or permissions. `permissions` is optional, but when
+   *                  supplied it must contain all 7 keys — the API rejects a partial object.
    * @returns Updated user details
    *
    * @example
    * ```typescript
    * const user = await TurboPartner.updatePartnerUserPermissions('user-uuid', {
    *   role: 'member',
-   *   permissions: { canManageOrgs: true },
+   *   permissions: {
+   *     canManageOrgs: true,
+   *     canManageOrgUsers: true,
+   *     canManagePartnerUsers: false,
+   *     canManageOrgAPIKeys: true,
+   *     canManagePartnerAPIKeys: false,
+   *     canUpdateEntitlements: false,
+   *     canViewAuditLogs: true,
+   *   },
    * });
    * ```
    */

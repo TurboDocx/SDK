@@ -90,7 +90,7 @@ function turboquoteBasicExample(): void
             companyId: $companyId,
             contactId: $contactId,
             currency: 'USD',
-            termDays: 30,
+            termDays: 60,  // Optional — 60 is the API default; -1 means auto-renewal
             validUntil: date('Y-m-d', strtotime('+30 days')),
         ));
 

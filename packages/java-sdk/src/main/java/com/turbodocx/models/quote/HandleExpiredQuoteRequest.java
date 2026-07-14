@@ -1,11 +1,17 @@
 package com.turbodocx.models.quote;
 
 /**
- * Request to handle an expired sent quote.
+ * Request to handle an expired sent quote. Voids or declines the original quote and
+ * creates a duplicate carrying the new {@code newValidUntil} date.
+ *
+ * <p>All three fields are required.
  */
 public class HandleExpiredQuoteRequest {
+    /** Either {@code "void"} or {@code "decline"}. No other value is accepted. Required. */
     private String action;
+    /** Required. Maximum 190 characters. */
     private String reason;
+    /** Required. ISO 8601 date carried by the replacement quote. */
     private String newValidUntil;
 
     public String getAction() { return action; }

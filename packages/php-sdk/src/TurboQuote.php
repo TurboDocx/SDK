@@ -377,11 +377,12 @@ final class TurboQuote
     }
 
     /**
-     * Handle an expired sent quote.
+     * Handle an expired sent quote: void or decline the original and return a
+     * duplicate carrying the new validUntil date.
      *
      * @param string $id
-     * @param HandleExpiredQuoteRequest $request
-     * @return Quote
+     * @param HandleExpiredQuoteRequest $request action is 'void' or 'decline'
+     * @return Quote The newly created duplicate quote
      */
     public static function handleExpiredQuote(string $id, HandleExpiredQuoteRequest $request): Quote
     {

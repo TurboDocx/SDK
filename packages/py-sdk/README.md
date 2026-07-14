@@ -414,11 +414,20 @@ key = await TurboPartner.create_partner_api_key(
     scopes=[SCOPE_ORG_READ, SCOPE_AUDIT_READ]
 )
 
-# Add user to partner portal
+# Add user to partner portal.
+# All 7 permission keys are REQUIRED — a partial permissions object is a 400.
 await TurboPartner.add_user_to_partner_portal(
     email="ops@company.com",
-    role="member",
-    permissions={"canManageOrgs": True, "canViewAuditLogs": True}
+    role="member",  # partner roles: "admin" | "member" | "viewer"
+    permissions={
+        "canManageOrgs": True,
+        "canManageOrgUsers": True,
+        "canManagePartnerUsers": False,
+        "canManageOrgAPIKeys": False,
+        "canManagePartnerAPIKeys": False,
+        "canUpdateEntitlements": False,
+        "canViewAuditLogs": True,
+    },
 )
 
 # Query audit logs

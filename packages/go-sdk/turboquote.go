@@ -290,7 +290,10 @@ func (c *QuoteClient) VoidQuote(ctx context.Context, id string, request *VoidQuo
 	return &resp.Result, nil
 }
 
-// HandleExpiredQuote handles an expired sent quote (resend, extend, or void)
+// HandleExpiredQuote resolves an expired sent quote: it voids or declines the
+// original and returns a duplicate carrying the new validUntil date.
+//
+// Action must be "void" or "decline"; Reason and NewValidUntil are both required.
 func (c *QuoteClient) HandleExpiredQuote(ctx context.Context, id string, request *HandleExpiredQuoteRequest) (*Quote, error) {
 	var resp struct {
 		Result Quote `json:"result"`

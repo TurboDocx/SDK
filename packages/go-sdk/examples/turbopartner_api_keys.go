@@ -73,12 +73,17 @@ func main() {
 	fmt.Println("Adding partner portal user...")
 	user, err := partner.AddUserToPartnerPortal(ctx, &turbodocx.AddPartnerUserRequest{
 		Email: "ops@yourcompany.com",
-		Role:  "member",
+		Role:  "member", // partner roles: admin | member | viewer (NOT the org role enum)
 		Permissions: turbodocx.PartnerPermissions{
-			CanManageOrgs:     true,
-			CanManageOrgUsers: true,
-			CanViewAuditLogs:  true,
-			// Other permissions default to false
+			// The API requires all 7 keys; none are omitempty, so an unset field
+			// is still sent as false. Spelled out here so the grant is unambiguous.
+			CanManageOrgs:           true,
+			CanManageOrgUsers:       true,
+			CanManagePartnerUsers:   false,
+			CanManageOrgAPIKeys:     false,
+			CanManagePartnerAPIKeys: false,
+			CanUpdateEntitlements:   false,
+			CanViewAuditLogs:        true,
 		},
 	})
 	if err != nil {

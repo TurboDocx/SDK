@@ -46,16 +46,20 @@ puts
 
 # --- Partner Portal Users ---
 
-# Add a user to the partner portal with specific permissions
+# Add a user to the partner portal with specific permissions.
+# All seven permission keys are required -- a partial permissions hash is a 400.
 puts "Adding partner portal user..."
 user = TurboDocxSdk::TurboPartner.add_user_to_partner_portal(
   "email"       => "ops@yourcompany.com",
-  "role"        => "member",
+  "role"        => "member",  # partner roles: "admin" | "member" | "viewer"
   "permissions" => {
-    "canManageOrgs"     => true,
-    "canManageOrgUsers" => true,
-    "canViewAuditLogs"  => true
-    # Other permissions default to false
+    "canManageOrgs"           => true,
+    "canManageOrgUsers"       => true,
+    "canManagePartnerUsers"   => false,
+    "canManageOrgAPIKeys"     => false,
+    "canManagePartnerAPIKeys" => false,
+    "canUpdateEntitlements"   => false,
+    "canViewAuditLogs"        => true
   }
 )
 puts "Added partner user: #{user['data']['email']} (Role: #{user['data']['role']})\n\n"

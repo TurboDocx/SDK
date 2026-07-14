@@ -255,7 +255,7 @@ public final class TurboPartner {
      *
      * @param organizationId Organization UUID
      * @param name           API key name
-     * @param role           API key role ("admin", "contributor", or "viewer")
+     * @param role           API key role ("admin", "contributor", "user", or "viewer")
      * @return JsonObject with success, data (key details including the key value), and message
      * @throws IOException if the request fails
      */
@@ -400,9 +400,17 @@ public final class TurboPartner {
     /**
      * Add a user to the partner portal.
      *
+     * <p>The {@code permissions} map is all-or-nothing: every one of the seven keys must
+     * be present. A partial map is rejected with a 400.
+     *
      * @param email       User email address
-     * @param role        User role ("admin", "member", or "viewer")
-     * @param permissions Permission flags with camelCase keys
+     * @param role        Partner role ("admin", "member", or "viewer"). The org roles
+     *                    "contributor" and "user" are NOT valid here.
+     * @param permissions Permission flags with camelCase keys. ALL SEVEN are required:
+     *                    {@code canManageOrgs}, {@code canManageOrgUsers},
+     *                    {@code canManagePartnerUsers}, {@code canManageOrgAPIKeys},
+     *                    {@code canManagePartnerAPIKeys}, {@code canUpdateEntitlements},
+     *                    {@code canViewAuditLogs}
      * @return JsonObject with success and data (user details)
      * @throws IOException if the request fails
      */
@@ -417,9 +425,17 @@ public final class TurboPartner {
     /**
      * Update a partner portal user's role and/or permissions.
      *
+     * <p>The {@code permissions} map may be omitted entirely, but there is no partial
+     * update: if you pass it, pass all seven keys or the backend returns a 400.
+     *
      * @param userId      User UUID
-     * @param role        New role (may be null to keep current)
-     * @param permissions New permission flags (may be null to keep current)
+     * @param role        New partner role ("admin", "member", or "viewer"; may be null to
+     *                    keep current)
+     * @param permissions New permission flags -- ALL SEVEN keys ({@code canManageOrgs},
+     *                    {@code canManageOrgUsers}, {@code canManagePartnerUsers},
+     *                    {@code canManageOrgAPIKeys}, {@code canManagePartnerAPIKeys},
+     *                    {@code canUpdateEntitlements}, {@code canViewAuditLogs}) or null
+     *                    to keep current
      * @return JsonObject with success and data (userId, role, permissions)
      * @throws IOException if the request fails
      */

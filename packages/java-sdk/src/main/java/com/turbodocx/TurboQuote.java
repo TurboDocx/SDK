@@ -192,7 +192,11 @@ public final class TurboQuote {
     }
 
     /**
-     * Handle an expired sent quote.
+     * Handle an expired sent quote. Voids or declines the original and returns the
+     * duplicate quote created with the new validity date.
+     *
+     * <p>{@code action} must be {@code "void"} or {@code "decline"}; {@code reason} and
+     * {@code newValidUntil} are both required.
      */
     public Quote handleExpiredQuote(String id, HandleExpiredQuoteRequest request) throws IOException {
         Type type = new TypeToken<ResultEnvelope<Quote>>(){}.getType();

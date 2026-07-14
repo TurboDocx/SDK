@@ -20,11 +20,12 @@ module TurboDocxSdk
       syncWithProducts
       isPrimaryAdmin
       canManageOrgs
-      canManageUsers
-      canManageBilling
-      canViewAuditLog
-      canManageApiKeys
-      canManageEntitlements
+      canManageOrgUsers
+      canManagePartnerUsers
+      canManageOrgAPIKeys
+      canManagePartnerAPIKeys
+      canUpdateEntitlements
+      canViewAuditLogs
       hasFileDownload
       hasGDrive
       hasWrike

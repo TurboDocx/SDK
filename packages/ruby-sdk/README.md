@@ -511,21 +511,61 @@ TurboDocxSdk::TurboPartner.list_partner_api_keys(limit: 10)
 TurboDocxSdk::TurboPartner.update_partner_api_key("key-uuid", name: "Renamed")
 TurboDocxSdk::TurboPartner.revoke_partner_api_key("key-uuid")
 
-# Add a user to the partner portal
+# Add a user to the partner portal.
+# `permissions` is all-or-nothing: every one of the seven keys must be present.
+# A partial permissions hash is rejected with a 400.
 TurboDocxSdk::TurboPartner.add_user_to_partner_portal(
   email:       "ops@company.com",
-  role:        "member",
-  permissions: { canManageOrgs: true, canViewAuditLogs: true }
+  role:        "member",  # partner roles: "admin" | "member" | "viewer"
+  permissions: {
+    canManageOrgs:           true,
+    canManageOrgUsers:       true,
+    canManagePartnerUsers:   false,
+    canManageOrgAPIKeys:     false,
+    canManagePartnerAPIKeys: false,
+    canUpdateEntitlements:   false,
+    canViewAuditLogs:        true
+  }
 )
 
 # List / update / remove / re-invite partner portal users
 TurboDocxSdk::TurboPartner.list_partner_portal_users(search: "ops")
+
+# The `permissions` object is optional on update — but if you send it, send all
+# seven keys. There is no partial permissions update.
 TurboDocxSdk::TurboPartner.update_partner_user_permissions("user-uuid",
-  permissions: { canManageOrgs: false }
+  permissions: {
+    canManageOrgs:           false,
+    canManageOrgUsers:       true,
+    canManagePartnerUsers:   false,
+    canManageOrgAPIKeys:     false,
+    canManagePartnerAPIKeys: false,
+    canUpdateEntitlements:   false,
+    canViewAuditLogs:        true
+  }
 )
 TurboDocxSdk::TurboPartner.remove_user_from_partner_portal("user-uuid")
 TurboDocxSdk::TurboPartner.resend_partner_portal_invitation_to_user("user-uuid")
 ```
+
+**Partner permissions** — all seven keys are required whenever `permissions` is sent (booleans):
+
+| Key | Grants |
+|:----|:-------|
+| `canManageOrgs` | Create / update / delete organizations |
+| `canManageOrgUsers` | Manage users inside organizations |
+| `canManagePartnerUsers` | Manage partner portal users |
+| `canManageOrgAPIKeys` | Manage organization API keys |
+| `canManagePartnerAPIKeys` | Manage partner API keys |
+| `canUpdateEntitlements` | Update organization entitlements |
+| `canViewAuditLogs` | Read the partner audit log |
+
+**Role enums are different for orgs and partners** — do not mix them:
+
+| Scope | Valid roles |
+|:------|:------------|
+| Org users, org API keys | `admin`, `contributor`, `user`, `viewer` |
+| Partner portal users | `admin`, `member`, `viewer` |
 
 #### Audit Logs
 
@@ -581,7 +621,7 @@ Unlike `TurboSign`, `TurboWebhooks` does NOT require `sender_email` — webhook 
 
 ```ruby
 created = TurboDocxSdk::TurboWebhooks.create_webhook(
-  urls:   ["https://your-server.example.com/webhooks/turbodocx"],  # HTTPS only
+  urls:   ["https://your-server.example.com/webhooks/turbodocx"],  # HTTPS only, 1-10 urls
   events: ["signature.document.completed", "signature.document.voided"]
 )
 
@@ -589,7 +629,7 @@ created = TurboDocxSdk::TurboWebhooks.create_webhook(
 puts "Save this secret: #{created['secret']}"
 ```
 
-If the signature webhook already exists, `create_webhook` raises `TurboDocxSdk::ValidationError`. Either update the existing one with `update_webhook` or `delete_webhook` first.
+If the signature webhook already exists, `create_webhook` raises `TurboDocxSdk::ConflictError` (409). Either update the existing one with `update_webhook` or `delete_webhook` first.
 
 #### Get, update, delete
 
@@ -597,6 +637,7 @@ If the signature webhook already exists, `create_webhook` raises `TurboDocxSdk::
 webhook = TurboDocxSdk::TurboWebhooks.get_webhook
 # webhook["deliveryStats"] and webhook["availableEvents"] are included
 
+# Only the keywords you pass are sent; the rest are left untouched.
 TurboDocxSdk::TurboWebhooks.update_webhook(is_active: false)
 TurboDocxSdk::TurboWebhooks.update_webhook(
   urls:   ["https://new-endpoint.example.com/webhooks/turbodocx"],
@@ -604,6 +645,8 @@ TurboDocxSdk::TurboWebhooks.update_webhook(
 )
 TurboDocxSdk::TurboWebhooks.delete_webhook
 ```
+
+> **`urls` and `events` can never be empty.** They stay `min(1)` on the backend even on update, so `urls: []` is a 400, not a "clear this field" instruction — and there is no way to remove every URL from a webhook. `update_webhook` raises `TurboDocxSdk::ValidationError` before hitting the wire if you pass an empty or `nil` array. To leave a field unchanged, just omit the keyword. `urls` accepts **1-10** entries.
 
 #### Test deliveries and replay
 
@@ -730,12 +773,15 @@ quote = TurboDocxSdk::TurboQuote.create_quote(
   "companyId" => "company-uuid",
   "contactId" => "contact-uuid",
   "currency"  => "USD",
+  "termDays"  => 90,           # optional; defaults to 60, max 3650
   "validUntil" => "2026-09-30"
 )
 puts "Quote number: #{quote['quoteNumber']}"
 
 # 2. Add a product line item with a percent discount
-#    (single hash is auto-wrapped into an array)
+#    (single hash is auto-wrapped into an array; 1-50 items per call)
+#    productId, productName, unitPrice and billingFrequency are all REQUIRED.
+#    productId may be nil for an ad-hoc item, but the key must be present.
 items = TurboDocxSdk::TurboQuote.add_line_items(quote["id"],
   "productId"        => "product-uuid",
   "productName"      => "Consulting Service",
@@ -750,6 +796,36 @@ puts "Line item ID: #{items[0]['id']}"
 # 3. Send the quote
 sent = TurboDocxSdk::TurboQuote.send_quote(quote["id"])
 puts sent["message"]
+```
+
+#### Quote terms and auto-renewal
+
+`termDays` defaults to **60** and accepts up to **3650** (10 years). The special value **`-1`** means auto-renewal, and it is the only case where `renewalPeriod` is allowed — in fact it is then **required**:
+
+```ruby
+# Auto-renewing quote: termDays == -1 REQUIRES renewalPeriod
+TurboDocxSdk::TurboQuote.create_quote(
+  "name"          => "Managed Services (auto-renew)",
+  "companyId"     => "company-uuid",
+  "contactId"     => "contact-uuid",
+  "termDays"      => -1,
+  "renewalPeriod" => TurboDocxSdk::RenewalPeriod::MONTHLY  # weekly | monthly | quarterly | annually
+)
+```
+
+For any other `termDays`, `renewalPeriod` must be omitted (or `nil`) — sending it is a 400.
+
+#### Handling an expired quote
+
+`handle_expired_quote` voids or declines an expired **sent** quote and creates a duplicate carrying the new validity date. All three keys are required, and `action` accepts **only** `"void"` or `"decline"`:
+
+```ruby
+replacement = TurboDocxSdk::TurboQuote.handle_expired_quote(quote["id"],
+  "action"        => "void",          # "void" or "decline" — nothing else is accepted
+  "reason"        => "Pricing refreshed for Q4",  # REQUIRED, max 190 chars
+  "newValidUntil" => "2026-12-31"     # REQUIRED, ISO 8601
+)
+puts replacement["quoteNumber"]  # the new duplicate quote
 ```
 
 #### Download a quote as PDF
@@ -781,9 +857,17 @@ puts result["quote"]["status"]  # "sent"
 Six catalog resources support bulk creation: `bulk_create_products`, `bulk_create_bundles`, `bulk_create_price_books`, `bulk_create_companies`, `bulk_create_contacts`, and `bulk_create_types`. Each takes an **array of row hashes** (same field shapes as the corresponding single `create_*` method); the SDK wraps them in the `{ "rows" => [...] }` envelope the API expects.
 
 ```ruby
+# Every product row requires name, categoryId, listPrice and billingFrequency.
+# `categoryId` is a TurboQuote type UUID — there is no `categoryName` shorthand;
+# resolve or create the category first (`list_types` / `create_type`) and pass its ID.
+category = TurboDocxSdk::TurboQuote.create_type(
+  "name"         => "Plans",
+  "categoryType" => TurboDocxSdk::CategoryType::PRODUCT_CATEGORY
+)
+
 report = TurboDocxSdk::TurboQuote.bulk_create_products([
-  { "name" => "Basic Plan",   "unitPrice" => 10,  "billingFrequency" => "monthly" },
-  { "name" => "Premium Plan", "unitPrice" => 100, "billingFrequency" => "monthly" }
+  { "name" => "Basic Plan",   "categoryId" => category["id"], "listPrice" => 10,  "billingFrequency" => "monthly" },
+  { "name" => "Premium Plan", "categoryId" => category["id"], "listPrice" => 100, "billingFrequency" => "monthly" }
 ])
 
 puts "Imported: #{report['imported']}"

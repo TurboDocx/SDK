@@ -466,10 +466,20 @@ const partnerUser = await TurboPartner.addUserToPartnerPortal({
   },
 });
 
-// Update partner user permissions
+// Update partner user permissions.
+// `permissions` is optional — but if you send it, send all 7 keys. The API has no partial
+// permissions update; omitted keys return 400.
 await TurboPartner.updatePartnerUserPermissions('user-uuid', {
   role: 'member',
-  permissions: { canManageOrgs: false },
+  permissions: {
+    canManageOrgs: false,
+    canManageOrgUsers: true,
+    canManagePartnerUsers: false,
+    canManageOrgAPIKeys: false,
+    canManagePartnerAPIKeys: false,
+    canUpdateEntitlements: false,
+    canViewAuditLogs: true,
+  },
 });
 
 // Remove a partner user

@@ -331,7 +331,9 @@ class TurboQuote:
         """
         Add product line item(s) to a quote.
 
-        Accepts a single item dict or a list of item dicts.
+        Accepts a single item dict or a list of item dicts (max 50 per request).
+        Every item must carry a `productId` key -- set it to None for a custom
+        line item that isn't backed by a catalog product.
         Returns a list of created line items.
         """
         client = cls._get_client()

@@ -6,7 +6,7 @@
  *
  * Methods demonstrated:
  * - configure()
- * - getTemplate(), createTemplate(), updateTemplate(), deleteTemplate()
+ * - getTemplate(), updateTemplate(), deleteTemplate()
  * - createType(), listTypes(), updateType(), deleteType()
  * - createCompany(), getCompany(), updateCompany(), listCompanyContacts(), deleteCompany()
  * - createContact(), updateContact(), deleteContact()
@@ -36,28 +36,23 @@ async function advancedExample(): Promise<void> {
     // =============================================
     console.log('2. Managing quote template...');
 
-    try {
-      const existingTemplate = await TurboQuote.getTemplate();
-      console.log(`  Existing template found: ${existingTemplate.id}`);
-    } catch {
-      console.log('  No existing template.');
-    }
+    // getTemplate() auto-provisions: if the org has no template yet, the API creates one from the
+    // org's branding and returns it. So there is always a template to update, and createTemplate()
+    // is effectively unreachable — on an established org it returns 400 TEMPLATE_ALREADY_EXISTS.
+    // The correct flow is getTemplate() -> updateTemplate().
+    const template = await TurboQuote.getTemplate();
+    console.log(`  Template: ${template.id}`);
 
-    const template = await TurboQuote.createTemplate({
+    const updatedTemplate = await TurboQuote.updateTemplate(template.id, {
       primaryColor: '#1a73e8',
       primaryTextColor: '#ffffff',
       disclaimer: 'Prices valid for 30 days from issue date.',
       termsAndConditions: 'Payment due within 30 days of acceptance.',
-      closingMessage: 'Thank you for your business!',
+      closingMessage: 'Thank you for choosing us!',
       senderName: 'Sales Team',
       senderEmail: 'sales@yourcompany.com',
       senderPhone: '+1-555-0100',
       contactEmail: 'support@yourcompany.com',
-    });
-    console.log(`  Created template: ${template.id}`);
-
-    const updatedTemplate = await TurboQuote.updateTemplate(template.id, {
-      closingMessage: 'Thank you for choosing us!',
     });
     console.log(`  Updated closing message: ${updatedTemplate.closingMessage}\n`);
 
@@ -234,6 +229,8 @@ async function advancedExample(): Promise<void> {
     await TurboQuote.deleteQuote(duplicated.id);
     await TurboQuote.deleteQuote(quote2.id);
     await TurboQuote.deleteQuote(quote1.id);
+    // deleteTemplate is really "reset to org branding defaults" — the next getTemplate() call
+    // regenerates a template from the org's branding.
     await TurboQuote.deleteTemplate(template.id);
     await TurboQuote.deleteProduct(product.id);
     await TurboQuote.deleteContact(contact.id);

@@ -59,8 +59,8 @@ module TurboDocxSdk
       # ConflictError. Update the existing webhook with +update_webhook+ or
       # delete it first.
       #
-      # @param urls [Array<String>] HTTPS-only endpoint URLs (HTTP returns 400)
-      # @param events [Array<String>] subscribed event types
+      # @param urls [Array<String>] HTTPS-only endpoint URLs, 1-10 (HTTP returns 400)
+      # @param events [Array<String>] subscribed event types (at least 1)
       # @return [Hash] { "id" => ..., "secret" => ... }
       # @raise [ConflictError] if the signature webhook already exists
       # @raise [ValidationError] on invalid request data (e.g. non-HTTPS url)
@@ -84,16 +84,39 @@ module TurboDocxSdk
       # Patch one or more fields on the signature webhook. Only fields the
       # caller explicitly provides are sent; untouched fields are omitted.
       #
-      # @param urls [Array<String>, nil] HTTPS-only endpoint URLs
-      # @param events [Array<String>, nil] subscribed event types
-      # @param is_active [Boolean, nil] enable/disable delivery
+      # +urls+ and +events+ stay +min(1)+ on the backend even though they are
+      # optional on PATCH, so an empty/nil array is a 400 rather than a "clear
+      # this field" instruction. Both are rejected client-side instead: to leave
+      # a field untouched, omit the keyword entirely.
+      #
+      # @param urls [Array<String>] HTTPS-only endpoint URLs (1-10)
+      # @param events [Array<String>] subscribed event types (at least 1)
+      # @param is_active [Boolean] enable/disable delivery
       # @return [Hash] the updated webhook
       # @raise [NotFoundError] if the signature webhook does not exist
-      # @raise [ValidationError] on invalid request data (e.g. non-HTTPS url)
+      # @raise [ValidationError] if urls or events is provided but empty/nil, or
+      #   on invalid request data (e.g. non-HTTPS url)
       def update_webhook(urls: :__unset, events: :__unset, is_active: :__unset)
         patch = {}
-        patch["urls"] = urls unless urls == :__unset
-        patch["events"] = events unless events == :__unset
+
+        unless urls == :__unset
+          if urls.nil? || urls.empty?
+            raise ValidationError,
+                  "urls must contain at least one URL. Omit the urls: argument to leave it unchanged."
+          end
+
+          patch["urls"] = urls
+        end
+
+        unless events == :__unset
+          if events.nil? || events.empty?
+            raise ValidationError,
+                  "events must contain at least one event type. Omit the events: argument to leave it unchanged."
+          end
+
+          patch["events"] = events
+        end
+
         patch["isActive"] = is_active unless is_active == :__unset
 
         envelope = get_client.patch("/api/webhooks/#{SIGNATURE_WEBHOOK_NAME}", patch)
