@@ -6,14 +6,92 @@
  */
 
 /**
- * Known TurboDocx webhook event types. Typed as `string` (not a closed union)
- * so the backend can add new events without an SDK release.
+ * The TurboSign webhook events, keyed by a short name.
  *
- * Known values (as of plan time):
- *   - "signature.document.completed"
- *   - "signature.document.voided"
+ * Each member's doc comment states exactly what the event fires on. Use these
+ * instead of raw strings so a typo is a compile error rather than a webhook
+ * that never fires.
+ *
+ * ```typescript
+ * import { TurboWebhooks, WebhookEvents } from '@turbodocx/sdk';
+ *
+ * await TurboWebhooks.createWebhook({
+ *   urls: ['https://your-server.example.com/webhooks/turbodocx'],
+ *   events: [WebhookEvents.RECIPIENT_SIGNED, WebhookEvents.COMPLETED],
+ * });
+ * ```
  */
-export type WebhookEvent = string;
+export const WebhookEvents = {
+  /** The document is dispatched to recipients. */
+  SENT: 'signature.document.sent',
+
+  /** A recipient opens the document for the first time. */
+  VIEWED: 'signature.document.viewed',
+
+  /**
+   * Any individual signer completes their signature — fires **once per signer**,
+   * including the last one. The payload carries the signer's identity plus
+   * `is_final_signer` (true only on the last signature) and `remaining_signers`.
+   *
+   * This is the per-person event, and it always fires *before* the
+   * document-level outcome (`SIGNED`, `COMPLETED`, or `FINALIZATION_FAILED`).
+   */
+  RECIPIENT_SIGNED: 'signature.document.recipient_signed',
+
+  /**
+   * A signer signs but the document is **not yet complete** — document-level
+   * partial progress.
+   *
+   * Two consequences worth internalizing:
+   *  - **It never fires on the final signature.** To detect "the whole document
+   *    is done", use {@link WebhookEvents.COMPLETED} (or `RECIPIENT_SIGNED` with
+   *    `is_final_signer: true`) — NOT this event.
+   *  - **A single-signer document never emits it at all.** That document emits
+   *    `RECIPIENT_SIGNED` (`is_final_signer: true`) then `COMPLETED`.
+   */
+  SIGNED: 'signature.document.signed',
+
+  /** All recipients have signed and the signed PDF is finalized. */
+  COMPLETED: 'signature.document.completed',
+
+  /**
+   * The signed PDF fails to finalize (e.g. a KMS signing error). The document is
+   * **not** completed — this fires *instead of* `COMPLETED` on the final signature.
+   */
+  FINALIZATION_FAILED: 'signature.document.finalization_failed',
+
+  /** The document is voided or cancelled. */
+  VOIDED: 'signature.document.voided',
+} as const;
+
+/**
+ * All 7 TurboSign webhook events, in lifecycle order.
+ *
+ * Every signature fires `recipient_signed` first, then exactly one of
+ * `completed` / `finalization_failed` (that was the final signature) or
+ * `signed` (signers still remain).
+ */
+export const WEBHOOK_EVENTS = [
+  WebhookEvents.SENT,
+  WebhookEvents.VIEWED,
+  WebhookEvents.RECIPIENT_SIGNED,
+  WebhookEvents.SIGNED,
+  WebhookEvents.COMPLETED,
+  WebhookEvents.FINALIZATION_FAILED,
+  WebhookEvents.VOIDED,
+] as const;
+
+/** The closed union of the 7 events the backend dispatches today. */
+export type KnownWebhookEvent = (typeof WEBHOOK_EVENTS)[number];
+
+/**
+ * A webhook event type.
+ *
+ * Autocompletes to the 7 {@link KnownWebhookEvent} values while still accepting
+ * any string — the backend can add new events without an SDK release, and code
+ * that already passes a raw string keeps compiling.
+ */
+export type WebhookEvent = KnownWebhookEvent | (string & {});
 
 /** Base webhook shape. Never includes `secret`. */
 export interface Webhook {

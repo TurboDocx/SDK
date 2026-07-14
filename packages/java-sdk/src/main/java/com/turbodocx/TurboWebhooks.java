@@ -47,7 +47,10 @@ public class TurboWebhooks {
      * later.
      *
      * @param urls   HTTPS URLs, 1-10 entries (HTTP returns 400 ValidationException)
-     * @param events Event types, at least 1 (e.g. "signature.document.completed")
+     * @param events Event types, at least 1. Prefer the {@link WebhookEvent} enum
+     *     ({@code WebhookEvent.COMPLETED.getValue()}, or {@code WebhookEvent.allValues()}
+     *     for every event) over raw strings. Raw strings still work, so new backend
+     *     events need no SDK bump.
      * @return JsonObject with {@code id} and {@code secret}
      * @throws IOException if the request fails
      * @throws TurboDocxException.ConflictException if a webhook with the

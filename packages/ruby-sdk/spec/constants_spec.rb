@@ -99,6 +99,36 @@ RSpec.describe "TurboDocxSdk Constants" do
     end
   end
 
+  describe "WebhookEvent" do
+    it "defines all 7 signature events" do
+      expect(TurboDocxSdk::WebhookEvent::SENT).to eq("signature.document.sent")
+      expect(TurboDocxSdk::WebhookEvent::VIEWED).to eq("signature.document.viewed")
+      expect(TurboDocxSdk::WebhookEvent::RECIPIENT_SIGNED).to eq("signature.document.recipient_signed")
+      expect(TurboDocxSdk::WebhookEvent::SIGNED).to eq("signature.document.signed")
+      expect(TurboDocxSdk::WebhookEvent::COMPLETED).to eq("signature.document.completed")
+      expect(TurboDocxSdk::WebhookEvent::FINALIZATION_FAILED).to eq("signature.document.finalization_failed")
+      expect(TurboDocxSdk::WebhookEvent::VOIDED).to eq("signature.document.voided")
+    end
+
+    # Drift guard: if the backend adds an event, ALL must grow with it.
+    it "exposes exactly the 7 wire strings via ALL, in lifecycle order, frozen" do
+      expect(TurboDocxSdk::WebhookEvent::ALL).to eq(
+        [
+          "signature.document.sent",
+          "signature.document.viewed",
+          "signature.document.recipient_signed",
+          "signature.document.signed",
+          "signature.document.completed",
+          "signature.document.finalization_failed",
+          "signature.document.voided",
+        ]
+      )
+      expect(TurboDocxSdk::WebhookEvent::ALL.size).to eq(7)
+      expect(TurboDocxSdk::WebhookEvent::ALL.uniq.size).to eq(7)
+      expect(TurboDocxSdk::WebhookEvent::ALL).to be_frozen
+    end
+  end
+
   describe "PartnerScope" do
     it "defines the granular partner API key permission scopes" do
       expect(TurboDocxSdk::PartnerScope::ORG_CREATE).to eq("org:create")

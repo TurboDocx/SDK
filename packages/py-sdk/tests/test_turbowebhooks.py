@@ -23,6 +23,14 @@ from turbodocx_sdk import (
     TurboWebhooks,
     ValidationError,
     verify_webhook_signature,
+    WEBHOOK_EVENTS,
+    WEBHOOK_EVENT_COMPLETED,
+    WEBHOOK_EVENT_FINALIZATION_FAILED,
+    WEBHOOK_EVENT_RECIPIENT_SIGNED,
+    WEBHOOK_EVENT_SENT,
+    WEBHOOK_EVENT_SIGNED,
+    WEBHOOK_EVENT_VIEWED,
+    WEBHOOK_EVENT_VOIDED,
 )
 
 
@@ -538,4 +546,61 @@ class TestVerifyWebhookSignature:
         assert verify_webhook_signature(
             self.BODY.encode("utf-8"), sig, self.TIMESTAMP, self.SECRET,
             now=lambda: self.NOW_SECONDS,
+        )
+
+
+# ============================================
+# WEBHOOK EVENT CONSTANTS
+# ============================================
+
+
+class TestWebhookEventConstants:
+    """Drift guard: if the backend adds an event, WEBHOOK_EVENTS must grow with it."""
+
+    def setup_method(self):
+        _reset()
+
+    EXPECTED = (
+        "signature.document.sent",
+        "signature.document.viewed",
+        "signature.document.recipient_signed",
+        "signature.document.signed",
+        "signature.document.completed",
+        "signature.document.finalization_failed",
+        "signature.document.voided",
+    )
+
+    def test_webhook_events_contains_exactly_the_seven_wire_strings(self):
+        assert WEBHOOK_EVENTS == self.EXPECTED
+        assert len(WEBHOOK_EVENTS) == 7
+
+    def test_each_named_constant_maps_to_its_wire_string(self):
+        assert WEBHOOK_EVENT_SENT == "signature.document.sent"
+        assert WEBHOOK_EVENT_VIEWED == "signature.document.viewed"
+        assert WEBHOOK_EVENT_RECIPIENT_SIGNED == "signature.document.recipient_signed"
+        assert WEBHOOK_EVENT_SIGNED == "signature.document.signed"
+        assert WEBHOOK_EVENT_COMPLETED == "signature.document.completed"
+        assert WEBHOOK_EVENT_FINALIZATION_FAILED == "signature.document.finalization_failed"
+        assert WEBHOOK_EVENT_VOIDED == "signature.document.voided"
+
+    @pytest.mark.asyncio
+    async def test_create_webhook_still_accepts_a_raw_event_string(self):
+        """Non-breaking: events is List[str], not a closed enum."""
+        mock_client = MagicMock()
+        mock_client.post = AsyncMock(return_value={"data": {"id": "wh_1", "secret": "s"}})
+
+        with patch.object(TurboWebhooks, "_get_client", return_value=mock_client):
+            await TurboWebhooks.create_webhook(
+                urls=["https://example.com/hook"],
+                # An event the SDK has never heard of — still sent verbatim.
+                events=["signature.document.some_future_event"],
+            )
+
+        mock_client.post.assert_called_once_with(
+            "/api/webhooks",
+            data={
+                "name": "signature",
+                "urls": ["https://example.com/hook"],
+                "events": ["signature.document.some_future_event"],
+            },
         )

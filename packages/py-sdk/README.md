@@ -449,11 +449,44 @@ logs = await TurboPartner.get_partner_audit_logs(limit=10)
 
 ### TurboWebhooks (Signature Webhook)
 
-The `TurboWebhooks` module manages your organization's **signature webhook** — a single subscription to TurboDocx signature events (`signature.document.completed`, `signature.document.voided`). It also exposes a `verify_webhook_signature` helper for incoming webhook receivers.
+The `TurboWebhooks` module manages your organization's **signature webhook** — a single subscription to TurboDocx signature events. It also exposes a `verify_webhook_signature` helper for incoming webhook receivers.
 
 > **One webhook per org.** The SDK manages a single fixed-name webhook (`signature`) per org so SDK-managed and UI-managed webhooks stay in sync — what you create here also appears in the dashboard's Signature Webhooks settings page. To manage multiple webhooks per org, call the REST API directly.
 >
 > **Requires administrator role.** All webhook routes require an admin TDX- API key.
+
+#### The 7 signature events
+
+Import the constants instead of hand-writing the wire strings — a typo becomes an import error rather than a webhook that silently never fires.
+
+| Event | Constant | Fires when |
+|---|---|---|
+| `signature.document.sent` | `WEBHOOK_EVENT_SENT` | The document is dispatched to recipients |
+| `signature.document.viewed` | `WEBHOOK_EVENT_VIEWED` | A recipient opens the document for the first time |
+| `signature.document.recipient_signed` | `WEBHOOK_EVENT_RECIPIENT_SIGNED` | Any individual signer completes their signature — fires **once per signer**, and carries `is_final_signer` + `remaining_signers` |
+| `signature.document.signed` | `WEBHOOK_EVENT_SIGNED` | A signer signs but the document is **not yet complete** (document-level partial progress) |
+| `signature.document.completed` | `WEBHOOK_EVENT_COMPLETED` | All recipients have signed and the signed PDF is finalized |
+| `signature.document.finalization_failed` | `WEBHOOK_EVENT_FINALIZATION_FAILED` | The signed PDF fails to finalize (e.g. a KMS signing error); the document is **not** completed |
+| `signature.document.voided` | `WEBHOOK_EVENT_VOIDED` | The document is voided or cancelled |
+
+On every signature, `recipient_signed` fires first, then **exactly one** document-level event:
+
+```
+Recipient signs
+   │
+   ├─ signature.document.recipient_signed   (always — one per signer)
+   │
+   └─ more signers remaining?
+        ├─ yes → signature.document.signed                 (partial progress)
+        └─ no  → signature.document.completed              (finalized OK)
+                 or signature.document.finalization_failed (finalization failed)
+```
+
+> **`signed` never fires on the final signature.** To detect "the whole document is done", subscribe to `completed` (or to `recipient_signed` and check `is_final_signer: true`) — **not** `signed`.
+>
+> **A single-signer document never emits `signed` at all.** It emits `recipient_signed` (with `is_final_signer: true`), then `completed`.
+
+`WEBHOOK_EVENTS` is a tuple of all 7 wire strings if you want to subscribe to everything. `events` stays a plain `list[str]`, so the backend can add events without an SDK release.
 
 #### Configuration
 
@@ -473,9 +506,26 @@ Unlike `TurboSign`, `TurboWebhooks` does NOT require `sender_email` — webhook 
 #### Create the signature webhook (save the secret immediately)
 
 ```python
+from turbodocx_sdk import (
+    TurboWebhooks,
+    WEBHOOK_EVENTS,
+    WEBHOOK_EVENT_COMPLETED,
+    WEBHOOK_EVENT_RECIPIENT_SIGNED,
+    WEBHOOK_EVENT_SENT,
+    WEBHOOK_EVENT_VIEWED,
+    WEBHOOK_EVENT_VOIDED,
+)
+
 created = await TurboWebhooks.create_webhook(
     urls=["https://your-server.example.com/webhooks/turbodocx"],  # HTTPS only
-    events=["signature.document.completed", "signature.document.voided"],
+    events=[
+        WEBHOOK_EVENT_SENT,
+        WEBHOOK_EVENT_VIEWED,
+        WEBHOOK_EVENT_RECIPIENT_SIGNED,
+        WEBHOOK_EVENT_COMPLETED,
+        WEBHOOK_EVENT_VOIDED,
+    ],
+    # ...or subscribe to everything: events=list(WEBHOOK_EVENTS)
 )
 # `secret` is shown ONCE here. Store it securely; it cannot be retrieved later.
 print(f"Save this secret: {created['secret']}")

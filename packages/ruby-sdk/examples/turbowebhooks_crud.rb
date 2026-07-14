@@ -34,8 +34,12 @@ require "json"
 # HTTPS-only -- non-HTTPS URLs return 400 ValidationError.
 RECEIVER_URL = "https://your-server.example.com/webhooks/turbodocx"
 
-EVENT_DOCUMENT_COMPLETED = "signature.document.completed"
-EVENT_DOCUMENT_VOIDED = "signature.document.voided"
+# The SDK exposes all 7 signature events as TurboDocxSdk::WebhookEvent constants
+# (plus WebhookEvent::ALL). See the README for what each one fires on -- note that
+# `signed` is partial-progress only and never fires on the final signature; use
+# `completed` to detect "the document is done".
+EVENT_DOCUMENT_COMPLETED = TurboDocxSdk::WebhookEvent::COMPLETED
+EVENT_DOCUMENT_VOIDED = TurboDocxSdk::WebhookEvent::VOIDED
 
 def section(title)
   puts

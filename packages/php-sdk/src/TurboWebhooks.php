@@ -21,6 +21,8 @@ use TurboDocx\Config\HttpClientConfig;
  *
  * @example
  * ```php
+ * use TurboDocx\Types\Enums\WebhookEvent;
+ *
  * TurboWebhooks::configureFromCredentials(
  *     apiKey: 'TDX-...',
  *     orgId: '...',
@@ -28,7 +30,7 @@ use TurboDocx\Config\HttpClientConfig;
  *
  * $created = TurboWebhooks::createWebhook(
  *     urls: ['https://your-server.example.com/webhooks/turbodocx'],
- *     events: ['signature.document.completed'],
+ *     events: [WebhookEvent::RECIPIENT_SIGNED->value, WebhookEvent::COMPLETED->value],
  * );
  * ```
  */
@@ -102,7 +104,11 @@ final class TurboWebhooks
      * ONCE and must be stored on receipt; it cannot be retrieved later.
      *
      * @param array<int, string> $urls HTTPS URLs (HTTP returns 400). Min 1, max 10.
-     * @param array<int, string> $events Event types (e.g. "signature.document.completed"). Min 1.
+     * @param array<int, string> $events Event types, min 1. Prefer the
+     *        {@see \TurboDocx\Types\Enums\WebhookEvent} enum
+     *        (`WebhookEvent::COMPLETED->value`, or `WebhookEvent::all()` for every
+     *        event) over raw strings. Raw strings still work, so new backend
+     *        events need no SDK bump.
      * @return array<string, mixed> {id: string, secret: string}
      * @throws \TurboDocx\Exceptions\ConflictException HTTP 409 when the
      *         signature webhook already exists. Update or delete the existing

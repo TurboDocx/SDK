@@ -88,6 +88,64 @@ module TurboDocxSdk
     ALL = [NEVER, YEARLY, MONTHLY].freeze
   end
 
+  # The 7 TurboSign webhook events (create_webhook / update_webhook +events:+,
+  # test_webhook / notify_webhook +event_type:+).
+  #
+  # +events:+ stays an Array of plain Strings, so raw strings keep working and
+  # the backend can add events without a gem release.
+  #
+  # On every signature, +recipient_signed+ fires first, then exactly one of
+  # +completed+ / +finalization_failed+ (that was the final signature) or
+  # +signed+ (signers still remain).
+  module WebhookEvent
+    # The document is dispatched to recipients.
+    SENT = "signature.document.sent"
+
+    # A recipient opens the document for the first time.
+    VIEWED = "signature.document.viewed"
+
+    # Any individual signer completes their signature -- fires ONCE PER SIGNER,
+    # including the last one. The payload carries the signer's identity plus
+    # +is_final_signer+ (true only on the last signature) and +remaining_signers+.
+    #
+    # This is the per-person event, and it always fires before the
+    # document-level outcome (SIGNED, COMPLETED, or FINALIZATION_FAILED).
+    RECIPIENT_SIGNED = "signature.document.recipient_signed"
+
+    # A signer signs but the document is NOT yet complete -- document-level
+    # partial progress.
+    #
+    # Two consequences worth internalizing:
+    # - It NEVER fires on the final signature. To detect "the whole document is
+    #   done", use COMPLETED (or RECIPIENT_SIGNED with +is_final_signer: true+)
+    #   -- NOT this event.
+    # - A single-signer document never emits it at all. That document emits
+    #   +recipient_signed+ (+is_final_signer: true+) then +completed+.
+    SIGNED = "signature.document.signed"
+
+    # All recipients have signed and the signed PDF is finalized.
+    COMPLETED = "signature.document.completed"
+
+    # The signed PDF fails to finalize (e.g. a KMS signing error). The document
+    # is NOT completed -- this fires INSTEAD OF COMPLETED on the final signature.
+    FINALIZATION_FAILED = "signature.document.finalization_failed"
+
+    # The document is voided or cancelled.
+    VOIDED = "signature.document.voided"
+
+    # All 7 events, in lifecycle order. Pass straight to
+    # +create_webhook(events: WebhookEvent::ALL)+ to subscribe to everything.
+    ALL = [
+      SENT,
+      VIEWED,
+      RECIPIENT_SIGNED,
+      SIGNED,
+      COMPLETED,
+      FINALIZATION_FAILED,
+      VOIDED,
+    ].freeze
+  end
+
   # Granular permission scopes for a TurboPartner API key
   # (create_partner_api_key / update_partner_api_key).
   module PartnerScope

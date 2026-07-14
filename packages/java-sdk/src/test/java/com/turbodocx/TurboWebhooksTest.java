@@ -397,4 +397,59 @@ class TurboWebhooksTest {
                         List.of("http://insecure.example.com"),
                         List.of("signature.document.completed")));
     }
+
+    // ============================================
+    // Webhook events
+    // ============================================
+
+    /** Drift guard: if the backend adds an event, WebhookEvent must grow with it. */
+    @Test
+    void webhookEventAllValuesReturnsExactlyTheSevenWireStrings() {
+        List<String> expected = List.of(
+                "signature.document.sent",
+                "signature.document.viewed",
+                "signature.document.recipient_signed",
+                "signature.document.signed",
+                "signature.document.completed",
+                "signature.document.finalization_failed",
+                "signature.document.voided");
+
+        assertEquals(expected, WebhookEvent.allValues());
+        assertEquals(7, WebhookEvent.values().length);
+    }
+
+    @Test
+    void eachWebhookEventMapsToItsWireString() {
+        assertEquals("signature.document.sent", WebhookEvent.SENT.getValue());
+        assertEquals("signature.document.viewed", WebhookEvent.VIEWED.getValue());
+        assertEquals("signature.document.recipient_signed", WebhookEvent.RECIPIENT_SIGNED.getValue());
+        assertEquals("signature.document.signed", WebhookEvent.SIGNED.getValue());
+        assertEquals("signature.document.completed", WebhookEvent.COMPLETED.getValue());
+        assertEquals("signature.document.finalization_failed", WebhookEvent.FINALIZATION_FAILED.getValue());
+        assertEquals("signature.document.voided", WebhookEvent.VOIDED.getValue());
+    }
+
+    /**
+     * Non-breaking: createWebhook still takes List&lt;String&gt;, so an event the
+     * SDK has never heard of is sent verbatim.
+     */
+    @Test
+    void createWebhookStillAcceptsRawEventStrings() throws Exception {
+        server.enqueue(new MockResponse()
+                .setResponseCode(201)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"data\":{\"id\":\"wh-1\",\"secret\":\"whsec_abc\"},\"message\":\"ok\"}"));
+
+        webhooks.createWebhook(
+                List.of("https://example.com/hook"),
+                List.of("signature.document.some_future_event"));
+
+        RecordedRequest request = server.takeRequest();
+        JsonObject body = gson.fromJson(request.getBody().readUtf8(), JsonObject.class);
+
+        assertEquals(1, body.getAsJsonArray("events").size());
+        assertEquals(
+                "signature.document.some_future_event",
+                body.getAsJsonArray("events").get(0).getAsString());
+    }
 }

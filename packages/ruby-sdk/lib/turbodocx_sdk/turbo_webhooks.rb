@@ -27,7 +27,8 @@ module TurboDocxSdk
   #   TurboDocxSdk::TurboWebhooks.configure(api_key: "...", org_id: "...")
   #   created = TurboDocxSdk::TurboWebhooks.create_webhook(
   #     urls: ["https://example.com/hook"],
-  #     events: ["signature.document.completed"]
+  #     events: [TurboDocxSdk::WebhookEvent::RECIPIENT_SIGNED,
+  #              TurboDocxSdk::WebhookEvent::COMPLETED]
   #   )
   #
   class TurboWebhooks
@@ -60,7 +61,10 @@ module TurboDocxSdk
       # delete it first.
       #
       # @param urls [Array<String>] HTTPS-only endpoint URLs, 1-10 (HTTP returns 400)
-      # @param events [Array<String>] subscribed event types (at least 1)
+      # @param events [Array<String>] subscribed event types (at least 1). Prefer
+      #   the +TurboDocxSdk::WebhookEvent+ constants (+WebhookEvent::COMPLETED+, or
+      #   +WebhookEvent::ALL+ for every event) over raw strings. Raw strings still
+      #   work, so new backend events need no gem bump.
       # @return [Hash] { "id" => ..., "secret" => ... }
       # @raise [ConflictError] if the signature webhook already exists
       # @raise [ValidationError] on invalid request data (e.g. non-HTTPS url)

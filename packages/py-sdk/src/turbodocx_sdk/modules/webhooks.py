@@ -112,8 +112,10 @@ class TurboWebhooks:
         Args:
             urls: List of HTTPS URLs to deliver events to (HTTP returns 400).
                 Min 1, max 10.
-            events: List of event types (e.g. "signature.document.completed").
-                Min 1.
+            events: List of event types. Min 1. Prefer the exported constants
+                (WEBHOOK_EVENT_COMPLETED, WEBHOOK_EVENT_RECIPIENT_SIGNED, ...)
+                over raw strings; WEBHOOK_EVENTS holds all 7. Plain strings are
+                still accepted so new backend events work without an SDK bump.
 
         Returns:
             Dict with `id` and `secret`. The `secret` is shown ONCE; store it

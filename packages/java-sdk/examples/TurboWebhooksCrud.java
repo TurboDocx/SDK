@@ -40,6 +40,7 @@ import com.google.gson.JsonObject;
 import com.turbodocx.TurboDocxClient;
 import com.turbodocx.TurboDocxException;
 import com.turbodocx.TurboWebhooks;
+import com.turbodocx.WebhookEvent;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -49,8 +50,12 @@ import java.util.Map;
 
 public class TurboWebhooksCrud {
 
-    private static final String EVENT_DOC_COMPLETED = "signature.document.completed";
-    private static final String EVENT_DOC_VOIDED = "signature.document.voided";
+    // The SDK exposes all 7 signature events on the WebhookEvent enum (plus
+    // WebhookEvent.allValues()). See the README for what each one fires on — note
+    // that `signed` is partial-progress only and never fires on the final
+    // signature; use `completed` to detect "the document is done".
+    private static final String EVENT_DOC_COMPLETED = WebhookEvent.COMPLETED.getValue();
+    private static final String EVENT_DOC_VOIDED = WebhookEvent.VOIDED.getValue();
 
     public static void main(String[] args) {
         try {

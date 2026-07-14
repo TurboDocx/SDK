@@ -560,11 +560,44 @@ for (int i = 0; i < results.size(); i++) {
 
 ## TurboWebhooks (Signature Webhook)
 
-The `TurboWebhooks` class manages your organization's **signature webhook** — a single subscription to TurboDocx signature events (`signature.document.completed`, `signature.document.voided`). It also exposes a `WebhookSignatureVerifier` helper for incoming webhook receivers.
+The `TurboWebhooks` class manages your organization's **signature webhook** — a single subscription to TurboDocx signature events. It also exposes a `WebhookSignatureVerifier` helper for incoming webhook receivers.
 
 > **One webhook per org.** The SDK manages a single fixed-name webhook (`signature`) per org so SDK-managed and UI-managed webhooks stay in sync — what you create here also appears in the dashboard's Signature Webhooks settings page. To manage multiple webhooks per org, call the REST API directly.
 >
 > **Requires administrator role.** All webhook routes require an admin TDX- API key.
+
+### The 7 signature events
+
+Use the `WebhookEvent` enum instead of hand-writing the wire strings — a typo becomes a compile error rather than a webhook that silently never fires.
+
+| Event | Enum constant | Fires when |
+|---|---|---|
+| `signature.document.sent` | `WebhookEvent.SENT` | The document is dispatched to recipients |
+| `signature.document.viewed` | `WebhookEvent.VIEWED` | A recipient opens the document for the first time |
+| `signature.document.recipient_signed` | `WebhookEvent.RECIPIENT_SIGNED` | Any individual signer completes their signature — fires **once per signer**, and carries `is_final_signer` + `remaining_signers` |
+| `signature.document.signed` | `WebhookEvent.SIGNED` | A signer signs but the document is **not yet complete** (document-level partial progress) |
+| `signature.document.completed` | `WebhookEvent.COMPLETED` | All recipients have signed and the signed PDF is finalized |
+| `signature.document.finalization_failed` | `WebhookEvent.FINALIZATION_FAILED` | The signed PDF fails to finalize (e.g. a KMS signing error); the document is **not** completed |
+| `signature.document.voided` | `WebhookEvent.VOIDED` | The document is voided or cancelled |
+
+On every signature, `recipient_signed` fires first, then **exactly one** document-level event:
+
+```
+Recipient signs
+   │
+   ├─ signature.document.recipient_signed   (always — one per signer)
+   │
+   └─ more signers remaining?
+        ├─ yes → signature.document.signed                 (partial progress)
+        └─ no  → signature.document.completed              (finalized OK)
+                 or signature.document.finalization_failed (finalization failed)
+```
+
+> **`signed` never fires on the final signature.** To detect "the whole document is done", subscribe to `completed` (or to `recipient_signed` and check `is_final_signer: true`) — **not** `signed`.
+>
+> **A single-signer document never emits `signed` at all.** It emits `recipient_signed` (with `is_final_signer: true`), then `completed`.
+
+`WebhookEvent.allValues()` returns every wire string if you want to subscribe to everything. The request fields stay `List<String>`, so the backend can add events without an SDK release.
 
 ### Configuration
 
@@ -584,9 +617,19 @@ TurboWebhooks webhooks = new TurboDocxClient.Builder()
 ### Create the signature webhook (save the secret immediately)
 
 ```java
+import com.turbodocx.WebhookEvent;
+
 JsonObject created = webhooks.createWebhook(
         List.of("https://your-server.example.com/webhooks/turbodocx"),  // HTTPS only, 1-10 urls
-        List.of("signature.document.completed", "signature.document.voided"));
+        List.of(
+                WebhookEvent.SENT.getValue(),
+                WebhookEvent.VIEWED.getValue(),
+                WebhookEvent.RECIPIENT_SIGNED.getValue(),
+                WebhookEvent.COMPLETED.getValue(),
+                WebhookEvent.VOIDED.getValue()));
+
+// ...or subscribe to everything:
+// JsonObject created = webhooks.createWebhook(urls, WebhookEvent.allValues());
 
 // `secret` is shown ONCE here. Store it securely; it cannot be retrieved later.
 System.out.println("Save this secret: " + created.get("secret").getAsString());

@@ -29,6 +29,7 @@
 
 import {
   TurboWebhooks,
+  WebhookEvents,
   AuthenticationError,
   AuthorizationError,
   ValidationError,
@@ -49,8 +50,12 @@ import {
 const RECEIVER_URL =
   process.env.TURBODOCX_RECEIVER_URL ?? 'https://your-server.example.com/webhooks/turbodocx';
 
-const EVENT_DOCUMENT_COMPLETED = 'signature.document.completed';
-const EVENT_DOCUMENT_VOIDED = 'signature.document.voided';
+// The SDK exports all 7 signature events as `WebhookEvents` (plus a
+// `WEBHOOK_EVENTS` array of every wire string). See the README for what each
+// one fires on — note that `SIGNED` is partial-progress only and never fires
+// on the final signature; use `COMPLETED` to detect "the document is done".
+const EVENT_DOCUMENT_COMPLETED = WebhookEvents.COMPLETED;
+const EVENT_DOCUMENT_VOIDED = WebhookEvents.VOIDED;
 
 function section(title: string): void {
   console.log('');

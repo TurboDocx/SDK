@@ -558,11 +558,44 @@ logs, err := partner.GetPartnerAuditLogs(ctx, &turbodocx.ListAuditLogsRequest{
 
 ### TurboWebhooks (Signature Webhook)
 
-The `WebhooksClient` manages your organization's **signature webhook** — a single subscription to TurboDocx signature events (`signature.document.completed`, `signature.document.voided`). The package also exposes `VerifyWebhookSignature` for incoming webhook receivers.
+The `WebhooksClient` manages your organization's **signature webhook** — a single subscription to TurboDocx signature events. The package also exposes `VerifyWebhookSignature` for incoming webhook receivers.
 
 > **One webhook per org.** The SDK manages a single fixed-name webhook (`signature`) per org so SDK-managed and UI-managed webhooks stay in sync — what you create here also appears in the dashboard's Signature Webhooks settings page. To manage multiple webhooks per org, call the REST API directly.
 >
 > **Requires administrator role.** All webhook routes require an admin TDX- API key.
+
+#### The 7 signature events
+
+Use the typed `WebhookEvent` constants instead of hand-writing the wire strings — a typo becomes a compile error rather than a webhook that silently never fires.
+
+| Event | Constant | Fires when |
+|---|---|---|
+| `signature.document.sent` | `turbodocx.WebhookEventSent` | The document is dispatched to recipients |
+| `signature.document.viewed` | `turbodocx.WebhookEventViewed` | A recipient opens the document for the first time |
+| `signature.document.recipient_signed` | `turbodocx.WebhookEventRecipientSigned` | Any individual signer completes their signature — fires **once per signer**, and carries `is_final_signer` + `remaining_signers` |
+| `signature.document.signed` | `turbodocx.WebhookEventSigned` | A signer signs but the document is **not yet complete** (document-level partial progress) |
+| `signature.document.completed` | `turbodocx.WebhookEventCompleted` | All recipients have signed and the signed PDF is finalized |
+| `signature.document.finalization_failed` | `turbodocx.WebhookEventFinalizationFailed` | The signed PDF fails to finalize (e.g. a KMS signing error); the document is **not** completed |
+| `signature.document.voided` | `turbodocx.WebhookEventVoided` | The document is voided or cancelled |
+
+On every signature, `recipient_signed` fires first, then **exactly one** document-level event:
+
+```
+Recipient signs
+   │
+   ├─ signature.document.recipient_signed   (always — one per signer)
+   │
+   └─ more signers remaining?
+        ├─ yes → signature.document.signed                 (partial progress)
+        └─ no  → signature.document.completed              (finalized OK)
+                 or signature.document.finalization_failed (finalization failed)
+```
+
+> **`signed` never fires on the final signature.** To detect "the whole document is done", subscribe to `completed` (or to `recipient_signed` and check `is_final_signer: true`) — **not** `signed`.
+>
+> **A single-signer document never emits `signed` at all.** It emits `recipient_signed` (with `is_final_signer: true`), then `completed`.
+
+`AllWebhookEvents` is a `[]WebhookEvent` of all 7, and `WebhookEventStrings(...)` converts typed events into the `[]string` the request structs take. `Events` stays `[]string`, so the backend can add events without an SDK release.
 
 #### Configuration
 
@@ -586,8 +619,16 @@ Unlike the main `NewClientWithConfig`, this constructor does NOT require `Sender
 ```go
 ctx := context.Background()
 created, err := client.CreateWebhook(ctx, turbodocx.CreateWebhookRequest{
-    URLs:   []string{"https://your-server.example.com/webhooks/turbodocx"}, // HTTPS only; 1-10 URLs
-    Events: []string{"signature.document.completed", "signature.document.voided"}, // at least 1
+    URLs: []string{"https://your-server.example.com/webhooks/turbodocx"}, // HTTPS only; 1-10 URLs
+    Events: turbodocx.WebhookEventStrings( // at least 1
+        turbodocx.WebhookEventSent,
+        turbodocx.WebhookEventViewed,
+        turbodocx.WebhookEventRecipientSigned,
+        turbodocx.WebhookEventCompleted,
+        turbodocx.WebhookEventVoided,
+    ),
+    // ...or subscribe to everything:
+    // Events: turbodocx.WebhookEventStrings(turbodocx.AllWebhookEvents...),
 })
 // `created.Secret` is shown ONCE here. Store it securely.
 fmt.Println("Save this secret:", created.Secret)
