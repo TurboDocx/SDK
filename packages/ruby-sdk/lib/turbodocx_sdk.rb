@@ -11,5 +11,5 @@ require_relative "turbodocx_sdk/deliverable"
 require_relative "turbodocx_sdk/turbo_webhooks"
 
 module TurboDocxSdk
-  VERSION = "0.4.0"
+  VERSION = "0.5.0"
 end

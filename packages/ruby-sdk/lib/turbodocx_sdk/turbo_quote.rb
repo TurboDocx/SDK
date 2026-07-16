@@ -51,6 +51,10 @@ module TurboDocxSdk
       #
       # @param request [Hash] :name (required), :companyId (required), :contactId (required),
       #   :currency, :termDays, :renewalPeriod, :validUntil, :taxRate, :priceBookId
+      #
+      #   +termDays+ defaults to 60 and maxes out at 3650. Pass +-1+ for auto-renewal:
+      #   +renewalPeriod+ (one of RenewalPeriod::ALL) is REQUIRED when +termDays+ is +-1+
+      #   and must be omitted/nil for every other +termDays+ value.
       # @return [Hash] the created quote
       # @raise [ValidationError] on invalid request data
       # @raise [AuthenticationError] on invalid credentials
@@ -226,10 +230,14 @@ module TurboDocxSdk
         unwrap(client.post("/v1/quotes/#{id}/void", request))
       end
 
-      # Handle an expired sent quote.
+      # Handle an expired sent quote. Voids or declines the original quote and
+      # creates a duplicate carrying the new +newValidUntil+ date.
       #
       # @param id [String]
-      # @param request [Hash] :action, :reason, :newValidUntil
+      # @param request [Hash] all three keys are required:
+      #   - +action+ [String] — +"void"+ or +"decline"+ (no other value is accepted)
+      #   - +reason+ [String] — max 190 characters
+      #   - +newValidUntil+ [String] — ISO 8601 date for the replacement quote
       # @return [Hash] the processed quote
       # @raise [NotFoundError] if the quote does not exist
       # @raise [ValidationError] on invalid request data
@@ -260,12 +268,13 @@ module TurboDocxSdk
       # Add product line items to a quote.
       #
       # @param quote_id [String]
-      # @param items [Hash, Array<Hash>] single item or array of items. Each item may include:
-      #   - +productId+ [String] — catalog product ID (optional)
-      #   - +productName+ [String] — display name
-      #   - +unitPrice+ [Numeric] — price per unit
-      #   - +billingFrequency+ [String] — one of BillingFrequency::ALL
-      #   - +quantity+ [Integer]
+      # @param items [Hash, Array<Hash>] single item or array of items (1-50). Each item includes:
+      #   - +productId+ [String, nil] — REQUIRED key; catalog product ID (uuid).
+      #     The value may be +nil+ for an ad-hoc item, but the key must be present.
+      #   - +productName+ [String] — REQUIRED; display name
+      #   - +unitPrice+ [Numeric] — REQUIRED; price per unit
+      #   - +billingFrequency+ [String] — REQUIRED; one of BillingFrequency::ALL
+      #   - +quantity+ [Integer] — default 1
       #   - +discountType+ [String, nil] — +"percent"+ or +"amount"+ (default +"percent"+);
       #     see DiscountType
       #   - +discountAmount+ [Numeric, nil] — discount value (min 0, 2 decimal places, default 0)
@@ -281,12 +290,13 @@ module TurboDocxSdk
         response["results"]
       end
 
-      # Add bundle line items to a quote.
+      # Add bundle line items to a quote. The server expands the bundle's children
+      # itself -- do NOT send child products.
       #
       # @param quote_id [String]
-      # @param items [Hash, Array<Hash>] single item or array of items. Each item may include:
-      #   - +bundleId+ [String] — catalog bundle ID
-      #   - +bundleName+ [String] — display name
+      # @param items [Hash, Array<Hash>] single item or array of items (1-50). Each item includes:
+      #   - +bundleId+ [String] — REQUIRED; catalog bundle ID
+      #   - +bundleName+ [String] — REQUIRED; display name
       #   - +quantity+ [Integer]
       #   - +discountType+ [String, nil] — +"percent"+ or +"amount"+ (default +"percent"+);
       #     see DiscountType
@@ -368,6 +378,24 @@ module TurboDocxSdk
         else
           unwrap(client.post("/v1/products", data))
         end
+      end
+
+      # Bulk create products (administrator or contributor). Partial success:
+      # rows that fail are reported in "failed" (1-indexed "row" + "reason")
+      # without aborting the rest; server-adjusted rows appear in "adjusted".
+      #
+      # @param rows [Array<Hash>] product rows, same field shapes as +create_product+.
+      #   Each row requires +name+, +categoryId+ (a TurboQuote type uuid — there is no
+      #   +categoryName+ shorthand; resolve or create the category first), +listPrice+
+      #   and +billingFrequency+.
+      # @return [Hash] { "imported" => N, "failed" => [...], "adjusted" => [...] }
+      # @raise [ValidationError] on an invalid request envelope
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def bulk_create_products(rows)
+        client = get_client
+        response = client.post("/v1/products/bulk", { "rows" => rows })
+        response["results"]
       end
 
       # Get a product by ID.
@@ -483,6 +511,21 @@ module TurboDocxSdk
         unwrap(client.post("/v1/pricebooks", data))
       end
 
+      # Bulk create price books (administrator or contributor). Partial success:
+      # rows that fail are reported in "failed" (1-indexed "row" + "reason")
+      # without aborting the rest; server-adjusted rows appear in "adjusted".
+      #
+      # @param rows [Array<Hash>] price book rows, same field shapes as +create_price_book+
+      # @return [Hash] { "imported" => N, "failed" => [...], "adjusted" => [...] }
+      # @raise [ValidationError] on an invalid request envelope
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def bulk_create_price_books(rows)
+        client = get_client
+        response = client.post("/v1/pricebooks/bulk", { "rows" => rows })
+        response["results"]
+      end
+
       # Get a price book by ID.
       #
       # @param id [String]
@@ -585,6 +628,22 @@ module TurboDocxSdk
         unwrap(client.post("/v1/bundles", request))
       end
 
+      # Bulk create bundles (administrator or contributor). Partial success:
+      # rows that fail are reported in "failed" (1-indexed "row" + "reason")
+      # without aborting the rest; server-adjusted rows appear in "adjusted"
+      # (e.g. a bundle item whose product wasn't found was dropped).
+      #
+      # @param rows [Array<Hash>] bundle rows, same field shapes as +create_bundle+
+      # @return [Hash] { "imported" => N, "failed" => [...], "adjusted" => [...] }
+      # @raise [ValidationError] on an invalid request envelope
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def bulk_create_bundles(rows)
+        client = get_client
+        response = client.post("/v1/bundles/bulk", { "rows" => rows })
+        response["results"]
+      end
+
       # Get a bundle by ID.
       #
       # @param id [String]
@@ -664,6 +723,22 @@ module TurboDocxSdk
         unwrap(client.post("/v1/companies", request))
       end
 
+      # Bulk create companies (administrator or contributor). Each row requires
+      # a +contacts+ array with at least one contact. Partial success: rows
+      # that fail are reported in "failed" (1-indexed "row" + "reason") without
+      # aborting the rest; server-adjusted rows appear in "adjusted".
+      #
+      # @param rows [Array<Hash>] company rows, same field shapes as +create_company+
+      # @return [Hash] { "imported" => N, "failed" => [...], "adjusted" => [...] }
+      # @raise [ValidationError] on an invalid request envelope
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def bulk_create_companies(rows)
+        client = get_client
+        response = client.post("/v1/companies/bulk", { "rows" => rows })
+        response["results"]
+      end
+
       # Get a company by ID.
       #
       # @param id [String]
@@ -740,6 +815,22 @@ module TurboDocxSdk
       def create_contact(request)
         client = get_client
         unwrap(client.post("/v1/contacts", request))
+      end
+
+      # Bulk create contacts (administrator or contributor). Each row requires
+      # a +companyId+. Partial success: rows that fail are reported in "failed"
+      # (1-indexed "row" + "reason") without aborting the rest; server-adjusted
+      # rows appear in "adjusted".
+      #
+      # @param rows [Array<Hash>] contact rows, same field shapes as +create_contact+
+      # @return [Hash] { "imported" => N, "failed" => [...], "adjusted" => [...] }
+      # @raise [ValidationError] on an invalid request envelope
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def bulk_create_contacts(rows)
+        client = get_client
+        response = client.post("/v1/contacts/bulk", { "rows" => rows })
+        response["results"]
       end
 
       # Update a contact.
@@ -870,6 +961,22 @@ module TurboDocxSdk
         unwrap(client.post("/v1/types", request))
       end
 
+      # Bulk create types/categories (administrator or contributor). Partial
+      # success: rows that fail are reported in "failed" (1-indexed "row" +
+      # "reason") without aborting the rest; server-adjusted rows appear in
+      # "adjusted".
+      #
+      # @param rows [Array<Hash>] type rows, same field shapes as +create_type+
+      # @return [Hash] { "imported" => N, "failed" => [...], "adjusted" => [...] }
+      # @raise [ValidationError] on an invalid request envelope
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def bulk_create_types(rows)
+        client = get_client
+        response = client.post("/v1/types/bulk", { "rows" => rows })
+        response["results"]
+      end
+
       # Update a type/category.
       #
       # @param id [String]
@@ -894,6 +1001,43 @@ module TurboDocxSdk
       def delete_type(id)
         client = get_client
         client.delete("/v1/types/#{id}")
+      end
+
+      # ============================================
+      # QUOTE NUMBER CONFIG
+      # ============================================
+
+      # Get the org's quote-number configuration (admin only).
+      #
+      # @return [Hash] { "format" => {...}, "currentFloor" => Integer } where +format+ has the
+      #   keys +prefix+, +yearToken+ (see QuoteNumberYearToken), +monthToken+ (see
+      #   QuoteNumberMonthToken), +separator+, +padWidth+ (Integer), +suffix+,
+      #   +startNumber+ (Integer), and +resetCadence+ (see QuoteNumberResetCadence)
+      # @raise [AuthorizationError] if the caller is not an admin
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def get_quote_number_config
+        client = get_client
+        response = client.get("/v1/quotes/number-config")
+        response["results"]
+      end
+
+      # Update the org's quote-number configuration (admin only).
+      #
+      # @param format [Hash] the full format object; all keys are required and passed verbatim
+      #   (camelCase): +prefix+ [String], +yearToken+ [String] (see QuoteNumberYearToken),
+      #   +monthToken+ [String] (see QuoteNumberMonthToken), +separator+ [String],
+      #   +padWidth+ [Integer] (0-12), +suffix+ [String], +startNumber+ [Integer] (>= 0),
+      #   +resetCadence+ [String] (see QuoteNumberResetCadence)
+      # @return [Hash] { "format" => {...}, "currentFloor" => Integer } (same shape as +get_quote_number_config+)
+      # @raise [AuthorizationError] if the caller is not an admin
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def update_quote_number_config(format)
+        client = get_client
+        response = client.patch("/v1/quotes/number-config", format)
+        response["results"]
       end
 
       # ============================================

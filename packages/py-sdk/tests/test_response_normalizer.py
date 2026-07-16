@@ -36,9 +36,12 @@ class TestBooleanCoercion:
             "syncWithProducts": 0,
             "isPrimaryAdmin": 1,
             "canManageOrgs": 1,
-            "canManageUsers": 0,
-            "canManageBilling": 1,
-            "canViewAuditLog": 0,
+            "canManageOrgUsers": 0,
+            "canManagePartnerUsers": 1,
+            "canManageOrgAPIKeys": 0,
+            "canManagePartnerAPIKeys": 1,
+            "canUpdateEntitlements": 0,
+            "canViewAuditLogs": 1,
             "hasFileDownload": 1,
             "hasGDrive": 0,
             "rdWatermark": 1,
@@ -52,9 +55,12 @@ class TestBooleanCoercion:
         assert result["syncWithProducts"] is False
         assert result["isPrimaryAdmin"] is True
         assert result["canManageOrgs"] is True
-        assert result["canManageUsers"] is False
-        assert result["canManageBilling"] is True
-        assert result["canViewAuditLog"] is False
+        assert result["canManageOrgUsers"] is False
+        assert result["canManagePartnerUsers"] is True
+        assert result["canManageOrgAPIKeys"] is False
+        assert result["canManagePartnerAPIKeys"] is True
+        assert result["canUpdateEntitlements"] is False
+        assert result["canViewAuditLogs"] is True
         assert result["hasFileDownload"] is True
         assert result["hasGDrive"] is False
         assert result["rdWatermark"] is True

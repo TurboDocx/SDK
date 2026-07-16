@@ -128,7 +128,8 @@ module TurboDocxSdk
       # Add a user to an organization.
       #
       # @param organization_id [String]
-      # @param request [Hash] :email, :role
+      # @param request [Hash] :email, :role (+"admin"+, +"contributor"+, +"user"+ or +"viewer"+ --
+      #   the org role enum; the partner role +"member"+ is NOT valid here)
       # @return [Hash] the added user
       # @raise [ValidationError] on invalid request data
       # @raise [NotFoundError] if the organization does not exist
@@ -143,7 +144,7 @@ module TurboDocxSdk
       #
       # @param organization_id [String]
       # @param user_id [String]
-      # @param request [Hash] :role
+      # @param request [Hash] :role (+"admin"+, +"contributor"+, +"user"+ or +"viewer"+)
       # @return [Hash] the updated user
       # @raise [NotFoundError] if the organization or user does not exist
       # @raise [AuthenticationError] on invalid credentials
@@ -199,7 +200,8 @@ module TurboDocxSdk
       # Create an API key for an organization.
       #
       # @param organization_id [String]
-      # @param request [Hash] :name, :role
+      # @param request [Hash] :name, :role (org role enum:
+      #   +"admin"+, +"contributor"+, +"user"+ or +"viewer"+)
       # @return [Hash] the created API key (includes full key value)
       # @raise [ValidationError] on invalid request data
       # @raise [NotFoundError] if the organization does not exist
@@ -306,7 +308,12 @@ module TurboDocxSdk
 
       # Add a user to the partner portal.
       #
-      # @param request [Hash] :email, :role, :permissions
+      # @param request [Hash] :email, :role (partner role enum: +"admin"+, +"member"+ or
+      #   +"viewer"+ -- the org roles +"contributor"+/+"user"+ are NOT valid here),
+      #   :permissions. When :permissions is supplied it must carry ALL SEVEN keys --
+      #   +canManageOrgs+, +canManageOrgUsers+, +canManagePartnerUsers+,
+      #   +canManageOrgAPIKeys+, +canManagePartnerAPIKeys+, +canUpdateEntitlements+,
+      #   +canViewAuditLogs+ (booleans). A partial permissions object is a 400.
       # @return [Hash] the added user
       # @raise [ValidationError] on invalid request data
       # @raise [AuthenticationError] on invalid credentials
@@ -318,8 +325,14 @@ module TurboDocxSdk
 
       # Update a partner user's permissions.
       #
+      # The :permissions object itself is optional, but there is no partial update:
+      # if you send it, send all seven keys or the backend returns a 400.
+      #
       # @param user_id [String]
-      # @param request [Hash] :role, :permissions
+      # @param request [Hash] :role (+"admin"+, +"member"+ or +"viewer"+), :permissions
+      #   (ALL SEVEN of +canManageOrgs+, +canManageOrgUsers+, +canManagePartnerUsers+,
+      #   +canManageOrgAPIKeys+, +canManagePartnerAPIKeys+, +canUpdateEntitlements+,
+      #   +canViewAuditLogs+)
       # @return [Hash] the updated user
       # @raise [NotFoundError] if the user does not exist
       # @raise [AuthenticationError] on invalid credentials

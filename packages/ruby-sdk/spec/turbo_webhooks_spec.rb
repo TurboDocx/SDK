@@ -107,6 +107,44 @@ RSpec.describe TurboDocxSdk::TurboWebhooks do
         }
       )
     end
+
+    it "accepts the WebhookEvent constants" do
+      allow(mock_client).to receive(:post).and_return("data" => { "id" => "wh-1", "secret" => "s" })
+
+      described_class.create_webhook(
+        urls: ["https://example.com/hook"],
+        events: [TurboDocxSdk::WebhookEvent::RECIPIENT_SIGNED, TurboDocxSdk::WebhookEvent::COMPLETED]
+      )
+
+      expect(mock_client).to have_received(:post).with(
+        "/api/webhooks",
+        {
+          "name" => "signature",
+          "urls" => ["https://example.com/hook"],
+          "events" => ["signature.document.recipient_signed", "signature.document.completed"]
+        }
+      )
+    end
+
+    # Non-breaking: events is an Array of plain Strings, so an event the SDK has
+    # never heard of is still sent verbatim.
+    it "still accepts a raw, unknown event string" do
+      allow(mock_client).to receive(:post).and_return("data" => { "id" => "wh-1", "secret" => "s" })
+
+      described_class.create_webhook(
+        urls: ["https://example.com/hook"],
+        events: ["signature.document.some_future_event"]
+      )
+
+      expect(mock_client).to have_received(:post).with(
+        "/api/webhooks",
+        {
+          "name" => "signature",
+          "urls" => ["https://example.com/hook"],
+          "events" => ["signature.document.some_future_event"]
+        }
+      )
+    end
   end
 
   # ============================================

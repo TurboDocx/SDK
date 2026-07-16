@@ -448,7 +448,8 @@ client.turboPartner().revokePartnerApiKey(keyId);
 // List partner portal users
 JsonObject partnerUsers = client.turboPartner().listPartnerPortalUsers(null, null, null);
 
-// Add a user to the partner portal
+// Add a user to the partner portal.
+// All seven permission keys are required -- a partial map is rejected with a 400.
 Map<String, Boolean> permissions = Map.of(
     "canManageOrgs", true,
     "canManageOrgUsers", true,
@@ -461,9 +462,18 @@ Map<String, Boolean> permissions = Map.of(
 JsonObject partnerUser = client.turboPartner().addUserToPartnerPortal(
     "admin@partner.com", "admin", permissions);
 
-// Update partner user permissions
-client.turboPartner().updatePartnerUserPermissions(userId, "member",
-    Map.of("canManageOrgs", false));
+// Update partner user permissions.
+// The permissions map itself is optional -- but if you send it, send all seven keys.
+// There is no partial permissions update.
+client.turboPartner().updatePartnerUserPermissions(userId, "member", Map.of(
+    "canManageOrgs", false,
+    "canManageOrgUsers", true,
+    "canManagePartnerUsers", false,
+    "canManageOrgAPIKeys", true,
+    "canManagePartnerAPIKeys", false,
+    "canUpdateEntitlements", false,
+    "canViewAuditLogs", true
+));
 
 // Remove a partner user
 client.turboPartner().removeUserFromPartnerPortal(userId);
@@ -471,6 +481,25 @@ client.turboPartner().removeUserFromPartnerPortal(userId);
 // Resend partner portal invitation
 client.turboPartner().resendPartnerPortalInvitationToUser(userId);
 ```
+
+**Partner permissions** — all seven keys are required whenever `permissions` is sent (booleans):
+
+| Key | Grants |
+|:----|:-------|
+| `canManageOrgs` | Create / update / delete organizations |
+| `canManageOrgUsers` | Manage users inside organizations |
+| `canManagePartnerUsers` | Manage partner portal users |
+| `canManageOrgAPIKeys` | Manage organization API keys |
+| `canManagePartnerAPIKeys` | Manage partner API keys |
+| `canUpdateEntitlements` | Update organization entitlements |
+| `canViewAuditLogs` | Read the partner audit log |
+
+**Role enums are different for orgs and partners** — do not mix them:
+
+| Scope | Valid roles |
+|:------|:------------|
+| Org users, org API keys | `admin`, `contributor`, `user`, `viewer` |
+| Partner portal users | `admin`, `member`, `viewer` |
 
 ### Audit Logs
 
@@ -531,11 +560,44 @@ for (int i = 0; i < results.size(); i++) {
 
 ## TurboWebhooks (Signature Webhook)
 
-The `TurboWebhooks` class manages your organization's **signature webhook** — a single subscription to TurboDocx signature events (`signature.document.completed`, `signature.document.voided`). It also exposes a `WebhookSignatureVerifier` helper for incoming webhook receivers.
+The `TurboWebhooks` class manages your organization's **signature webhook** — a single subscription to TurboDocx signature events. It also exposes a `WebhookSignatureVerifier` helper for incoming webhook receivers.
 
 > **One webhook per org.** The SDK manages a single fixed-name webhook (`signature`) per org so SDK-managed and UI-managed webhooks stay in sync — what you create here also appears in the dashboard's Signature Webhooks settings page. To manage multiple webhooks per org, call the REST API directly.
 >
 > **Requires administrator role.** All webhook routes require an admin TDX- API key.
+
+### The 7 signature events
+
+Use the `WebhookEvent` enum instead of hand-writing the wire strings — a typo becomes a compile error rather than a webhook that silently never fires.
+
+| Event | Enum constant | Fires when |
+|---|---|---|
+| `signature.document.sent` | `WebhookEvent.SENT` | The document is dispatched to recipients |
+| `signature.document.viewed` | `WebhookEvent.VIEWED` | A recipient opens the document for the first time |
+| `signature.document.recipient_signed` | `WebhookEvent.RECIPIENT_SIGNED` | Any individual signer completes their signature — fires **once per signer**, and carries `is_final_signer` + `remaining_signers` |
+| `signature.document.signed` | `WebhookEvent.SIGNED` | A signer signs but the document is **not yet complete** (document-level partial progress) |
+| `signature.document.completed` | `WebhookEvent.COMPLETED` | All recipients have signed and the signed PDF is finalized |
+| `signature.document.finalization_failed` | `WebhookEvent.FINALIZATION_FAILED` | The signed PDF fails to finalize (e.g. a KMS signing error); the document is **not** completed |
+| `signature.document.voided` | `WebhookEvent.VOIDED` | The document is voided or cancelled |
+
+On every signature, `recipient_signed` fires first, then **exactly one** document-level event:
+
+```
+Recipient signs
+   │
+   ├─ signature.document.recipient_signed   (always — one per signer)
+   │
+   └─ more signers remaining?
+        ├─ yes → signature.document.signed                 (partial progress)
+        └─ no  → signature.document.completed              (finalized OK)
+                 or signature.document.finalization_failed (finalization failed)
+```
+
+> **`signed` never fires on the final signature.** To detect "the whole document is done", subscribe to `completed` (or to `recipient_signed` and check `is_final_signer: true`) — **not** `signed`.
+>
+> **A single-signer document never emits `signed` at all.** It emits `recipient_signed` (with `is_final_signer: true`), then `completed`.
+
+`WebhookEvent.allValues()` returns every wire string if you want to subscribe to everything. The request fields stay `List<String>`, so the backend can add events without an SDK release.
 
 ### Configuration
 
@@ -555,15 +617,25 @@ TurboWebhooks webhooks = new TurboDocxClient.Builder()
 ### Create the signature webhook (save the secret immediately)
 
 ```java
+import com.turbodocx.WebhookEvent;
+
 JsonObject created = webhooks.createWebhook(
-        List.of("https://your-server.example.com/webhooks/turbodocx"),  // HTTPS only
-        List.of("signature.document.completed", "signature.document.voided"));
+        List.of("https://your-server.example.com/webhooks/turbodocx"),  // HTTPS only, 1-10 urls
+        List.of(
+                WebhookEvent.SENT.getValue(),
+                WebhookEvent.VIEWED.getValue(),
+                WebhookEvent.RECIPIENT_SIGNED.getValue(),
+                WebhookEvent.COMPLETED.getValue(),
+                WebhookEvent.VOIDED.getValue()));
+
+// ...or subscribe to everything:
+// JsonObject created = webhooks.createWebhook(urls, WebhookEvent.allValues());
 
 // `secret` is shown ONCE here. Store it securely; it cannot be retrieved later.
 System.out.println("Save this secret: " + created.get("secret").getAsString());
 ```
 
-If the signature webhook already exists, `createWebhook` throws `TurboDocxException.ValidationException`. Either update the existing one with `updateWebhook` or `deleteWebhook` first.
+If the signature webhook already exists, `createWebhook` throws `TurboDocxException.ConflictException` (409). Either update the existing one with `updateWebhook` or `deleteWebhook` first.
 
 ### Get, update, delete
 
@@ -573,8 +645,14 @@ JsonObject webhook = webhooks.getWebhook();
 
 // Pass null to leave a field unchanged
 webhooks.updateWebhook(null, null, false);  // isActive=false
+webhooks.updateWebhook(
+        List.of("https://new-endpoint.example.com/webhooks/turbodocx"),
+        List.of("signature.document.completed"),
+        null);
 webhooks.deleteWebhook();
 ```
+
+> **`urls` and `events` can never be empty.** They stay `min(1)` on the backend even on update, so `List.of()` is a 400, not a "clear this field" instruction — there is no way to remove every URL from a webhook. `updateWebhook` throws `TurboDocxException.ValidationException` before hitting the wire if you pass an empty list. To leave a field unchanged, pass `null`. `urls` accepts **1-10** entries.
 
 ### Test deliveries and replay
 
@@ -662,12 +740,14 @@ CreateQuoteRequest quoteReq = new CreateQuoteRequest();
 quoteReq.setName("Q1 Software Proposal");
 quoteReq.setCompanyId(companyId);
 quoteReq.setContactId(contactId);
-quoteReq.setTermDays(30);
+quoteReq.setTermDays(90);         // optional; defaults to 60, max 3650
 quoteReq.setCurrency(Currency.USD);
 
 Quote quote = tq.createQuote(quoteReq);
 
-// 2. Add a line item
+// 2. Add a line item.
+//    productId, productName, unitPrice and billingFrequency are all REQUIRED.
+//    productId may be null for an ad-hoc item (the SDK still sends the key).
 AddLineItemRequest item = new AddLineItemRequest();
 item.setProductName("Enterprise License");
 item.setProductId(null);          // null = custom line item
@@ -682,6 +762,37 @@ tq.addLineItems(quote.getId(), item);
 // 3. Send the quote
 SendQuoteResponse sent = tq.sendQuote(quote.getId());
 System.out.println("Status: " + sent.getQuote().getStatus()); // "sent"
+```
+
+### Quote terms and auto-renewal
+
+`termDays` defaults to **60** and accepts up to **3650** (10 years). The special value **`-1`** means auto-renewal, and it is the only case where `renewalPeriod` is allowed — in fact it is then **required**:
+
+```java
+CreateQuoteRequest autoRenew = new CreateQuoteRequest();
+autoRenew.setName("Managed Services (auto-renew)");
+autoRenew.setCompanyId(companyId);
+autoRenew.setContactId(contactId);
+autoRenew.setTermDays(-1);                          // -1 == auto-renewal
+autoRenew.setRenewalPeriod(RenewalPeriod.MONTHLY);  // REQUIRED when termDays == -1
+
+Quote renewing = tq.createQuote(autoRenew);
+```
+
+For any other `termDays`, leave `renewalPeriod` null — sending it is a 400.
+
+### Handling an expired quote
+
+`handleExpiredQuote` voids or declines an expired **sent** quote and returns the duplicate it creates with the new validity date. All three fields are required, and `action` accepts **only** `"void"` or `"decline"`:
+
+```java
+HandleExpiredQuoteRequest expiredReq = new HandleExpiredQuoteRequest();
+expiredReq.setAction("void");                       // "void" or "decline" — nothing else
+expiredReq.setReason("Pricing refreshed for Q4");   // REQUIRED, max 190 chars
+expiredReq.setNewValidUntil("2026-12-31");          // REQUIRED, ISO 8601
+
+Quote replacement = tq.handleExpiredQuote(quote.getId(), expiredReq);
+System.out.println("Replacement: " + replacement.getQuoteNumber());
 ```
 
 ### Download a quote PDF

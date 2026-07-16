@@ -77,9 +77,13 @@ func NewWebhooksClientWithConfig(config ClientConfig) (*WebhooksClient, error) {
 
 // CreateWebhookRequest is the payload for CreateWebhook.
 // The `name` field is hardcoded by the SDK and is not part of this struct.
+//
+// Events stays []string so raw strings keep working, but prefer the typed
+// WebhookEvent constants via WebhookEventStrings — see webhook_events.go for
+// all 7 events and what each fires on.
 type CreateWebhookRequest struct {
-	URLs   []string `json:"urls"`
-	Events []string `json:"events"`
+	URLs   []string `json:"urls"`   // HTTPS only (HTTP is a 400); min 1, max 10
+	Events []string `json:"events"` // min 1; see WebhookEventStrings + AllWebhookEvents
 }
 
 // CreateWebhookResponse is the data unwrapped from the create envelope.
@@ -125,9 +129,13 @@ func (c *WebhooksClient) GetWebhook(ctx context.Context) (map[string]interface{}
 // UpdateWebhookRequest contains the fields that can be patched on the
 // signature webhook. Renaming is not supported — the SDK manages a fixed name.
 // Use a pointer or nil to leave a field unchanged.
+//
+// The list minimums survive the patch: a list you do send must be non-empty (and URLs
+// at most 10). An empty slice is omitted from the payload rather than sent as [], so it
+// leaves the existing list untouched — there is no way to clear all URLs or events.
 type UpdateWebhookRequest struct {
-	URLs     []string `json:"urls,omitempty"`
-	Events   []string `json:"events,omitempty"`
+	URLs     []string `json:"urls,omitempty"`   // nil to leave unchanged; otherwise min 1, max 10
+	Events   []string `json:"events,omitempty"` // nil to leave unchanged; otherwise min 1
 	IsActive *bool    `json:"isActive,omitempty"`
 }
 

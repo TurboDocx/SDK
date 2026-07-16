@@ -432,3 +432,56 @@ func TestWebhooksErrorPropagation(t *testing.T) {
 		require.True(t, ok, "expected ValidationError, got %T", err)
 	})
 }
+
+// =========================================================================
+// Webhook Events
+// =========================================================================
+
+// TestAllWebhookEvents is a drift guard: if the backend adds an event,
+// AllWebhookEvents must grow with it.
+func TestAllWebhookEvents(t *testing.T) {
+	expected := []string{
+		"signature.document.sent",
+		"signature.document.viewed",
+		"signature.document.recipient_signed",
+		"signature.document.signed",
+		"signature.document.completed",
+		"signature.document.finalization_failed",
+		"signature.document.voided",
+	}
+
+	assert.Len(t, AllWebhookEvents, 7)
+	assert.Equal(t, expected, WebhookEventStrings(AllWebhookEvents...))
+
+	// Each named constant maps to its wire string.
+	assert.Equal(t, "signature.document.sent", WebhookEventSent.String())
+	assert.Equal(t, "signature.document.viewed", WebhookEventViewed.String())
+	assert.Equal(t, "signature.document.recipient_signed", WebhookEventRecipientSigned.String())
+	assert.Equal(t, "signature.document.signed", WebhookEventSigned.String())
+	assert.Equal(t, "signature.document.completed", WebhookEventCompleted.String())
+	assert.Equal(t, "signature.document.finalization_failed", WebhookEventFinalizationFailed.String())
+	assert.Equal(t, "signature.document.voided", WebhookEventVoided.String())
+}
+
+// TestCreateWebhookAcceptsRawEventStrings pins the non-breaking contract:
+// Events is []string, so an event the SDK has never heard of is sent verbatim.
+func TestCreateWebhookAcceptsRawEventStrings(t *testing.T) {
+	var body map[string]interface{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		require.NoError(t, json.Unmarshal(raw, &body))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"data":{"id":"wh-1","secret":"whsec_abc"},"message":"ok"}`))
+	}))
+	defer server.Close()
+
+	client := newTestWebhooksClient(t, server.URL)
+	_, err := client.CreateWebhook(context.Background(), CreateWebhookRequest{
+		URLs:   []string{"https://example.com/hook"},
+		Events: []string{"signature.document.some_future_event"},
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, []interface{}{"signature.document.some_future_event"}, body["events"])
+}

@@ -693,16 +693,20 @@ describe("TurboPartner Module", () => {
         MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue(mockResponse);
         setup();
 
+        // The API requires all 7 permission keys whenever `permissions` is sent — a partial
+        // object is a 400 — so send the full set with the one key flipped.
+        const permissions = { ...mockPermissions, canManageOrgs: false };
+
         const result = await TurboPartner.updatePartnerUserPermissions("puser-1", {
           role: "member",
-          permissions: { canManageOrgs: false },
+          permissions,
         });
 
         expect(result.data.userId).toBe("puser-1");
         expect(result.data.role).toBe("member");
         expect(MockedHttpClient.prototype.patch).toHaveBeenCalledWith(
           `/partner/${PARTNER_ID}/users/puser-1`,
-          { role: "member", permissions: { canManageOrgs: false } }
+          { role: "member", permissions }
         );
       });
     });

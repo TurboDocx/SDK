@@ -10,6 +10,8 @@ from .quote_shared import (
     PaginationParams,
     PaginatedResponse,
     SuccessResponse,
+    BulkImportRowIssue,
+    BulkImportResult,
 )
 from .quote import (
     QuoteStatusInfo,
@@ -29,6 +31,8 @@ from .quote import (
     CreateAndSendResponse,
     QuoteListStats,
     QuoteListResponse,
+    QuoteNumberFormat,
+    QuoteNumberConfig,
 )
 from .quote_line_item import (
     LineItem,
@@ -96,8 +100,29 @@ from .quote_type import (
     ListTypesOptions,
     QuoteTypeListResponse,
 )
+from .webhooks import (
+    WebhookEvent,
+    WEBHOOK_EVENTS,
+    WEBHOOK_EVENT_SENT,
+    WEBHOOK_EVENT_VIEWED,
+    WEBHOOK_EVENT_RECIPIENT_SIGNED,
+    WEBHOOK_EVENT_SIGNED,
+    WEBHOOK_EVENT_COMPLETED,
+    WEBHOOK_EVENT_FINALIZATION_FAILED,
+    WEBHOOK_EVENT_VOIDED,
+)
 
 __all__ = [
+    # Webhooks
+    "WebhookEvent",
+    "WEBHOOK_EVENTS",
+    "WEBHOOK_EVENT_SENT",
+    "WEBHOOK_EVENT_VIEWED",
+    "WEBHOOK_EVENT_RECIPIENT_SIGNED",
+    "WEBHOOK_EVENT_SIGNED",
+    "WEBHOOK_EVENT_COMPLETED",
+    "WEBHOOK_EVENT_FINALIZATION_FAILED",
+    "WEBHOOK_EVENT_VOIDED",
     # Shared
     "QuoteStatus",
     "BillingFrequency",
@@ -109,6 +134,8 @@ __all__ = [
     "PaginationParams",
     "PaginatedResponse",
     "SuccessResponse",
+    "BulkImportRowIssue",
+    "BulkImportResult",
     # Quote
     "QuoteStatusInfo",
     "Quote",
@@ -127,6 +154,8 @@ __all__ = [
     "CreateAndSendResponse",
     "QuoteListStats",
     "QuoteListResponse",
+    "QuoteNumberFormat",
+    "QuoteNumberConfig",
     # Line Item
     "LineItem",
     "AddLineItemRequest",

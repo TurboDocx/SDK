@@ -25,6 +25,8 @@ export {
   type PaginationParams,
   type PaginatedResponse,
   type SuccessResponse,
+  type BulkImportRowIssue,
+  type BulkImportResult,
 } from './types/quote-shared';
 export * from './types/quote';
 export * from './types/quote-line-item';

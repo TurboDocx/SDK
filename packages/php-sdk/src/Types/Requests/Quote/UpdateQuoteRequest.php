@@ -22,6 +22,14 @@ final class UpdateQuoteRequest
     private ?float $taxRate;
     private ?string $priceBookId;
 
+    /**
+     * @param int|null $termDays Quote term in days (max 3650). Use -1 for auto-renewal, which makes
+     *                           $renewalPeriod required.
+     * @param string|null $renewalPeriod Required when $termDays is -1, and must be null otherwise
+     *                                   (sending it with any other term is a 400). To clear it when
+     *                                   moving off auto-renewal, pass null with $includeRenewalPeriod: true.
+     *                                   One of: weekly, monthly, quarterly, annually.
+     */
     public function __construct(
         public readonly ?string $name = null,
         public readonly ?string $companyId = null,

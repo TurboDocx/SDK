@@ -44,9 +44,13 @@ import (
 	turbodocx "github.com/TurboDocx/SDK/packages/go-sdk"
 )
 
+// The SDK exports all 7 signature events as typed WebhookEvent constants (plus
+// AllWebhookEvents). See the README for what each one fires on — note that
+// `signed` is partial-progress only and never fires on the final signature;
+// use `completed` to detect "the document is done".
 const (
-	eventDocumentCompleted = "signature.document.completed"
-	eventDocumentVoided    = "signature.document.voided"
+	eventDocumentCompleted = string(turbodocx.WebhookEventCompleted)
+	eventDocumentVoided    = string(turbodocx.WebhookEventVoided)
 )
 
 func getEnv(key, fallback string) string {

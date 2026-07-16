@@ -17,6 +17,10 @@ use TurboDocx\Types\Quote\Company;
 use TurboDocx\Types\Quote\Contact;
 use TurboDocx\Types\Quote\QuoteTemplate;
 use TurboDocx\Types\Quote\QuoteType;
+use TurboDocx\Types\Quote\QuoteNumberConfig;
+use TurboDocx\Types\Quote\QuoteNumberFormat;
+use TurboDocx\Types\Quote\BulkImportResult;
+use TurboDocx\Types\Quote\BulkImportRowIssue;
 use TurboDocx\Types\Requests\Quote\CreateQuoteRequest;
 use TurboDocx\Types\Requests\Quote\UpdateQuoteRequest;
 use TurboDocx\Types\Requests\Quote\ListQuotesRequest;
@@ -66,6 +70,9 @@ use TurboDocx\Types\Responses\Quote\CreateAndSendResponse;
 use TurboDocx\Types\Enums\QuoteStatus;
 use TurboDocx\Types\Enums\BundleItemStatus;
 use TurboDocx\Types\Enums\DiscountType;
+use TurboDocx\Types\Enums\QuoteNumberYearToken;
+use TurboDocx\Types\Enums\QuoteNumberMonthToken;
+use TurboDocx\Types\Enums\QuoteNumberResetCadence;
 use TurboDocx\Types\Quote\QuoteListStats;
 use TurboDocx\Types\Quote\CurrencyTotal;
 
@@ -1671,6 +1678,29 @@ final class TurboQuoteTest extends TestCase
         $this->assertCount(2, DiscountType::cases());
     }
 
+    public function testQuoteNumberYearTokenEnumValues(): void
+    {
+        $this->assertSame('none', QuoteNumberYearToken::NONE->value);
+        $this->assertSame('two', QuoteNumberYearToken::TWO->value);
+        $this->assertSame('four', QuoteNumberYearToken::FOUR->value);
+        $this->assertCount(3, QuoteNumberYearToken::cases());
+    }
+
+    public function testQuoteNumberMonthTokenEnumValues(): void
+    {
+        $this->assertSame('off', QuoteNumberMonthToken::OFF->value);
+        $this->assertSame('two', QuoteNumberMonthToken::TWO->value);
+        $this->assertCount(2, QuoteNumberMonthToken::cases());
+    }
+
+    public function testQuoteNumberResetCadenceEnumValues(): void
+    {
+        $this->assertSame('never', QuoteNumberResetCadence::NEVER->value);
+        $this->assertSame('yearly', QuoteNumberResetCadence::YEARLY->value);
+        $this->assertSame('monthly', QuoteNumberResetCadence::MONTHLY->value);
+        $this->assertCount(3, QuoteNumberResetCadence::cases());
+    }
+
     // ============================================
     // QUOTE LIST STATS
     // ============================================
@@ -1835,6 +1865,242 @@ final class TurboQuoteTest extends TestCase
 
         $arr = $ct->toArray();
         $this->assertSame(['currency' => 'USD', 'total' => 100.0], $arr);
+    }
+
+    // ============================================
+    // QUOTE NUMBER CONFIG
+    // ============================================
+
+    public function testGetQuoteNumberConfigUnwrapsResults(): void
+    {
+        $mockFormat = [
+            'prefix' => 'Q-',
+            'yearToken' => 'four',
+            'monthToken' => 'two',
+            'separator' => '-',
+            'padWidth' => 5,
+            'suffix' => '',
+            'startNumber' => 1,
+            'resetCadence' => 'yearly',
+        ];
+        $this->mockClient->setGetReturn(['results' => ['format' => $mockFormat, 'currentFloor' => 42]]);
+        $this->injectMockClient();
+
+        $result = TurboQuote::getQuoteNumberConfig();
+
+        $this->assertInstanceOf(QuoteNumberConfig::class, $result);
+        $this->assertInstanceOf(QuoteNumberFormat::class, $result->format);
+        $this->assertSame('Q-', $result->format->prefix);
+        $this->assertSame('four', $result->format->yearToken);
+        $this->assertSame('two', $result->format->monthToken);
+        $this->assertSame('-', $result->format->separator);
+        $this->assertSame(5, $result->format->padWidth);
+        $this->assertSame('', $result->format->suffix);
+        $this->assertSame(1, $result->format->startNumber);
+        $this->assertSame('yearly', $result->format->resetCadence);
+        $this->assertSame(42, $result->currentFloor);
+        $this->assertSame('/v1/quotes/number-config', $this->mockClient->lastGetPath);
+    }
+
+    public function testUpdateQuoteNumberConfigSendsFormatBodyAndUnwrapsResults(): void
+    {
+        $sentFormat = [
+            'prefix' => 'INV-',
+            'yearToken' => 'two',
+            'monthToken' => 'off',
+            'separator' => '/',
+            'padWidth' => 4,
+            'suffix' => '-X',
+            'startNumber' => 100,
+            'resetCadence' => 'monthly',
+        ];
+        $this->mockClient->setPatchReturn(['results' => ['format' => $sentFormat, 'currentFloor' => 7]]);
+        $this->injectMockClient();
+
+        $result = TurboQuote::updateQuoteNumberConfig(new QuoteNumberFormat(
+            prefix: 'INV-',
+            yearToken: 'two',
+            monthToken: 'off',
+            separator: '/',
+            padWidth: 4,
+            suffix: '-X',
+            startNumber: 100,
+            resetCadence: 'monthly',
+        ));
+
+        $this->assertInstanceOf(QuoteNumberConfig::class, $result);
+        $this->assertSame('INV-', $result->format->prefix);
+        $this->assertSame(7, $result->currentFloor);
+        $this->assertSame('/v1/quotes/number-config', $this->mockClient->lastPatchPath);
+        // Request body keys are camelCase verbatim; padWidth/startNumber are integers.
+        $this->assertSame($sentFormat, $this->mockClient->lastPatchData);
+        $this->assertSame(4, $this->mockClient->lastPatchData['padWidth']);
+        $this->assertSame(100, $this->mockClient->lastPatchData['startNumber']);
+    }
+
+    // ============================================
+    // BULK CREATES
+    // ============================================
+
+    public function testBulkCreateProductsPostsRowsEnvelopeAndUnwrapsResults(): void
+    {
+        $this->mockClient->setPostReturn([
+            'results' => ['imported' => 2, 'failed' => [], 'adjusted' => []],
+        ]);
+        $this->injectMockClient();
+
+        $result = TurboQuote::bulkCreateProducts([
+            new CreateProductRequest(name: 'Widget', listPrice: 100.0, billingFrequency: 'one-time', categoryId: 'cat-1'),
+            new CreateProductRequest(name: 'Gadget', listPrice: 250.5, billingFrequency: 'monthly', categoryId: 'cat-1', sku: 'GAD-1'),
+        ]);
+
+        $this->assertInstanceOf(BulkImportResult::class, $result);
+        $this->assertSame(2, $result->imported);
+        $this->assertSame([], $result->failed);
+        $this->assertSame([], $result->adjusted);
+        $this->assertSame('/v1/products/bulk', $this->mockClient->lastPostPath);
+        // Rows are passed verbatim (camelCase keys) inside the { rows } envelope.
+        $this->assertSame([
+            'rows' => [
+                ['name' => 'Widget', 'listPrice' => 100.0, 'billingFrequency' => 'one-time', 'categoryId' => 'cat-1'],
+                ['name' => 'Gadget', 'listPrice' => 250.5, 'billingFrequency' => 'monthly', 'categoryId' => 'cat-1', 'sku' => 'GAD-1'],
+            ],
+        ], $this->mockClient->lastPostData);
+    }
+
+    public function testBulkCreatePriceBooksPostsRowsEnvelopeAndUnwrapsResults(): void
+    {
+        $this->mockClient->setPostReturn([
+            'results' => ['imported' => 1, 'failed' => [], 'adjusted' => []],
+        ]);
+        $this->injectMockClient();
+
+        $result = TurboQuote::bulkCreatePriceBooks([
+            new CreatePriceBookRequest(name: 'Partner Pricing', priceBookTypeId: 'pbt-1', validFrom: '2026-01-01', discountPercent: 10.0),
+        ]);
+
+        $this->assertInstanceOf(BulkImportResult::class, $result);
+        $this->assertSame(1, $result->imported);
+        $this->assertSame('/v1/pricebooks/bulk', $this->mockClient->lastPostPath);
+        $this->assertSame([
+            'rows' => [
+                ['name' => 'Partner Pricing', 'priceBookTypeId' => 'pbt-1', 'validFrom' => '2026-01-01', 'discountPercent' => 10.0],
+            ],
+        ], $this->mockClient->lastPostData);
+    }
+
+    public function testBulkCreateBundlesPostsRowsEnvelopeAndUnwrapsResults(): void
+    {
+        $this->mockClient->setPostReturn([
+            'results' => ['imported' => 1, 'failed' => [], 'adjusted' => []],
+        ]);
+        $this->injectMockClient();
+
+        $result = TurboQuote::bulkCreateBundles([
+            new CreateBundleRequest(name: 'Starter Kit', categoryId: 'cat-1', items: [['productId' => 'p-1', 'quantity' => 2]]),
+        ]);
+
+        $this->assertInstanceOf(BulkImportResult::class, $result);
+        $this->assertSame(1, $result->imported);
+        $this->assertSame('/v1/bundles/bulk', $this->mockClient->lastPostPath);
+        $this->assertSame([
+            'rows' => [
+                ['name' => 'Starter Kit', 'categoryId' => 'cat-1', 'items' => [['productId' => 'p-1', 'quantity' => 2]]],
+            ],
+        ], $this->mockClient->lastPostData);
+    }
+
+    public function testBulkCreateCompaniesPostsRowsEnvelopeAndUnwrapsResults(): void
+    {
+        $this->mockClient->setPostReturn([
+            'results' => ['imported' => 1, 'failed' => [], 'adjusted' => []],
+        ]);
+        $this->injectMockClient();
+
+        $result = TurboQuote::bulkCreateCompanies([
+            new CreateCompanyRequest(name: 'Acme Corp', contacts: [['name' => 'Jane Doe', 'email' => 'jane@acme.com']]),
+        ]);
+
+        $this->assertInstanceOf(BulkImportResult::class, $result);
+        $this->assertSame(1, $result->imported);
+        $this->assertSame('/v1/companies/bulk', $this->mockClient->lastPostPath);
+        $this->assertSame([
+            'rows' => [
+                ['name' => 'Acme Corp', 'contacts' => [['name' => 'Jane Doe', 'email' => 'jane@acme.com']]],
+            ],
+        ], $this->mockClient->lastPostData);
+    }
+
+    public function testBulkCreateContactsPostsRowsEnvelopeAndUnwrapsResults(): void
+    {
+        $this->mockClient->setPostReturn([
+            'results' => ['imported' => 1, 'failed' => [], 'adjusted' => []],
+        ]);
+        $this->injectMockClient();
+
+        $result = TurboQuote::bulkCreateContacts([
+            new CreateContactRequest(name: 'John Smith', companyId: 'c-1', email: 'john@acme.com'),
+        ]);
+
+        $this->assertInstanceOf(BulkImportResult::class, $result);
+        $this->assertSame(1, $result->imported);
+        $this->assertSame('/v1/contacts/bulk', $this->mockClient->lastPostPath);
+        $this->assertSame([
+            'rows' => [
+                ['name' => 'John Smith', 'companyId' => 'c-1', 'email' => 'john@acme.com'],
+            ],
+        ], $this->mockClient->lastPostData);
+    }
+
+    public function testBulkCreateTypesPostsRowsEnvelopeAndUnwrapsResults(): void
+    {
+        $this->mockClient->setPostReturn([
+            'results' => ['imported' => 2, 'failed' => [], 'adjusted' => []],
+        ]);
+        $this->injectMockClient();
+
+        $result = TurboQuote::bulkCreateTypes([
+            new CreateQuoteTypeRequest(name: 'Hardware', categoryType: 'product'),
+            new CreateQuoteTypeRequest(name: 'Services', categoryType: 'product'),
+        ]);
+
+        $this->assertInstanceOf(BulkImportResult::class, $result);
+        $this->assertSame(2, $result->imported);
+        $this->assertSame('/v1/types/bulk', $this->mockClient->lastPostPath);
+        $this->assertSame([
+            'rows' => [
+                ['name' => 'Hardware', 'categoryType' => 'product'],
+                ['name' => 'Services', 'categoryType' => 'product'],
+            ],
+        ], $this->mockClient->lastPostData);
+    }
+
+    public function testBulkCreatePartialSuccessSurfacesFailedAndAdjustedWithoutThrowing(): void
+    {
+        $this->mockClient->setPostReturn([
+            'results' => [
+                'imported' => 3,
+                'failed' => [['row' => 2, 'reason' => 'Category not found']],
+                'adjusted' => [['row' => 5, 'reason' => 'Bundle item product not found; item dropped']],
+            ],
+        ]);
+        $this->injectMockClient();
+
+        $result = TurboQuote::bulkCreateProducts([
+            new CreateProductRequest(name: 'Widget', listPrice: 100.0, billingFrequency: 'one-time', categoryId: 'cat-1'),
+        ]);
+
+        // Partial success does NOT throw — issues are surfaced on the result.
+        $this->assertInstanceOf(BulkImportResult::class, $result);
+        $this->assertSame(3, $result->imported);
+        $this->assertCount(1, $result->failed);
+        $this->assertInstanceOf(BulkImportRowIssue::class, $result->failed[0]);
+        $this->assertSame(2, $result->failed[0]->row);
+        $this->assertSame('Category not found', $result->failed[0]->reason);
+        $this->assertCount(1, $result->adjusted);
+        $this->assertInstanceOf(BulkImportRowIssue::class, $result->adjusted[0]);
+        $this->assertSame(5, $result->adjusted[0]->row);
+        $this->assertSame('Bundle item product not found; item dropped', $result->adjusted[0]->reason);
     }
 
     // ============================================

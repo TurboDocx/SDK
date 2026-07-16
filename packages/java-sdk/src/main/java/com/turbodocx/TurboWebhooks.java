@@ -46,8 +46,11 @@ public class TurboWebhooks {
      * is shown ONCE and must be stored on receipt; it cannot be retrieved
      * later.
      *
-     * @param urls   HTTPS URLs (HTTP returns 400 ValidationException)
-     * @param events Event types (e.g. "signature.document.completed")
+     * @param urls   HTTPS URLs, 1-10 entries (HTTP returns 400 ValidationException)
+     * @param events Event types, at least 1. Prefer the {@link WebhookEvent} enum
+     *     ({@code WebhookEvent.COMPLETED.getValue()}, or {@code WebhookEvent.allValues()}
+     *     for every event) over raw strings. Raw strings still work, so new backend
+     *     events need no SDK bump.
      * @return JsonObject with {@code id} and {@code secret}
      * @throws IOException if the request fails
      * @throws TurboDocxException.ConflictException if a webhook with the
@@ -74,11 +77,27 @@ public class TurboWebhooks {
      * Patch one or more fields on the signature webhook. Pass null for
      * fields you don't want to change. Renaming is not supported.
      *
+     * <p>{@code urls} and {@code events} stay {@code min(1)} on the backend even
+     * though they are optional on PATCH, so an empty list is a 400 rather than a
+     * "clear this field" instruction. Both are rejected before the request is sent;
+     * pass null to leave a field untouched. {@code urls} accepts 1-10 entries.
+     *
+     * @throws TurboDocxException.ValidationException if urls or events is non-null
+     *     but empty
      * @throws TurboDocxException.ConflictException if the patch would
      *     result in a webhook-name conflict with an existing webhook
      *     (HTTP 409)
      */
     public JsonObject updateWebhook(List<String> urls, List<String> events, Boolean isActive) throws IOException {
+        if (urls != null && urls.isEmpty()) {
+            throw new TurboDocxException.ValidationException(
+                    "urls must contain at least one URL. Pass null to leave it unchanged.");
+        }
+        if (events != null && events.isEmpty()) {
+            throw new TurboDocxException.ValidationException(
+                    "events must contain at least one event type. Pass null to leave it unchanged.");
+        }
+
         Map<String, Object> body = new LinkedHashMap<>();
         if (urls != null) body.put("urls", urls);
         if (events != null) body.put("events", events);

@@ -18,6 +18,7 @@ use TurboDocx\Exceptions\ConflictException;
 use TurboDocx\Exceptions\TurboDocxException;
 use TurboDocx\HttpClient;
 use TurboDocx\TurboWebhooks;
+use TurboDocx\Types\Enums\WebhookEvent;
 
 use function TurboDocx\Utils\verifyWebhookSignature;
 
@@ -31,6 +32,7 @@ use function TurboDocx\Utils\verifyWebhookSignature;
  *   - TurboWebhooks::configure() and configureFromCredentials()
  *   - Lazy getClient() env-var fallback (success + missing-env error)
  *   - verifyWebhookSignature() pure-function helper
+ *   - The WebhookEvent enum (all 7 wire strings)
  */
 final class TurboWebhooksTest extends TestCase
 {
@@ -285,5 +287,56 @@ final class TurboWebhooksTest extends TestCase
         $this->assertFalse(
             verifyWebhookSignature(self::BODY, 'sha256=short', $ts, self::SECRET, 300, self::NOW_SECONDS),
         );
+    }
+
+    // ============================================
+    // WEBHOOK EVENT ENUM
+    // ============================================
+
+    /**
+     * Drift guard: if the backend adds an event, WebhookEvent must grow with it.
+     */
+    public function testWebhookEventAllReturnsExactlyTheSevenWireStrings(): void
+    {
+        $expected = [
+            'signature.document.sent',
+            'signature.document.viewed',
+            'signature.document.recipient_signed',
+            'signature.document.signed',
+            'signature.document.completed',
+            'signature.document.finalization_failed',
+            'signature.document.voided',
+        ];
+
+        $this->assertSame($expected, WebhookEvent::all());
+        $this->assertCount(7, WebhookEvent::cases());
+        $this->assertSame($expected, WebhookEvent::values());
+    }
+
+    public function testEachWebhookEventCaseMapsToItsWireString(): void
+    {
+        $this->assertSame('signature.document.sent', WebhookEvent::SENT->value);
+        $this->assertSame('signature.document.viewed', WebhookEvent::VIEWED->value);
+        $this->assertSame('signature.document.recipient_signed', WebhookEvent::RECIPIENT_SIGNED->value);
+        $this->assertSame('signature.document.signed', WebhookEvent::SIGNED->value);
+        $this->assertSame('signature.document.completed', WebhookEvent::COMPLETED->value);
+        $this->assertSame(
+            'signature.document.finalization_failed',
+            WebhookEvent::FINALIZATION_FAILED->value,
+        );
+        $this->assertSame('signature.document.voided', WebhookEvent::VOIDED->value);
+    }
+
+    /**
+     * Non-breaking: createWebhook() still takes array<int, string>, so an event
+     * the SDK has never heard of remains a legal argument.
+     */
+    public function testCreateWebhookStillAcceptsRawEventStrings(): void
+    {
+        $reflection = new ReflectionClass(TurboWebhooks::class);
+        $events = $reflection->getMethod('createWebhook')->getParameters()[1];
+
+        $this->assertSame('events', $events->getName());
+        $this->assertSame('array', (string) $events->getType());
     }
 }

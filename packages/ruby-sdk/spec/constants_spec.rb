@@ -72,4 +72,78 @@ RSpec.describe "TurboDocxSdk Constants" do
       expect(TurboDocxSdk::BundleItemStatus::CURRENCY_MISMATCH).to eq("currency_mismatch")
     end
   end
+
+  describe "QuoteNumberYearToken" do
+    it "defines all 3 year tokens" do
+      expect(TurboDocxSdk::QuoteNumberYearToken::NONE).to eq("none")
+      expect(TurboDocxSdk::QuoteNumberYearToken::TWO).to eq("two")
+      expect(TurboDocxSdk::QuoteNumberYearToken::FOUR).to eq("four")
+      expect(TurboDocxSdk::QuoteNumberYearToken::ALL).to eq(%w[none two four])
+    end
+  end
+
+  describe "QuoteNumberMonthToken" do
+    it "defines all 2 month tokens" do
+      expect(TurboDocxSdk::QuoteNumberMonthToken::OFF).to eq("off")
+      expect(TurboDocxSdk::QuoteNumberMonthToken::TWO).to eq("two")
+      expect(TurboDocxSdk::QuoteNumberMonthToken::ALL).to eq(%w[off two])
+    end
+  end
+
+  describe "QuoteNumberResetCadence" do
+    it "defines all 3 reset cadences" do
+      expect(TurboDocxSdk::QuoteNumberResetCadence::NEVER).to eq("never")
+      expect(TurboDocxSdk::QuoteNumberResetCadence::YEARLY).to eq("yearly")
+      expect(TurboDocxSdk::QuoteNumberResetCadence::MONTHLY).to eq("monthly")
+      expect(TurboDocxSdk::QuoteNumberResetCadence::ALL).to eq(%w[never yearly monthly])
+    end
+  end
+
+  describe "WebhookEvent" do
+    it "defines all 7 signature events" do
+      expect(TurboDocxSdk::WebhookEvent::SENT).to eq("signature.document.sent")
+      expect(TurboDocxSdk::WebhookEvent::VIEWED).to eq("signature.document.viewed")
+      expect(TurboDocxSdk::WebhookEvent::RECIPIENT_SIGNED).to eq("signature.document.recipient_signed")
+      expect(TurboDocxSdk::WebhookEvent::SIGNED).to eq("signature.document.signed")
+      expect(TurboDocxSdk::WebhookEvent::COMPLETED).to eq("signature.document.completed")
+      expect(TurboDocxSdk::WebhookEvent::FINALIZATION_FAILED).to eq("signature.document.finalization_failed")
+      expect(TurboDocxSdk::WebhookEvent::VOIDED).to eq("signature.document.voided")
+    end
+
+    # Drift guard: if the backend adds an event, ALL must grow with it.
+    it "exposes exactly the 7 wire strings via ALL, in lifecycle order, frozen" do
+      expect(TurboDocxSdk::WebhookEvent::ALL).to eq(
+        [
+          "signature.document.sent",
+          "signature.document.viewed",
+          "signature.document.recipient_signed",
+          "signature.document.signed",
+          "signature.document.completed",
+          "signature.document.finalization_failed",
+          "signature.document.voided",
+        ]
+      )
+      expect(TurboDocxSdk::WebhookEvent::ALL.size).to eq(7)
+      expect(TurboDocxSdk::WebhookEvent::ALL.uniq.size).to eq(7)
+      expect(TurboDocxSdk::WebhookEvent::ALL).to be_frozen
+    end
+  end
+
+  describe "PartnerScope" do
+    it "defines the granular partner API key permission scopes" do
+      expect(TurboDocxSdk::PartnerScope::ORG_CREATE).to eq("org:create")
+      expect(TurboDocxSdk::PartnerScope::ORG_READ).to eq("org:read")
+      expect(TurboDocxSdk::PartnerScope::ENTITLEMENTS_UPDATE).to eq("entitlements:update")
+      expect(TurboDocxSdk::PartnerScope::ORG_USERS_READ).to eq("org-users:read")
+      expect(TurboDocxSdk::PartnerScope::PARTNER_APIKEYS_DELETE).to eq("partner-apikeys:delete")
+      expect(TurboDocxSdk::PartnerScope::AUDIT_READ).to eq("audit:read")
+    end
+
+    it "exposes all 22 scopes via ALL, frozen and unique" do
+      expect(TurboDocxSdk::PartnerScope::ALL.size).to eq(22)
+      expect(TurboDocxSdk::PartnerScope::ALL.uniq.size).to eq(22)
+      expect(TurboDocxSdk::PartnerScope::ALL).to be_frozen
+      expect(TurboDocxSdk::PartnerScope::ALL).to include("org:create", "audit:read")
+    end
+  end
 end

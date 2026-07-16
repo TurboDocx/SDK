@@ -13,6 +13,7 @@
 
 import { TurboWebhooks } from "../src/modules/webhooks";
 import { HttpClient } from "../src/http";
+import { WEBHOOK_EVENTS, WebhookEvents } from "../src/types/webhooks";
 import { verifyWebhookSignature } from "../src/utils/verifyWebhookSignature";
 import {
   AuthenticationError,
@@ -598,5 +599,58 @@ describe("verifyWebhookSignature", () => {
         now: () => NOW_SECONDS,
       }),
     ).toBe(true);
+  });
+});
+
+// ============================================
+// WEBHOOK EVENT CONSTANTS
+// ============================================
+
+describe("WEBHOOK_EVENTS", () => {
+  // Drift guard: if the backend adds an event, this list must grow with it.
+  const EXPECTED = [
+    "signature.document.sent",
+    "signature.document.viewed",
+    "signature.document.recipient_signed",
+    "signature.document.signed",
+    "signature.document.completed",
+    "signature.document.finalization_failed",
+    "signature.document.voided",
+  ];
+
+  it("should contain exactly the 7 known wire strings, in lifecycle order", () => {
+    expect([...WEBHOOK_EVENTS]).toEqual(EXPECTED);
+  });
+
+  it("should expose the same 7 values on the WebhookEvents map", () => {
+    expect(Object.values(WebhookEvents).sort()).toEqual([...EXPECTED].sort());
+  });
+
+  it("should map each named member to its wire string", () => {
+    expect(WebhookEvents.SENT).toBe("signature.document.sent");
+    expect(WebhookEvents.VIEWED).toBe("signature.document.viewed");
+    expect(WebhookEvents.RECIPIENT_SIGNED).toBe("signature.document.recipient_signed");
+    expect(WebhookEvents.SIGNED).toBe("signature.document.signed");
+    expect(WebhookEvents.COMPLETED).toBe("signature.document.completed");
+    expect(WebhookEvents.FINALIZATION_FAILED).toBe("signature.document.finalization_failed");
+    expect(WebhookEvents.VOIDED).toBe("signature.document.voided");
+  });
+
+  it("should still accept a raw event string on createWebhook (non-breaking)", async () => {
+    const post = jest.fn().mockResolvedValue({ data: { id: "wh_1", secret: "s" } });
+    MockedHttpClient.prototype.post = post;
+    TurboWebhooks.configure({ apiKey: API_KEY, orgId: ORG_ID });
+
+    await TurboWebhooks.createWebhook({
+      urls: ["https://example.com/hook"],
+      // A raw string the SDK has never heard of — still compiles, still sent.
+      events: ["signature.document.some_future_event"],
+    });
+
+    expect(post).toHaveBeenCalledWith("/api/webhooks", {
+      name: "signature",
+      urls: ["https://example.com/hook"],
+      events: ["signature.document.some_future_event"],
+    });
   });
 });

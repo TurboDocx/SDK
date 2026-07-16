@@ -38,7 +38,7 @@ feat|fix|docs|test|refactor: description
 ## Cross-SDK Conventions
 
 - All SDKs must maintain **feature parity** — see `.claude/rules/cross-sdk-parity.md`
-- Two modules per SDK: **TurboSign** (signatures) and **TurboPartner** (partner portal)
+- Five modules per SDK: **TurboSign** (signatures), **TurboPartner** (partner portal), **TurboWebhooks** (org signature webhook), **Deliverable** (document generation), **TurboQuote** (CPQ)
 - Follow each language's idiomatic naming (camelCase JS, snake_case Py, PascalCase Go)
 - Shared error hierarchy: `TurboDocxError > Auth | Validation | NotFound | RateLimit | Network`
 - Config pattern: explicit config → env var fallback → error
@@ -52,3 +52,12 @@ See @docs/ARCHITECTURE.md for HTTP client design, file input abstraction, error 
 - `.claude/rules/cross-sdk-parity.md` — feature parity requirements
 - `.claude/rules/js-sdk.md` — JS/TS-specific conventions
 - `.claude/rules/testing.md` — TDD workflow and test patterns
+
+## Change Management (SOC 2)
+
+This is a **public** repo. Every non-standard change is recorded as a **Change Request** issue
+(`.github/ISSUE_TEMPLATE/change-request.yml`); the PR closes it with `Closes #<issue>`. Bugs use
+the **Bug Report** form. Standard changes (dependency bumps, docs typos) skip the issue.
+
+**Never reference internal repos or PRs (e.g. backend/frontend) in this public repo — it leaks
+unreleased internal context.**

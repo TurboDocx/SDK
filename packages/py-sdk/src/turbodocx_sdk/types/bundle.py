@@ -55,10 +55,13 @@ class Bundle(TypedDict, total=False):
     category: Dict[str, Any]
 
 
-class BundleItemInput(TypedDict, total=False):
+class _BundleItemInputRequired(TypedDict):
     productId: str
     unitPrice: float
     billingFrequency: str  # BillingFrequency literal
+
+
+class BundleItemInput(_BundleItemInputRequired, total=False):
     quantity: int
     discountType: DiscountType
     discountPercent: float

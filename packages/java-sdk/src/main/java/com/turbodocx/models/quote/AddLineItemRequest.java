@@ -2,12 +2,23 @@ package com.turbodocx.models.quote;
 
 /**
  * Request to add a product line item to a quote.
+ *
+ * <p>{@code productId}, {@code productName}, {@code unitPrice} and
+ * {@code billingFrequency} are all required. {@code productId} is unusual: the backend
+ * requires the KEY to be present but allows the VALUE to be null (an ad-hoc line item).
+ * {@code TurboQuote.addLineItems} emits {@code productId: null} explicitly, so leaving it
+ * unset is safe.
  */
 public class AddLineItemRequest {
+    /** Required key; catalog product UUID. May be null for an ad-hoc line item. */
     private String productId;
+    /** Required. */
     private String productName;
+    /** Required. */
     private Double unitPrice;
+    /** Required. */
     private String billingFrequency;
+    /** Defaults to 1 when unset. */
     private Double quantity;
     private DiscountType discountType;
     private Double discountPercent;

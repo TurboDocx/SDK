@@ -62,7 +62,7 @@ func main() {
 	fmt.Println("Adding user to organization...")
 	user, err := partner.AddUserToOrganization(ctx, orgID, &turbodocx.AddOrgUserRequest{
 		Email: "admin@acme.com",
-		Role:  "admin",
+		Role:  "admin", // org roles: admin | contributor | user | viewer
 	})
 	if err != nil {
 		fmt.Printf("Error adding user: %v\n", err)

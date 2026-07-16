@@ -98,6 +98,7 @@ func main() {
 	fmt.Println("Adding line item...")
 	qty := 3
 	lineItems, err := client.AddLineItems(ctx, quote.ID, turbodocx.AddLineItemRequest{
+		ProductID:        nil, // required key; nil = ad-hoc item (no catalog product)
 		ProductName:      "Professional License",
 		UnitPrice:        499.00,
 		BillingFrequency: "annual",

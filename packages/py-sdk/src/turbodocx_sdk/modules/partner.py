@@ -610,7 +610,8 @@ class TurboPartner:
         Args:
             email: User email address
             role: User role ("admin", "member", or "viewer")
-            permissions: Permission flags dict with camelCase keys:
+            permissions: Permission flags dict with camelCase keys. ALL 7 keys are
+                required -- a partial object is rejected with a 400:
                 canManageOrgs, canManageOrgUsers, canManagePartnerUsers,
                 canManageOrgAPIKeys, canManagePartnerAPIKeys,
                 canUpdateEntitlements, canViewAuditLogs
@@ -635,8 +636,12 @@ class TurboPartner:
 
         Args:
             user_id: User UUID
-            role: New role
-            permissions: New permission flags
+            role: New role ("admin", "member", or "viewer")
+            permissions: New permission flags. The key itself is optional, but if you
+                send it, ALL 7 flags must be present -- there is no partial update:
+                canManageOrgs, canManageOrgUsers, canManagePartnerUsers,
+                canManageOrgAPIKeys, canManagePartnerAPIKeys,
+                canUpdateEntitlements, canViewAuditLogs
 
         Returns:
             Dict with success and data (userId, role, permissions)

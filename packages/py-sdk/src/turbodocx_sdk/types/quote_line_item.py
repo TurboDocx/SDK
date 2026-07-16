@@ -43,13 +43,15 @@ class LineItem(TypedDict, total=False):
 
 
 class _AddLineItemRequestRequired(TypedDict):
+    # The productId KEY is required, but its value may be None for a custom
+    # (non-catalog) line item. Omitting the key entirely is a 400.
+    productId: Optional[str]
     productName: str
     unitPrice: float
     billingFrequency: str  # BillingFrequency literal
 
 
 class AddLineItemRequest(_AddLineItemRequestRequired, total=False):
-    productId: Optional[str]
     quantity: int
     discountType: DiscountType
     discountPercent: float

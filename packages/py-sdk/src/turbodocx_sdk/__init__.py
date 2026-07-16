@@ -5,7 +5,7 @@ Official SDK for TurboDocx API - Digital signatures, document generation,
 and AI-powered workflows.
 """
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 from typing import Optional
 
@@ -15,6 +15,17 @@ from .modules.webhooks import TurboWebhooks
 from .modules.deliverable import Deliverable
 from .utils.verify_webhook_signature import verify_webhook_signature
 from .utils.client_context import ClientContext
+from .types.webhooks import (
+    WebhookEvent,
+    WEBHOOK_EVENTS,
+    WEBHOOK_EVENT_SENT,
+    WEBHOOK_EVENT_VIEWED,
+    WEBHOOK_EVENT_RECIPIENT_SIGNED,
+    WEBHOOK_EVENT_SIGNED,
+    WEBHOOK_EVENT_COMPLETED,
+    WEBHOOK_EVENT_FINALIZATION_FAILED,
+    WEBHOOK_EVENT_VOIDED,
+)
 from .modules.quote import TurboQuote
 from .modules.partner import (
     SCOPE_ORG_CREATE,
@@ -104,6 +115,16 @@ __all__ = [
     "RateLimitError",
     "NetworkError",
     "__version__",
+    # Webhook event constants
+    "WebhookEvent",
+    "WEBHOOK_EVENTS",
+    "WEBHOOK_EVENT_SENT",
+    "WEBHOOK_EVENT_VIEWED",
+    "WEBHOOK_EVENT_RECIPIENT_SIGNED",
+    "WEBHOOK_EVENT_SIGNED",
+    "WEBHOOK_EVENT_COMPLETED",
+    "WEBHOOK_EVENT_FINALIZATION_FAILED",
+    "WEBHOOK_EVENT_VOIDED",
     # Scope constants
     "SCOPE_ORG_CREATE",
     "SCOPE_ORG_READ",

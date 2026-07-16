@@ -38,3 +38,18 @@ class PaginatedResponse(TypedDict):
 
 class SuccessResponse(TypedDict):
     message: str
+
+
+class BulkImportRowIssue(TypedDict):
+    """A per-row issue from a bulk create; row is the 1-indexed position in the request payload."""
+
+    row: int
+    reason: str
+
+
+class BulkImportResult(TypedDict):
+    """Result of a bulk create: imported count plus failed/adjusted row issues (partial success)."""
+
+    imported: int
+    failed: List[BulkImportRowIssue]
+    adjusted: List[BulkImportRowIssue]

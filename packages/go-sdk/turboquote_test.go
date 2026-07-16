@@ -2842,3 +2842,393 @@ func TestUpdateQuoteRequestClearMultipleFields(t *testing.T) {
 		t.Error("validUntil should be null")
 	}
 }
+
+// =============================================
+// Quote Number Config Tests
+// =============================================
+
+func TestQuoteClient_GetQuoteNumberConfig(t *testing.T) {
+	t.Run("gets the quote number config and unwraps results", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "GET", r.Method)
+			assert.Equal(t, "/v1/quotes/number-config", r.URL.Path)
+			assert.Equal(t, "Bearer test-api-key", r.Header.Get("Authorization"))
+			assert.Equal(t, "test-org-id", r.Header.Get("x-rapiddocx-org-id"))
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"results": map[string]interface{}{
+					"format": map[string]interface{}{
+						"prefix":       "Q-",
+						"yearToken":    "four",
+						"monthToken":   "two",
+						"separator":    "-",
+						"padWidth":     5,
+						"suffix":       "",
+						"startNumber":  100,
+						"resetCadence": "yearly",
+					},
+					"currentFloor": 42,
+				},
+			})
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		result, err := client.GetQuoteNumberConfig(context.Background())
+
+		require.NoError(t, err)
+		assert.Equal(t, "Q-", result.Format.Prefix)
+		assert.Equal(t, QuoteNumberYearTokenFour, result.Format.YearToken)
+		assert.Equal(t, QuoteNumberMonthTokenTwo, result.Format.MonthToken)
+		assert.Equal(t, "-", result.Format.Separator)
+		assert.Equal(t, 5, result.Format.PadWidth)
+		assert.Equal(t, "", result.Format.Suffix)
+		assert.Equal(t, 100, result.Format.StartNumber)
+		assert.Equal(t, QuoteNumberResetCadenceYearly, result.Format.ResetCadence)
+		assert.Equal(t, 42, result.CurrentFloor)
+	})
+}
+
+func TestQuoteClient_UpdateQuoteNumberConfig(t *testing.T) {
+	t.Run("updates the quote number config and unwraps results", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "PATCH", r.Method)
+			assert.Equal(t, "/v1/quotes/number-config", r.URL.Path)
+
+			body, _ := io.ReadAll(r.Body)
+			var sent map[string]interface{}
+			require.NoError(t, json.Unmarshal(body, &sent))
+
+			// All eight format fields must be present verbatim (camelCase),
+			// including zero-valued ones (padWidth: 0, startNumber: 0, empty suffix).
+			for _, key := range []string{
+				"prefix", "yearToken", "monthToken", "separator",
+				"padWidth", "suffix", "startNumber", "resetCadence",
+			} {
+				_, ok := sent[key]
+				assert.True(t, ok, "request body missing key %q", key)
+			}
+			assert.Equal(t, "INV", sent["prefix"])
+			assert.Equal(t, "none", sent["yearToken"])
+			assert.Equal(t, "off", sent["monthToken"])
+			assert.Equal(t, float64(0), sent["padWidth"])
+			assert.Equal(t, float64(0), sent["startNumber"])
+			assert.Equal(t, "", sent["suffix"])
+			assert.Equal(t, "never", sent["resetCadence"])
+			// currentFloor must NOT be part of the PATCH body.
+			_, hasFloor := sent["currentFloor"]
+			assert.False(t, hasFloor, "currentFloor should not be in the request body")
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"results": map[string]interface{}{
+					"format": map[string]interface{}{
+						"prefix":       "INV",
+						"yearToken":    "none",
+						"monthToken":   "off",
+						"separator":    "/",
+						"padWidth":     0,
+						"suffix":       "",
+						"startNumber":  0,
+						"resetCadence": "never",
+					},
+					"currentFloor": 7,
+				},
+			})
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		result, err := client.UpdateQuoteNumberConfig(context.Background(), &QuoteNumberFormat{
+			Prefix:       "INV",
+			YearToken:    QuoteNumberYearTokenNone,
+			MonthToken:   QuoteNumberMonthTokenOff,
+			Separator:    "/",
+			PadWidth:     0,
+			Suffix:       "",
+			StartNumber:  0,
+			ResetCadence: QuoteNumberResetCadenceNever,
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, "INV", result.Format.Prefix)
+		assert.Equal(t, QuoteNumberYearTokenNone, result.Format.YearToken)
+		assert.Equal(t, QuoteNumberMonthTokenOff, result.Format.MonthToken)
+		assert.Equal(t, "/", result.Format.Separator)
+		assert.Equal(t, 0, result.Format.PadWidth)
+		assert.Equal(t, 0, result.Format.StartNumber)
+		assert.Equal(t, QuoteNumberResetCadenceNever, result.Format.ResetCadence)
+		assert.Equal(t, 7, result.CurrentFloor)
+	})
+}
+
+// =============================================
+// Bulk Create Tests
+// =============================================
+// All six bulk endpoints share the same wire contract: POST {resource}/bulk
+// with { "rows": [...] }, response { results: { imported, failed, adjusted } }.
+
+// bulkTestResponse is the canonical happy-path bulk response body.
+func bulkTestResponse() map[string]interface{} {
+	return map[string]interface{}{
+		"results": map[string]interface{}{
+			"imported": 2,
+			"failed": []map[string]interface{}{
+				{"row": 3, "reason": "A product with this name already exists"},
+			},
+			"adjusted": []map[string]interface{}{},
+		},
+	}
+}
+
+func TestQuoteClient_BulkCreateProducts(t *testing.T) {
+	t.Run("POSTs product rows to /v1/products/bulk wrapped in rows and unwraps results", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "POST", r.Method)
+			assert.Equal(t, "/v1/products/bulk", r.URL.Path)
+
+			var sent map[string]interface{}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&sent))
+			// Body is exactly { rows: [...] } with the rows passed verbatim (camelCase).
+			require.Len(t, sent, 1, "request body should contain only the rows key")
+			rows, ok := sent["rows"].([]interface{})
+			require.True(t, ok, "rows should be an array")
+			require.Len(t, rows, 2)
+			first := rows[0].(map[string]interface{})
+			assert.Equal(t, "Widget A", first["name"])
+			assert.Equal(t, float64(10), first["listPrice"])
+			assert.Equal(t, "monthly", first["billingFrequency"])
+			assert.Equal(t, "cat-1", first["categoryId"])
+			second := rows[1].(map[string]interface{})
+			assert.Equal(t, "Widget B", second["name"])
+			assert.Equal(t, "one-time", second["billingFrequency"])
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(bulkTestResponse())
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		result, err := client.BulkCreateProducts(context.Background(), []CreateProductRequest{
+			{Name: "Widget A", ListPrice: 10, BillingFrequency: "monthly", CategoryID: "cat-1"},
+			{Name: "Widget B", ListPrice: 20, BillingFrequency: "one-time", CategoryID: "cat-1"},
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 2, result.Imported)
+		require.Len(t, result.Failed, 1)
+		assert.Equal(t, BulkImportRowIssue{Row: 3, Reason: "A product with this name already exists"}, result.Failed[0])
+		assert.Empty(t, result.Adjusted)
+	})
+}
+
+func TestQuoteClient_BulkCreatePriceBooks(t *testing.T) {
+	t.Run("POSTs price book rows to /v1/pricebooks/bulk", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "POST", r.Method)
+			assert.Equal(t, "/v1/pricebooks/bulk", r.URL.Path)
+
+			var sent map[string]interface{}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&sent))
+			rows, ok := sent["rows"].([]interface{})
+			require.True(t, ok, "rows should be an array")
+			require.Len(t, rows, 1)
+			first := rows[0].(map[string]interface{})
+			assert.Equal(t, "EMEA 2026", first["name"])
+			assert.Equal(t, "pbt-1", first["priceBookTypeId"])
+			assert.Equal(t, "2026-01-01", first["validFrom"])
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(bulkTestResponse())
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		result, err := client.BulkCreatePriceBooks(context.Background(), []CreatePriceBookRequest{
+			{Name: "EMEA 2026", PriceBookTypeID: "pbt-1", ValidFrom: "2026-01-01"},
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 2, result.Imported)
+	})
+}
+
+func TestQuoteClient_BulkCreateBundles(t *testing.T) {
+	t.Run("POSTs bundle rows to /v1/bundles/bulk", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "POST", r.Method)
+			assert.Equal(t, "/v1/bundles/bulk", r.URL.Path)
+
+			var sent map[string]interface{}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&sent))
+			rows, ok := sent["rows"].([]interface{})
+			require.True(t, ok, "rows should be an array")
+			require.Len(t, rows, 1)
+			first := rows[0].(map[string]interface{})
+			assert.Equal(t, "Starter Pack", first["name"])
+			assert.Equal(t, "cat-1", first["categoryId"])
+			items, ok := first["items"].([]interface{})
+			require.True(t, ok, "items should be an array")
+			require.Len(t, items, 1)
+			item := items[0].(map[string]interface{})
+			assert.Equal(t, "p-1", item["productId"])
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(bulkTestResponse())
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		qty := 2
+		result, err := client.BulkCreateBundles(context.Background(), []CreateBundleRequest{
+			{
+				Name:       "Starter Pack",
+				CategoryID: "cat-1",
+				Items: []BundleItemInput{
+					{ProductID: "p-1", UnitPrice: 10, BillingFrequency: "monthly", Quantity: &qty},
+				},
+			},
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 2, result.Imported)
+	})
+}
+
+func TestQuoteClient_BulkCreateCompanies(t *testing.T) {
+	t.Run("POSTs company rows (each with contacts) to /v1/companies/bulk", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "POST", r.Method)
+			assert.Equal(t, "/v1/companies/bulk", r.URL.Path)
+
+			var sent map[string]interface{}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&sent))
+			rows, ok := sent["rows"].([]interface{})
+			require.True(t, ok, "rows should be an array")
+			require.Len(t, rows, 1)
+			first := rows[0].(map[string]interface{})
+			assert.Equal(t, "Acme Corp", first["name"])
+			contacts, ok := first["contacts"].([]interface{})
+			require.True(t, ok, "contacts should be an array")
+			require.Len(t, contacts, 1)
+			contact := contacts[0].(map[string]interface{})
+			assert.Equal(t, "Jane Doe", contact["name"])
+			assert.Equal(t, "jane@acme.com", contact["email"])
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(bulkTestResponse())
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		result, err := client.BulkCreateCompanies(context.Background(), []CreateCompanyRequest{
+			{
+				Name: "Acme Corp",
+				Contacts: []CreateCompanyContactInput{
+					{Name: "Jane Doe", Email: "jane@acme.com"},
+				},
+			},
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 2, result.Imported)
+	})
+}
+
+func TestQuoteClient_BulkCreateContacts(t *testing.T) {
+	t.Run("POSTs contact rows (each with companyId) to /v1/contacts/bulk", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "POST", r.Method)
+			assert.Equal(t, "/v1/contacts/bulk", r.URL.Path)
+
+			var sent map[string]interface{}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&sent))
+			rows, ok := sent["rows"].([]interface{})
+			require.True(t, ok, "rows should be an array")
+			require.Len(t, rows, 1)
+			first := rows[0].(map[string]interface{})
+			assert.Equal(t, "John Smith", first["name"])
+			assert.Equal(t, "c-1", first["companyId"])
+			assert.Equal(t, "john@acme.com", first["email"])
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(bulkTestResponse())
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		result, err := client.BulkCreateContacts(context.Background(), []CreateContactRequest{
+			{Name: "John Smith", CompanyID: "c-1", Email: StringPtr("john@acme.com")},
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 2, result.Imported)
+	})
+}
+
+func TestQuoteClient_BulkCreateTypes(t *testing.T) {
+	t.Run("POSTs type rows to /v1/types/bulk", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "POST", r.Method)
+			assert.Equal(t, "/v1/types/bulk", r.URL.Path)
+
+			var sent map[string]interface{}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&sent))
+			rows, ok := sent["rows"].([]interface{})
+			require.True(t, ok, "rows should be an array")
+			require.Len(t, rows, 1)
+			first := rows[0].(map[string]interface{})
+			assert.Equal(t, "Hardware", first["name"])
+			assert.Equal(t, "product_category", first["categoryType"])
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(bulkTestResponse())
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		result, err := client.BulkCreateTypes(context.Background(), []CreateQuoteTypeRequest{
+			{Name: "Hardware", CategoryType: "product_category"},
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 2, result.Imported)
+	})
+}
+
+func TestQuoteClient_BulkCreatePartialSuccess(t *testing.T) {
+	t.Run("surfaces partial-success details (failed rows are 1-indexed, no error)", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "POST", r.Method)
+			assert.Equal(t, "/v1/contacts/bulk", r.URL.Path)
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"results": map[string]interface{}{
+					"imported": 1,
+					"failed": []map[string]interface{}{
+						{"row": 2, "reason": "Company not found"},
+					},
+					"adjusted": []map[string]interface{}{
+						{"row": 1, "reason": "Dropped unknown product"},
+					},
+				},
+			})
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		result, err := client.BulkCreateContacts(context.Background(), []CreateContactRequest{
+			{Name: "Ok Row", CompanyID: "c-1"},
+			{Name: "Bad Row", CompanyID: "missing"},
+		})
+
+		require.NoError(t, err, "partial success must not return an error")
+		assert.Equal(t, 1, result.Imported)
+		require.Len(t, result.Failed, 1)
+		assert.Equal(t, BulkImportRowIssue{Row: 2, Reason: "Company not found"}, result.Failed[0])
+		require.Len(t, result.Adjusted, 1)
+		assert.Equal(t, BulkImportRowIssue{Row: 1, Reason: "Dropped unknown product"}, result.Adjusted[0])
+	})
+}

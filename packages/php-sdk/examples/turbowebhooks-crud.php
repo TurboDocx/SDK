@@ -43,6 +43,7 @@ use TurboDocx\Exceptions\NotFoundException;
 use TurboDocx\Exceptions\RateLimitException;
 use TurboDocx\Exceptions\TurboDocxException;
 use TurboDocx\Exceptions\ValidationException; // caught only at top-level (see bottom of file)
+use TurboDocx\Types\Enums\WebhookEvent;
 
 /**
  * The URL the webhook will POST to when an event fires. The backend
@@ -50,6 +51,14 @@ use TurboDocx\Exceptions\ValidationException; // caught only at top-level (see b
  */
 const RECEIVER_URL = 'https://your-server.example.com/webhooks/turbodocx';
 
+// The SDK exposes all 7 signature events on the WebhookEvent enum (plus
+// WebhookEvent::all(), which returns every wire string). See the README for what
+// each one fires on — note that `signed` is partial-progress only and never fires
+// on the final signature; use `completed` to detect "the document is done".
+//
+// These are plain constants rather than `WebhookEvent::COMPLETED->value` because
+// fetching an enum property inside a const expression requires PHP 8.2, and this
+// package supports 8.1. At a call site (below), use the enum directly.
 const EVENT_DOCUMENT_COMPLETED = 'signature.document.completed';
 const EVENT_DOCUMENT_VOIDED = 'signature.document.voided';
 
@@ -88,7 +97,13 @@ function turbowebhooksCrudExample(): void
     try {
         $created = TurboWebhooks::createWebhook(
             urls: [RECEIVER_URL],
-            events: [EVENT_DOCUMENT_COMPLETED, EVENT_DOCUMENT_VOIDED],
+            // Prefer the enum over raw strings. Swap for WebhookEvent::all() to
+            // subscribe to all 7 events.
+            events: [
+                WebhookEvent::RECIPIENT_SIGNED->value,
+                WebhookEvent::COMPLETED->value,
+                WebhookEvent::VOIDED->value,
+            ],
         );
         echo "Created. Save this secret — it is shown ONCE:\n";
         echo "  id:     {$created['id']}\n";

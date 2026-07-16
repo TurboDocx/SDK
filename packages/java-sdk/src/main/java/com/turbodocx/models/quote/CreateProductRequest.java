@@ -1,14 +1,21 @@
 package com.turbodocx.models.quote;
 
 /**
- * Request to create a product.
- * Note: images are handled via multipart form data at the TurboQuote layer,
+ * Request to create a product. Also the row shape accepted by
+ * {@code bulkCreateProducts}, where {@code name}, {@code categoryId},
+ * {@code listPrice} and {@code billingFrequency} are all required.
+ *
+ * <p>Note: images are handled via multipart form data at the TurboQuote layer,
  * not serialized in this request object.
  */
 public class CreateProductRequest {
     private String name;
     private Double listPrice;
     private String billingFrequency;
+    /**
+     * A TurboQuote type UUID. There is no {@code categoryName} shorthand -- resolve or
+     * create the category first ({@code listTypes} / {@code createType}) and pass its ID.
+     */
     private String categoryId;
     private String sku;
     private String description;

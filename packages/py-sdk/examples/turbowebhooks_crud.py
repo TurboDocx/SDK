@@ -35,6 +35,8 @@ from datetime import datetime, timezone
 
 from turbodocx_sdk import (
     TurboWebhooks,
+    WEBHOOK_EVENT_COMPLETED,
+    WEBHOOK_EVENT_VOIDED,
     AuthenticationError,
     AuthorizationError,
     ValidationError,
@@ -56,8 +58,12 @@ RECEIVER_URL = os.environ.get(
     "https://your-server.example.com/webhooks/turbodocx",
 )
 
-EVENT_DOCUMENT_COMPLETED = "signature.document.completed"
-EVENT_DOCUMENT_VOIDED = "signature.document.voided"
+# The SDK exports all 7 signature events as WEBHOOK_EVENT_* constants (plus a
+# WEBHOOK_EVENTS tuple of every wire string). See the README for what each one
+# fires on — note that `signed` is partial-progress only and never fires on the
+# final signature; use `completed` to detect "the document is done".
+EVENT_DOCUMENT_COMPLETED = WEBHOOK_EVENT_COMPLETED
+EVENT_DOCUMENT_VOIDED = WEBHOOK_EVENT_VOIDED
 
 
 def section(title: str) -> None:

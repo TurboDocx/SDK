@@ -18,11 +18,20 @@ When bumping, update **all** of these to the identical `MAJOR.MINOR.PATCH` strin
 | SDK | File | Field |
 |-----|------|-------|
 | js-sdk | `packages/js-sdk/package.json` | `"version"` |
-| py-sdk | `packages/py-sdk/pyproject.toml` | `version = "…"` |
+| py-sdk | `packages/py-sdk/pyproject.toml` **and** `packages/py-sdk/src/turbodocx_sdk/__init__.py` | `version = "…"` + `__version__ = "…"` |
 | go-sdk | `packages/go-sdk/turbodocx.go` | `const Version = "…"` |
 | php-sdk | `packages/php-sdk/composer.json` | `"version"` |
-| java-sdk | `packages/java-sdk/pom.xml` | `<version>` |
+| java-sdk | `packages/java-sdk/pom.xml` **and** `packages/java-sdk/src/main/java/com/turbodocx/ClientContext.java` | `<version>` + `static final String VERSION` |
 | ruby-sdk | `packages/ruby-sdk/turbodocx-sdk.gemspec` **and** `packages/ruby-sdk/lib/turbodocx_sdk.rb` | `spec.version` + `VERSION =` (Ruby carries the version in two places — keep them in sync) |
+
+**Why py/java/ruby carry the version twice:** the registry manifest (`pyproject.toml`,
+`pom.xml`, `.gemspec`) is not readable at runtime, but the client-context User-Agent must
+emit `@turbodocx/sdk/<version>` — the exact token the backend keys on to classify a request
+as an SDK call for the audit trail. So those SDKs also hold an in-code constant. **A stale
+in-code constant is not cosmetic** — it ships a wrong version into the audit trail. (Both
+drifted this way once: py `__version__` sat at 0.2.0 and java `ClientContext.VERSION` at
+0.4.0 while their manifests were at 0.5.0.) JS reads `package.json`, Go's `const Version`
+*is* the manifest, and PHP reads `composer.json` — those have one site each.
 
 ## Checklist for a release bump
 

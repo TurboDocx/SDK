@@ -107,6 +107,22 @@ type QuoteSuccessResponse struct {
 	Message string `json:"message"`
 }
 
+// BulkImportRowIssue describes a per-row problem reported by a bulk create.
+// Row is the 1-indexed position of the row in the request payload.
+type BulkImportRowIssue struct {
+	Row    int    `json:"row"`
+	Reason string `json:"reason"`
+}
+
+// BulkImportResult is the outcome of a bulk create. Rows process sequentially
+// with partial success: Failed rows did not import (no error is returned for
+// them), Adjusted rows imported with a server-side adjustment.
+type BulkImportResult struct {
+	Imported int                  `json:"imported"`
+	Failed   []BulkImportRowIssue `json:"failed"`
+	Adjusted []BulkImportRowIssue `json:"adjusted"`
+}
+
 // ============================================
 // Quote Types
 // ============================================
@@ -166,26 +182,33 @@ type Quote struct {
 // Quote Request Types
 // ============================================
 
-// CreateQuoteRequest is the request to create a new quote
+// CreateQuoteRequest is the request to create a new quote.
+//
+// TermDays defaults to 60 when omitted (max 3650). The special value -1 means auto-renewal:
+// RenewalPeriod is required when TermDays is -1, and must be omitted for any other term —
+// sending it alongside a fixed term is a 400.
 type CreateQuoteRequest struct {
 	Name          string   `json:"name"`
 	CompanyID     string   `json:"companyId"`
 	ContactID     string   `json:"contactId"`
 	CurrencyCode  *string  `json:"currency,omitempty"`
-	TermDays      *int     `json:"termDays,omitempty"`
-	RenewalPeriod *string  `json:"renewalPeriod,omitempty"`
+	TermDays      *int     `json:"termDays,omitempty"`      // default 60; -1 = auto-renewal
+	RenewalPeriod *string  `json:"renewalPeriod,omitempty"` // weekly|monthly|quarterly|annually; only with TermDays -1
 	ValidUntil    *string  `json:"validUntil,omitempty"`
 	TaxRate       *float64 `json:"taxRate,omitempty"`
 	PriceBookID   *string  `json:"priceBookId,omitempty"`
 }
 
-// UpdateQuoteRequest is the request to update a quote
+// UpdateQuoteRequest is the request to update a quote.
+//
+// RenewalPeriod is required when TermDays is -1 (auto-renewal) and must be absent otherwise.
+// Use ClearRenewalPeriod to explicitly null it out when moving a quote off auto-renewal.
 type UpdateQuoteRequest struct {
 	Name          *string  `json:"name,omitempty"`
 	CompanyID     *string  `json:"companyId,omitempty"`
 	ContactID     *string  `json:"contactId,omitempty"`
-	TermDays      *int     `json:"termDays,omitempty"`
-	RenewalPeriod *string  `json:"renewalPeriod,omitempty"`
+	TermDays      *int     `json:"termDays,omitempty"`      // max 3650; -1 = auto-renewal
+	RenewalPeriod *string  `json:"renewalPeriod,omitempty"` // weekly|monthly|quarterly|annually; only with TermDays -1
 	ValidUntil    *string  `json:"validUntil,omitempty"`
 	TaxRate       *float64 `json:"taxRate,omitempty"`
 	CurrencyCode  *string  `json:"currency,omitempty"`
@@ -269,22 +292,25 @@ type VoidQuoteRequest struct {
 	Reason string `json:"reason"`
 }
 
-// HandleExpiredQuoteRequest is the request to handle an expired sent quote
+// HandleExpiredQuoteRequest is the request to handle an expired sent quote.
+// All three fields are required by the API.
 type HandleExpiredQuoteRequest struct {
-	Action        string `json:"action"`
-	Reason        string `json:"reason"`
-	NewValidUntil string `json:"newValidUntil"`
+	Action        string `json:"action"`        // "void" or "decline" — no other value is accepted
+	Reason        string `json:"reason"`        // max 190 characters
+	NewValidUntil string `json:"newValidUntil"` // ISO date carried onto the reissued duplicate
 }
 
-// CreateAndSendRequest is the convenience request to create, add items, and send a quote
+// CreateAndSendRequest is the convenience request to create, add items, and send a quote.
+//
+// TermDays defaults to 60 when omitted; RenewalPeriod is required only when TermDays is -1.
 type CreateAndSendRequest struct {
 	// Quote fields
 	Name          string   `json:"name"`
 	CompanyID     string   `json:"companyId"`
 	ContactID     string   `json:"contactId"`
 	CurrencyCode  *string  `json:"currency,omitempty"`
-	TermDays      *int     `json:"termDays,omitempty"`
-	RenewalPeriod *string  `json:"renewalPeriod,omitempty"`
+	TermDays      *int     `json:"termDays,omitempty"`      // default 60; -1 = auto-renewal
+	RenewalPeriod *string  `json:"renewalPeriod,omitempty"` // weekly|monthly|quarterly|annually; only with TermDays -1
 	ValidUntil    *string  `json:"validUntil,omitempty"`
 	TaxRate       *float64 `json:"taxRate,omitempty"`
 	PriceBookID   *string  `json:"priceBookId,omitempty"`
@@ -394,6 +420,9 @@ type LineItem struct {
 
 // AddLineItemRequest is the request to add a product line item
 type AddLineItemRequest struct {
+	// ProductID, ProductName, UnitPrice and BillingFrequency are all required by the API.
+	// ProductID is deliberately not omitempty: the key must be present on the wire, but its
+	// value may be null — a nil ProductID means an ad-hoc item with no catalog product behind it.
 	ProductID          *string      `json:"productId"`
 	ProductName        string       `json:"productName"`
 	UnitPrice          float64      `json:"unitPrice"`
@@ -1352,6 +1381,58 @@ type ListTypesOptions struct {
 type QuoteTypeListResponse struct {
 	Results      []QuoteType `json:"results"`
 	TotalRecords int         `json:"totalRecords"`
+}
+
+// ============================================
+// Quote Number Config Types
+// ============================================
+
+// QuoteNumberYearToken represents the year token portion of a quote number format
+type QuoteNumberYearToken string
+
+const (
+	QuoteNumberYearTokenNone QuoteNumberYearToken = "none"
+	QuoteNumberYearTokenTwo  QuoteNumberYearToken = "two"
+	QuoteNumberYearTokenFour QuoteNumberYearToken = "four"
+)
+
+// QuoteNumberMonthToken represents the month token portion of a quote number format
+type QuoteNumberMonthToken string
+
+const (
+	QuoteNumberMonthTokenOff QuoteNumberMonthToken = "off"
+	QuoteNumberMonthTokenTwo QuoteNumberMonthToken = "two"
+)
+
+// QuoteNumberResetCadence represents how often the quote number sequence resets
+type QuoteNumberResetCadence string
+
+const (
+	QuoteNumberResetCadenceNever   QuoteNumberResetCadence = "never"
+	QuoteNumberResetCadenceYearly  QuoteNumberResetCadence = "yearly"
+	QuoteNumberResetCadenceMonthly QuoteNumberResetCadence = "monthly"
+)
+
+// QuoteNumberFormat is the per-org quote numbering format.
+// All eight fields are required by the backend; they are sent verbatim
+// (camelCase) on PATCH, so none use omitempty -- zero values like
+// padWidth: 0 or an empty prefix are meaningful and must be transmitted.
+type QuoteNumberFormat struct {
+	Prefix       string                  `json:"prefix"`
+	YearToken    QuoteNumberYearToken    `json:"yearToken"`
+	MonthToken   QuoteNumberMonthToken   `json:"monthToken"`
+	Separator    string                  `json:"separator"`
+	PadWidth     int                     `json:"padWidth"`
+	Suffix       string                  `json:"suffix"`
+	StartNumber  int                     `json:"startNumber"`
+	ResetCadence QuoteNumberResetCadence `json:"resetCadence"`
+}
+
+// QuoteNumberConfig is the per-org quote numbering configuration.
+type QuoteNumberConfig struct {
+	Format QuoteNumberFormat `json:"format"`
+	// CurrentFloor is the per-period issued floor; startNumber can't be set below this.
+	CurrentFloor int `json:"currentFloor"`
 }
 
 // ============================================

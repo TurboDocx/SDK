@@ -110,8 +110,12 @@ class TurboWebhooks:
         Create the org's signature webhook.
 
         Args:
-            urls: List of HTTPS URLs to deliver events to (HTTP returns 400)
-            events: List of event types (e.g. "signature.document.completed")
+            urls: List of HTTPS URLs to deliver events to (HTTP returns 400).
+                Min 1, max 10.
+            events: List of event types. Min 1. Prefer the exported constants
+                (WEBHOOK_EVENT_COMPLETED, WEBHOOK_EVENT_RECIPIENT_SIGNED, ...)
+                over raw strings; WEBHOOK_EVENTS holds all 7. Plain strings are
+                still accepted so new backend events work without an SDK bump.
 
         Returns:
             Dict with `id` and `secret`. The `secret` is shown ONCE; store it
@@ -150,6 +154,10 @@ class TurboWebhooks:
         Patch one or more fields on the signature webhook.
 
         Renaming is not supported — the SDK manages a fixed name.
+
+        `urls` and `events` are optional, but they still enforce their minimums
+        when present: passing an empty list is a 400. Leave the argument as None
+        to leave the field untouched. `urls` also caps at 10 entries.
         """
         body: Dict[str, Any] = {}
         if urls is not None:

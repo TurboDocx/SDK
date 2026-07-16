@@ -163,7 +163,11 @@ type PartnerUser struct {
 	IsActive       bool                `json:"isActive,omitempty"`
 }
 
-// PartnerPermissions represents the permissions for a partner portal user
+// PartnerPermissions represents the permissions for a partner portal user.
+//
+// The API requires all 7 keys on every request that carries a permissions object —
+// there is no partial update. None of the fields are omitempty, so the zero value of
+// an unset field is still sent as false; set each one explicitly.
 type PartnerPermissions struct {
 	CanManageOrgs           bool `json:"canManageOrgs"`
 	CanManageOrgUsers       bool `json:"canManageOrgUsers"`
@@ -205,7 +209,12 @@ type Features struct {
 	CreatedBy                string `json:"createdBy,omitempty"`
 }
 
-// Tracking represents read-only usage counters for an organization
+// Tracking represents an organization's usage counters. These are writable via
+// UpdateOrganizationEntitlements — unlike Features, which hold the org's limits.
+//
+// The counters are maintained by database triggers, so patching one shifts a running
+// count rather than setting a quota. Note the omitempty tags: a 0 you set is dropped
+// rather than sent, so a counter cannot be zeroed through this struct.
 type Tracking struct {
 	NumUsers                 int   `json:"numUsers,omitempty"`
 	NumProjectspaces         int   `json:"numProjectspaces,omitempty"`
@@ -213,7 +222,9 @@ type Tracking struct {
 	StorageUsed              int64 `json:"storageUsed,omitempty"`
 	NumGeneratedDeliverables int   `json:"numGeneratedDeliverables,omitempty"`
 	NumSignaturesUsed        int   `json:"numSignaturesUsed,omitempty"`
-	CurrentAICredits         int   `json:"currentAICredits,omitempty"`
+	NumQuotesSent            int   `json:"numQuotesSent,omitempty"`
+	// CurrentAICredits: -1 means unlimited. Every other counter floors at 0.
+	CurrentAICredits int `json:"currentAICredits,omitempty"`
 }
 
 // AuditLogEntry represents a single audit log entry
@@ -292,7 +303,7 @@ type UpdateEntitlementsRequest struct {
 // AddOrgUserRequest is the request to add a user to an organization
 type AddOrgUserRequest struct {
 	Email string `json:"email"`
-	Role  string `json:"role"`
+	Role  string `json:"role"` // admin | contributor | user | viewer ("member" is a partner role, not an org role)
 }
 
 // ListOrgUsersRequest is the request to list organization users
@@ -304,13 +315,13 @@ type ListOrgUsersRequest struct {
 
 // UpdateOrgUserRequest is the request to update an organization user's role
 type UpdateOrgUserRequest struct {
-	Role string `json:"role"`
+	Role string `json:"role"` // admin | contributor | user | viewer
 }
 
 // CreateOrgAPIKeyRequest is the request to create an organization API key
 type CreateOrgAPIKeyRequest struct {
 	Name string `json:"name"`
-	Role string `json:"role"`
+	Role string `json:"role"` // admin | contributor | user | viewer
 }
 
 // ListOrgAPIKeysRequest is the request to list organization API keys
@@ -323,7 +334,7 @@ type ListOrgAPIKeysRequest struct {
 // UpdateOrgAPIKeyRequest is the request to update an organization API key
 type UpdateOrgAPIKeyRequest struct {
 	Name string `json:"name,omitempty"`
-	Role string `json:"role,omitempty"`
+	Role string `json:"role,omitempty"` // admin | contributor | user | viewer
 }
 
 // CreatePartnerAPIKeyRequest is the request to create a partner API key
@@ -350,7 +361,7 @@ type UpdatePartnerAPIKeyRequest struct {
 // AddPartnerUserRequest is the request to add a user to the partner portal
 type AddPartnerUserRequest struct {
 	Email       string             `json:"email"`
-	Role        string             `json:"role"`
+	Role        string             `json:"role"` // admin | member | viewer (partner roles differ from org roles)
 	Permissions PartnerPermissions `json:"permissions"`
 }
 
@@ -361,9 +372,11 @@ type ListPartnerUsersRequest struct {
 	Search string
 }
 
-// UpdatePartnerUserRequest is the request to update a partner user
+// UpdatePartnerUserRequest is the request to update a partner user.
+//
+// Permissions is optional, but when set it must carry all 7 keys — see PartnerPermissions.
 type UpdatePartnerUserRequest struct {
-	Role        string              `json:"role,omitempty"`
+	Role        string              `json:"role,omitempty"` // admin | member | viewer
 	Permissions *PartnerPermissions `json:"permissions,omitempty"`
 }
 

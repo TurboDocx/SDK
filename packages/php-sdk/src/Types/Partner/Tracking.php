@@ -16,6 +16,8 @@ final class Tracking implements \JsonSerializable
         public readonly ?int $storageUsed = null,
         public readonly ?int $numGeneratedDeliverables = null,
         public readonly ?int $numSignaturesUsed = null,
+        public readonly ?int $numQuotesSent = null,
+        /** -1 means unlimited. Every other counter floors at 0. */
         public readonly ?int $currentAICredits = null,
     ) {}
 
@@ -32,6 +34,7 @@ final class Tracking implements \JsonSerializable
             storageUsed: isset($data['storageUsed']) ? (int) $data['storageUsed'] : null,
             numGeneratedDeliverables: isset($data['numGeneratedDeliverables']) ? (int) $data['numGeneratedDeliverables'] : null,
             numSignaturesUsed: isset($data['numSignaturesUsed']) ? (int) $data['numSignaturesUsed'] : null,
+            numQuotesSent: isset($data['numQuotesSent']) ? (int) $data['numQuotesSent'] : null,
             currentAICredits: isset($data['currentAICredits']) ? (int) $data['currentAICredits'] : null,
         );
     }
@@ -49,6 +52,7 @@ final class Tracking implements \JsonSerializable
             'storageUsed' => $this->storageUsed,
             'numGeneratedDeliverables' => $this->numGeneratedDeliverables,
             'numSignaturesUsed' => $this->numSignaturesUsed,
+            'numQuotesSent' => $this->numQuotesSent,
             'currentAICredits' => $this->currentAICredits,
         ], fn($value) => $value !== null);
     }

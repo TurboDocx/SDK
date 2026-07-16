@@ -466,10 +466,20 @@ const partnerUser = await TurboPartner.addUserToPartnerPortal({
   },
 });
 
-// Update partner user permissions
+// Update partner user permissions.
+// `permissions` is optional — but if you send it, send all 7 keys. The API has no partial
+// permissions update; omitted keys return 400.
 await TurboPartner.updatePartnerUserPermissions('user-uuid', {
   role: 'member',
-  permissions: { canManageOrgs: false },
+  permissions: {
+    canManageOrgs: false,
+    canManageOrgUsers: true,
+    canManagePartnerUsers: false,
+    canManageOrgAPIKeys: false,
+    canManagePartnerAPIKeys: false,
+    canUpdateEntitlements: false,
+    canViewAuditLogs: true,
+  },
 });
 
 // Remove a partner user
@@ -499,11 +509,44 @@ for (const entry of logs.data.results) {
 
 ### TurboWebhooks (Signature Webhook)
 
-The `TurboWebhooks` module manages your organization's **signature webhook** — a single subscription to TurboDocx signature events (`signature.document.completed`, `signature.document.voided`). It also exposes a `verifyWebhookSignature` helper for incoming webhook receivers.
+The `TurboWebhooks` module manages your organization's **signature webhook** — a single subscription to TurboDocx signature events. It also exposes a `verifyWebhookSignature` helper for incoming webhook receivers.
 
 > **One webhook per org.** The SDK manages a single fixed-name webhook (`signature`) per org so SDK-managed and UI-managed webhooks stay in sync — what you create here also appears in the dashboard's Signature Webhooks settings page. To manage multiple webhooks per org, call the REST API directly.
 >
 > **Requires administrator role.** All webhook routes require an admin TDX- API key.
+
+#### The 7 signature events
+
+Import the `WebhookEvents` constants instead of hand-writing the wire strings — a typo becomes a compile error rather than a webhook that silently never fires.
+
+| Event | Constant | Fires when |
+|---|---|---|
+| `signature.document.sent` | `WebhookEvents.SENT` | The document is dispatched to recipients |
+| `signature.document.viewed` | `WebhookEvents.VIEWED` | A recipient opens the document for the first time |
+| `signature.document.recipient_signed` | `WebhookEvents.RECIPIENT_SIGNED` | Any individual signer completes their signature — fires **once per signer**, and carries `is_final_signer` + `remaining_signers` |
+| `signature.document.signed` | `WebhookEvents.SIGNED` | A signer signs but the document is **not yet complete** (document-level partial progress) |
+| `signature.document.completed` | `WebhookEvents.COMPLETED` | All recipients have signed and the signed PDF is finalized |
+| `signature.document.finalization_failed` | `WebhookEvents.FINALIZATION_FAILED` | The signed PDF fails to finalize (e.g. a KMS signing error); the document is **not** completed |
+| `signature.document.voided` | `WebhookEvents.VOIDED` | The document is voided or cancelled |
+
+On every signature, `recipient_signed` fires first, then **exactly one** document-level event:
+
+```
+Recipient signs
+   │
+   ├─ signature.document.recipient_signed   (always — one per signer)
+   │
+   └─ more signers remaining?
+        ├─ yes → signature.document.signed                 (partial progress)
+        └─ no  → signature.document.completed              (finalized OK)
+                 or signature.document.finalization_failed (finalization failed)
+```
+
+> **`signed` never fires on the final signature.** To detect "the whole document is done", subscribe to `completed` (or to `recipient_signed` and check `is_final_signer: true`) — **not** `signed`.
+>
+> **A single-signer document never emits `signed` at all.** It emits `recipient_signed` (with `is_final_signer: true`), then `completed`.
+
+`WEBHOOK_EVENTS` is exported as a readonly array of all 7 wire strings if you want to subscribe to everything. The `WebhookEvent` type autocompletes to the known events but still accepts any string, so the backend can add events without an SDK release.
 
 #### Configuration
 
@@ -522,9 +565,18 @@ TurboWebhooks.configure({
 #### Create the signature webhook (save the secret immediately)
 
 ```typescript
+import { TurboWebhooks, WebhookEvents, WEBHOOK_EVENTS } from '@turbodocx/sdk';
+
 const created = await TurboWebhooks.createWebhook({
   urls: ['https://your-server.example.com/webhooks/turbodocx'], // HTTPS only
-  events: ['signature.document.completed', 'signature.document.voided'],
+  events: [
+    WebhookEvents.SENT,
+    WebhookEvents.VIEWED,
+    WebhookEvents.RECIPIENT_SIGNED,
+    WebhookEvents.COMPLETED,
+    WebhookEvents.VOIDED,
+  ],
+  // ...or subscribe to everything: events: [...WEBHOOK_EVENTS]
 });
 
 // `secret` is shown ONCE here — store it securely. It cannot be retrieved later.
