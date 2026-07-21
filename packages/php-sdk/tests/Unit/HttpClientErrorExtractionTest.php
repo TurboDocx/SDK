@@ -34,8 +34,11 @@ final class HttpClientErrorExtractionTest extends TestCase
      */
     private function requestFailure(int $status, array $body): TurboDocxException
     {
+        // JSON_THROW_ON_ERROR narrows json_encode's return from `string|false` to `string`,
+        // which phpstan level 8 requires for Response's $body parameter. It also turns a
+        // silently-malformed fixture into a visible failure.
         $mock = new MockHandler([
-            new Response($status, ['Content-Type' => 'application/json'], json_encode($body)),
+            new Response($status, ['Content-Type' => 'application/json'], json_encode($body, JSON_THROW_ON_ERROR)),
         ]);
 
         $config = new QuoteClientConfig(apiKey: 'test-key');

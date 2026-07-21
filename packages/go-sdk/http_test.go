@@ -329,8 +329,27 @@ func TestMapStatusToError_DefaultCodes(t *testing.T) {
 	for _, tc := range cases {
 		err := mapStatusToError(TurboDocxError{Message: "boom", StatusCode: tc.status})
 
+		// errors.As cannot reach the EMBEDDED TurboDocxError: the typed errors embed it by
+		// value and define no Unwrap, so *ValidationError is not a *TurboDocxError. Read the
+		// embedded field off the concrete type, matching the other tests in this file.
 		var base *TurboDocxError
-		require.ErrorAs(t, err, &base)
+		switch typed := err.(type) {
+		case *ValidationError:
+			base = &typed.TurboDocxError
+		case *AuthenticationError:
+			base = &typed.TurboDocxError
+		case *AuthorizationError:
+			base = &typed.TurboDocxError
+		case *NotFoundError:
+			base = &typed.TurboDocxError
+		case *ConflictError:
+			base = &typed.TurboDocxError
+		case *RateLimitError:
+			base = &typed.TurboDocxError
+		default:
+			t.Fatalf("status %d produced unexpected error type %T", tc.status, err)
+		}
+
 		require.Equal(t, tc.wantCode, base.Code)
 	}
 }

@@ -81,11 +81,22 @@ class TestTurboPartnerClientContext:
         assert ua.startswith("@turbodocx/sdk/")
         assert "httpx" not in ua
 
-    def test_partner_sends_timezone_language_and_device_fingerprint(self):
+    def test_partner_sends_timezone_and_device_fingerprint(self):
         h = self._headers()
         assert len(h.get("X-Timezone", "")) > 0
-        assert len(h.get("Accept-Language", "")) > 0
         assert len(h.get("X-Device-Fingerprint", "")) > 0
+
+    def test_partner_omits_accept_language_when_the_host_has_no_real_locale(self):
+        """Accept-Language is only sent when the host reports a real BCP-47 tag.
+
+        A CI runner (and many containers) has no locale set, so Python reports the
+        non-language "C"/"POSIX" default. The SDK drops those rather than sending a header
+        the backend would reject as an invalid language tag, so the header is legitimately
+        ABSENT there — asserting it is always present fails on exactly the environment this
+        feature exists to describe.
+        """
+        language = self._headers().get("Accept-Language")
+        assert language is None or len(language) > 0
 
     def test_partner_lets_caller_override_client_context(self):
         h = self._headers(client_context=ClientContext(

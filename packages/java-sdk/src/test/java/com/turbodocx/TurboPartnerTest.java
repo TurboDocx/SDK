@@ -185,7 +185,11 @@ class TurboPartnerTest {
 
         RecordedRequest request = server.takeRequest();
         assertEquals("Bearer TDXP-test-key", request.getHeader("Authorization"));
-        assertEquals("application/json", request.getHeader("Content-Type"));
+        // OkHttp appends the charset to the request body's media type, so the header reads
+        // "application/json; charset=utf-8". Assert the media type rather than byte equality.
+        assertTrue(
+                request.getHeader("Content-Type").startsWith("application/json"),
+                "got " + request.getHeader("Content-Type"));
     }
 
     // ============================================
