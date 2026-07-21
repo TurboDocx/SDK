@@ -1,0 +1,114 @@
+version: 2
+
+updates:
+  # NPM dependencies (root) - security updates only
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: "main"
+    commit-message:
+      prefix: "security"
+      include: "scope"
+    open-pull-requests-limit: 0
+    allow:
+      - dependency-type: "all"
+    rebase-strategy: "auto"
+
+  # NPM dependencies (js-sdk) - security updates only
+  - package-ecosystem: "npm"
+    directory: "/packages/js-sdk"
+    schedule:
+      interval: "daily"
+    target-branch: "main"
+    commit-message:
+      prefix: "security"
+      include: "scope"
+    open-pull-requests-limit: 0
+    allow:
+      - dependency-type: "all"
+    rebase-strategy: "auto"
+
+  # Go dependencies (go-sdk) - security updates only
+  - package-ecosystem: "gomod"
+    directory: "/packages/go-sdk"
+    schedule:
+      interval: "weekly"
+    target-branch: "main"
+    commit-message:
+      prefix: "security"
+      include: "scope"
+    open-pull-requests-limit: 0
+    allow:
+      - dependency-type: "all"
+    rebase-strategy: "auto"
+
+  # Maven dependencies (java-sdk) - security updates only
+  - package-ecosystem: "maven"
+    directory: "/packages/java-sdk"
+    schedule:
+      interval: "weekly"
+    target-branch: "main"
+    commit-message:
+      prefix: "security"
+      include: "scope"
+    open-pull-requests-limit: 0
+    allow:
+      - dependency-type: "all"
+    rebase-strategy: "auto"
+
+  # Composer dependencies (php-sdk) - security updates only
+  - package-ecosystem: "composer"
+    directory: "/packages/php-sdk"
+    schedule:
+      interval: "weekly"
+    target-branch: "main"
+    commit-message:
+      prefix: "security"
+      include: "scope"
+    open-pull-requests-limit: 0
+    allow:
+      - dependency-type: "all"
+    rebase-strategy: "auto"
+
+  # Pip dependencies (py-sdk) - security updates only
+  - package-ecosystem: "pip"
+    directory: "/packages/py-sdk"
+    schedule:
+      interval: "weekly"
+    target-branch: "main"
+    commit-message:
+      prefix: "security"
+      include: "scope"
+    open-pull-requests-limit: 0
+    allow:
+      - dependency-type: "all"
+    rebase-strategy: "auto"
+
+  # Bundler dependencies (ruby-sdk) - security updates only
+  - package-ecosystem: "bundler"
+    directory: "/packages/ruby-sdk"
+    schedule:
+      interval: "weekly"
+    target-branch: "main"
+    commit-message:
+      prefix: "security"
+      include: "scope"
+    open-pull-requests-limit: 0
+    allow:
+      - dependency-type: "all"
+    rebase-strategy: "auto"
+
+  # GitHub Actions dependencies - security updates only
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "main"
+    commit-message:
+      prefix: "security"
+      include: "scope"
+    open-pull-requests-limit: 0
+    allow:
+      - dependency-type: "all"
+    rebase-strategy: "auto"
