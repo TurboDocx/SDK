@@ -122,7 +122,7 @@ public final class ClientContext {
     // User-Agent because the JAR manifest's Implementation-Version is only present
     // in a packaged jar built with the manifest entry — it is null when running
     // from classes/ (tests) or a jar built without it, which silently reported 0.0.0.
-    static final String VERSION = "0.5.0";
+    static final String VERSION = "0.6.0";
 
     private static String getSdkVersion() {
         try {

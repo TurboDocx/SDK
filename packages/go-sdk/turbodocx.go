@@ -27,7 +27,7 @@ import (
 )
 
 // Version is the current SDK version
-const Version = "0.5.0"
+const Version = "0.6.0"
 
 // Client is the main TurboDocx API client
 type Client struct {
