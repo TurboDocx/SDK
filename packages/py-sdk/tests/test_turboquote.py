@@ -187,6 +187,31 @@ class TestQuotesCrud:
         self.mock_client.get.assert_called_once_with("/v1/quotes/q-1")
 
     @pytest.mark.asyncio
+    async def test_get_quote_folds_prepared_by(self):
+        """Should fold the server-resolved preparedBy onto the quote"""
+        # preparedBy rides as a sibling of "result" on the wire — it is the backend-resolved
+        # "Prepared by" identity and must be preferred over "creator" for display.
+        mock_quote = {"id": "q-1", "name": "Test Quote", "status": "sent", "lineItems": []}
+        mock_prepared_by = {"name": "Acme Billing Integration", "email": "billing@acme.com"}
+        self.mock_client.get = AsyncMock(
+            return_value={"result": mock_quote, "preparedBy": mock_prepared_by}
+        )
+
+        result = await TurboQuote.get_quote("q-1")
+
+        assert result["preparedBy"] == mock_prepared_by
+
+    @pytest.mark.asyncio
+    async def test_get_quote_without_prepared_by(self):
+        """Should leave preparedBy absent when the response omits it"""
+        mock_quote = {"id": "q-1", "name": "Test Quote", "status": "sent", "lineItems": []}
+        self.mock_client.get = AsyncMock(return_value={"result": mock_quote})
+
+        result = await TurboQuote.get_quote("q-1")
+
+        assert "preparedBy" not in result
+
+    @pytest.mark.asyncio
     async def test_update_quote_and_unwrap_result(self):
         """Should update a quote and unwrap result"""
         mock_quote = {"id": "q-1", "name": "Updated Name", "taxRate": 10}

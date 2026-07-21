@@ -15,6 +15,7 @@ from .quote_shared import (
 )
 from .quote import (
     QuoteStatusInfo,
+    QuotePreparedBy,
     Quote,
     CreateQuoteRequest,
     UpdateQuoteRequest,
@@ -138,6 +139,7 @@ __all__ = [
     "BulkImportResult",
     # Quote
     "QuoteStatusInfo",
+    "QuotePreparedBy",
     "Quote",
     "CreateQuoteRequest",
     "UpdateQuoteRequest",

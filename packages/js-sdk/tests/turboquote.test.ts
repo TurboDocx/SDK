@@ -264,6 +264,26 @@ describe("TurboQuote Module", () => {
       expect(mockClient.get).toHaveBeenCalledWith("/v1/quotes/q-1");
     });
 
+    it("should fold the server-resolved preparedBy onto the quote", async () => {
+      // preparedBy is a sibling of `result` on the wire — the resolved "Prepared by" identity.
+      const mockQuote = { id: "q-1", name: "Test Quote", status: "sent", lineItems: [] };
+      const mockPreparedBy = { name: "Acme Billing Integration", email: "billing@acme.com" };
+      mockClient.get.mockResolvedValue({ result: mockQuote, preparedBy: mockPreparedBy });
+
+      const result = await TurboQuote.getQuote("q-1");
+
+      expect(result.preparedBy).toEqual(mockPreparedBy);
+    });
+
+    it("should leave preparedBy undefined when the response omits it", async () => {
+      const mockQuote = { id: "q-1", name: "Test Quote", status: "sent", lineItems: [] };
+      mockClient.get.mockResolvedValue({ result: mockQuote });
+
+      const result = await TurboQuote.getQuote("q-1");
+
+      expect(result.preparedBy).toBeUndefined();
+    });
+
     it("should update a quote and unwrap result", async () => {
       const mockQuote = { id: "q-1", name: "Updated Name", taxRate: 10 };
       mockClient.patch.mockResolvedValue({ result: mockQuote, message: "Quote updated successfully" });

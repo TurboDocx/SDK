@@ -192,4 +192,118 @@ RSpec.describe TurboDocxSdk::HttpClient do
       end
     end
   end
+
+  # The API reports failures in several envelopes. Reading only the top-level message/error
+  # loses the actionable reason ("senderEmail must be a valid email address") and the specific
+  # code (QUOTE_NOT_FOUND) — and for the nested `error: {...}` shape used across TurboQuote,
+  # would surface the inspected Hash instead of the message.
+  describe "error detail and code extraction" do
+    let(:client) { described_class.new(api_key: "test-key", skip_sender_validation: true) }
+
+    def error_response(status, body)
+      double(code: status.to_s, message: "Error", body: JSON.generate(body))
+    end
+
+    def raised_by(status, body)
+      client.send(:handle_error_response, error_response(status, body))
+      raise "expected an error to be raised"
+    rescue TurboDocxSdk::TurboDocxError => e
+      e
+    end
+
+    it "surfaces the per-field reason instead of the generic envelope message" do
+      error = raised_by(400, {
+                          "message" => "There was an issue validating the body",
+                          "type" => "ValidationError",
+                          "data" => { "errors" => [{ "message" => "senderEmail must be a valid email address" }] }
+                        })
+
+      expect(error).to be_a(TurboDocxSdk::ValidationError)
+      expect(error.message).to include("senderEmail must be a valid email address")
+    end
+
+    it "joins multiple field errors so every failure is reported" do
+      error = raised_by(400, {
+                          "message" => "There was an issue validating the body",
+                          "data" => { "errors" => [{ "message" => "a is bad" }, { "message" => "b is required" }] }
+                        })
+
+      expect(error.message).to include("a is bad")
+      expect(error.message).to include("b is required")
+    end
+
+    it "falls back to the top-level message when there are no field errors" do
+      error = raised_by(400, {
+                          "message" => "A sender email is required for API-key requests.",
+                          "error" => "SenderEmailRequired"
+                        })
+
+      expect(error.message).to eq("A sender email is required for API-key requests.")
+      # `error` alongside a `message` is the CODE, not the message.
+      expect(error.code).to eq("SenderEmailRequired")
+    end
+
+    it "ignores an empty errors array rather than blanking the message" do
+      error = raised_by(400, { "message" => "There was an issue validating the body", "data" => { "errors" => [] } })
+
+      expect(error.message).to eq("There was an issue validating the body")
+    end
+
+    it "reads message and code out of a nested error object" do
+      error = raised_by(404, { "error" => { "message" => "Quote not found", "code" => "QUOTE_NOT_FOUND" } })
+
+      expect(error).to be_a(TurboDocxSdk::NotFoundError)
+      expect(error.message).to eq("Quote not found")
+      expect(error.code).to eq("QUOTE_NOT_FOUND")
+    end
+
+    it "surfaces per-row reasons from a top-level errors array (bulk validation)" do
+      error = raised_by(400, {
+                          "message" => "Bulk validation failed",
+                          "type" => "BulkValidationFailed",
+                          "errors" => [{ "message" => "Row 1 invalid" }, { "message" => "Row 3 required" }]
+                        })
+
+      expect(error.message).to include("Row 1 invalid")
+      expect(error.message).to include("Row 3 required")
+    end
+
+    it "reads the code from a top-level type" do
+      error = raised_by(400, { "message" => "Recipient name is required", "type" => "RecipientNameRequired" })
+
+      expect(error.code).to eq("RecipientNameRequired")
+    end
+
+    it "treats a lone error string as the message, not the code" do
+      # SingleStepRoutes sends {error: <message>, code: <type>}.
+      error = raised_by(400, { "error" => "Document could not be prepared", "code" => "TemplateProcessingFailed" })
+
+      expect(error.message).to eq("Document could not be prepared")
+      expect(error.code).to eq("TemplateProcessingFailed")
+    end
+
+    it "keeps the class default code when the API sends none" do
+      error = raised_by(404, { "message" => "Resource missing" })
+
+      expect(error.code).to eq("NOT_FOUND")
+    end
+
+    it "lets an API-supplied code win over the class default" do
+      # The default must never mask a real code the backend sent.
+      error = raised_by(404, { "message" => "Quote missing", "code" => "QUOTE_NOT_FOUND" })
+
+      expect(error.code).to eq("QUOTE_NOT_FOUND")
+    end
+
+    it "gives every error subclass a default code" do
+      # Parity guard: all six SDKs populate `code` for every typed error.
+      expect(TurboDocxSdk::AuthenticationError.new("x").code).to eq("AUTHENTICATION_ERROR")
+      expect(TurboDocxSdk::AuthorizationError.new("x").code).to eq("AUTHORIZATION_ERROR")
+      expect(TurboDocxSdk::ValidationError.new("x").code).to eq("VALIDATION_ERROR")
+      expect(TurboDocxSdk::NotFoundError.new("x").code).to eq("NOT_FOUND")
+      expect(TurboDocxSdk::ConflictError.new("x").code).to eq("CONFLICT")
+      expect(TurboDocxSdk::RateLimitError.new("x").code).to eq("RATE_LIMIT_EXCEEDED")
+      expect(TurboDocxSdk::NetworkError.new("x").code).to eq("NETWORK_ERROR")
+    end
+  end
 end

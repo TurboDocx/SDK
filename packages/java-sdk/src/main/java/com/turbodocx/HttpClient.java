@@ -440,6 +440,120 @@ public class HttpClient {
         }
     }
 
+    /**
+     * Join the per-field/per-row messages from an error envelope — {@code data.errors[]}
+     * (validation) or a top-level {@code errors[]} (bulk) — or null when the body carries none.
+     * These say what the caller must fix; the envelope message is generic.
+     */
+    static String extractFieldErrors(JsonObject json) {
+        try {
+            if (json == null) {
+                return null;
+            }
+
+            JsonElement errorsElement = null;
+            if (json.has("data") && json.get("data").isJsonObject()) {
+                JsonObject data = json.getAsJsonObject("data");
+                if (data.has("errors") && data.get("errors").isJsonArray()) {
+                    errorsElement = data.get("errors");
+                }
+            }
+            if (errorsElement == null && json.has("errors") && json.get("errors").isJsonArray()) {
+                errorsElement = json.get("errors");
+            }
+            if (errorsElement == null) {
+                return null;
+            }
+
+            StringBuilder joined = new StringBuilder();
+            for (JsonElement element : errorsElement.getAsJsonArray()) {
+                if (!element.isJsonObject()) {
+                    continue;
+                }
+                JsonObject detail = element.getAsJsonObject();
+                if (detail.has("message") && !detail.get("message").isJsonNull()) {
+                    String text = detail.get("message").getAsString();
+                    if (!text.isEmpty()) {
+                        if (joined.length() > 0) {
+                            joined.append("; ");
+                        }
+                        joined.append(text);
+                    }
+                }
+            }
+            return joined.length() > 0 ? joined.toString() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Read the message out of a nested {@code error} object ({@code {"message","code"}} — the
+     * TurboQuote surface returns this shape). Returns null when {@code error} is absent or is a
+     * plain string; without this the object would render as its JSON, losing the reason.
+     */
+    static String extractNestedErrorMessage(JsonObject json) {
+        try {
+            if (json == null || !json.has("error") || !json.get("error").isJsonObject()) {
+                return null;
+            }
+            JsonObject nested = json.getAsJsonObject("error");
+            if (nested.has("message") && !nested.get("message").isJsonNull()) {
+                String text = nested.get("message").getAsString();
+                return text.isEmpty() ? null : text;
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** The {@code error} value when it is a plain string (not the nested-object shape), else null. */
+    static String extractErrorString(JsonObject json) {
+        try {
+            if (json != null && json.has("error") && json.get("error").isJsonPrimitive()) {
+                return json.get("error").getAsString();
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * The specific reason code, so callers can branch on it rather than only on the HTTP class.
+     * It appears as {@code code}, {@code type}, nested {@code error.code}, or {@code error} as a
+     * bare string alongside {@code message} — that last only counts as a code when a separate
+     * message exists, since alone the string IS the message. Returns null when none is present,
+     * letting each exception keep its default code.
+     */
+    static String extractErrorCode(JsonObject json) {
+        try {
+            if (json == null) {
+                return null;
+            }
+            if (json.has("code") && !json.get("code").isJsonNull()) {
+                return json.get("code").getAsString();
+            }
+            if (json.has("type") && !json.get("type").isJsonNull()) {
+                return json.get("type").getAsString();
+            }
+            if (json.has("error") && json.get("error").isJsonObject()) {
+                JsonObject nested = json.getAsJsonObject("error");
+                if (nested.has("code") && !nested.get("code").isJsonNull()) {
+                    return nested.get("code").getAsString();
+                }
+            }
+            String errorString = extractErrorString(json);
+            if (json.has("message") && errorString != null) {
+                return errorString;
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private void handleError(Response response) throws IOException {
         String body = response.body() != null ? response.body().string() : "";
         String message = "API Error";
@@ -448,15 +562,22 @@ public class HttpClient {
         try {
             JsonObject json = gson.fromJson(body, JsonObject.class);
             if (json != null) {
-                // Check both "message" and "error" fields (backend uses both)
-                if (json.has("message")) {
+                // Field-level validation failures arrive as an envelope whose top-level message
+                // is generic ("There was an issue validating the body") with the useful per-field
+                // reasons nested under data.errors[]. Surface those — "senderEmail must be a
+                // valid email address" tells the caller what to fix; the envelope does not.
+                String fieldErrors = extractFieldErrors(json);
+
+                if (fieldErrors != null) {
+                    message = fieldErrors;
+                } else if (json.has("message")) {
                     message = json.get("message").getAsString();
-                } else if (json.has("error")) {
-                    message = json.get("error").getAsString();
+                } else if (extractNestedErrorMessage(json) != null) {
+                    message = extractNestedErrorMessage(json);
+                } else if (extractErrorString(json) != null) {
+                    message = extractErrorString(json);
                 }
-                if (json.has("code")) {
-                    code = json.get("code").getAsString();
-                }
+                code = extractErrorCode(json);
             }
         } catch (Exception e) {
             // Use default message

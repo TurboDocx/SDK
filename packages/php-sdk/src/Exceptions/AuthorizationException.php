@@ -10,8 +10,8 @@ namespace TurboDocx\Exceptions;
  */
 class AuthorizationException extends TurboDocxException
 {
-    public function __construct(string $message = 'Forbidden: API key lacks required permissions', ?\Throwable $previous = null)
+    public function __construct(string $message = 'Forbidden: API key lacks required permissions', ?string $errorCode = null, ?\Throwable $previous = null)
     {
-        parent::__construct($message, statusCode: 403, errorCode: 'AUTHORIZATION_ERROR', previous: $previous);
+        parent::__construct($message, statusCode: 403, errorCode: $errorCode ?? 'AUTHORIZATION_ERROR', previous: $previous);
     }
 }

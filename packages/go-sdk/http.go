@@ -164,8 +164,34 @@ type NetworkError struct {
 	TurboDocxError
 }
 
+// defaultErrorCode is the fallback Code for a status when the API response carries no
+// machine-readable code, so Code is always populated and callers can branch on it without
+// an empty-string check. An API-supplied code always wins. Kept identical across all six SDKs.
+func defaultErrorCode(statusCode int) string {
+	switch statusCode {
+	case 400:
+		return "VALIDATION_ERROR"
+	case 401:
+		return "AUTHENTICATION_ERROR"
+	case 403:
+		return "AUTHORIZATION_ERROR"
+	case 404:
+		return "NOT_FOUND"
+	case 409:
+		return "CONFLICT"
+	case 429:
+		return "RATE_LIMIT_EXCEEDED"
+	default:
+		return ""
+	}
+}
+
 // mapStatusToError maps an HTTP status code to the appropriate typed error.
 func mapStatusToError(baseErr TurboDocxError) error {
+	if baseErr.Code == "" {
+		baseErr.Code = defaultErrorCode(baseErr.StatusCode)
+	}
+
 	switch baseErr.StatusCode {
 	case 400:
 		return &ValidationError{TurboDocxError: baseErr}
@@ -216,21 +242,82 @@ func (c *HTTPClient) handleResponse(resp *http.Response, result interface{}) err
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:       "NETWORK_ERROR",
 			Message:    fmt.Sprintf("failed to read response body: %v", err),
 			StatusCode: 0,
 		}}
 	}
 
 	if resp.StatusCode >= 400 {
-		var apiErr struct {
+		type errorDetail struct {
 			Message string `json:"message"`
-			Error   string `json:"error"`
-			Code    string `json:"code"`
+		}
+		// The API reports failures in a few shapes; read all of them so the caller always gets
+		// the actionable reason rather than a generic envelope.
+		//
+		// `error` is json.RawMessage because it may be a plain string OR a nested object
+		// ({"message","code"} — the TurboQuote surface). Typing it as a string would make the
+		// whole unmarshal fail on those responses, discarding every field including the message.
+		var apiErr struct {
+			Message string          `json:"message"`
+			Error   json.RawMessage `json:"error"`
+			Code    string          `json:"code"`
+			Type    string          `json:"type"`
+			Data    struct {
+				Errors []errorDetail `json:"errors"`
+			} `json:"data"`
+			Errors []errorDetail `json:"errors"`
 		}
 		if err := json.Unmarshal(body, &apiErr); err == nil {
-			msg := apiErr.Message
+			// Per-field/per-row reasons live under data.errors[] (validation) or a top-level
+			// errors[] (bulk). These say what to fix; the envelope message does not.
+			details := apiErr.Data.Errors
+			if len(details) == 0 {
+				details = apiErr.Errors
+			}
+			fieldErrors := make([]string, 0, len(details))
+			for _, detail := range details {
+				if detail.Message != "" {
+					fieldErrors = append(fieldErrors, detail.Message)
+				}
+			}
+
+			// Decode `error` as either a bare string or a nested object.
+			var errorString string
+			var nestedError struct {
+				Message string `json:"message"`
+				Code    string `json:"code"`
+			}
+			if len(apiErr.Error) > 0 {
+				if err := json.Unmarshal(apiErr.Error, &errorString); err != nil {
+					_ = json.Unmarshal(apiErr.Error, &nestedError)
+				}
+			}
+
+			// The specific reason code, so callers can branch on it rather than only on the
+			// HTTP class. It appears as `code`, `type`, nested `error.code`, or `error` as a
+			// bare string alongside `message` — that last case only counts as a code when a
+			// separate `message` exists, since alone the string IS the message.
+			code := apiErr.Code
+			if code == "" {
+				code = apiErr.Type
+			}
+			if code == "" {
+				code = nestedError.Code
+			}
+			if code == "" && apiErr.Message != "" && errorString != "" {
+				code = errorString
+			}
+
+			msg := strings.Join(fieldErrors, "; ")
 			if msg == "" {
-				msg = apiErr.Error
+				msg = apiErr.Message
+			}
+			if msg == "" {
+				msg = nestedError.Message
+			}
+			if msg == "" {
+				msg = errorString
 			}
 			if msg == "" {
 				msg = resp.Status
@@ -238,7 +325,7 @@ func (c *HTTPClient) handleResponse(resp *http.Response, result interface{}) err
 			return mapStatusToError(TurboDocxError{
 				Message:    msg,
 				StatusCode: resp.StatusCode,
-				Code:       apiErr.Code,
+				Code:       code,
 			})
 		}
 		return mapStatusToError(TurboDocxError{
@@ -286,6 +373,7 @@ func (c *HTTPClient) Get(ctx context.Context, path string, result interface{}) e
 	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+path, nil)
 	if err != nil {
 		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("failed to create request: %v", err),
 		}}
 	}
@@ -295,6 +383,7 @@ func (c *HTTPClient) Get(ctx context.Context, path string, result interface{}) e
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("request failed: %v", err),
 		}}
 	}
@@ -307,6 +396,7 @@ func (c *HTTPClient) GetRaw(ctx context.Context, path string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+path, nil)
 	if err != nil {
 		return nil, &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("failed to create request: %v", err),
 		}}
 	}
@@ -316,6 +406,7 @@ func (c *HTTPClient) GetRaw(ctx context.Context, path string) ([]byte, error) {
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("request failed: %v", err),
 		}}
 	}
@@ -345,6 +436,7 @@ func (c *HTTPClient) Post(ctx context.Context, path string, data interface{}, re
 	req, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+path, body)
 	if err != nil {
 		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("failed to create request: %v", err),
 		}}
 	}
@@ -354,6 +446,7 @@ func (c *HTTPClient) Post(ctx context.Context, path string, data interface{}, re
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("request failed: %v", err),
 		}}
 	}
@@ -375,6 +468,7 @@ func (c *HTTPClient) Patch(ctx context.Context, path string, data interface{}, r
 	req, err := http.NewRequestWithContext(ctx, "PATCH", c.baseURL+path, body)
 	if err != nil {
 		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("failed to create request: %v", err),
 		}}
 	}
@@ -384,6 +478,7 @@ func (c *HTTPClient) Patch(ctx context.Context, path string, data interface{}, r
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("request failed: %v", err),
 		}}
 	}
@@ -396,6 +491,7 @@ func (c *HTTPClient) Delete(ctx context.Context, path string, result interface{}
 	req, err := http.NewRequestWithContext(ctx, "DELETE", c.baseURL+path, nil)
 	if err != nil {
 		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("failed to create request: %v", err),
 		}}
 	}
@@ -405,6 +501,7 @@ func (c *HTTPClient) Delete(ctx context.Context, path string, result interface{}
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("request failed: %v", err),
 		}}
 	}
@@ -476,6 +573,7 @@ func (c *HTTPClient) UploadFile(ctx context.Context, path string, file interface
 	req, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+path, &buf)
 	if err != nil {
 		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("failed to create request: %v", err),
 		}}
 	}
@@ -486,6 +584,7 @@ func (c *HTTPClient) UploadFile(ctx context.Context, path string, file interface
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("request failed: %v", err),
 		}}
 	}
@@ -551,6 +650,7 @@ func (c *HTTPClient) doProductMultipart(ctx context.Context, method, path string
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, &buf)
 	if err != nil {
 		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("failed to create request: %v", err),
 		}}
 	}
@@ -561,6 +661,7 @@ func (c *HTTPClient) doProductMultipart(ctx context.Context, method, path string
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("request failed: %v", err),
 		}}
 	}

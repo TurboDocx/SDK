@@ -11,8 +11,8 @@ namespace TurboDocx\Exceptions;
  */
 class ConflictException extends TurboDocxException
 {
-    public function __construct(string $message = 'Conflict with existing resource', ?\Throwable $previous = null)
+    public function __construct(string $message = 'Conflict with existing resource', ?string $errorCode = null, ?\Throwable $previous = null)
     {
-        parent::__construct($message, statusCode: 409, errorCode: 'CONFLICT', previous: $previous);
+        parent::__construct($message, statusCode: 409, errorCode: $errorCode ?? 'CONFLICT', previous: $previous);
     }
 }

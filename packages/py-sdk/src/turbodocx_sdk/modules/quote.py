@@ -175,12 +175,16 @@ class TurboQuote:
 
     @classmethod
     async def get_quote(cls, id: str) -> Dict[str, Any]:
-        """Get a quote by ID, including statusInfo if available."""
+        """Get a quote by ID, including statusInfo and preparedBy if available."""
         client = cls._get_client()
         response = await client.get(f"/v1/quotes/{id}")
         quote = response["result"]
         if "statusInfo" in response and response["statusInfo"] is not None:
             quote["statusInfo"] = response["statusInfo"]
+        # preparedBy is a sibling of "result" — the resolved "Prepared by" identity. Fold it
+        # onto the quote (same pattern as statusInfo); prefer it over "creator" for display.
+        if "preparedBy" in response and response["preparedBy"] is not None:
+            quote["preparedBy"] = response["preparedBy"]
         return quote
 
     @classmethod

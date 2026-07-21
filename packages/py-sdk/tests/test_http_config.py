@@ -48,7 +48,9 @@ class TestSenderEmailValidation:
         error_msg = str(exc_info.value).lower()
         assert "sender_email is required" in error_msg
         assert "reply-to address" in error_msg
-        assert "api service user via turbosign" in error_msg
+        # The message no longer promises a fallback sender: the API rejects a send with no
+        # sender email instead of mailing from the synthetic API-service address.
+        assert "audit trail" in error_msg
 
     def test_should_accept_valid_sender_email(self):
         """Should accept valid sender_email"""

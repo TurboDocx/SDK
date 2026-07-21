@@ -43,8 +43,8 @@ final class HttpClientConfig
 
         if (empty($this->senderEmail) && !$skipSenderValidation) {
             throw new ValidationException(
-                'senderEmail is required. This email will be used as the reply-to address for signature requests. '
-                . 'Without it, emails will default to "API Service User via TurboSign".'
+                'senderEmail is required. It is used as the reply-to address for signature requests '
+                . 'and recorded as the sender in the audit trail. The API rejects sends without it.'
             );
         }
     }

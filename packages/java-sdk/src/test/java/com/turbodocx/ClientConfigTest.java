@@ -30,7 +30,9 @@ class ClientConfigTest {
 
         assertTrue(exception.getMessage().contains("SenderEmail is required"));
         assertTrue(exception.getMessage().contains("reply-to address"));
-        assertTrue(exception.getMessage().contains("API Service User via TurboSign"));
+        // The message no longer promises a fallback sender: the API rejects a send with no
+        // sender email instead of mailing from the synthetic API-service address.
+        assertTrue(exception.getMessage().contains("audit trail"));
     }
 
     @Test

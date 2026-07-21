@@ -45,12 +45,12 @@ class TurboSign:
             base_url: Base URL for the API (optional, defaults to https://api.turbodocx.com)
             org_id: Organization ID (required)
             sender_email: Reply-to email address for signature requests (required).
-                         This email will be used as the reply-to address when sending
-                         signature request emails. Without it, emails will default to
-                         "API Service User via TurboSign".
-            sender_name: Sender name for signature requests (optional but strongly recommended).
-                        This name will appear in signature request emails. Without this,
-                        the sender will appear as "API Service User".
+                         Used as the reply-to address on signature request emails and
+                         recorded as the sender in the audit trail. The API rejects sends
+                         without it.
+            sender_name: Sender name for signature requests (optional). Appears in
+                        signature request emails and the audit trail. Defaults to the
+                        name of your API key.
 
         Example:
             >>> TurboSign.configure(

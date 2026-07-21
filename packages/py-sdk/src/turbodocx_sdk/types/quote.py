@@ -22,6 +22,23 @@ class QuoteStatusInfo(TypedDict):
     isTerminal: bool
 
 
+class QuotePreparedBy(TypedDict, total=False):
+    """The resolved "Prepared by" identity shown on the quote PDF and preview, returned by
+    get_quote alongside the quote.
+
+    Resolved server-side, not derived from ``creator``: it applies the org quote template
+    first, then the creator, and for a quote created by an API key it yields the API key's
+    label with no email (an API key has no mailbox). Prefer this over ``creator`` for any
+    customer-facing display — ``creator`` may be the internal API service account.
+
+    Both keys are optional: a quote can have no resolvable sender email (e.g. an API-created
+    quote whose org template has no sender email). Render a placeholder for an absent key.
+    """
+
+    name: str
+    email: str
+
+
 class Quote(TypedDict, total=False):
     id: str
     orgId: str
@@ -53,6 +70,8 @@ class Quote(TypedDict, total=False):
     priceBook: PriceBook
     creator: Dict[str, Any]
     statusInfo: QuoteStatusInfo
+    # Folded on by get_quote from the response's sibling "preparedBy". See QuotePreparedBy.
+    preparedBy: QuotePreparedBy
 
 
 # ============================================

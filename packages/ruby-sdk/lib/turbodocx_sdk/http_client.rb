@@ -51,8 +51,8 @@ module TurboDocxSdk
 
       unless @sender_email || skip_sender_validation
         raise ValidationError,
-              'senderEmail is required. This email will be used as the reply-to address for signature requests. ' \
-              'Without it, emails will default to "API Service User via TurboSign".'
+              "senderEmail is required. It is used as the reply-to address for signature requests " \
+              "and recorded as the sender in the audit trail. The API rejects sends without it."
       end
     end
 
@@ -345,22 +345,49 @@ module TurboDocxSdk
 
     def handle_error_response(response)
       message = "HTTP #{response.code}: #{response.message}"
+      api_code = nil
       begin
         error_data = JSON.parse(response.body)
-        message = error_data["message"] || error_data["error"] || message
+        # The API reports failures in a few shapes; read all of them so the caller always gets
+        # the actionable reason rather than a generic envelope.
+        #
+        # Per-field/per-row reasons live under data.errors[] (validation) or a top-level
+        # errors[] (bulk). These say what to fix; the envelope message does not.
+        details = error_data.dig("data", "errors") || error_data["errors"] || []
+        field_errors = details.filter_map { |d| d["message"] if d.is_a?(Hash) && d["message"] }
+
+        # `error` may be a nested object ({"message","code"} — the TurboQuote surface) rather
+        # than a string; using it blindly would surface the inspected Hash.
+        raw_error = error_data["error"]
+        nested_message = raw_error["message"] if raw_error.is_a?(Hash)
+        error_string = raw_error if raw_error.is_a?(String)
+
+        message = if field_errors.any?
+                    field_errors.join("; ")
+                  else
+                    error_data["message"] || nested_message || error_string || message
+                  end
+
+        # The specific reason code, so callers can branch on it rather than only on the HTTP
+        # class. It appears as `code`, `type`, nested `error.code`, or `error` as a bare string
+        # alongside `message` — that last only counts as a code when a separate message exists,
+        # since alone the string IS the message.
+        nested_code = raw_error["code"] if raw_error.is_a?(Hash)
+        api_code = error_data["code"] || error_data["type"] || nested_code ||
+                   (error_string if error_data["message"] && error_string)
       rescue StandardError
         # If response is not JSON, use status text
       end
 
       code = response.code.to_i
       case code
-      when 400 then raise ValidationError, message
-      when 401 then raise AuthenticationError, message
-      when 403 then raise AuthorizationError, message
-      when 404 then raise NotFoundError, message
-      when 409 then raise ConflictError, message
-      when 429 then raise RateLimitError, message
-      else raise TurboDocxError.new(message, status_code: code)
+      when 400 then raise ValidationError.new(message, code: api_code)
+      when 401 then raise AuthenticationError.new(message, code: api_code)
+      when 403 then raise AuthorizationError.new(message, code: api_code)
+      when 404 then raise NotFoundError.new(message, code: api_code)
+      when 409 then raise ConflictError.new(message, code: api_code)
+      when 429 then raise RateLimitError.new(message, code: api_code)
+      else raise TurboDocxError.new(message, status_code: code, code: api_code)
       end
     end
 

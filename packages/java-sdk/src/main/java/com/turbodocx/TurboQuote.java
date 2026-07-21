@@ -67,16 +67,22 @@ public final class TurboQuote {
     }
 
     /**
-     * Get a quote by ID, including statusInfo.
+     * Get a quote by ID, including statusInfo and preparedBy.
      */
     public Quote getQuote(String id) throws IOException {
-        // getQuote needs special handling: statusInfo is a sibling key to result
+        // getQuote needs special handling: statusInfo and preparedBy are sibling keys to result
         JsonObject response = httpClient.get("/v1/quotes/" + id, JsonObject.class);
 
         Quote quote = gson.fromJson(response.get("result"), Quote.class);
         if (response.has("statusInfo") && !response.get("statusInfo").isJsonNull()) {
             QuoteStatusInfo statusInfo = gson.fromJson(response.get("statusInfo"), QuoteStatusInfo.class);
             quote.setStatusInfo(statusInfo);
+        }
+        // preparedBy is the resolved "Prepared by" identity; fold it onto the quote (same
+        // pattern as statusInfo). Prefer it over getCreator() for customer-facing display.
+        if (response.has("preparedBy") && !response.get("preparedBy").isJsonNull()) {
+            Quote.QuotePreparedBy preparedBy = gson.fromJson(response.get("preparedBy"), Quote.QuotePreparedBy.class);
+            quote.setPreparedBy(preparedBy);
         }
         return quote;
     }

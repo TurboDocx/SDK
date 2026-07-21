@@ -109,6 +109,86 @@ class TurboPartnerTest {
     }
 
     // ============================================
+    // Client-Context Header Tests
+    // ============================================
+    // The partner audit log records userAgent, and the backend only classifies a
+    // request as an SDK call when the User-Agent starts with the canonical
+    // "@turbodocx/sdk/" token — so the partner path must send the same
+    // client-context headers as the main HttpClient.
+
+    @Test
+    @DisplayName("should send client-context headers on the partner path")
+    void shouldSendClientContextHeaders() throws Exception {
+        enqueueSuccess(Map.of("success", true, "data", Map.of("id", "org-1")));
+
+        client.turboPartner().createOrganization("Test");
+
+        RecordedRequest request = server.takeRequest();
+        String ua = request.getHeader("User-Agent");
+        assertNotNull(ua);
+        assertTrue(ua.startsWith("@turbodocx/sdk/"), "got " + ua);
+        assertFalse(ua.contains("okhttp"));
+        assertNotNull(request.getHeader("X-Timezone"));
+        assertNotNull(request.getHeader("Accept-Language"));
+        assertNotNull(request.getHeader("X-Device-Fingerprint"));
+    }
+
+    @Test
+    @DisplayName("should not send X-Forwarded-For on the partner path by default")
+    void shouldNotSendForwardedForByDefault() throws Exception {
+        enqueueSuccess(Map.of("success", true, "data", Map.of("id", "org-1")));
+
+        client.turboPartner().createOrganization("Test");
+
+        assertNull(server.takeRequest().getHeader("X-Forwarded-For"));
+    }
+
+    @Test
+    @DisplayName("should honor a caller-supplied clientContext on the partner path")
+    void shouldHonorCallerSuppliedClientContext() throws Exception {
+        TurboPartnerClient c = new TurboPartnerClient.Builder()
+                .partnerApiKey("TDXP-test-key")
+                .partnerId(PARTNER_ID)
+                .baseUrl(server.url("/").toString())
+                .clientContext(ClientContext.builder()
+                        .userAgent("my-app/9.9 (worker)")
+                        .timezone("America/New_York")
+                        .language("fr-FR")
+                        .deviceFingerprint("fp-abc")
+                        .ipAddress("203.0.113.7")
+                        .build())
+                .build();
+        enqueueSuccess(Map.of("success", true, "data", Map.of("id", "org-1")));
+
+        c.turboPartner().createOrganization("Test");
+
+        RecordedRequest request = server.takeRequest();
+        assertEquals("my-app/9.9 (worker)", request.getHeader("User-Agent"));
+        assertEquals("America/New_York", request.getHeader("X-Timezone"));
+        assertEquals("fr-FR", request.getHeader("Accept-Language"));
+        assertEquals("fp-abc", request.getHeader("X-Device-Fingerprint"));
+        assertEquals("203.0.113.7", request.getHeader("X-Forwarded-For"));
+    }
+
+    @Test
+    @DisplayName("should keep auth and content-type winning over client context")
+    void clientContextDoesNotOverrideProtocolHeaders() throws Exception {
+        TurboPartnerClient c = new TurboPartnerClient.Builder()
+                .partnerApiKey("TDXP-test-key")
+                .partnerId(PARTNER_ID)
+                .baseUrl(server.url("/").toString())
+                .clientContext(ClientContext.builder().userAgent("my-app/9.9").build())
+                .build();
+        enqueueSuccess(Map.of("success", true, "data", Map.of("id", "org-1")));
+
+        c.turboPartner().createOrganization("Test");
+
+        RecordedRequest request = server.takeRequest();
+        assertEquals("Bearer TDXP-test-key", request.getHeader("Authorization"));
+        assertEquals("application/json", request.getHeader("Content-Type"));
+    }
+
+    // ============================================
     // Organization Management Tests
     // ============================================
 
@@ -582,6 +662,26 @@ class TurboPartnerTest {
         assertEquals(404, e.getStatusCode());
         assertEquals("Organization not found", e.getMessage());
         assertEquals("NOT_FOUND", e.getCode());
+    }
+
+    @Test
+    @DisplayName("should throw ConflictException for 409")
+    void handleConflictError() {
+        // The partner path used to fall through to the base TurboDocxException on 409 while
+        // the main HttpClient mapped it — so `catch (ConflictException)` silently missed
+        // duplicate-resource errors here. All six SDKs map 409 on both paths.
+        server.enqueue(new MockResponse()
+                .setResponseCode(409)
+                .setHeader("Content-Type", "application/json")
+                .setBody(gson.toJson(Map.of("message", "Organization already exists", "code", "ORG_EXISTS"))));
+
+        TurboDocxException.ConflictException e = assertThrows(
+                TurboDocxException.ConflictException.class,
+                () -> client.turboPartner().createOrganization("Dupe Org"));
+
+        assertEquals(409, e.getStatusCode());
+        assertEquals("Organization already exists", e.getMessage());
+        assertEquals("ORG_EXISTS", e.getCode());
     }
 
     @Test

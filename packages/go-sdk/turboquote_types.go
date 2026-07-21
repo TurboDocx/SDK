@@ -144,6 +144,21 @@ type QuoteCreator struct {
 	LastName  string `json:"lastName"`
 }
 
+// QuotePreparedBy is the resolved "Prepared by" identity shown on the quote PDF and preview,
+// returned by GetQuote alongside the quote.
+//
+// Resolved server-side, not derived from Creator: it applies the org quote template first,
+// then the creator, and for a quote created by an API key it yields the API key's label with
+// no email (an API key has no mailbox). Prefer this over Creator for any customer-facing
+// display — Creator may be the internal API service account.
+//
+// Both fields are optional (pointers): a quote can have no resolvable sender email (e.g. an
+// API-created quote whose org template has no sender email). Render a placeholder for a nil.
+type QuotePreparedBy struct {
+	Name  *string `json:"name,omitempty"`
+	Email *string `json:"email,omitempty"`
+}
+
 // Quote represents a quote entity
 type Quote struct {
 	ID                 string           `json:"id"`
@@ -176,6 +191,8 @@ type Quote struct {
 	PriceBook          *PriceBook       `json:"priceBook,omitempty"`
 	Creator            *QuoteCreator    `json:"creator,omitempty"`
 	StatusInfo         *QuoteStatusInfo `json:"statusInfo,omitempty"`
+	// PreparedBy is folded on by GetQuote from the response's sibling "preparedBy".
+	PreparedBy *QuotePreparedBy `json:"preparedBy,omitempty"`
 }
 
 // ============================================

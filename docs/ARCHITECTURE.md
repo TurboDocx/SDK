@@ -32,7 +32,7 @@ All SDKs follow: **explicit config > env var fallback > error**.
 | `apiKey` | `TURBODOCX_API_KEY` | Yes (or accessToken) |
 | `orgId` | `TURBODOCX_ORG_ID` | Yes for TurboSign |
 | `senderEmail` | `TURBODOCX_SENDER_EMAIL` | Yes for TurboSign |
-| `senderName` | `TURBODOCX_SENDER_NAME` | No (defaults to "API Service User") |
+| `senderName` | `TURBODOCX_SENDER_NAME` | No (defaults to the API key's name) |
 | `baseUrl` | `TURBODOCX_BASE_URL` | No (defaults to api.turbodocx.com) |
 
 ## Error Hierarchy
@@ -47,6 +47,29 @@ TurboDocxError (base)
 ```
 
 All errors carry `statusCode` and `code` properties. Each SDK implements this hierarchy using language-appropriate patterns (classes in JS/Py/Java/PHP, error types in Go, exceptions in Ruby).
+
+### Message and code extraction
+
+The backend reports failures in several envelopes, so reading only the top-level `message`
+loses the actionable reason (`"senderEmail must be a valid email address"`) and the specific
+code (`QUOTE_NOT_FOUND`). Every SDK resolves both in the same order:
+
+```
+message:  data.errors[] → errors[] → message → error.message → error (string) → HTTP status text
+code:     code → type → error.code → error (string, only when a message is also present) → class default
+```
+
+Field errors are joined with `"; "`. An `error` key alongside a `message` is the **code**, not
+the message (that's the `{message, error: "SenderEmailRequired"}` shape); an `error` string
+*without* a `message` is the message (the `{error, code}` shape from the single-step routes).
+
+**`code` is always populated.** Not every backend error carries a machine-readable code, so
+each typed error falls back to a class default — `VALIDATION_ERROR` (400),
+`AUTHENTICATION_ERROR` (401), `AUTHORIZATION_ERROR` (403), `NOT_FOUND` (404), `CONFLICT` (409),
+`RATE_LIMIT_EXCEEDED` (429), `NETWORK_ERROR` (no status). An API-supplied code always wins over
+the default. This lets callers branch on `code` in every language without a null check. The
+base `TurboDocxError` itself (the ≥500 / unmapped-status fallback) has no default and keeps
+whatever the API sent.
 
 ## File Input Abstraction
 

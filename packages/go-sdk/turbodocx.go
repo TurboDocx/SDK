@@ -55,13 +55,13 @@ type ClientConfig struct {
 	BaseURL string
 
 	// SenderEmail is the reply-to email address for signature requests (required).
-	// This email will be used as the reply-to address when sending signature request emails.
-	// Without it, emails will default to "API Service User via TurboSign".
+	// Used as the reply-to address on signature request emails and recorded as the sender
+	// in the audit trail. An API key has no mailbox of its own, so the API rejects a send
+	// without it rather than mailing from an unmonitored address.
 	SenderEmail string
 
-	// SenderName is the sender name for signature requests (optional but strongly recommended).
-	// This name will appear in signature request emails. Without this, the sender will
-	// appear as "API Service User".
+	// SenderName is the sender name for signature requests (optional). Appears in signature
+	// request emails and the audit trail. Defaults to the name of your API key.
 	SenderName string
 
 	// ClientContext describes the calling environment for the signature audit
@@ -117,7 +117,7 @@ func NewClientWithConfig(config ClientConfig) (*Client, error) {
 	if config.SenderEmail == "" {
 		return nil, &ValidationError{
 			TurboDocxError: TurboDocxError{
-				Message:    "SenderEmail is required. This email will be used as the reply-to address for signature requests. Without it, emails will default to \"API Service User via TurboSign\".",
+				Message:    "SenderEmail is required. It is used as the reply-to address for signature requests and recorded as the sender in the audit trail. The API rejects sends without it.",
 				StatusCode: 400,
 			},
 		}

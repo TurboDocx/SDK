@@ -9,8 +9,8 @@ namespace TurboDocx\Exceptions;
  */
 class NotFoundException extends TurboDocxException
 {
-    public function __construct(string $message = 'Resource not found', ?\Throwable $previous = null)
+    public function __construct(string $message = 'Resource not found', ?string $errorCode = null, ?\Throwable $previous = null)
     {
-        parent::__construct($message, statusCode: 404, errorCode: 'NOT_FOUND', previous: $previous);
+        parent::__construct($message, statusCode: 404, errorCode: $errorCode ?? 'NOT_FOUND', previous: $previous);
     }
 }

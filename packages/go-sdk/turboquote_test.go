@@ -350,6 +350,57 @@ func TestQuoteClient_GetQuote(t *testing.T) {
 		assert.Equal(t, "q-1", result.ID)
 		assert.Nil(t, result.StatusInfo)
 	})
+
+	t.Run("folds the server-resolved preparedBy onto the quote", func(t *testing.T) {
+		// preparedBy rides as a sibling of "result" on the wire — it is the backend-resolved
+		// "Prepared by" identity and must be preferred over Creator for display.
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"result": map[string]interface{}{
+					"id":        "q-1",
+					"name":      "Test Quote",
+					"status":    "sent",
+					"lineItems": []interface{}{},
+				},
+				"preparedBy": map[string]interface{}{
+					"name":  "Acme Billing Integration",
+					"email": "billing@acme.com",
+				},
+			})
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		result, err := client.GetQuote(context.Background(), "q-1")
+
+		require.NoError(t, err)
+		require.NotNil(t, result.PreparedBy)
+		require.NotNil(t, result.PreparedBy.Name)
+		assert.Equal(t, "Acme Billing Integration", *result.PreparedBy.Name)
+		require.NotNil(t, result.PreparedBy.Email)
+		assert.Equal(t, "billing@acme.com", *result.PreparedBy.Email)
+	})
+
+	t.Run("leaves preparedBy nil when the response omits it", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"result": map[string]interface{}{
+					"id":     "q-1",
+					"name":   "Test Quote",
+					"status": "sent",
+				},
+			})
+		}))
+		defer server.Close()
+
+		client := newTestQuoteClient(t, server.URL)
+		result, err := client.GetQuote(context.Background(), "q-1")
+
+		require.NoError(t, err)
+		assert.Nil(t, result.PreparedBy)
+	})
 }
 
 func TestQuoteClient_UpdateQuote(t *testing.T) {

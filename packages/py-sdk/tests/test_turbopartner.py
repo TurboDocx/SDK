@@ -17,6 +17,7 @@ from turbodocx_sdk.modules.partner import (
     SCOPE_ORG_READ,
     SCOPE_AUDIT_READ,
 )
+from turbodocx_sdk.utils.client_context import ClientContext
 
 
 PARTNER_ID = "test-partner-id"
@@ -56,6 +57,57 @@ class TestTurboPartnerConfigure:
     def test_not_configured_raises_error(self):
         with pytest.raises(RuntimeError, match="not configured"):
             TurboPartner._get_client()
+
+
+class TestTurboPartnerClientContext:
+    """The partner path must send the same client-context headers as the main
+    client — the partner audit log records userAgent, and the backend only
+    classifies a call as an SDK call on the canonical @turbodocx/sdk token."""
+
+    def setup_method(self):
+        TurboPartner._client = None
+        TurboPartner._partner_id = None
+
+    def _headers(self, **extra):
+        TurboPartner.configure(
+            partner_api_key="TDXP-test-key",
+            partner_id=PARTNER_ID,
+            **extra,
+        )
+        return TurboPartner._get_client()._get_headers()
+
+    def test_partner_sends_descriptive_turbodocx_sdk_user_agent_by_default(self):
+        ua = self._headers()["User-Agent"]
+        assert ua.startswith("@turbodocx/sdk/")
+        assert "httpx" not in ua
+
+    def test_partner_sends_timezone_language_and_device_fingerprint(self):
+        h = self._headers()
+        assert len(h.get("X-Timezone", "")) > 0
+        assert len(h.get("Accept-Language", "")) > 0
+        assert len(h.get("X-Device-Fingerprint", "")) > 0
+
+    def test_partner_lets_caller_override_client_context(self):
+        h = self._headers(client_context=ClientContext(
+            user_agent="my-app/9.9 (worker)",
+            timezone="America/New_York",
+            language="fr-FR",
+            device_fingerprint="fp-abc",
+            ip_address="203.0.113.7",
+        ))
+        assert h["User-Agent"] == "my-app/9.9 (worker)"
+        assert h["X-Timezone"] == "America/New_York"
+        assert h["Accept-Language"] == "fr-FR"
+        assert h["X-Device-Fingerprint"] == "fp-abc"
+        assert h["X-Forwarded-For"] == "203.0.113.7"
+
+    def test_partner_does_not_send_forwarded_for_by_default(self):
+        assert "X-Forwarded-For" not in self._headers()
+
+    def test_partner_auth_and_content_type_win_over_client_context(self):
+        h = self._headers(client_context=ClientContext(user_agent="my-app/9.9"))
+        assert h["Authorization"] == "Bearer TDXP-test-key"
+        assert h["Content-Type"] == "application/json"
 
 
 # =========================================================================

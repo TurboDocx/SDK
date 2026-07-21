@@ -95,8 +95,9 @@ public final class TurboDocxClient implements AutoCloseable {
 
         /**
          * Set the sender email for signature requests (required).
-         * This email will be used as the reply-to address when sending signature request emails.
-         * Without it, emails will default to "API Service User via TurboSign".
+         * Used as the reply-to address on signature request emails and recorded as the sender
+         * in the audit trail. An API key has no mailbox of its own, so the API rejects a send
+         * without it rather than mailing from an unmonitored address.
          */
         public Builder senderEmail(String senderEmail) {
             this.senderEmail = senderEmail;
@@ -104,9 +105,9 @@ public final class TurboDocxClient implements AutoCloseable {
         }
 
         /**
-         * Set the sender name for signature requests (optional but strongly recommended).
-         * This name will appear in signature request emails. Without this, the sender will
-         * appear as "API Service User".
+         * Set the sender name for signature requests (optional).
+         * Appears in signature request emails and the audit trail. Defaults to the name of
+         * your API key.
          */
         public Builder senderName(String senderName) {
             this.senderName = senderName;
@@ -156,7 +157,7 @@ public final class TurboDocxClient implements AutoCloseable {
                 throw new TurboDocxException.AuthenticationException("Organization ID (orgId) is required for authentication");
             }
             if (senderEmail == null || senderEmail.isEmpty()) {
-                throw new TurboDocxException.ValidationException("SenderEmail is required. This email will be used as the reply-to address for signature requests. Without it, emails will default to \"API Service User via TurboSign\".");
+                throw new TurboDocxException.ValidationException("SenderEmail is required. It is used as the reply-to address for signature requests and recorded as the sender in the audit trail. The API rejects sends without it.");
             }
             return new TurboDocxClient(this);
         }
