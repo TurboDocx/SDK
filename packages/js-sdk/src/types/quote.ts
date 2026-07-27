@@ -28,6 +28,23 @@ export interface QuoteStatusInfo {
   isTerminal: boolean;
 }
 
+/**
+ * The resolved "Prepared by" identity shown on the quote PDF and preview, returned by
+ * `getQuote` alongside the quote.
+ *
+ * Resolved server-side, not derived from `creator`: it applies the org quote template first,
+ * then the creator, and for a quote created by an API key it yields the API key's label with
+ * no email (an API key has no mailbox). Prefer this over reading `creator` for any
+ * customer-facing display — `creator` may be the internal API service account.
+ *
+ * Both fields are optional: a quote can have no resolvable sender email (e.g. an API-created
+ * quote whose org template has no sender email). Render a placeholder for an absent field.
+ */
+export interface QuotePreparedBy {
+  name?: string;
+  email?: string;
+}
+
 export interface Quote {
   id: string;
   orgId: string;
@@ -59,6 +76,8 @@ export interface Quote {
   priceBook?: PriceBook;
   creator?: { id: string; firstName: string; lastName: string };
   statusInfo?: QuoteStatusInfo;
+  // Folded on by getQuote from the response's sibling `preparedBy`. See QuotePreparedBy.
+  preparedBy?: QuotePreparedBy;
 }
 
 // ============================================

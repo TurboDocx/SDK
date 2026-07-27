@@ -150,6 +150,7 @@ func (c *QuoteClient) GetQuote(ctx context.Context, id string) (*Quote, error) {
 	var resp struct {
 		Result     Quote            `json:"result"`
 		StatusInfo *QuoteStatusInfo `json:"statusInfo,omitempty"`
+		PreparedBy *QuotePreparedBy `json:"preparedBy,omitempty"`
 	}
 	if err := c.http.Get(ctx, "/v1/quotes/"+id, &resp); err != nil {
 		return nil, err
@@ -157,6 +158,11 @@ func (c *QuoteClient) GetQuote(ctx context.Context, id string) (*Quote, error) {
 	quote := resp.Result
 	if resp.StatusInfo != nil {
 		quote.StatusInfo = resp.StatusInfo
+	}
+	// preparedBy is a sibling of "result" — the resolved "Prepared by" identity. Fold it onto
+	// the quote (same pattern as StatusInfo); prefer it over Creator for display.
+	if resp.PreparedBy != nil {
+		quote.PreparedBy = resp.PreparedBy
 	}
 	return &quote, nil
 }

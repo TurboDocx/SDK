@@ -44,6 +44,14 @@ final class Quote implements \JsonSerializable
         public readonly ?PriceBook $priceBook = null,
         public readonly ?array $creator = null,
         public readonly ?QuoteStatusInfo $statusInfo = null,
+        /**
+         * Resolved "Prepared by" identity (`['name' => ?, 'email' => ?]`) shown on the quote
+         * PDF and preview. Resolved server-side from the org template then the creator; for an
+         * API-key-created quote it is the API key's label with no email. Prefer over `creator`
+         * for customer-facing display.
+         * @var array<string, string>|null
+         */
+        public readonly ?array $preparedBy = null,
     ) {}
 
     /**
@@ -86,6 +94,7 @@ final class Quote implements \JsonSerializable
             priceBook: isset($data['priceBook']) ? PriceBook::fromArray($data['priceBook']) : null,
             creator: $data['creator'] ?? null,
             statusInfo: isset($data['statusInfo']) ? QuoteStatusInfo::fromArray($data['statusInfo']) : null,
+            preparedBy: $data['preparedBy'] ?? null,
         );
     }
 
@@ -138,6 +147,9 @@ final class Quote implements \JsonSerializable
         }
         if ($this->statusInfo !== null) {
             $data['statusInfo'] = $this->statusInfo->toArray();
+        }
+        if ($this->preparedBy !== null) {
+            $data['preparedBy'] = $this->preparedBy;
         }
 
         return $data;

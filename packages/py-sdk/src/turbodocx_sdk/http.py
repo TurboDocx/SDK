@@ -9,6 +9,7 @@ from urllib.parse import quote
 
 import httpx
 
+from .utils.client_context import ClientContext, resolve_client_context_headers
 from .utils.response_normalizer import normalize_response
 
 
@@ -71,48 +72,102 @@ def detect_file_type(file_bytes: bytes) -> Tuple[str, str]:
     return ("application/octet-stream", "bin")
 
 
+def _extract_error(error_data: dict, fallback_message: str) -> tuple:
+    """Pull the actionable message and the specific code out of an API error body.
+
+    The API reports failures in several shapes and BOTH HTTP clients (HttpClient and
+    PartnerHttpClient) must read all of them identically — this lived as a duplicated block
+    in each, so only one copy was covered by tests and they could silently drift.
+
+    message: data.errors[] -> errors[] -> message -> error.message -> error(str) -> fallback
+    code:    code -> type -> error.code -> error(str, only alongside a message)
+
+    Returns ``(message, code)``; ``code`` is None when the body carries none, in which case
+    the raising error class supplies its own default.
+    """
+    # Per-field/per-row reasons live under data.errors[] (celebrate/Joi) or a top-level
+    # errors[] (bulk). These say what to fix; the envelope message does not.
+    details = (error_data.get("data") or {}).get("errors") or error_data.get("errors") or []
+    field_errors = [d.get("message") for d in details if isinstance(d, dict) and d.get("message")]
+
+    # `error` may be a nested object ({"message", "code"} — the TurboQuote surface) rather
+    # than a string; reading it blindly would stringify the dict.
+    raw_error = error_data.get("error")
+    nested_message = raw_error.get("message") if isinstance(raw_error, dict) else None
+    error_string = raw_error if isinstance(raw_error, str) else None
+
+    message = (
+        "; ".join(field_errors)
+        or error_data.get("message")
+        or nested_message
+        or error_string
+        or fallback_message
+    )
+
+    # The specific reason code, so callers can branch on it (err.code == "QUOTE_NOT_FOUND")
+    # rather than only on the HTTP class. It appears in four places depending on the handler:
+    # `code`, `type`, nested `error.code`, or `error` as a bare string alongside `message`.
+    # That last case is why the string form is only a code when `message` is also present —
+    # alone it IS the message.
+    nested_code = raw_error.get("code") if isinstance(raw_error, dict) else None
+    code = (
+        error_data.get("code")
+        or error_data.get("type")
+        or nested_code
+        or (error_string if error_data.get("message") and error_string else None)
+    )
+
+    return message, code
+
+
 class TurboDocxError(Exception):
     """Base exception for TurboDocx API errors"""
+
+    #: Fallback for ``code`` when the API response carries no machine-readable code.
+    #: Subclasses override it so ``err.code`` is always populated and callers can branch
+    #: on it without a None check. Kept identical across all six SDKs.
+    DEFAULT_CODE: Optional[str] = None
 
     def __init__(self, message: str, status_code: Optional[int] = None, code: Optional[str] = None):
         super().__init__(message)
         self.status_code = status_code
-        self.code = code
+        # An API-supplied code always wins; DEFAULT_CODE only fills the gap.
+        self.code = code or self.DEFAULT_CODE
 
 
 class AuthenticationError(TurboDocxError):
     """Raised when authentication fails (HTTP 401)"""
-    pass
+    DEFAULT_CODE = "AUTHENTICATION_ERROR"
 
 
 class AuthorizationError(TurboDocxError):
     """Raised when the caller is authenticated but lacks required permissions (HTTP 403)"""
-    pass
+    DEFAULT_CODE = "AUTHORIZATION_ERROR"
 
 
 class ValidationError(TurboDocxError):
     """Raised when validation fails (HTTP 400)"""
-    pass
+    DEFAULT_CODE = "VALIDATION_ERROR"
 
 
 class NotFoundError(TurboDocxError):
     """Raised when resource is not found (HTTP 404)"""
-    pass
+    DEFAULT_CODE = "NOT_FOUND"
 
 
 class ConflictError(TurboDocxError):
     """Raised when a request conflicts with current resource state (HTTP 409)"""
-    pass
+    DEFAULT_CODE = "CONFLICT"
 
 
 class RateLimitError(TurboDocxError):
     """Raised when rate limit is exceeded (HTTP 429)"""
-    pass
+    DEFAULT_CODE = "RATE_LIMIT_EXCEEDED"
 
 
 class NetworkError(TurboDocxError):
     """Raised when network request fails"""
-    pass
+    DEFAULT_CODE = "NETWORK_ERROR"
 
 
 class HttpClient:
@@ -126,7 +181,8 @@ class HttpClient:
         org_id: Optional[str] = None,
         sender_email: Optional[str] = None,
         sender_name: Optional[str] = None,
-        skip_sender_validation: bool = False
+        skip_sender_validation: bool = False,
+        client_context: Optional[ClientContext] = None
     ):
         """
         Initialize HTTP client
@@ -137,12 +193,13 @@ class HttpClient:
             base_url: Base URL for the API (optional, defaults to https://api.turbodocx.com)
             org_id: Organization ID (required)
             sender_email: Reply-to email address for signature requests (required).
-                         This email will be used as the reply-to address when sending
-                         signature request emails. Without it, emails will default to
-                         "API Service User via TurboSign".
-            sender_name: Sender name for signature requests (optional but strongly recommended).
-                        This name will appear in signature request emails. Without this,
-                        the sender will appear as "API Service User".
+                         Used as the reply-to address on signature request emails and
+                         recorded as the sender in the audit trail. An API key has no
+                         mailbox of its own, so the API rejects a send without it rather
+                         than mailing from an unmonitored address.
+            sender_name: Sender name for signature requests (optional). Appears in
+                        signature request emails and the audit trail. Defaults to the
+                        name of your API key.
             skip_sender_validation: Skip sender_email validation (used internally by
                                    modules like Deliverable, TurboQuote, and TurboPartner
                                    that don't send signature emails)
@@ -153,15 +210,17 @@ class HttpClient:
         self.org_id = org_id or os.environ.get("TURBODOCX_ORG_ID")
         self.sender_email = sender_email or os.environ.get("TURBODOCX_SENDER_EMAIL")
         self.sender_name = sender_name or os.environ.get("TURBODOCX_SENDER_NAME")
+        # Resolved client-context headers (User-Agent, X-Timezone, ...), computed once.
+        self._context_headers = resolve_client_context_headers(client_context)
 
         if not self.api_key and not self.access_token:
             raise AuthenticationError("API key or access token is required")
 
         if not self.sender_email and not skip_sender_validation:
             raise ValidationError(
-                "sender_email is required. This email will be used as the reply-to address "
-                "for signature requests. Without it, emails will default to "
-                '"API Service User via TurboSign".'
+                "sender_email is required. It is used as the reply-to address for signature "
+                "requests and recorded as the sender in the audit trail. The API rejects "
+                "sends without it."
             )
 
     def get_sender_config(self) -> Dict[str, Optional[str]]:
@@ -178,7 +237,11 @@ class HttpClient:
 
     def _get_headers(self, include_content_type: bool = True) -> Dict[str, str]:
         """Get default headers for requests"""
-        headers: Dict[str, str] = {}
+        # Client-context headers (User-Agent, X-Timezone, Accept-Language,
+        # X-Forwarded-For, X-Device-Fingerprint) describe the calling environment
+        # so the signature audit trail records real device/location. Copy them
+        # first so the SDK's own protocol headers always win over caller context.
+        headers: Dict[str, str] = dict(self._context_headers)
 
         if include_content_type:
             headers["Content-Type"] = "application/json"
@@ -212,8 +275,7 @@ class HttpClient:
 
         try:
             error_data = response.json()
-            error_message = error_data.get("message") or error_data.get("error") or error_message
-            error_code = error_data.get("code")
+            error_message, error_code = _extract_error(error_data, error_message)
         except Exception:
             # Response body is not valid JSON; fall back to default error message
             pass
@@ -557,11 +619,14 @@ class PartnerHttpClient:
         self,
         partner_api_key: Optional[str] = None,
         partner_id: Optional[str] = None,
-        base_url: Optional[str] = None
+        base_url: Optional[str] = None,
+        client_context: Optional[ClientContext] = None
     ):
         self.partner_api_key = partner_api_key or os.environ.get("TURBODOCX_PARTNER_API_KEY")
         self.partner_id = partner_id or os.environ.get("TURBODOCX_PARTNER_ID")
         self.base_url = base_url or os.environ.get("TURBODOCX_BASE_URL", "https://api.turbodocx.com")
+        # Resolved client-context headers (User-Agent, X-Timezone, ...), computed once.
+        self._context_headers = resolve_client_context_headers(client_context)
 
         if not self.partner_api_key:
             raise AuthenticationError("Partner API key is required")
@@ -571,10 +636,15 @@ class PartnerHttpClient:
 
     def _get_headers(self) -> Dict[str, str]:
         """Get default headers for partner requests"""
-        return {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.partner_api_key}",
-        }
+        # Client-context headers (User-Agent, X-Timezone, Accept-Language,
+        # X-Forwarded-For, X-Device-Fingerprint) describe the calling environment
+        # so the partner audit log records the canonical @turbodocx/sdk token.
+        # Copy them first so the SDK's own protocol headers always win over
+        # caller context.
+        headers: Dict[str, str] = dict(self._context_headers)
+        headers["Content-Type"] = "application/json"
+        headers["Authorization"] = f"Bearer {self.partner_api_key}"
+        return headers
 
     async def _handle_error_response(self, response: httpx.Response) -> None:
         """Handle error response from API"""
@@ -583,8 +653,7 @@ class PartnerHttpClient:
 
         try:
             error_data = response.json()
-            error_message = error_data.get("message") or error_data.get("error") or error_message
-            error_code = error_data.get("code")
+            error_message, error_code = _extract_error(error_data, error_message)
         except Exception:
             # Response body is not valid JSON; fall back to default error message
             pass

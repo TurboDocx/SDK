@@ -227,7 +227,12 @@ final class TurboQuote
     }
 
     /**
-     * Get a quote by ID, including statusInfo if present.
+     * Get a quote by ID, including statusInfo and preparedBy if present.
+     *
+     * `preparedBy` is the resolved "Prepared by" identity (`['name' => ?, 'email' => ?]`)
+     * shown on the quote PDF and preview. Resolved server-side from the org template then the
+     * creator; for an API-key-created quote it is the API key's label with no email. Prefer it
+     * over `creator` for customer-facing display — `creator` may be the internal API service user.
      *
      * @param string $id
      * @return Quote
@@ -239,6 +244,9 @@ final class TurboQuote
         $quoteData = $response['result'];
         if (isset($response['statusInfo'])) {
             $quoteData['statusInfo'] = $response['statusInfo'];
+        }
+        if (isset($response['preparedBy'])) {
+            $quoteData['preparedBy'] = $response['preparedBy'];
         }
         return Quote::fromArray($quoteData);
     }

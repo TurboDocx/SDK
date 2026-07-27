@@ -273,6 +273,31 @@ final class TurboQuoteTest extends TestCase
         $this->assertSame('/v1/quotes/q-1', $this->mockClient->lastGetPath);
     }
 
+    public function testGetQuoteFoldsPreparedBy(): void
+    {
+        // preparedBy rides as a sibling of `result` on the wire — it is the backend-resolved
+        // "Prepared by" identity and must be preferred over `creator` for display.
+        $mockQuote = ['id' => 'q-1', 'name' => 'Test Quote', 'status' => 'sent', 'lineItems' => []];
+        $mockPreparedBy = ['name' => 'Acme Billing Integration', 'email' => 'billing@acme.com'];
+        $this->mockClient->setGetReturn(['result' => $mockQuote, 'preparedBy' => $mockPreparedBy]);
+        $this->injectMockClient();
+
+        $result = TurboQuote::getQuote('q-1');
+
+        $this->assertSame($mockPreparedBy, $result->preparedBy);
+    }
+
+    public function testGetQuoteWithoutPreparedBy(): void
+    {
+        $mockQuote = ['id' => 'q-1', 'name' => 'Test Quote', 'status' => 'sent', 'lineItems' => []];
+        $this->mockClient->setGetReturn(['result' => $mockQuote]);
+        $this->injectMockClient();
+
+        $result = TurboQuote::getQuote('q-1');
+
+        $this->assertNull($result->preparedBy);
+    }
+
     public function testUpdateQuoteAndUnwrapResult(): void
     {
         $mockQuote = ['id' => 'q-1', 'name' => 'Updated Name', 'taxRate' => 10];

@@ -6,6 +6,7 @@ namespace TurboDocx\Config;
 
 use TurboDocx\Exceptions\AuthenticationException;
 use TurboDocx\Exceptions\ValidationException;
+use TurboDocx\Utils\ClientContext;
 
 /**
  * Configuration for the TurboDocx HTTP client
@@ -20,6 +21,10 @@ final class HttpClientConfig
      * @param string|null $senderEmail Reply-to email address for signature requests (required for TurboSign)
      * @param string|null $senderName Sender name for signature requests (optional but recommended)
      * @param bool $skipSenderValidation Skip senderEmail validation (used by modules like Deliverable)
+     * @param ClientContext|null $clientContext Describes the calling environment for the signature audit
+     *                                          trail. The SDK auto-detects a descriptive User-Agent, timezone,
+     *                                          language, and device fingerprint from the host; supply this to
+     *                                          override them or to report a client IP (ipAddress) for geolocation.
      */
     public function __construct(
         public ?string $apiKey = null,
@@ -29,6 +34,7 @@ final class HttpClientConfig
         public ?string $senderEmail = null,
         public ?string $senderName = null,
         bool $skipSenderValidation = false,
+        public ?ClientContext $clientContext = null,
     ) {
         // Validate required fields
         if (empty($this->apiKey) && empty($this->accessToken)) {
@@ -37,8 +43,8 @@ final class HttpClientConfig
 
         if (empty($this->senderEmail) && !$skipSenderValidation) {
             throw new ValidationException(
-                'senderEmail is required. This email will be used as the reply-to address for signature requests. '
-                . 'Without it, emails will default to "API Service User via TurboSign".'
+                'senderEmail is required. It is used as the reply-to address for signature requests '
+                . 'and recorded as the sender in the audit trail. The API rejects sends without it.'
             );
         }
     }

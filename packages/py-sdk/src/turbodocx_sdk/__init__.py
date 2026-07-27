@@ -5,7 +5,7 @@ Official SDK for TurboDocx API - Digital signatures, document generation,
 and AI-powered workflows.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.6.0"
 
 from typing import Optional
 
@@ -14,6 +14,7 @@ from .modules.partner import TurboPartner
 from .modules.webhooks import TurboWebhooks
 from .modules.deliverable import Deliverable
 from .utils.verify_webhook_signature import verify_webhook_signature
+from .utils.client_context import ClientContext
 from .types.webhooks import (
     WebhookEvent,
     WEBHOOK_EVENTS,
@@ -102,6 +103,7 @@ __all__ = [
     "Deliverable",
     "verify_webhook_signature",
     "TurboQuote",
+    "ClientContext",
     "HttpClient",
     "PartnerHttpClient",
     "TurboDocxError",

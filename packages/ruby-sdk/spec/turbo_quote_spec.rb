@@ -146,6 +146,27 @@ RSpec.describe TurboDocxSdk::TurboQuote do
       expect(mock_client).to have_received(:get).with("/v1/quotes/q-1")
     end
 
+    it "folds the server-resolved preparedBy onto the quote" do
+      # "preparedBy" rides as a sibling of "result" on the wire — it is the backend-resolved
+      # "Prepared by" identity and must be preferred over "creator" for display.
+      mock_quote = { "id" => "q-1", "name" => "Test Quote", "status" => "sent", "lineItems" => [] }
+      mock_prepared_by = { "name" => "Acme Billing Integration", "email" => "billing@acme.com" }
+      allow(mock_client).to receive(:get).and_return({ "result" => mock_quote, "preparedBy" => mock_prepared_by })
+
+      result = described_class.get_quote("q-1")
+
+      expect(result["preparedBy"]).to eq(mock_prepared_by)
+    end
+
+    it "leaves preparedBy absent when the response omits it" do
+      mock_quote = { "id" => "q-1", "name" => "Test Quote", "status" => "sent", "lineItems" => [] }
+      allow(mock_client).to receive(:get).and_return({ "result" => mock_quote })
+
+      result = described_class.get_quote("q-1")
+
+      expect(result["preparedBy"]).to be_nil
+    end
+
     it "updates a quote and unwraps result" do
       mock_quote = { "id" => "q-1", "name" => "Updated Name", "taxRate" => 10 }
       allow(mock_client).to receive(:patch).and_return({ "result" => mock_quote, "message" => "Quote updated successfully" })

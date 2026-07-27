@@ -11,6 +11,7 @@ use Psr\Http\Message\ResponseInterface;
 use TurboDocx\Config\HttpClientConfig;
 use TurboDocx\Config\PartnerClientConfig;
 use TurboDocx\Config\QuoteClientConfig;
+use TurboDocx\Utils\ClientContext;
 use TurboDocx\Utils\ResponseNormalizer;
 use TurboDocx\Exceptions\AuthenticationException;
 use TurboDocx\Exceptions\AuthorizationException;
@@ -248,18 +249,49 @@ class HttpClient
             if ($response !== null) {
                 $statusCode = $response->getStatusCode();
                 $body = json_decode($response->getBody()->getContents(), true);
-                $message = is_array($body)
-                    ? ($body['message'] ?? $body['error'] ?? $e->getMessage())
-                    : $e->getMessage();
+
+                // The API reports failures in a few shapes; read all of them so the caller always
+                // gets the actionable reason rather than a generic envelope.
+                //
+                // Per-field/per-row reasons live under data.errors[] (validation) or a top-level
+                // errors[] (bulk). These say what to fix; the envelope message does not.
+                $details = is_array($body) ? ($body['data']['errors'] ?? $body['errors'] ?? []) : [];
+                $fieldErrors = [];
+                foreach ($details as $detail) {
+                    if (is_array($detail) && !empty($detail['message'])) {
+                        $fieldErrors[] = $detail['message'];
+                    }
+                }
+
+                // `error` may be a nested object (['message','code'] — the TurboQuote surface)
+                // rather than a string; using it blindly would surface "Array".
+                $rawError = is_array($body) ? ($body['error'] ?? null) : null;
+                $nestedMessage = is_array($rawError) ? ($rawError['message'] ?? null) : null;
+                $errorString = is_string($rawError) ? $rawError : null;
+
+                $topMessage = is_array($body) ? ($body['message'] ?? null) : null;
+
+                $message = $fieldErrors !== []
+                    ? implode('; ', $fieldErrors)
+                    : ($topMessage ?? $nestedMessage ?? $errorString ?? $e->getMessage());
+
+                // The specific reason code, so callers can branch on it rather than only on the
+                // HTTP class. It appears as `code`, `type`, nested `error.code`, or `error` as a
+                // bare string alongside `message` — that last only counts as a code when a
+                // separate message exists, since alone the string IS the message.
+                $nestedCode = is_array($rawError) ? ($rawError['code'] ?? null) : null;
+                $code = (is_array($body) ? ($body['code'] ?? $body['type'] ?? null) : null)
+                    ?? $nestedCode
+                    ?? (($topMessage !== null && $errorString !== null) ? $errorString : null);
 
                 throw match ($statusCode) {
-                    400 => new ValidationException($message, previous: $e),
-                    401 => new AuthenticationException($message, previous: $e),
-                    403 => new AuthorizationException($message, previous: $e),
-                    404 => new NotFoundException($message, previous: $e),
-                    409 => new ConflictException($message, previous: $e),
-                    429 => new RateLimitException($message, previous: $e),
-                    default => new TurboDocxException($message, $statusCode, previous: $e),
+                    400 => new ValidationException($message, $code, previous: $e),
+                    401 => new AuthenticationException($message, $code, previous: $e),
+                    403 => new AuthorizationException($message, $code, previous: $e),
+                    404 => new NotFoundException($message, $code, previous: $e),
+                    409 => new ConflictException($message, $code, previous: $e),
+                    429 => new RateLimitException($message, $code, previous: $e),
+                    default => new TurboDocxException($message, $statusCode, $code, previous: $e),
                 };
             }
         }
@@ -347,10 +379,23 @@ class HttpClient
      */
     private function getHeaders(HttpClientConfig|PartnerClientConfig|QuoteClientConfig $config): array
     {
+        // Client-context headers (User-Agent, X-Timezone, Accept-Language,
+        // X-Forwarded-For, X-Device-Fingerprint) describe the calling environment
+        // so the signature audit trail records real device/location. Merge them
+        // first so the SDK's own protocol headers below always win over caller
+        // context. Attached for every module (matching the other SDKs) — only
+        // HttpClientConfig (TurboSign) carries a caller override; Partner/Quote
+        // get the auto-detected values.
         $headers = [
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ];
+
+        $clientContext = $config instanceof HttpClientConfig ? $config->clientContext : null;
+        $headers = array_merge(
+            ClientContext::resolveHeaders($clientContext),
+            $headers
+        );
 
         if ($config instanceof PartnerClientConfig) {
             $headers['Authorization'] = "Bearer {$config->partnerApiKey}";

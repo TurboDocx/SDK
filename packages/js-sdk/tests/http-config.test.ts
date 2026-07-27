@@ -35,7 +35,9 @@ describe('HttpClient Configuration', () => {
           orgId: 'test-org-id',
         });
       }).toThrow(
-        /senderEmail is required.*reply-to address.*API Service User via TurboSign/i
+        // No fallback sender is promised any more: the API rejects a send with no sender
+        // email instead of mailing from the synthetic API-service address.
+        /senderEmail is required.*reply-to address.*audit trail/i
       );
     });
 

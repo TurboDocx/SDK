@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
 from ..http import PartnerHttpClient
+from ..utils.client_context import ClientContext
 
 
 # --- Scope Constants ---
@@ -65,7 +66,8 @@ class TurboPartner:
         cls,
         partner_api_key: Optional[str] = None,
         partner_id: Optional[str] = None,
-        base_url: str = "https://api.turbodocx.com"
+        base_url: str = "https://api.turbodocx.com",
+        client_context: Optional[ClientContext] = None
     ) -> None:
         """
         Configure the TurboPartner module with partner API credentials
@@ -74,6 +76,10 @@ class TurboPartner:
             partner_api_key: Partner API key (starts with TDXP-)
             partner_id: Partner UUID
             base_url: Base URL for the API (optional)
+            client_context: Describe the calling environment for the partner audit
+                log (optional). The SDK auto-detects a descriptive User-Agent,
+                timezone, language, and device fingerprint from the host; supply
+                this to override them or to report a client IP (ip_address).
 
         Example:
             >>> TurboPartner.configure(
@@ -84,7 +90,8 @@ class TurboPartner:
         cls._client = PartnerHttpClient(
             partner_api_key=partner_api_key,
             partner_id=partner_id,
-            base_url=base_url
+            base_url=base_url,
+            client_context=client_context
         )
         cls._partner_id = cls._client.partner_id
 

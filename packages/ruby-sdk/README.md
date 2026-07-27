@@ -162,7 +162,7 @@ TurboDocxSdk::TurboSign.configure(
 )
 ```
 
-**Important:** `sender_email` is **REQUIRED**. This email is used as the reply-to address for signature request emails. The `sender_name` is optional but strongly recommended for a professional appearance.
+**Important:** `sender_email` is **REQUIRED**. It is used as the reply-to address for signature request emails and recorded as the sender in the audit trail. An API key has no mailbox of its own, so the API rejects a send without it rather than mailing from an unmonitored address. `sender_name` is optional — it defaults to the name of your API key.
 
 ### Environment Variables
 
@@ -840,6 +840,30 @@ sent = TurboDocxSdk::TurboQuote.send_quote(quote["id"])
 puts sent["message"]
 ```
 
+#### Sender identity — "Prepared by"
+
+The quote's **"Prepared by"** name and email are resolved by the server, not by whoever
+downloads or sends the quote. Precedence: the org **quote template's** sender fields first,
+then the quote's **creator**.
+
+A quote created with an **API key** has no mailbox of its own — so its sender email can only
+come from the quote template. **If your org's quote template has no sender email set,
+`create_quote` (and `duplicate_quote`) raise `ValidationError` (`400 SenderEmailRequired`)** for
+an API-key caller. Set a sender email on the template once (via `update_template`) and every
+subsequent create/duplicate/send resolves cleanly. Human (JWT) callers are never blocked — their
+own email is the fallback.
+
+`get_quote` returns the resolved identity under `"preparedBy"` — **prefer it over `"creator"`**
+for any customer-facing display (`"creator"` may be the internal API service account). The
+`"email"` key may be absent for an API-created quote:
+
+```ruby
+quote = TurboDocxSdk::TurboQuote.get_quote(quote_id)
+prepared = quote["preparedBy"] || {}
+puts prepared["name"]   # e.g. "Acme Billing Integration" or the template sender
+puts prepared["email"]  # may be nil — render a placeholder
+```
+
 #### Quote terms and auto-renewal
 
 `termDays` defaults to **60** and accepts up to **3650** (10 years). The special value **`-1`** means auto-renewal, and it is the only case where `renewalPeriod` is allowed — in fact it is then **required**:
@@ -1140,6 +1164,29 @@ end
 | `TurboDocxSdk::TurboDocxError` | base class |
 
 ---
+
+### Error Codes
+
+`code` is **always populated** — an API-supplied code when there is one, otherwise the error
+class's default (`VALIDATION_ERROR`, `AUTHENTICATION_ERROR`, `AUTHORIZATION_ERROR`,
+`NOT_FOUND`, `CONFLICT`, `RATE_LIMIT_EXCEEDED`, `NETWORK_ERROR`). Branch on it without a null
+check.
+
+The API also returns more specific codes, passed through unchanged:
+
+| Code | Status | Meaning |
+|:-----|:-------|:--------|
+| `SenderEmailRequired` | 400 | No sender email resolvable. TurboSign: set `senderEmail` on the request. TurboQuote: configure one on the org quote template (Quote Settings). |
+| `SenderNameRequired` | 400 | No sender name resolvable — the API key has no usable name. |
+| `QuoteHasNoLineItems` | 400 | The quote has no line items. Add at least one before sending. |
+| `QuoteExpired` | 400 | The quote is past its `validUntil` date. |
+| `QuoteValidUntilRequired` | 400 | The quote has no `validUntil` date set. |
+| `QuoteNotSendable` | 400 | Only draft quotes can be sent. |
+| `QuoteContactRequired` | 400 | The quote's contact is missing a name or email. |
+| `QuoteCustomerInactive` | 400 | The quote's company or contact was deleted or deactivated. |
+
+Error **messages** carry the actionable reason, not a generic envelope — multiple field errors
+are joined with `"; "`, e.g. `"name" is not allowed to be empty; "companyId" must be a valid GUID`.
 
 ## Requirements
 

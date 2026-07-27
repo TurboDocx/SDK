@@ -31,7 +31,8 @@ RSpec.describe TurboDocxSdk::TurboSign do
         org_id: "test-org-id",
         sender_email: "test@company.com",
         sender_name: nil,
-        base_url: nil
+        base_url: nil,
+        client_context: nil
       )
     end
 
@@ -48,7 +49,8 @@ RSpec.describe TurboDocxSdk::TurboSign do
         org_id: "test-org-id",
         sender_email: "test@company.com",
         sender_name: nil,
-        base_url: "https://custom-api.example.com"
+        base_url: "https://custom-api.example.com",
+        client_context: nil
       )
     end
 
@@ -64,7 +66,8 @@ RSpec.describe TurboDocxSdk::TurboSign do
         org_id: "org-123",
         sender_email: "test@company.com",
         sender_name: nil,
-        base_url: nil
+        base_url: nil,
+        client_context: nil
       )
     end
 
@@ -81,7 +84,8 @@ RSpec.describe TurboDocxSdk::TurboSign do
         org_id: "org-1",
         sender_email: "sender@company.com",
         sender_name: "Sales Team",
-        base_url: nil
+        base_url: nil,
+        client_context: nil
       )
     end
 

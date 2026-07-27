@@ -36,6 +36,7 @@ public class Quote {
     private PriceBook priceBook;
     private QuoteCreator creator;
     private QuoteStatusInfo statusInfo;
+    private QuotePreparedBy preparedBy;
 
     public String getId() { return id; }
     public String getOrgId() { return orgId; }
@@ -68,7 +69,17 @@ public class Quote {
     public QuoteCreator getCreator() { return creator; }
     public QuoteStatusInfo getStatusInfo() { return statusInfo; }
 
+    /**
+     * The resolved "Prepared by" identity shown on the quote PDF and preview. Resolved
+     * server-side from the org template then the creator; for an API-key-created quote it is
+     * the API key's label with no email. Prefer over {@link #getCreator()} for customer-facing
+     * display — the creator may be the internal API service account.
+     */
+    public QuotePreparedBy getPreparedBy() { return preparedBy; }
+
     public void setStatusInfo(QuoteStatusInfo statusInfo) { this.statusInfo = statusInfo; }
+
+    public void setPreparedBy(QuotePreparedBy preparedBy) { this.preparedBy = preparedBy; }
 
     /**
      * Nested creator type.
@@ -81,5 +92,17 @@ public class Quote {
         public String getId() { return id; }
         public String getFirstName() { return firstName; }
         public String getLastName() { return lastName; }
+    }
+
+    /**
+     * Nested "Prepared by" type. Both fields may be null (an API-created quote whose org
+     * template has no sender email resolves to a name with no email).
+     */
+    public static class QuotePreparedBy {
+        private String name;
+        private String email;
+
+        public String getName() { return name; }
+        public String getEmail() { return email; }
     }
 }

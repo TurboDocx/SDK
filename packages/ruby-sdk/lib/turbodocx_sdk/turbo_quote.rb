@@ -67,15 +67,21 @@ module TurboDocxSdk
       # Get a quote by ID.
       #
       # @param id [String]
-      # @return [Hash] the quote, with "statusInfo" merged in if present
+      # @return [Hash] the quote, with "statusInfo" and "preparedBy" merged in if present
       # @raise [NotFoundError] if the quote does not exist
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
+      #
+      # "preparedBy" is the resolved "Prepared by" identity ({ "name", "email" }) shown on the
+      # quote PDF and preview. Resolved server-side from the org template then the creator; for
+      # an API-key-created quote it is the API key's label with no email. Prefer it over
+      # "creator" for customer-facing display — "creator" may be the internal API service user.
       def get_quote(id)
         client = get_client
         response = client.get("/v1/quotes/#{id}")
         quote = response["result"]
         quote["statusInfo"] = response["statusInfo"] if response["statusInfo"]
+        quote["preparedBy"] = response["preparedBy"] if response["preparedBy"]
         quote
       end
 

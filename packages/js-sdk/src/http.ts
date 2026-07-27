@@ -6,14 +6,15 @@ import * as fs from 'fs';
 import * as nodePath from 'path';
 import { TurboDocxError, AuthenticationError, AuthorizationError, ValidationError, NotFoundError, ConflictError, RateLimitError, NetworkError } from './utils/errors';
 import { normalizeResponse } from './utils/response-normalizer';
+import { ClientContext, resolveClientContextHeaders } from './utils/client-context';
 
 /**
  * Configuration for the TurboDocx HTTP client
  *
  * @property apiKey - TurboDocx API key (required)
  * @property orgId - Organization ID (required)
- * @property senderEmail - Reply-to email address for signature requests (required for TurboSign). This email will be used as the reply-to address when sending signature request emails. If not provided, emails will default to "API Service User via TurboSign".
- * @property senderName - Sender name for signature requests (optional but strongly recommended). This name will appear in signature request emails. Without this, the sender will appear as "API Service User".
+ * @property senderEmail - Reply-to email address for signature requests (required for TurboSign). Used as the reply-to address on signature request emails and recorded as the sender in the audit trail. An API key has no mailbox of its own, so the API rejects a send without it rather than mailing from an unmonitored address.
+ * @property senderName - Sender name for signature requests (optional). Appears in signature request emails and the audit trail. Defaults to the name of your API key.
  * @property accessToken - OAuth access token (alternative to apiKey)
  * @property baseUrl - API base URL (optional, defaults to https://api.turbodocx.com)
  * @property skipSenderValidation - Skip senderEmail validation (used internally by TurboPartner)
@@ -26,6 +27,14 @@ export interface HttpClientConfig {
   senderEmail?: string;
   senderName?: string;
   skipSenderValidation?: boolean;
+  /**
+   * Describes the calling environment for the signature audit trail. The SDK
+   * auto-detects a descriptive User-Agent, timezone, and device fingerprint
+   * from the host; supply this to override them or to report a client IP
+   * (`ipAddress`) so the audit trail can geolocate the caller. See
+   * {@link ClientContext}.
+   */
+  clientContext?: ClientContext;
 }
 
 /**
@@ -122,6 +131,8 @@ export class HttpClient {
   private orgId?: string;
   private senderEmail?: string;
   private senderName?: string;
+  /** Resolved client-context headers (User-Agent, X-Timezone, ...), computed once. */
+  private contextHeaders: Record<string, string>;
 
   constructor(config: HttpClientConfig = {}) {
     this.apiKey = config.apiKey || process.env.TURBODOCX_API_KEY;
@@ -130,13 +141,14 @@ export class HttpClient {
     this.orgId = config.orgId || process.env.TURBODOCX_ORG_ID;
     this.senderEmail = config.senderEmail || process.env.TURBODOCX_SENDER_EMAIL;
     this.senderName = config.senderName || process.env.TURBODOCX_SENDER_NAME;
+    this.contextHeaders = resolveClientContextHeaders(config.clientContext);
 
     if (!this.apiKey && !this.accessToken) {
       throw new AuthenticationError('API key or access token is required');
     }
 
     if (!this.senderEmail && !config.skipSenderValidation) {
-      throw new ValidationError('senderEmail is required. This email will be used as the reply-to address for signature requests. Without it, emails will default to "API Service User via TurboSign".');
+      throw new ValidationError('senderEmail is required. It is used as the reply-to address for signature requests and recorded as the sender in the audit trail. The API rejects sends without it.');
     }
   }
 
@@ -166,7 +178,13 @@ export class HttpClient {
   }
 
   private getHeaders(): Record<string, string> {
+    // Client-context headers (User-Agent, X-Timezone, X-Forwarded-For,
+    // X-Device-Fingerprint) describe the calling environment so the signature
+    // audit trail records real device/location instead of "node"/"Unknown".
+    // Spread them first so the SDK's own protocol headers (Content-Type,
+    // Authorization, org id) always win over caller-supplied context.
     const headers: Record<string, string> = {
+      ...this.contextHeaders,
       'Content-Type': 'application/json',
     };
 
@@ -182,6 +200,16 @@ export class HttpClient {
       headers['x-rapiddocx-org-id'] = this.orgId;
     }
 
+    return headers;
+  }
+
+  /**
+   * Headers for multipart/form-data requests: same as {@link getHeaders} but
+   * without `Content-Type` so `fetch` can set the multipart boundary itself.
+   */
+  private getMultipartHeaders(): Record<string, string> {
+    const headers = this.getHeaders();
+    delete headers['Content-Type'];
     return headers;
   }
 
@@ -260,15 +288,7 @@ export class HttpClient {
       }
 
       // Make request for browser File
-      const headers: Record<string, string> = {};
-      if (this.accessToken) {
-        headers['Authorization'] = `Bearer ${this.accessToken}`;
-      } else if (this.apiKey) {
-        headers['Authorization'] = `Bearer ${this.apiKey}`;
-      }
-      if (this.orgId) {
-        headers['x-rapiddocx-org-id'] = this.orgId;
-      }
+      const headers = this.getMultipartHeaders();
 
       try {
         const response = await fetch(url, {
@@ -303,17 +323,7 @@ export class HttpClient {
       });
     }
 
-    const headers: Record<string, string> = {};
-    // API key is sent as Bearer token (backend expects Authorization header)
-    if (this.accessToken) {
-      headers['Authorization'] = `Bearer ${this.accessToken}`;
-    } else if (this.apiKey) {
-      headers['Authorization'] = `Bearer ${this.apiKey}`;
-    }
-    // Organization ID header (required by backend)
-    if (this.orgId) {
-      headers['x-rapiddocx-org-id'] = this.orgId;
-    }
+    const headers = this.getMultipartHeaders();
 
     try {
       const response = await fetch(url, {
@@ -338,34 +348,76 @@ export class HttpClient {
 
   private async handleErrorResponse(response: Response): Promise<never> {
     let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+    let errorCode: string | undefined;
 
     try {
-      const errorData = await response.json() as { message?: string; error?: string; code?: string };
-      errorMessage = errorData.message || errorData.error || errorMessage;
+      // The API reports failures in a few shapes; read all of them so the caller always gets
+      // the actionable reason rather than a generic envelope (or "[object Object]").
+      const errorData = (await response.json()) as {
+        message?: string;
+        // May be a plain string OR a nested object — the TurboQuote surface returns
+        // `{ error: { message, code } }`, which stringifies to "[object Object]" if treated
+        // as a string.
+        error?: string | { message?: string; code?: string };
+        code?: string;
+        // Several handlers report the machine-readable reason as `type` rather than `code`.
+        type?: string;
+        // Field-level validation reasons: nested for celebrate/Joi, top-level for bulk.
+        data?: { errors?: Array<{ message?: string }> };
+        errors?: Array<{ message?: string }>;
+      };
+
+      // Per-field/per-row reasons are the most useful thing we can report ("senderEmail must
+      // be a valid email address", "Row 3: name is required") — the envelope message is
+      // generic ("There was an issue validating the body") and doesn't say what to fix.
+      const fieldErrors = (errorData.data?.errors ?? errorData.errors ?? [])
+        .map((detail) => detail?.message)
+        .filter((message): message is string => Boolean(message));
+
+      const nestedError = typeof errorData.error === 'object' && errorData.error !== null ? errorData.error : null;
+      const errorString = typeof errorData.error === 'string' ? errorData.error : undefined;
+
+      errorMessage =
+        (fieldErrors.length > 0 ? fieldErrors.join('; ') : '') ||
+        errorData.message ||
+        nestedError?.message ||
+        errorString ||
+        errorMessage;
+
+      // The specific reason code, so callers can branch on it (err.code === 'QUOTE_NOT_FOUND')
+      // rather than only on the HTTP class. It appears in four places depending on the handler:
+      //   `code`  · `type`  · nested `error.code`  · `error` as a bare string alongside `message`
+      // That last case is why the string form is only treated as a code when `message` is also
+      // present — when it stands alone it IS the message (already consumed above).
+      errorCode =
+        errorData.code ||
+        errorData.type ||
+        nestedError?.code ||
+        (errorData.message && errorString ? errorString : undefined);
     } catch {
       // If response is not JSON, use status text
     }
 
     if (response.status === 400) {
-      throw new ValidationError(errorMessage);
+      throw new ValidationError(errorMessage, errorCode);
     }
     if (response.status === 401) {
-      throw new AuthenticationError(errorMessage);
+      throw new AuthenticationError(errorMessage, errorCode);
     }
     if (response.status === 403) {
-      throw new AuthorizationError(errorMessage);
+      throw new AuthorizationError(errorMessage, errorCode);
     }
     if (response.status === 404) {
-      throw new NotFoundError(errorMessage);
+      throw new NotFoundError(errorMessage, errorCode);
     }
     if (response.status === 409) {
-      throw new ConflictError(errorMessage);
+      throw new ConflictError(errorMessage, errorCode);
     }
     if (response.status === 429) {
-      throw new RateLimitError(errorMessage);
+      throw new RateLimitError(errorMessage, errorCode);
     }
 
-    throw new TurboDocxError(errorMessage, response.status);
+    throw new TurboDocxError(errorMessage, response.status, errorCode);
   }
 
   async get<T>(path: string, params?: Record<string, any>, options?: RequestInit): Promise<T> {
@@ -438,8 +490,7 @@ export class HttpClient {
     }
 
     const fullUrl = `${this.baseUrl}${url}`;
-    const headers = this.getHeaders();
-    delete headers['Content-Type'];
+    const headers = this.getMultipartHeaders();
 
     try {
       const response = await fetch(fullUrl, { method: 'GET', headers });
@@ -465,15 +516,7 @@ export class HttpClient {
 
   private async requestFormData<T>(method: string, path: string, formData: FormData): Promise<T> {
     const url = `${this.baseUrl}${path}`;
-    const headers: Record<string, string> = {};
-    if (this.accessToken) {
-      headers['Authorization'] = `Bearer ${this.accessToken}`;
-    } else if (this.apiKey) {
-      headers['Authorization'] = `Bearer ${this.apiKey}`;
-    }
-    if (this.orgId) {
-      headers['x-rapiddocx-org-id'] = this.orgId;
-    }
+    const headers = this.getMultipartHeaders();
 
     try {
       const response = await fetch(url, { method, headers, body: formData });

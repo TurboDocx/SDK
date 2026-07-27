@@ -9,6 +9,7 @@ import type { BulkImportResult, PaginationParams, SuccessResponse } from '../typ
 import type {
   Quote,
   QuoteStatusInfo,
+  QuotePreparedBy,
   CreateQuoteRequest,
   UpdateQuoteRequest,
   ListQuotesOptions,
@@ -195,10 +196,20 @@ export class TurboQuote {
 
   static async getQuote(id: string): Promise<Quote> {
     const client = this.getClient();
-    const response = await client.get<{ result: Quote; statusInfo?: QuoteStatusInfo }>(`/v1/quotes/${id}`);
+    const response = await client.get<{
+      result: Quote;
+      statusInfo?: QuoteStatusInfo;
+      preparedBy?: QuotePreparedBy;
+    }>(`/v1/quotes/${id}`);
     const quote = response.result;
     if (response.statusInfo) {
       quote.statusInfo = response.statusInfo;
+    }
+    // preparedBy is a sibling of `result` on the wire; fold it onto the quote so callers read
+    // one object (same pattern as statusInfo). It is the resolved "Prepared by" identity —
+    // prefer it over `creator` for display.
+    if (response.preparedBy) {
+      quote.preparedBy = response.preparedBy;
     }
     return quote;
   }

@@ -21,6 +21,16 @@ public class TurboDocxException extends RuntimeException {
         this(message, 0, null);
     }
 
+    /**
+     * Returns {@code code} when the API supplied one, otherwise the subclass default.
+     * Not every backend error carries a machine-readable code, but {@code getCode()} must
+     * still be branchable — so the default fills the gap. An API-supplied code always wins.
+     * Kept identical across all six SDKs.
+     */
+    static String orDefault(String code, String defaultCode) {
+        return (code == null || code.isEmpty()) ? defaultCode : code;
+    }
+
     public int getStatusCode() {
         return statusCode;
     }
@@ -33,11 +43,13 @@ public class TurboDocxException extends RuntimeException {
      * Exception thrown when authentication fails (HTTP 401)
      */
     public static class AuthenticationException extends TurboDocxException {
+        public static final String DEFAULT_CODE = "AUTHENTICATION_ERROR";
+
         public AuthenticationException(String message, String code) {
-            super(message, 401, code);
+            super(message, 401, orDefault(code, DEFAULT_CODE));
         }
         public AuthenticationException(String message) {
-            super(message, 401, null);
+            this(message, null);
         }
     }
 
@@ -46,11 +58,13 @@ public class TurboDocxException extends RuntimeException {
      * permissions required by the route (HTTP 403).
      */
     public static class AuthorizationException extends TurboDocxException {
+        public static final String DEFAULT_CODE = "AUTHORIZATION_ERROR";
+
         public AuthorizationException(String message, String code) {
-            super(message, 403, code);
+            super(message, 403, orDefault(code, DEFAULT_CODE));
         }
         public AuthorizationException(String message) {
-            super(message, 403, null);
+            this(message, null);
         }
     }
 
@@ -58,11 +72,13 @@ public class TurboDocxException extends RuntimeException {
      * Exception thrown when validation fails (HTTP 400)
      */
     public static class ValidationException extends TurboDocxException {
+        public static final String DEFAULT_CODE = "VALIDATION_ERROR";
+
         public ValidationException(String message, String code) {
-            super(message, 400, code);
+            super(message, 400, orDefault(code, DEFAULT_CODE));
         }
         public ValidationException(String message) {
-            super(message, 400, null);
+            this(message, null);
         }
     }
 
@@ -70,11 +86,13 @@ public class TurboDocxException extends RuntimeException {
      * Exception thrown when resource is not found (HTTP 404)
      */
     public static class NotFoundException extends TurboDocxException {
+        public static final String DEFAULT_CODE = "NOT_FOUND";
+
         public NotFoundException(String message, String code) {
-            super(message, 404, code);
+            super(message, 404, orDefault(code, DEFAULT_CODE));
         }
         public NotFoundException(String message) {
-            super(message, 404, null);
+            this(message, null);
         }
     }
 
@@ -84,11 +102,13 @@ public class TurboDocxException extends RuntimeException {
      * with a name that already exists.
      */
     public static class ConflictException extends TurboDocxException {
+        public static final String DEFAULT_CODE = "CONFLICT";
+
         public ConflictException(String message, String code) {
-            super(message, 409, code);
+            super(message, 409, orDefault(code, DEFAULT_CODE));
         }
         public ConflictException(String message) {
-            super(message, 409, null);
+            this(message, null);
         }
     }
 
@@ -96,11 +116,13 @@ public class TurboDocxException extends RuntimeException {
      * Exception thrown when rate limit is exceeded (HTTP 429)
      */
     public static class RateLimitException extends TurboDocxException {
+        public static final String DEFAULT_CODE = "RATE_LIMIT_EXCEEDED";
+
         public RateLimitException(String message, String code) {
-            super(message, 429, code);
+            super(message, 429, orDefault(code, DEFAULT_CODE));
         }
         public RateLimitException(String message) {
-            super(message, 429, null);
+            this(message, null);
         }
     }
 
@@ -108,8 +130,10 @@ public class TurboDocxException extends RuntimeException {
      * Exception thrown when a network error occurs
      */
     public static class NetworkException extends TurboDocxException {
+        public static final String DEFAULT_CODE = "NETWORK_ERROR";
+
         public NetworkException(String message) {
-            super(message, 0, null);
+            super(message, 0, DEFAULT_CODE);
         }
     }
 }

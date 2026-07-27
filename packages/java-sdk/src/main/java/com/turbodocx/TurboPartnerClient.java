@@ -19,7 +19,8 @@ public final class TurboPartnerClient {
     private final TurboPartner turboPartner;
 
     private TurboPartnerClient(Builder builder) {
-        PartnerHttpClient httpClient = new PartnerHttpClient(builder.baseUrl, builder.partnerApiKey);
+        PartnerHttpClient httpClient = new PartnerHttpClient(
+                builder.baseUrl, builder.partnerApiKey, builder.clientContext);
         this.turboPartner = new TurboPartner(httpClient, builder.partnerId);
     }
 
@@ -37,6 +38,7 @@ public final class TurboPartnerClient {
         private String partnerApiKey;
         private String partnerId;
         private String baseUrl;
+        private ClientContext clientContext;
 
         /**
          * Set the partner API key (required). Must start with TDXP-.
@@ -59,6 +61,17 @@ public final class TurboPartnerClient {
          */
         public Builder baseUrl(String baseUrl) {
             this.baseUrl = baseUrl;
+            return this;
+        }
+
+        /**
+         * Describe the calling environment for the partner audit log (optional).
+         * The SDK auto-detects a descriptive User-Agent, timezone, language, and
+         * device fingerprint from the host; supply this to override them or to
+         * report a client IP (ipAddress).
+         */
+        public Builder clientContext(ClientContext clientContext) {
+            this.clientContext = clientContext;
             return this;
         }
 

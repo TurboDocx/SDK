@@ -227,6 +227,39 @@ class TurboQuoteTest {
         }
 
         @Test
+        @DisplayName("should fold the server-resolved preparedBy onto the quote")
+        void getQuoteFoldsPreparedBy() throws Exception {
+            // preparedBy rides as a sibling of "result" on the wire — it is the backend-resolved
+            // "Prepared by" identity and must be preferred over getCreator() for display.
+            Map<String, Object> preparedBy = new HashMap<>();
+            preparedBy.put("name", "Acme Billing Integration");
+            preparedBy.put("email", "billing@acme.com");
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("result", createQuoteMap("q-1", "Test Quote", "sent"));
+            response.put("preparedBy", preparedBy);
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            Quote result = client.turboQuote().getQuote("q-1");
+
+            assertNotNull(result.getPreparedBy());
+            assertEquals("Acme Billing Integration", result.getPreparedBy().getName());
+            assertEquals("billing@acme.com", result.getPreparedBy().getEmail());
+        }
+
+        @Test
+        @DisplayName("should leave preparedBy null when the response omits it")
+        void getQuoteWithoutPreparedBy() throws Exception {
+            Map<String, Object> response = new HashMap<>();
+            response.put("result", createQuoteMap("q-1", "Test Quote", "sent"));
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            Quote result = client.turboQuote().getQuote("q-1");
+
+            assertNull(result.getPreparedBy());
+        }
+
+        @Test
         @DisplayName("should update a quote and unwrap result")
         void updateQuote() throws Exception {
             Map<String, Object> response = new HashMap<>();

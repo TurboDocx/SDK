@@ -14,43 +14,43 @@ module TurboDocxSdk
 
   # Raised when authentication fails (HTTP 401).
   class AuthenticationError < TurboDocxError
-    def initialize(message = "Authentication failed")
-      super(message, status_code: 401, code: "AUTHENTICATION_ERROR")
+    def initialize(message = "Authentication failed", code: nil)
+      super(message, status_code: 401, code: code || "AUTHENTICATION_ERROR")
     end
   end
 
   # Raised when the caller is authenticated but lacks the required permissions (HTTP 403).
   class AuthorizationError < TurboDocxError
-    def initialize(message = "Forbidden: API key lacks required permissions")
-      super(message, status_code: 403, code: "AUTHORIZATION_ERROR")
+    def initialize(message = "Forbidden: API key lacks required permissions", code: nil)
+      super(message, status_code: 403, code: code || "AUTHORIZATION_ERROR")
     end
   end
 
   # Raised when request validation fails (HTTP 400).
   class ValidationError < TurboDocxError
-    def initialize(message)
-      super(message, status_code: 400, code: "VALIDATION_ERROR")
+    def initialize(message, code: nil)
+      super(message, status_code: 400, code: code || "VALIDATION_ERROR")
     end
   end
 
   # Raised when the requested resource is not found (HTTP 404).
   class NotFoundError < TurboDocxError
-    def initialize(message = "Resource not found")
-      super(message, status_code: 404, code: "NOT_FOUND")
+    def initialize(message = "Resource not found", code: nil)
+      super(message, status_code: 404, code: code || "NOT_FOUND")
     end
   end
 
   # Raised when a request conflicts with the current resource state (HTTP 409).
   class ConflictError < TurboDocxError
-    def initialize(message = "Conflict with existing resource")
-      super(message, status_code: 409, code: "CONFLICT")
+    def initialize(message = "Conflict with existing resource", code: nil)
+      super(message, status_code: 409, code: code || "CONFLICT")
     end
   end
 
   # Raised when rate limit is exceeded (HTTP 429).
   class RateLimitError < TurboDocxError
-    def initialize(message = "Rate limit exceeded")
-      super(message, status_code: 429, code: "RATE_LIMIT_EXCEEDED")
+    def initialize(message = "Rate limit exceeded", code: nil)
+      super(message, status_code: 429, code: code || "RATE_LIMIT_EXCEEDED")
     end
   end
 

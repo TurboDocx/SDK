@@ -18,11 +18,20 @@ When bumping, update **all** of these to the identical `MAJOR.MINOR.PATCH` strin
 | SDK | File | Field |
 |-----|------|-------|
 | js-sdk | `packages/js-sdk/package.json` | `"version"` |
-| py-sdk | `packages/py-sdk/pyproject.toml` | `version = "…"` |
+| py-sdk | `packages/py-sdk/pyproject.toml` **and** `packages/py-sdk/src/turbodocx_sdk/__init__.py` | `version = "…"` + `__version__ = "…"` |
 | go-sdk | `packages/go-sdk/turbodocx.go` | `const Version = "…"` |
 | php-sdk | `packages/php-sdk/composer.json` | `"version"` |
-| java-sdk | `packages/java-sdk/pom.xml` | `<version>` |
+| java-sdk | `packages/java-sdk/pom.xml` **and** `packages/java-sdk/src/main/java/com/turbodocx/ClientContext.java` | `<version>` + `static final String VERSION` |
 | ruby-sdk | `packages/ruby-sdk/turbodocx-sdk.gemspec` **and** `packages/ruby-sdk/lib/turbodocx_sdk.rb` | `spec.version` + `VERSION =` (Ruby carries the version in two places — keep them in sync) |
+
+**Why py/java/ruby carry the version twice:** the registry manifest (`pyproject.toml`,
+`pom.xml`, `.gemspec`) is not readable at runtime, but the client-context User-Agent must
+emit `@turbodocx/sdk/<version>` — the exact token the backend keys on to classify a request
+as an SDK call for the audit trail. So those SDKs also hold an in-code constant. **A stale
+in-code constant is not cosmetic** — it ships a wrong version into the audit trail. (Both
+drifted this way once: py `__version__` sat at 0.2.0 and java `ClientContext.VERSION` at
+0.4.0 while their manifests were at 0.5.0.) JS reads `package.json`, Go's `const Version`
+*is* the manifest, and PHP reads `composer.json` — those have one site each.
 
 ## Checklist for a release bump
 
@@ -33,7 +42,38 @@ When bumping, update **all** of these to the identical `MAJOR.MINOR.PATCH` strin
    git grep -nE '"version"|version *=|const Version|<version>|spec\.version|VERSION *=' packages/*/  # spot every version site
    ```
 4. Run each SDK's tests (versions sometimes assert in spec — e.g. ruby `constants_spec`).
-5. Commit as one change: `chore: release vX.Y.Z across all SDKs`.
+5. **Bump the two hardcoded versions in OTHER repos** — see below.
+6. Commit as one change: `chore: release vX.Y.Z across all SDKs`.
+
+## Two version sites live OUTSIDE this repo
+
+The **quickstart** repo (`TurboDocx/quickstart`, the Agent Skills plugin) hands users install
+snippets. Five of the six are version-less (`npm install @turbodocx/sdk`, `pip install
+turbodocx-sdk`, …) and resolve to latest on their own — but **Java has no version-less form**,
+so `skills/turbodocx-sdk/references/java.md` hardcodes the version in three places (Maven
+`<version>`, Gradle Groovy, Gradle Kotlin DSL).
+
+That pin does not move when this repo is bumped, so it silently goes stale and ships users an
+old SDK. (It sat at 0.4.0 while the SDKs were at 0.5.0.) On every release:
+
+```bash
+# in the quickstart repo
+sed -i 's|turbodocx-sdk:OLD|turbodocx-sdk:NEW|g; s|<version>OLD</version>|<version>NEW</version>|g' \
+  skills/turbodocx-sdk/references/java.md
+```
+
+### 2. n8n node — `NODE_PACKAGE_VERSION`
+
+`n8n-nodes-turbodocx/nodes/TurboDocx/shared/clientContext.ts` hardcodes
+`NODE_PACKAGE_VERSION`, which goes into the `@turbodocx/sdk/<version>` User-Agent and therefore
+into the **audit trail**. It cannot read its own `package.json`: n8n Cloud's community-node lint
+bans `require()` and JSON imports (and `os` / the `process` global — which is why that node
+reports no OS, arch, hostname or device fingerprint). A stale constant ships a wrong version
+into a compliance record.
+
+Note this tracks the **n8n node's** version (`package.json` in that repo), NOT the SDK version —
+the backend renders it as "TurboDocx n8n Node <version>". So bump it when the *node* is
+released, not when the SDKs are.
 
 ## Why not derive it from one source?
 

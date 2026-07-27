@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import okhttp3.*;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -24,9 +25,15 @@ class PartnerHttpClient {
     private final OkHttpClient client;
     private final String baseUrl;
     private final String partnerApiKey;
+    private final ClientContext clientContext;
     private final Gson gson;
 
     PartnerHttpClient(String baseUrl, String partnerApiKey) {
+        this(baseUrl, partnerApiKey, ClientContext.autoDetect());
+    }
+
+    PartnerHttpClient(String baseUrl, String partnerApiKey, ClientContext clientContext) {
+        this.clientContext = clientContext != null ? clientContext : ClientContext.autoDetect();
         this.client = new OkHttpClient.Builder()
                 .connectTimeout(60, TimeUnit.SECONDS)
                 .readTimeout(120, TimeUnit.SECONDS)
@@ -106,14 +113,20 @@ class PartnerHttpClient {
         try {
             JsonObject json = gson.fromJson(body, JsonObject.class);
             if (json != null) {
-                if (json.has("message")) {
+                // Prefer the per-field validation reasons over the generic envelope message —
+                // see HttpClient.extractFieldErrors.
+                String fieldErrors = HttpClient.extractFieldErrors(json);
+
+                if (fieldErrors != null) {
+                    message = fieldErrors;
+                } else if (json.has("message")) {
                     message = json.get("message").getAsString();
-                } else if (json.has("error")) {
-                    message = json.get("error").getAsString();
+                } else if (HttpClient.extractNestedErrorMessage(json) != null) {
+                    message = HttpClient.extractNestedErrorMessage(json);
+                } else if (HttpClient.extractErrorString(json) != null) {
+                    message = HttpClient.extractErrorString(json);
                 }
-                if (json.has("code")) {
-                    code = json.get("code").getAsString();
-                }
+                code = HttpClient.extractErrorCode(json);
             }
         } catch (Exception e) {
             // Use default message
@@ -128,6 +141,8 @@ class PartnerHttpClient {
                 throw new TurboDocxException.AuthorizationException(message, code);
             case 404:
                 throw new TurboDocxException.NotFoundException(message, code);
+            case 409:
+                throw new TurboDocxException.ConflictException(message, code);
             case 429:
                 throw new TurboDocxException.RateLimitException(message, code);
             default:
@@ -136,9 +151,20 @@ class PartnerHttpClient {
     }
 
     private Headers buildHeaders() {
-        return new Headers.Builder()
-                .add("Authorization", "Bearer " + partnerApiKey)
-                .add("Content-Type", "application/json")
-                .build();
+        Headers.Builder builder = new Headers.Builder();
+
+        // Client-context headers (User-Agent, X-Timezone, Accept-Language,
+        // X-Forwarded-For, X-Device-Fingerprint) describe the calling environment
+        // so the partner audit log records the canonical @turbodocx/sdk token.
+        // Added first so the SDK's own protocol headers below always win over
+        // caller context — matching HttpClient.buildHeaders ordering.
+        for (Map.Entry<String, String> entry : ClientContext.resolveHeaders(clientContext).entrySet()) {
+            builder.add(entry.getKey(), entry.getValue());
+        }
+
+        builder.add("Authorization", "Bearer " + partnerApiKey);
+        builder.add("Content-Type", "application/json");
+
+        return builder.build();
     }
 }

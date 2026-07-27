@@ -200,7 +200,7 @@ TurboDocxClient client = new TurboDocxClient.Builder()
     .build();
 ```
 
-**Important:** `senderEmail` is **REQUIRED**. This email will be used as the reply-to address for signature request emails. Without it, emails will default to "API Service User via TurboSign". The `senderName` is optional but strongly recommended for a professional appearance.
+**Important:** `senderEmail` is **REQUIRED**. It is used as the reply-to address for signature request emails and recorded as the sender in the audit trail. An API key has no mailbox of its own, so the API rejects a send without it rather than mailing from an unmonitored address. `senderName` is optional — it defaults to the name of your API key.
 
 **Environment Variables:**
 
@@ -711,7 +711,7 @@ The `TurboQuote` module provides end-to-end quoting operations: create and send 
 
 ### Configuration
 
-Build a client via `TurboQuoteClient.Builder()` — no `senderEmail` required (quotes do not send signature emails through TurboSign).
+Build a client via `TurboQuoteClient.Builder()` — it takes no `senderEmail`. Sending a quote *does* create a signature request and email the recipient; the sender comes from your organization's quote template (Quote Settings) instead. Configure one there, or create/duplicate/send is rejected with `400 SenderEmailRequired`.
 
 ```java
 import com.turbodocx.TurboQuoteClient;
@@ -800,6 +800,31 @@ System.out.println("Replacement: " + replacement.getQuoteNumber());
 ```java
 byte[] pdf = tq.downloadQuotePdf(quoteId);
 Files.write(Paths.get("quote.pdf"), pdf);
+```
+
+### Sender identity — "Prepared by"
+
+The quote's **"Prepared by"** name and email are resolved by the server, not by whoever
+downloads or sends the quote. Precedence: the org **quote template's** sender fields first,
+then the quote's **creator**.
+
+A quote created with an **API key** has no mailbox of its own — so its sender email can only
+come from the quote template. **If your org's quote template has no sender email set,
+`createQuote` (and `duplicateQuote`) throw `ValidationException` (`400 SenderEmailRequired`)**
+for an API-key caller. Set a sender email on the template once (via `updateTemplate`) and every
+subsequent create/duplicate/send resolves cleanly. Human (JWT) callers are never blocked — their
+own email is the fallback.
+
+`getQuote` returns the resolved identity via `getPreparedBy()` — **prefer it over `getCreator()`**
+for any customer-facing display (the creator may be the internal API service account). Both
+fields may be null for an API-created quote:
+
+```java
+Quote quote = tq.getQuote(quoteId);
+if (quote.getPreparedBy() != null) {
+    System.out.println(quote.getPreparedBy().getName());  // e.g. "Acme Billing Integration"
+    System.out.println(quote.getPreparedBy().getEmail()); // may be null — render a placeholder
+}
 ```
 
 ### All 47 methods
@@ -1003,6 +1028,29 @@ try {
     System.out.println("Unexpected error: " + e.getMessage());
 }
 ```
+
+### Error Codes
+
+`code` is **always populated** — an API-supplied code when there is one, otherwise the error
+class's default (`VALIDATION_ERROR`, `AUTHENTICATION_ERROR`, `AUTHORIZATION_ERROR`,
+`NOT_FOUND`, `CONFLICT`, `RATE_LIMIT_EXCEEDED`, `NETWORK_ERROR`). Branch on it without a null
+check.
+
+The API also returns more specific codes, passed through unchanged:
+
+| Code | Status | Meaning |
+|:-----|:-------|:--------|
+| `SenderEmailRequired` | 400 | No sender email resolvable. TurboSign: set `senderEmail` on the request. TurboQuote: configure one on the org quote template (Quote Settings). |
+| `SenderNameRequired` | 400 | No sender name resolvable — the API key has no usable name. |
+| `QuoteHasNoLineItems` | 400 | The quote has no line items. Add at least one before sending. |
+| `QuoteExpired` | 400 | The quote is past its `validUntil` date. |
+| `QuoteValidUntilRequired` | 400 | The quote has no `validUntil` date set. |
+| `QuoteNotSendable` | 400 | Only draft quotes can be sent. |
+| `QuoteContactRequired` | 400 | The quote's contact is missing a name or email. |
+| `QuoteCustomerInactive` | 400 | The quote's company or contact was deleted or deactivated. |
+
+Error **messages** carry the actionable reason, not a generic envelope — multiple field errors
+are joined with `"; "`, e.g. `"name" is not allowed to be empty; "companyId" must be a valid GUID`.
 
 ### Common Error Codes
 

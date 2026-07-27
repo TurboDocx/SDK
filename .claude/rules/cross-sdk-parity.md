@@ -60,6 +60,45 @@ shipped name.
 - `testWebhook` and `notifyWebhook` currently route through the same backend handler and return identical shapes. Both are exposed for symmetry with the backend surface; prefer `testWebhook` in new code.
 - The HMAC format the helper must verify: header `X-TurboDocx-Signature: sha256=<hex>`, signed string `${timestamp}.${rawBody}`, HMAC-SHA256, with a configurable timestamp tolerance (default 300s) to prevent replay attacks. Use the language's constant-time comparison primitive (`crypto.timingSafeEqual` / `hmac.compare_digest` / `hmac.Equal` / `hash_equals` / `MessageDigest.isEqual`).
 
+## Client Context (Audit-Trail Device/Location Headers)
+
+Every SDK auto-attaches request headers describing the calling environment so the
+TurboSign **audit trail** records real device/location instead of "Unknown" when
+the caller is a container/VM. This is wired into the shared HTTP client (so it
+covers JSON, multipart upload, and raw-download paths) and exposed for overrides
+via a `clientContext` option on the TurboSign config/constructor.
+
+| Header | Source | Notes |
+|---|---|---|
+| `User-Agent` | auto | **Must** start with the canonical `@turbodocx/sdk/<version>` token — the backend `parseTurboDocxSdkUserAgent` only classifies a request as an SDK call on that exact prefix. Suffix is language-specific: `(Runtime/x; OS; arch; host=<hostname>)`. |
+| `X-Timezone` | auto | Host timezone (IANA where available, abbreviation otherwise). |
+| `Accept-Language` | auto | Host BCP-47 tag (e.g. `en-US`). Backend surfaces it as audit `language` for SDK calls (validated as a BCP-47 tag server-side; non-language `C`/`POSIX` locales are dropped). |
+| `X-Device-Fingerprint` | auto | Stable SHA-256 of hostname/OS/arch. |
+| `X-Forwarded-For` | **opt-in** | Sent only when the caller sets `ipAddress`. Never auto-filled: the host only sees a private IP. **The backend ignores it** — see below. |
+
+**`ipAddress` does not change the recorded IP.** The backend's `getTrustedClientIp` takes the
+entry its own load balancer *appended* (rightmost-wins), not the leftmost — that is deliberate,
+because the leftmost entry is caller-controlled and was how the audit IP used to be spoofable.
+So a caller-supplied `X-Forwarded-For` is read and discarded. This is the correct security
+posture and callers rarely need the override: the backend already resolves the real public IP
+from the connection itself, which is what a datacenter caller (Postman, n8n, a CI runner) wants.
+The field is kept for API compatibility; treat it as a no-op for the audit trail rather than a
+way to attribute a send to another IP.
+
+Override fields (idiomatic casing per language): `userAgent` / `user_agent`, `ipAddress` / `ip_address`, `timezone`, `language`, `deviceFingerprint` / `device_fingerprint`. The auto-generated values are computed once at client construction. In browsers, `User-Agent` is a forbidden fetch header, so the JS SDK's value is dropped and the real browser UA is sent (and handled by the backend's normal UA path).
+
+Per-SDK location: `client-context.ts` (JS), `utils/client_context.py` (Py), `client_context.go` (Go), `Utils/ClientContext.php` (PHP), `ClientContext.java` (Java), `client_context.rb` (Ruby).
+
+**All six SDKs send these headers on every path, including TurboPartner.** JS, Go, PHP and
+Ruby route partner/webhooks/deliverable through the single shared HTTP client, so those paths
+get the headers for free. Java and Python each have a *separate* `PartnerHttpClient`; both now
+accept a client context (`TurboPartnerClient.Builder.clientContext(...)` in Java,
+`TurboPartner.configure(client_context=...)` in Python, each defaulting to auto-detect) and
+merge the resolved context headers into their header builder ahead of `Authorization` +
+`Content-Type`, so the SDK's own protocol headers still win. The partner **audit log** records
+`userAgent` (`handlers/Partner/auditLogging.ts`), so a partner call from any SDK is now logged
+with the canonical `@turbodocx/sdk/…` token.
+
 ## Required Deliverable Operations
 
 Canonical (JS) names; every SDK implements all 7 with its idiomatic casing (see the mapping below).

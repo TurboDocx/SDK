@@ -9,8 +9,8 @@ namespace TurboDocx\Exceptions;
  */
 class ValidationException extends TurboDocxException
 {
-    public function __construct(string $message, ?\Throwable $previous = null)
+    public function __construct(string $message, ?string $errorCode = null, ?\Throwable $previous = null)
     {
-        parent::__construct($message, statusCode: 400, errorCode: 'VALIDATION_ERROR', previous: $previous);
+        parent::__construct($message, statusCode: 400, errorCode: $errorCode ?? 'VALIDATION_ERROR', previous: $previous);
     }
 }

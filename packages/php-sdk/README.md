@@ -177,7 +177,7 @@ TurboSign::configure(new HttpClientConfig(
 ));
 ```
 
-**Important:** `senderEmail` is **REQUIRED**. This email will be used as the reply-to address for signature request emails. Without it, emails will default to "API Service User via TurboSign". The `senderName` is optional but strongly recommended for a professional appearance.
+**Important:** `senderEmail` is **REQUIRED**. It is used as the reply-to address for signature request emails and recorded as the sender in the audit trail. An API key has no mailbox of its own, so the API rejects a send without it rather than mailing from an unmonitored address. `senderName` is optional — it defaults to the name of your API key.
 
 ### Environment Variables
 
@@ -1220,7 +1220,7 @@ TURBODOCX_ORG_ID=your-org-id
 |-------|--------|-------------|
 | **Quotes** | `listQuotes(?ListQuotesRequest)` | List quotes with pagination, filters, and stats |
 | | `createQuote(CreateQuoteRequest)` | Create a new quote |
-| | `getQuote(id)` | Get quote by ID (includes statusInfo) |
+| | `getQuote(id)` | Get quote by ID (includes `statusInfo` and `preparedBy`) |
 | | `updateQuote(id, UpdateQuoteRequest)` | Update quote fields |
 | | `deleteQuote(id)` | Delete a quote |
 | | `duplicateQuote(id)` | Duplicate a quote |
@@ -1341,6 +1341,30 @@ $result = TurboQuote::sendQuote($quote->id, new SendQuoteRequest(
 ));
 
 echo "Quote sent! Status: {$result->quote->status}\n";
+```
+
+### Sender Identity — "Prepared by"
+
+The quote's **"Prepared by"** name and email are resolved by the server, not by whoever
+downloads or sends the quote. Precedence: the org **quote template's** sender fields first,
+then the quote's **creator**.
+
+A quote created with an **API key** has no mailbox of its own — so its sender email can only
+come from the quote template. **If your org's quote template has no sender email set,
+`createQuote()` (and `duplicateQuote()`) throw `ValidationException` (`400 SenderEmailRequired`)**
+for an API-key caller. Set a sender email on the template once (via `updateTemplate()`) and every
+subsequent create/duplicate/send resolves cleanly. Human (JWT) callers are never blocked — their
+own email is the fallback.
+
+`getQuote()` returns the resolved identity as `preparedBy` (`['name' => ?, 'email' => ?]`) —
+**prefer it over `creator`** for any customer-facing display (`creator` may be the internal API
+service account). The `email` key may be absent for an API-created quote.
+
+```php
+$quote = TurboQuote::getQuote($quoteId);
+$prepared = $quote->preparedBy ?? [];
+echo $prepared['name'] ?? '';   // e.g. "Acme Billing Integration" or the template sender
+echo $prepared['email'] ?? '';  // may be absent — render a placeholder
 ```
 
 ### Quote Terms and Auto-Renewal
@@ -1490,6 +1514,29 @@ All exceptions extend `TurboDocxException` and include:
 - `message` (Human-readable error message)
 
 ---
+
+### Error Codes
+
+`code` is **always populated** — an API-supplied code when there is one, otherwise the error
+class's default (`VALIDATION_ERROR`, `AUTHENTICATION_ERROR`, `AUTHORIZATION_ERROR`,
+`NOT_FOUND`, `CONFLICT`, `RATE_LIMIT_EXCEEDED`, `NETWORK_ERROR`). Branch on it without a null
+check.
+
+The API also returns more specific codes, passed through unchanged:
+
+| Code | Status | Meaning |
+|:-----|:-------|:--------|
+| `SenderEmailRequired` | 400 | No sender email resolvable. TurboSign: set `senderEmail` on the request. TurboQuote: configure one on the org quote template (Quote Settings). |
+| `SenderNameRequired` | 400 | No sender name resolvable — the API key has no usable name. |
+| `QuoteHasNoLineItems` | 400 | The quote has no line items. Add at least one before sending. |
+| `QuoteExpired` | 400 | The quote is past its `validUntil` date. |
+| `QuoteValidUntilRequired` | 400 | The quote has no `validUntil` date set. |
+| `QuoteNotSendable` | 400 | Only draft quotes can be sent. |
+| `QuoteContactRequired` | 400 | The quote's contact is missing a name or email. |
+| `QuoteCustomerInactive` | 400 | The quote's company or contact was deleted or deactivated. |
+
+Error **messages** carry the actionable reason, not a generic envelope — multiple field errors
+are joined with `"; "`, e.g. `"name" is not allowed to be empty; "companyId" must be a valid GUID`.
 
 ## License
 

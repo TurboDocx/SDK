@@ -9,8 +9,8 @@ namespace TurboDocx\Exceptions;
  */
 class RateLimitException extends TurboDocxException
 {
-    public function __construct(string $message = 'Rate limit exceeded', ?\Throwable $previous = null)
+    public function __construct(string $message = 'Rate limit exceeded', ?string $errorCode = null, ?\Throwable $previous = null)
     {
-        parent::__construct($message, statusCode: 429, errorCode: 'RATE_LIMIT_EXCEEDED', previous: $previous);
+        parent::__construct($message, statusCode: 429, errorCode: $errorCode ?? 'RATE_LIMIT_EXCEEDED', previous: $previous);
     }
 }

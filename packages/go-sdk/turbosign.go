@@ -395,6 +395,7 @@ func (c *TurboSignClient) Download(ctx context.Context, documentID string) ([]by
 	resp, err := http.Get(downloadResponse.DownloadURL)
 	if err != nil {
 		return nil, &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
 			Message: fmt.Sprintf("failed to download file: %v", err),
 		}}
 	}
@@ -402,6 +403,7 @@ func (c *TurboSignClient) Download(ctx context.Context, documentID string) ([]by
 
 	if resp.StatusCode >= 400 {
 		return nil, &NetworkError{TurboDocxError: TurboDocxError{
+			Code:       "NETWORK_ERROR",
 			Message:    fmt.Sprintf("failed to download file: %s", resp.Status),
 			StatusCode: resp.StatusCode,
 		}}
