@@ -79,7 +79,7 @@ target/
 
 # Ruby
 *.gem
-Gemfile.lock
+# Gemfile.lock: committed for Dependabot coverage, see packages/php-sdk/.gitignore
 .bundle/
 
 # Generated files (exclude ExampleAssets)
