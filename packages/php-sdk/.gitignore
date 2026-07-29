@@ -1,6 +1,8 @@
 # Composer
 /vendor/
-composer.lock
+# composer.lock is committed on purpose: without it GitHub's dependency graph
+# only sees composer.json's version ranges, and Dependabot cannot raise a
+# security alert against a range. Consumers ignore a library's lock anyway.
 
 # PHPUnit
 /coverage/

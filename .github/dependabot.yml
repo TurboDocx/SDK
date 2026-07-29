@@ -6,7 +6,6 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    target-branch: "main"
     commit-message:
       prefix: "security"
       include: "scope"
@@ -20,7 +19,6 @@ updates:
     directory: "/packages/js-sdk"
     schedule:
       interval: "daily"
-    target-branch: "main"
     commit-message:
       prefix: "security"
       include: "scope"
@@ -34,7 +32,6 @@ updates:
     directory: "/packages/go-sdk"
     schedule:
       interval: "weekly"
-    target-branch: "main"
     commit-message:
       prefix: "security"
       include: "scope"
@@ -48,7 +45,6 @@ updates:
     directory: "/packages/java-sdk"
     schedule:
       interval: "weekly"
-    target-branch: "main"
     commit-message:
       prefix: "security"
       include: "scope"
@@ -62,7 +58,6 @@ updates:
     directory: "/packages/php-sdk"
     schedule:
       interval: "weekly"
-    target-branch: "main"
     commit-message:
       prefix: "security"
       include: "scope"
@@ -76,7 +71,6 @@ updates:
     directory: "/packages/py-sdk"
     schedule:
       interval: "weekly"
-    target-branch: "main"
     commit-message:
       prefix: "security"
       include: "scope"
@@ -90,7 +84,6 @@ updates:
     directory: "/packages/ruby-sdk"
     schedule:
       interval: "weekly"
-    target-branch: "main"
     commit-message:
       prefix: "security"
       include: "scope"
@@ -104,7 +97,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    target-branch: "main"
     commit-message:
       prefix: "security"
       include: "scope"
