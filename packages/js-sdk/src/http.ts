@@ -65,6 +65,21 @@ export interface QuoteClientConfig {
  * - PDF: starts with %PDF (0x25 0x50 0x44 0x46)
  * - DOCX/PPTX: starts with PK (ZIP), differentiate by internal content
  */
+/**
+ * Re-view a Buffer's bytes as an ArrayBuffer-backed Uint8Array so it can be passed to `new Blob()`.
+ *
+ * ponytail: @types/node 26 types Buffer as ArrayBufferLike-backed, which is not a valid BlobPart —
+ * BlobPart requires an ArrayBuffer-backed view, because the underlying buffer could in principle be
+ * a SharedArrayBuffer. This is zero-copy (a view over the same memory, not a duplicate), so upload
+ * memory is unchanged, and fs.readFileSync never returns a SharedArrayBuffer-backed Buffer.
+ *
+ * Spelled `Uint8Array<ArrayBuffer>` rather than `BlobPart` because BlobPart is not in scope
+ * under ts-jest's resolution — the generic is the only form that satisfies both `tsc -p` and
+ * the test run. It surfaces in http.d.ts but not the package entry point.
+ */
+export const toBlobPart = (buffer: Buffer): Uint8Array<ArrayBuffer> =>
+  new Uint8Array(buffer.buffer as ArrayBuffer, buffer.byteOffset, buffer.byteLength);
+
 export const detectFileType = (buffer: Buffer): { mimetype: string; extension: string } => {
   // PDF: %PDF
   if (buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) {
@@ -312,7 +327,7 @@ export class HttpClient {
     }
 
     // Create blob with detected mimetype and append with filename
-    const blob = new Blob([fileBuffer], { type: mimeType });
+    const blob = new Blob([toBlobPart(fileBuffer)], { type: mimeType });
     formData.append(fieldName, blob, fileName);
 
     // Add additional form fields (except fileName which is only used for file metadata)
