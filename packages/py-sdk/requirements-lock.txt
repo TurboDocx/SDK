@@ -6,8 +6,13 @@
 # this is Python's.
 #
 # NOT the install path. CI still runs `pip install -e ".[dev]"` against the declared
-# ranges, so an upstream breaking change still surfaces. This file exists to be scanned,
-# and Dependabot keeps it current the same way it maintains any other lockfile.
+# ranges, so an upstream breaking change still surfaces. This file exists to be scanned.
+#
+# UNVERIFIED: whether Dependabot will also *update* this file is untested. It reliably
+# makes the tree visible to the dependency graph (that much is the point), but Dependabot
+# maintains lockfiles it resolves from a manifest it installs with, and nothing installs
+# from this one. If security-update PRs don't appear here, regenerate it by hand using the
+# command below -- a stale pin still beats the versionInfo: null it replaces.
 #
 # Regenerate: python -m venv .venv && .venv/bin/pip install -e ".[dev]" \
 #             && .venv/bin/pip freeze --exclude-editable
