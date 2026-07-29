@@ -30,7 +30,9 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "httpx>=0.24.0",
+    # ponytail: floor is >=0.28.1, not >=0.24.0 — older httpx pulls httpcore<1.0.9,
+    # which pins h11<0.15 (GHSA-vqfr-h8mv-ghfj, CRITICAL request smuggling).
+    "httpx>=0.28.1",
     "typing_extensions>=4.0.0",
 ]
 
