@@ -1,0 +1,30 @@
+# Resolved dependency tree for py-sdk, pinned so GitHub's dependency graph can see it.
+#
+# WHY THIS FILE EXISTS: pyproject.toml declares version *ranges*, and the graph records
+# those as versionInfo: null -- Dependabot cannot match an advisory against "no version",
+# so py-sdk had zero vulnerability detection. Every other ecosystem here has a lockfile;
+# this is Python's.
+#
+# NOT the install path. CI still runs `pip install -e ".[dev]"` against the declared
+# ranges, so an upstream breaking change still surfaces. This file exists to be scanned,
+# and Dependabot keeps it current the same way it maintains any other lockfile.
+#
+# Regenerate: python -m venv .venv && .venv/bin/pip install -e ".[dev]" \
+#             && .venv/bin/pip freeze --exclude-editable
+anyio==4.14.2
+backports.asyncio.runner==1.2.0
+certifi==2026.7.22
+exceptiongroup==1.3.1
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.18
+iniconfig==2.3.0
+packaging==26.2
+pluggy==1.6.0
+Pygments==2.20.0
+pytest==9.1.1
+pytest-asyncio==1.4.0
+pytest-httpx==0.36.2
+tomli==2.4.1
+typing_extensions==4.16.0
