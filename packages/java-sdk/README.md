@@ -87,7 +87,7 @@ A modern, developer-first alternative to legacy e-signature platforms:
 <dependency>
     <groupId>com.turbodocx</groupId>
     <artifactId>turbodocx-sdk</artifactId>
-    <version>0.2.0</version>
+    <version>0.6.1</version>
 </dependency>
 ```
 
