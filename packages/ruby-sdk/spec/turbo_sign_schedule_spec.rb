@@ -91,7 +91,13 @@ RSpec.describe TurboDocxSdk::TurboSign do
     end
 
     it "sends maxReminders:0 (no reminders) and -1 (unlimited) rather than dropping them" do
-      allow(mock_client).to receive(:post).and_return({})
+      # Capture on the stub itself — `have_received(...).twice { }` does not yield the args, so
+      # the block never populates anything.
+      bodies = []
+      allow(mock_client).to receive(:post) do |_path, body|
+        bodies << body
+        {}
+      end
 
       described_class.send_signature(
         deliverableId: "d", recipients: recipients, fields: fields, maxReminders: 0
@@ -100,8 +106,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
         deliverableId: "d", recipients: recipients, fields: fields, maxReminders: -1
       )
 
-      bodies = []
-      expect(mock_client).to have_received(:post).twice { |_path, body| bodies << body }
+      expect(bodies.length).to eq(2)
       expect(bodies[0]["maxReminders"]).to eq(0)
       expect(bodies[1]["maxReminders"]).to eq(-1)
     end
