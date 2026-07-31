@@ -38,7 +38,8 @@ public final class TurboSign {
                 request.getDocumentDescription(),
                 request.getSenderName(),
                 request.getSenderEmail(),
-                request.getCcEmails()
+                request.getCcEmails(),
+                request.getSchedule()
         );
 
         if (request.hasFile()) {
@@ -81,7 +82,8 @@ public final class TurboSign {
                 request.getDocumentDescription(),
                 request.getSenderName(),
                 request.getSenderEmail(),
-                request.getCcEmails()
+                request.getCcEmails(),
+                request.getSchedule()
         );
 
         if (request.hasFile()) {
@@ -210,7 +212,8 @@ public final class TurboSign {
             String documentDescription,
             String senderName,
             String senderEmail,
-            List<String> ccEmails
+            List<String> ccEmails,
+            SignatureSchedule schedule
     ) {
         Map<String, String> formData = new HashMap<>();
         formData.put("recipients", gson.toJson(recipients));
@@ -237,6 +240,88 @@ public final class TurboSign {
             formData.put("ccEmails", gson.toJson(ccEmails));
         }
 
+        applyScheduleOverrides(formData, schedule);
+
         return formData;
+    }
+
+    /**
+     * Copies per-document reminder/expiration overrides onto an outgoing request body.
+     *
+     * <p>Durations are JSON-encoded. multipart/form-data has no notion of a nested value, so a
+     * {value, unit} object cannot survive the file-upload path as an object. The API decodes a
+     * JSON-string duration on both content types, so encoding uniformly keeps one code path for
+     * the multipart and JSON branches — the same treatment recipients and fields already get.
+     *
+     * <p>Scalars are formatted as strings because formData is {@code Map<String, String>}; the
+     * API's validation coerces them, exactly as it already does for the JSON-encoded recipients,
+     * fields and ccEmails this SDK sends.
+     *
+     * <p>Null checks, never truthiness: a deliberate {@code false} or {@code 0} must survive.
+     */
+    private void applyScheduleOverrides(Map<String, String> formData, SignatureSchedule schedule) {
+        if (schedule == null) {
+            return;
+        }
+
+        if (schedule.getRemindersEnabled() != null) {
+            formData.put("remindersEnabled", String.valueOf(schedule.getRemindersEnabled()));
+        }
+        if (schedule.getMaxReminders() != null) {
+            formData.put("maxReminders", String.valueOf(schedule.getMaxReminders()));
+        }
+        if (schedule.getExpirationEnabled() != null) {
+            formData.put("expirationEnabled", String.valueOf(schedule.getExpirationEnabled()));
+        }
+
+        putDuration(formData, "reminderDelay", schedule.getReminderDelay());
+        putDuration(formData, "reminderInterval", schedule.getReminderInterval());
+        putDuration(formData, "expireAfter", schedule.getExpireAfter());
+        putDuration(formData, "expirationWarning", schedule.getExpirationWarning());
+        putDuration(formData, "expirationWarningInterval", schedule.getExpirationWarningInterval());
+    }
+
+    private void putDuration(Map<String, String> formData, String key, SignatureSchedule.Duration duration) {
+        if (duration != null) {
+            formData.put(key, gson.toJson(duration));
+        }
+    }
+
+    /**
+     * Sends a reminder email to a document's outstanding signers.
+     *
+     * <p>This is a standalone nudge, deliberately decoupled from the automatic reminder schedule:
+     * it ignores the configured cadence, works even when reminders are disabled or the per-signer
+     * cap is already spent, and does not consume that cap.
+     *
+     * <p>Only signers at the CURRENT signing order are emailed. A recipient at a later order (or
+     * one who has already signed) is reported back as skipped rather than silently dropped.
+     *
+     * @param documentId   ID of the document
+     * @param recipientIds optional subset to remind; pass null to remind every eligible signer.
+     *                     When supplied the request is all-or-nothing: if any id is not a
+     *                     current-order pending signer the API rejects the whole call.
+     * @return one result per recipient considered
+     * @throws IOException on transport failure
+     */
+    public SendReminderResponse sendReminder(String documentId, List<String> recipientIds) throws IOException {
+        // Only include the filter when it actually names someone. The API requires at least one
+        // id when the key is present, so forwarding an empty list would guarantee a 400 — an
+        // empty list is far more likely to mean "no filter" than "remind nobody".
+        Map<String, Object> body = new HashMap<>();
+        if (recipientIds != null && !recipientIds.isEmpty()) {
+            body.put("recipientIds", recipientIds);
+        }
+
+        return httpClient.post(
+                "/turbosign/documents/" + documentId + "/send-reminder",
+                body,
+                SendReminderResponse.class
+        );
+    }
+
+    /** Reminds every eligible signer. @see #sendReminder(String, List) */
+    public SendReminderResponse sendReminder(String documentId) throws IOException {
+        return sendReminder(documentId, null);
     }
 }

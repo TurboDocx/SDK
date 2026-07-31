@@ -109,8 +109,89 @@ export interface AuditTrailResponse {
 }
 
 export interface DocumentStatusResponse {
-  /** Current document status */
+  /** Current document status — e.g. 'under_review', 'completed', 'voided', 'expired' */
   status: string;
+  /**
+   * ISO timestamp when the signing window closes, if the document has a deadline.
+   *
+   * Absent when expiration is off (the default), which means the document never expires.
+   * Once this instant passes the signing links stop working and the document becomes 'expired'.
+   */
+  expiresAt?: string;
+}
+
+// ============================================
+// REMINDER + EXPIRATION SCHEDULE
+// ============================================
+
+/**
+ * A configured length of time.
+ *
+ * The unit is carried alongside the value rather than normalised away, so "48 hours" stays
+ * "48 hours" instead of reading back as "2 days".
+ */
+export interface Duration {
+  /** Whole number of units. Minimum 1, except `expirationWarning` where 0 means "never warn". */
+  value: number;
+  /** Unit the value is measured in */
+  unit: 'hours' | 'days';
+}
+
+/**
+ * Per-document reminder + expiration overrides.
+ *
+ * Every field is optional. An omitted field inherits the organization's default; omitting the set
+ * entirely means "use the org policy as it stands at send time". Both features are **off** by
+ * default, so a document only gets reminders or an expiry if the org enabled them or the caller
+ * opts in here.
+ *
+ * The resolved schedule is frozen onto the document when it is sent, so later changes to the org
+ * defaults never alter a document already out for signature.
+ */
+export interface SignatureScheduleOptions {
+  /** Send reminder emails to signers who haven't signed yet */
+  remindersEnabled?: boolean;
+  /** How long after the invitation before the FIRST reminder */
+  reminderDelay?: Duration;
+  /** Gap between subsequent reminders */
+  reminderInterval?: Duration;
+  /** Cap per signer. `-1` means unlimited, `0` means none. Never caps expiry warnings. */
+  maxReminders?: number;
+  /** Close the signing window after `expireAfter` */
+  expirationEnabled?: boolean;
+  /** How long the document stays signable, counted from sending */
+  expireAfter?: Duration;
+  /** How far BEFORE expiry warning emails start. `{ value: 0 }` means no warnings at all. */
+  expirationWarning?: Duration;
+  /** Gap between warnings once the warning window is open */
+  expirationWarningInterval?: Duration;
+}
+
+/** Outcome for one recipient of a reminder request */
+export type ReminderStatus =
+  | 'sent'
+  | 'failed'
+  | 'skipped_not_due'
+  | 'skipped_max_reached'
+  | 'skipped_disabled'
+  | 'skipped_completed'
+  | 'skipped_wrong_order'
+  | 'skipped_claim_lost';
+
+export interface ReminderResult {
+  /** Recipient this outcome refers to */
+  recipientId: string;
+  /** What happened for this recipient */
+  status: ReminderStatus;
+  /** Reminder count after the send (only meaningful when status is 'sent') */
+  reminderCount?: number;
+  /** Which email was sent — the reminder nudge or the expiry warning */
+  phase?: 'reminder' | 'expiring';
+}
+
+export interface SendReminderResponse {
+  /** One entry per recipient considered, including those skipped and why */
+  results: ReminderResult[];
 }
 
 // ============================================
@@ -205,6 +286,18 @@ export interface CreateSignatureReviewLinkRequest {
   senderEmail?: string;
   /** CC emails (comma-separated or array) */
   ccEmails?: string | string[];
+  /**
+   * Per-document reminder + expiration overrides. Omit to inherit the organization's defaults.
+   * @see SignatureScheduleOptions
+   */
+  remindersEnabled?: SignatureScheduleOptions['remindersEnabled'];
+  reminderDelay?: SignatureScheduleOptions['reminderDelay'];
+  reminderInterval?: SignatureScheduleOptions['reminderInterval'];
+  maxReminders?: SignatureScheduleOptions['maxReminders'];
+  expirationEnabled?: SignatureScheduleOptions['expirationEnabled'];
+  expireAfter?: SignatureScheduleOptions['expireAfter'];
+  expirationWarning?: SignatureScheduleOptions['expirationWarning'];
+  expirationWarningInterval?: SignatureScheduleOptions['expirationWarningInterval'];
 }
 
 /**
@@ -253,6 +346,18 @@ export interface SendSignatureRequest {
   senderEmail?: string;
   /** CC emails (comma-separated or array) */
   ccEmails?: string | string[];
+  /**
+   * Per-document reminder + expiration overrides. Omit to inherit the organization's defaults.
+   * @see SignatureScheduleOptions
+   */
+  remindersEnabled?: SignatureScheduleOptions['remindersEnabled'];
+  reminderDelay?: SignatureScheduleOptions['reminderDelay'];
+  reminderInterval?: SignatureScheduleOptions['reminderInterval'];
+  maxReminders?: SignatureScheduleOptions['maxReminders'];
+  expirationEnabled?: SignatureScheduleOptions['expirationEnabled'];
+  expireAfter?: SignatureScheduleOptions['expireAfter'];
+  expirationWarning?: SignatureScheduleOptions['expirationWarning'];
+  expirationWarningInterval?: SignatureScheduleOptions['expirationWarningInterval'];
 }
 
 /**

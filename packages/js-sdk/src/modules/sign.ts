@@ -13,6 +13,8 @@ import {
   CreateSignatureReviewLinkResponse,
   SendSignatureRequest,
   SendSignatureResponse,
+  SignatureScheduleOptions,
+  SendReminderResponse,
 } from '../types/sign';
 
 export class TurboSign {
@@ -56,6 +58,42 @@ export class TurboSign {
   // ============================================
   // SINGLE-STEP OPERATIONS
   // ============================================
+
+  /**
+   * Copies any per-document schedule overrides onto an outgoing request body.
+   *
+   * Durations are JSON-encoded. `multipart/form-data` has no notion of a nested value — every
+   * part arrives as a string — so a `{ value, unit }` object cannot survive the file-upload path
+   * as an object. The API decodes a JSON-string duration on BOTH content types, so encoding
+   * uniformly keeps one code path for the multipart and JSON branches, exactly as `recipients`
+   * and `fields` are already handled.
+   *
+   * Presence is tested with `!== undefined`, never truthiness: `false` (feature off) and `0`
+   * (no reminders / never warn) are all meaningful values, and a truthiness check would drop
+   * them and silently fall back to the organization's default — the opposite of what the caller
+   * asked for.
+   */
+  private static applyScheduleOverrides(
+    formData: Record<string, any>,
+    request: SignatureScheduleOptions
+  ): void {
+    if (request.remindersEnabled !== undefined) formData.remindersEnabled = request.remindersEnabled;
+    if (request.maxReminders !== undefined) formData.maxReminders = request.maxReminders;
+    if (request.expirationEnabled !== undefined) formData.expirationEnabled = request.expirationEnabled;
+
+    const durationFields = [
+      'reminderDelay',
+      'reminderInterval',
+      'expireAfter',
+      'expirationWarning',
+      'expirationWarningInterval',
+    ] as const;
+
+    for (const field of durationFields) {
+      const duration = request[field];
+      if (duration !== undefined) formData[field] = JSON.stringify(duration);
+    }
+  }
 
   /**
    * Create signature review link without sending emails
@@ -122,6 +160,9 @@ export class TurboSign {
         ? JSON.stringify(request.ccEmails)
         : JSON.stringify([request.ccEmails]);
     }
+
+    // Per-document reminder + expiration overrides; omitted keys inherit the org defaults.
+    this.applyScheduleOverrides(formData, request);
 
     // Handle different file input methods
     if (request.file) {
@@ -203,6 +244,9 @@ export class TurboSign {
         ? JSON.stringify(request.ccEmails)
         : JSON.stringify([request.ccEmails]);
     }
+
+    // Per-document reminder + expiration overrides; omitted keys inherit the org defaults.
+    this.applyScheduleOverrides(formData, request);
 
     // Handle different file input methods
     if (request.file) {
@@ -348,5 +392,56 @@ export class TurboSign {
     const client = this.getClient();
     // HTTP client auto-unwraps {data: ...} responses
     return client.get<DocumentStatusResponse>(`/turbosign/documents/${documentId}/status`);
+  }
+
+  /**
+   * Send a reminder email to a document's outstanding signers
+   *
+   * This is a **standalone nudge**, deliberately decoupled from the automatic reminder schedule:
+   * it ignores the configured cadence, works even when reminders are disabled or the per-signer
+   * cap is already spent, and does not consume that cap.
+   *
+   * Only signers at the CURRENT signing order are emailed. A recipient at a later order (or one
+   * who has already signed) is reported back as skipped rather than silently dropped, so the
+   * caller can tell that nobody was emailed.
+   *
+   * @param documentId - ID of the document
+   * @param recipientIds - Optional subset to remind. Omit to remind every eligible signer.
+   *                       When supplied, the request is all-or-nothing: if any id is not a
+   *                       current-order pending signer the API rejects the whole call and sends
+   *                       nothing.
+   * @returns One result per recipient considered, including why each was skipped
+   *
+   * @example
+   * ```typescript
+   * // Nudge whoever's turn it is
+   * const { results } = await TurboSign.sendReminder(documentId);
+   * for (const r of results) {
+   *   console.log(`${r.recipientId}: ${r.status}`); // e.g. "sent", "skipped_wrong_order"
+   * }
+   *
+   * // Nudge one specific signer
+   * await TurboSign.sendReminder(documentId, [recipientId]);
+   * ```
+   */
+  static async sendReminder(
+    documentId: string,
+    recipientIds?: string[]
+  ): Promise<SendReminderResponse> {
+    const client = this.getClient();
+
+    // Only include the filter when it actually names someone. The API requires at least one id
+    // when the key is present, so forwarding an empty array would guarantee a 400 — an empty
+    // list is far more likely to mean "no filter" than "remind nobody".
+    const body: Record<string, unknown> = {};
+    if (recipientIds && recipientIds.length > 0) {
+      body.recipientIds = recipientIds;
+    }
+
+    // HTTP client auto-unwraps {data: ...} responses
+    return client.post<SendReminderResponse>(
+      `/turbosign/documents/${documentId}/send-reminder`,
+      body
+    );
   }
 }
