@@ -398,6 +398,94 @@ RSpec.describe TurboDocxSdk::TurboSign do
   end
 
   # ============================================
+  # getRecipients
+  # ============================================
+
+  describe ".get_recipients" do
+    # The wire shape after the HTTP client unwraps {data: ...}
+    let(:mock_recipients_response) do
+      {
+        "document" => {
+          "id" => "doc-123",
+          "name" => "Mutual NDA",
+          "status" => "under_review",
+          "createdOn" => "2026-01-01T00:00:00.000Z",
+          "expiresAt" => nil,
+          "sentBy" => { "name" => "Jane Sender", "email" => "jane@acme.com" }
+        },
+        "recipients" => [
+          {
+            "id" => "rec-1",
+            "name" => "John Signer",
+            "email" => "john@example.com",
+            "status" => "completed",
+            "signedOn" => "2026-02-01T10:00:00.000Z",
+            "signingOrder" => 1
+          },
+          {
+            "id" => "rec-2",
+            "name" => "Ada Signer",
+            "email" => "ada@example.com",
+            "status" => "pending",
+            "signedOn" => nil,
+            "signingOrder" => 2
+          }
+        ],
+        "summary" => { "total" => 2, "pending" => 1, "viewed" => 0, "completed" => 1 }
+      }
+    end
+
+    before do
+      described_class.configure(
+        api_key: "test-key",
+        org_id: "org-1",
+        sender_email: "test@company.com"
+      )
+    end
+
+    it "gets every recipient with their signing status" do
+      allow(mock_client).to receive(:get).and_return(mock_recipients_response)
+
+      result = described_class.get_recipients("doc-123")
+
+      expect(result["recipients"].length).to eq(2)
+      expect(result["recipients"][0]["status"]).to eq("completed")
+      expect(result["recipients"][0]["email"]).to eq("john@example.com")
+      expect(result["recipients"][0]["signedOn"]).to eq("2026-02-01T10:00:00.000Z")
+      expect(result["recipients"][0]["signingOrder"]).to eq(1)
+      # A pending signer has no signedOn timestamp
+      expect(result["recipients"][1]["status"]).to eq("pending")
+      expect(result["recipients"][1]["signedOn"]).to be_nil
+      expect(mock_client).to have_received(:get).with(
+        "/turbosign/documents/doc-123/recipients"
+      )
+    end
+
+    it "exposes who sent the document and the pending/completed roll-up" do
+      allow(mock_client).to receive(:get).and_return(mock_recipients_response)
+
+      result = described_class.get_recipients("doc-123")
+
+      expect(result["document"]["sentBy"]).to eq(
+        { "name" => "Jane Sender", "email" => "jane@acme.com" }
+      )
+      # Document status distinguishes a voided/expired doc from one still waiting
+      expect(result["document"]["status"]).to eq("under_review")
+      expect(result["summary"]).to eq(
+        { "total" => 2, "pending" => 1, "viewed" => 0, "completed" => 1 }
+      )
+    end
+
+    it "propagates a not found error for an unknown document" do
+      allow(mock_client).to receive(:get).and_raise(TurboDocxSdk::NotFoundError, "Document not found")
+
+      expect {
+        described_class.get_recipients("missing-doc")
+      }.to raise_error(TurboDocxSdk::NotFoundError, "Document not found")
+    end
+  end
+
+  # ============================================
   # download
   # ============================================
 

@@ -113,6 +113,52 @@ export interface DocumentStatusResponse {
   status: string;
 }
 
+/** Where a single recipient is in the signing process. */
+export interface RecipientSignatureStatus {
+  id: string;
+  name: string;
+  email: string;
+  /** One of 'pending', 'viewed', 'completed'. */
+  status: string;
+  /** ISO timestamp when this recipient signed; null while pending or viewed. */
+  signedOn: string | null;
+  signingOrder: number;
+}
+
+/** Roll-up of the roster, so callers can answer "how many are left" without looping. */
+export interface RecipientStatusSummary {
+  total: number;
+  pending: number;
+  viewed: number;
+  completed: number;
+}
+
+/** The identity that sent a document for signature. */
+export interface DocumentSender {
+  name: string;
+  email: string;
+}
+
+export interface DocumentRecipientsResponse {
+  document: {
+    id: string;
+    name: string;
+    /**
+     * Document-level status. There is no per-recipient declined/expired/voided state, so on a
+     * voided or expired document every unsigned recipient still reads 'pending' — read this to
+     * tell "still waiting" apart from "this document is dead".
+     */
+    status: string;
+    createdOn: string;
+    /** When the signing window closes; null when the document never expires. */
+    expiresAt: string | null;
+    /** Who sent it — never the synthetic API service account. */
+    sentBy: DocumentSender;
+  };
+  recipients: RecipientSignatureStatus[];
+  summary: RecipientStatusSummary;
+}
+
 // ============================================
 // SINGLE-STEP OPERATION TYPES
 // ============================================

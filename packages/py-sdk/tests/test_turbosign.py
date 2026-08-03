@@ -324,6 +324,95 @@ class TestGetStatus:
             mock_client.get.assert_called_once_with("/turbosign/documents/doc-123/status")
 
 
+class TestGetRecipients:
+    """Test get_recipients operation"""
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        TurboSign._client = None
+
+    def mock_response(self):
+        """The wire shape after the HTTP client unwraps {data: ...}"""
+        return {
+            "document": {
+                "id": "doc-123",
+                "name": "Mutual NDA",
+                "status": "under_review",
+                "createdOn": "2026-01-01T00:00:00.000Z",
+                "expiresAt": None,
+                "sentBy": {"name": "Jane Sender", "email": "jane@acme.com"},
+            },
+            "recipients": [
+                {
+                    "id": "rec-1",
+                    "name": "John Signer",
+                    "email": "john@example.com",
+                    "status": "completed",
+                    "signedOn": "2026-02-01T10:00:00.000Z",
+                    "signingOrder": 1,
+                },
+                {
+                    "id": "rec-2",
+                    "name": "Ada Signer",
+                    "email": "ada@example.com",
+                    "status": "pending",
+                    "signedOn": None,
+                    "signingOrder": 2,
+                },
+            ],
+            "summary": {"total": 2, "pending": 1, "viewed": 0, "completed": 1},
+        }
+
+    @pytest.mark.asyncio
+    async def test_get_every_recipient_with_status(self):
+        """Should get every recipient with their signing status"""
+        with patch.object(TurboSign, '_get_client') as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.get = AsyncMock(return_value=self.mock_response())
+            mock_get_client.return_value = mock_client
+
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
+            result = await TurboSign.get_recipients("doc-123")
+
+            assert len(result["recipients"]) == 2
+            assert result["recipients"][0]["status"] == "completed"
+            assert result["recipients"][0]["email"] == "john@example.com"
+            assert result["recipients"][0]["signedOn"] == "2026-02-01T10:00:00.000Z"
+            assert result["recipients"][0]["signingOrder"] == 1
+            # A pending signer has no signedOn timestamp
+            assert result["recipients"][1]["status"] == "pending"
+            assert result["recipients"][1]["signedOn"] is None
+            mock_client.get.assert_called_once_with("/turbosign/documents/doc-123/recipients")
+
+    @pytest.mark.asyncio
+    async def test_reports_sender_and_summary(self):
+        """Should expose who sent the document and the pending/completed roll-up"""
+        with patch.object(TurboSign, '_get_client') as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.get = AsyncMock(return_value=self.mock_response())
+            mock_get_client.return_value = mock_client
+
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
+            result = await TurboSign.get_recipients("doc-123")
+
+            assert result["document"]["sentBy"] == {"name": "Jane Sender", "email": "jane@acme.com"}
+            # Document status distinguishes a voided/expired doc from one still waiting
+            assert result["document"]["status"] == "under_review"
+            assert result["summary"] == {"total": 2, "pending": 1, "viewed": 0, "completed": 1}
+
+    @pytest.mark.asyncio
+    async def test_raises_not_found_for_unknown_document(self):
+        """Should propagate NotFoundError for an unknown document"""
+        with patch.object(TurboSign, '_get_client') as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.get = AsyncMock(side_effect=NotFoundError("Document not found"))
+            mock_get_client.return_value = mock_client
+
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
+            with pytest.raises(NotFoundError):
+                await TurboSign.get_recipients("missing-doc")
+
+
 class TestDownload:
     """Test download operation"""
 

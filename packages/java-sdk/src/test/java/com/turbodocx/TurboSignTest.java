@@ -339,6 +339,78 @@ class TurboSignTest {
     }
 
     // ============================================
+    // GetRecipients Tests (3)
+    // ============================================
+
+    /** The wire shape the backend returns, envelope included. */
+    private static final String RECIPIENTS_BODY = "{\"data\":{"
+            + "\"document\":{\"id\":\"doc-123\",\"name\":\"Mutual NDA\",\"status\":\"under_review\","
+            + "\"createdOn\":\"2026-01-01T00:00:00.000Z\",\"expiresAt\":null,"
+            + "\"sentBy\":{\"name\":\"Jane Sender\",\"email\":\"jane@acme.com\"}},"
+            + "\"recipients\":["
+            + "{\"id\":\"rec-1\",\"name\":\"John Signer\",\"email\":\"john@example.com\","
+            + "\"status\":\"completed\",\"signedOn\":\"2026-02-01T10:00:00.000Z\",\"signingOrder\":1},"
+            + "{\"id\":\"rec-2\",\"name\":\"Ada Signer\",\"email\":\"ada@example.com\","
+            + "\"status\":\"pending\",\"signedOn\":null,\"signingOrder\":2}],"
+            + "\"summary\":{\"total\":2,\"pending\":1,\"viewed\":0,\"completed\":1}}}";
+
+    @Test
+    @DisplayName("should get every recipient with their signing status")
+    void getRecipients() throws Exception {
+        server.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody(RECIPIENTS_BODY));
+
+        DocumentRecipientsResponse result = client.turboSign().getRecipients("doc-123");
+
+        assertEquals(2, result.getRecipients().size());
+        assertEquals("completed", result.getRecipients().get(0).getStatus());
+        assertEquals("john@example.com", result.getRecipients().get(0).getEmail());
+        assertEquals("2026-02-01T10:00:00.000Z", result.getRecipients().get(0).getSignedOn());
+        assertEquals(1, result.getRecipients().get(0).getSigningOrder());
+        // A pending signer has no signedOn timestamp
+        assertNull(result.getRecipients().get(1).getSignedOn());
+        assertEquals("pending", result.getRecipients().get(1).getStatus());
+
+        RecordedRequest recorded = server.takeRequest();
+        assertEquals("GET", recorded.getMethod());
+        assertEquals("/turbosign/documents/doc-123/recipients", recorded.getPath());
+    }
+
+    @Test
+    @DisplayName("should expose who sent the document and the pending/completed roll-up")
+    void getRecipientsSummaryAndSender() throws Exception {
+        server.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody(RECIPIENTS_BODY));
+
+        DocumentRecipientsResponse result = client.turboSign().getRecipients("doc-123");
+
+        assertEquals("Jane Sender", result.getDocument().getSentBy().getName());
+        assertEquals("jane@acme.com", result.getDocument().getSentBy().getEmail());
+        // Document status is what distinguishes a voided/expired doc from one still waiting
+        assertEquals("under_review", result.getDocument().getStatus());
+        assertEquals(2, result.getSummary().getTotal());
+        assertEquals(1, result.getSummary().getPending());
+        assertEquals(0, result.getSummary().getViewed());
+        assertEquals(1, result.getSummary().getCompleted());
+    }
+
+    @Test
+    @DisplayName("should throw NotFoundException for an unknown document")
+    void getRecipientsNotFound() {
+        server.enqueue(new MockResponse()
+                .setResponseCode(404)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"message\":\"Document not found\",\"type\":\"DocumentNotFound\"}"));
+
+        assertThrows(TurboDocxException.NotFoundException.class,
+                () -> client.turboSign().getRecipients("missing-doc"));
+    }
+
+    // ============================================
     // Void Test (1)
     // ============================================
 

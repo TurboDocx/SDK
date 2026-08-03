@@ -262,17 +262,41 @@ fmt.Printf("Message: %s\n", result.Message)
 
 #### `GetStatus`
 
-Check the current status of a document.
+Check the document-level status. For per-recipient detail, use `GetRecipients`.
 
 ```go
 status, err := client.TurboSign.GetStatus(ctx, "doc-uuid-here")
 
-fmt.Printf("Status: %s\n", status.Status)  // "pending", "completed", "voided"
+fmt.Printf("Status: %s\n", status.Status)  // "under_review", "completed", "voided", ...
+```
 
-for _, r := range status.Recipients {
-    fmt.Printf("%s: %s\n", r.Name, r.Status)
+#### `GetRecipients`
+
+See who the document went to, who has signed, who you are still waiting on, and who sent it.
+
+```go
+result, err := client.TurboSign.GetRecipients(ctx, "doc-uuid-here")
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Sent by %s <%s>\n", result.Document.SentBy.Name, result.Document.SentBy.Email)
+fmt.Printf("%d of %d signed, %d not started\n",
+    result.Summary.Completed, result.Summary.Total, result.Summary.Pending)
+
+for _, r := range result.Recipients {
+    // "pending" | "viewed" | "completed"
+    fmt.Printf("%s <%s>: %s\n", r.Name, r.Email, r.Status)
+    if r.SignedOn != nil {
+        fmt.Printf("  signed %s\n", *r.SignedOn)
+    }
 }
 ```
+
+> **Overlay the document status.** Recipient status is only `pending` / `viewed` / `completed` —
+> there is no per-recipient declined or expired state. On a voided or expired document every
+> unsigned recipient still reads `pending`, so check `result.Document.Status` before treating
+> someone as "still to sign".
 
 #### `Download`
 
@@ -1164,6 +1188,7 @@ The `cmd/manual/main.go` program tests all SDK methods:
 - ✅ `CreateSignatureReviewLink()` - Document upload for review
 - ✅ `SendSignature()` - Send for signature
 - ✅ `GetStatus()` - Check document status
+- ✅ `GetRecipients()` - Per-recipient signing status (who signed, who is pending)
 - ✅ `Download()` - Download signed document
 - ✅ `VoidDocument()` - Cancel signature request
 - ✅ `ResendEmail()` - Resend signature emails

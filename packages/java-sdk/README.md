@@ -273,13 +273,40 @@ for (RecipientResponse r : result.getRecipients()) {
 
 #### `getStatus()`
 
-Check the current status of a document.
+Check the document-level status. For per-recipient detail, use `getRecipients()`.
 
 ```java
 DocumentStatusResponse status = client.turboSign().getStatus("doc-uuid-here");
 
-System.out.println("Status: " + status.getStatus());  // "pending", "completed", "voided"
+System.out.println("Status: " + status.getStatus());  // "under_review", "completed", "voided"
 ```
+
+#### `getRecipients()`
+
+See who the document went to, who has signed, who you are still waiting on, and who sent it.
+
+```java
+DocumentRecipientsResponse result = client.turboSign().getRecipients("doc-uuid-here");
+
+System.out.println("Sent by " + result.getDocument().getSentBy().getName()
+        + " <" + result.getDocument().getSentBy().getEmail() + ">");
+System.out.println(result.getSummary().getCompleted() + " of "
+        + result.getSummary().getTotal() + " signed, "
+        + result.getSummary().getPending() + " not started");
+
+for (DocumentRecipientsResponse.RecipientStatus r : result.getRecipients()) {
+    // "pending" | "viewed" | "completed"
+    System.out.println(r.getName() + " <" + r.getEmail() + ">: " + r.getStatus());
+    if (r.getSignedOn() != null) {
+        System.out.println("  signed " + r.getSignedOn());
+    }
+}
+```
+
+> **Overlay the document status.** Recipient status is only `pending` / `viewed` / `completed` —
+> there is no per-recipient declined or expired state. On a voided or expired document every
+> unsigned recipient still reads `pending`, so check `result.getDocument().getStatus()` before
+> treating someone as "still to sign".
 
 #### `download()`
 
@@ -990,6 +1017,7 @@ The `ManualTest.java` class tests all SDK methods:
 - ✅ `createSignatureReviewLink()` - Document upload for review
 - ✅ `sendSignature()` - Send for signature
 - ✅ `getStatus()` - Check document status
+- ✅ `getRecipients()` - Per-recipient signing status (who signed, who is pending)
 - ✅ `download()` - Download signed document
 - ✅ `voidDocument()` - Cancel signature request
 - ✅ `resendEmail()` - Resend signature emails

@@ -232,16 +232,40 @@ The document source can also be raw bytes or a local file path (`file: File.binr
 
 #### `get_status(document_id)`
 
-Check the status of a document.
+Check the document-level status. For per-recipient detail, use `get_recipients`.
 
 ```ruby
 status = TurboDocxSdk::TurboSign.get_status("doc-uuid")
-puts "Status: #{status['status']}"  # "pending" | "completed" | "voided"
-
-status["recipients"].each do |r|
-  puts "#{r['name']}: #{r['status']}"
-end
+puts "Status: #{status['status']}"  # "under_review" | "completed" | "voided" | ...
 ```
+
+#### `get_recipients(document_id)`
+
+See who the document went to, who has signed, who you are still waiting on, and who sent it.
+
+```ruby
+result = TurboDocxSdk::TurboSign.get_recipients("doc-uuid")
+
+sender = result["document"]["sentBy"]
+puts "Sent by #{sender['name']} <#{sender['email']}>"
+
+summary = result["summary"]
+puts "#{summary['completed']} of #{summary['total']} signed, #{summary['pending']} not started"
+
+result["recipients"].each do |r|
+  # "pending" | "viewed" | "completed"
+  puts "#{r['name']} <#{r['email']}>: #{r['status']}"
+  puts "  signed #{r['signedOn']}" if r["signedOn"]
+end
+
+# Who are we chasing?
+waiting_on = result["recipients"].reject { |r| r["status"] == "completed" }
+```
+
+> **Overlay the document status.** Recipient status is only `pending` / `viewed` / `completed` —
+> there is no per-recipient declined or expired state. On a voided or expired document every
+> unsigned recipient still reads `pending`, so check `result["document"]["status"]` before
+> treating someone as "still to sign".
 
 #### `download(document_id)`
 

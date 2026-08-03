@@ -173,6 +173,28 @@ module TurboDocxSdk
         client.get("/turbosign/documents/#{document_id}/status")
       end
 
+      # Get every recipient on a document with their signing status.
+      #
+      # Answers "who has signed and who are we still waiting on" in one call, and
+      # reports who sent the document.
+      #
+      # There is no per-recipient declined/expired/voided state, so on a voided or
+      # expired document every unsigned recipient still reads "pending" — read
+      # result["document"]["status"] to tell "still waiting" apart from
+      # "this document is dead".
+      #
+      # @param document_id [String]
+      # @return [Hash] with "document" (including "sentBy"), "recipients"
+      #   (each with "status", "signedOn", "signingOrder") and "summary"
+      #   ("total", "pending", "viewed", "completed")
+      # @raise [NotFoundError] if the document does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def get_recipients(document_id)
+        client = get_client
+        client.get("/turbosign/documents/#{document_id}/recipients")
+      end
+
       private
 
       def get_client

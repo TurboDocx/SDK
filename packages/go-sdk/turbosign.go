@@ -156,6 +156,55 @@ type DocumentStatusResponse struct {
 	Status string `json:"status"`
 }
 
+// DocumentSender is the identity that sent a document for signature.
+// Never the synthetic API service account.
+type DocumentSender struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+// RecipientsDocument is the document the recipients belong to.
+type RecipientsDocument struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// Status is the document-level status. There is no per-recipient
+	// declined/expired/voided state, so on a voided or expired document every unsigned
+	// recipient still reads "pending" — read this to tell "still waiting" apart from
+	// "this document is dead".
+	Status    string         `json:"status"`
+	CreatedOn string         `json:"createdOn"`
+	ExpiresAt *string        `json:"expiresAt"`
+	SentBy    DocumentSender `json:"sentBy"`
+}
+
+// RecipientSignatureStatus is where a single recipient is in the signing process.
+type RecipientSignatureStatus struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	// Status is one of "pending", "viewed", "completed".
+	Status string `json:"status"`
+	// SignedOn is nil while the recipient is pending or has only viewed the document.
+	SignedOn     *string `json:"signedOn"`
+	SigningOrder int     `json:"signingOrder"`
+}
+
+// RecipientStatusSummary rolls the roster up so callers can answer
+// "how many are we waiting on" without looping.
+type RecipientStatusSummary struct {
+	Total     int `json:"total"`
+	Pending   int `json:"pending"`
+	Viewed    int `json:"viewed"`
+	Completed int `json:"completed"`
+}
+
+// DocumentRecipientsResponse is the response from GetRecipients
+type DocumentRecipientsResponse struct {
+	Document   RecipientsDocument         `json:"document"`
+	Recipients []RecipientSignatureStatus `json:"recipients"`
+	Summary    RecipientStatusSummary     `json:"summary"`
+}
+
 // VoidDocumentResponse is the response from VoidDocument
 type VoidDocumentResponse struct {
 	ID         string `json:"id"`
@@ -370,6 +419,21 @@ func (c *TurboSignClient) GetStatus(ctx context.Context, documentID string) (*Do
 	var response DocumentStatusResponse
 
 	err := c.http.Get(ctx, "/turbosign/documents/"+documentID+"/status", &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
+// GetRecipients gets every recipient on a document with their signing status.
+//
+// Answers "who has signed and who are we still waiting on" in one call, and reports
+// who sent the document. Summary carries the pending/viewed/completed counts.
+func (c *TurboSignClient) GetRecipients(ctx context.Context, documentID string) (*DocumentRecipientsResponse, error) {
+	var response DocumentRecipientsResponse
+
+	err := c.http.Get(ctx, "/turbosign/documents/"+documentID+"/recipients", &response)
 	if err != nil {
 		return nil, err
 	}

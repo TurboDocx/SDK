@@ -9,6 +9,7 @@ import {
   ResendEmailResponse,
   AuditTrailResponse,
   DocumentStatusResponse,
+  DocumentRecipientsResponse,
   CreateSignatureReviewLinkRequest,
   CreateSignatureReviewLinkResponse,
   SendSignatureRequest,
@@ -348,5 +349,24 @@ export class TurboSign {
     const client = this.getClient();
     // HTTP client auto-unwraps {data: ...} responses
     return client.get<DocumentStatusResponse>(`/turbosign/documents/${documentId}/status`);
+  }
+
+  /**
+   * Get every recipient on a document with their signing status
+   *
+   * Answers "who has signed and who are we still waiting on" in one call, and reports who
+   * sent the document. `summary` carries the pending/viewed/completed counts.
+   *
+   * @example
+   * ```typescript
+   * const { recipients, summary, document } = await TurboSign.getRecipients(documentId);
+   * console.log(`${summary.completed}/${summary.total} signed, sent by ${document.sentBy.name}`);
+   * const waitingOn = recipients.filter((r) => r.status !== 'completed');
+   * ```
+   */
+  static async getRecipients(documentId: string): Promise<DocumentRecipientsResponse> {
+    const client = this.getClient();
+    // HTTP client auto-unwraps {data: ...} responses
+    return client.get<DocumentRecipientsResponse>(`/turbosign/documents/${documentId}/recipients`);
   }
 }

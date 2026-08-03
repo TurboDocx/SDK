@@ -303,6 +303,130 @@ func TestTurboSignClient_GetStatus(t *testing.T) {
 	assert.Equal(t, "pending", result.Status)
 }
 
+// recipientsPayload is the wire shape the backend returns, envelope included.
+func recipientsPayload() map[string]interface{} {
+	return map[string]interface{}{
+		"data": map[string]interface{}{
+			"document": map[string]interface{}{
+				"id":        "doc-123",
+				"name":      "Mutual NDA",
+				"status":    "under_review",
+				"createdOn": "2026-01-01T00:00:00.000Z",
+				"expiresAt": nil,
+				"sentBy": map[string]interface{}{
+					"name":  "Jane Sender",
+					"email": "jane@acme.com",
+				},
+			},
+			"recipients": []map[string]interface{}{
+				{
+					"id":           "rec-1",
+					"name":         "John Signer",
+					"email":        "john@example.com",
+					"status":       "completed",
+					"signedOn":     "2026-02-01T10:00:00.000Z",
+					"signingOrder": 1,
+				},
+				{
+					"id":           "rec-2",
+					"name":         "Ada Signer",
+					"email":        "ada@example.com",
+					"status":       "pending",
+					"signedOn":     nil,
+					"signingOrder": 2,
+				},
+			},
+			"summary": map[string]interface{}{
+				"total": 2, "pending": 1, "viewed": 0, "completed": 1,
+			},
+		},
+	}
+}
+
+func newRecipientsServer(t *testing.T) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/turbosign/documents/doc-123/recipients", r.URL.Path)
+		assert.Equal(t, "GET", r.Method)
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(recipientsPayload())
+	}))
+}
+
+func TestTurboSignClient_GetRecipients(t *testing.T) {
+	server := newRecipientsServer(t)
+	defer server.Close()
+
+	client, _ := NewClientWithConfig(ClientConfig{
+		APIKey:      "test-api-key",
+		OrgID:       "test-org-id",
+		BaseURL:     server.URL,
+		SenderEmail: "test@example.com",
+	})
+
+	result, err := client.TurboSign.GetRecipients(context.Background(), "doc-123")
+
+	require.NoError(t, err)
+	require.Len(t, result.Recipients, 2)
+	assert.Equal(t, "completed", result.Recipients[0].Status)
+	assert.Equal(t, "john@example.com", result.Recipients[0].Email)
+	require.NotNil(t, result.Recipients[0].SignedOn)
+	assert.Equal(t, "2026-02-01T10:00:00.000Z", *result.Recipients[0].SignedOn)
+	assert.Equal(t, 1, result.Recipients[0].SigningOrder)
+	// A pending signer has no signedOn timestamp
+	assert.Equal(t, "pending", result.Recipients[1].Status)
+	assert.Nil(t, result.Recipients[1].SignedOn)
+}
+
+func TestTurboSignClient_GetRecipientsSummaryAndSender(t *testing.T) {
+	server := newRecipientsServer(t)
+	defer server.Close()
+
+	client, _ := NewClientWithConfig(ClientConfig{
+		APIKey:      "test-api-key",
+		OrgID:       "test-org-id",
+		BaseURL:     server.URL,
+		SenderEmail: "test@example.com",
+	})
+
+	result, err := client.TurboSign.GetRecipients(context.Background(), "doc-123")
+
+	require.NoError(t, err)
+	assert.Equal(t, "Jane Sender", result.Document.SentBy.Name)
+	assert.Equal(t, "jane@acme.com", result.Document.SentBy.Email)
+	// Document status distinguishes a voided/expired doc from one still waiting
+	assert.Equal(t, "under_review", result.Document.Status)
+	assert.Equal(t, 2, result.Summary.Total)
+	assert.Equal(t, 1, result.Summary.Pending)
+	assert.Equal(t, 0, result.Summary.Viewed)
+	assert.Equal(t, 1, result.Summary.Completed)
+}
+
+func TestTurboSignClient_GetRecipientsNotFound(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message": "Document not found",
+			"code":    "DOCUMENT_NOT_FOUND",
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClientWithConfig(ClientConfig{
+		APIKey:      "test-api-key",
+		OrgID:       "test-org-id",
+		BaseURL:     server.URL,
+		SenderEmail: "test@example.com",
+	})
+
+	_, err := client.TurboSign.GetRecipients(context.Background(), "missing-doc")
+
+	require.Error(t, err)
+	notFoundErr, ok := err.(*NotFoundError)
+	require.True(t, ok, "expected NotFoundError")
+	assert.Equal(t, 404, notFoundErr.StatusCode)
+}
+
 func TestTurboSignClient_Download(t *testing.T) {
 	expectedContent := []byte("%PDF-mock-content")
 	presignedURL := ""

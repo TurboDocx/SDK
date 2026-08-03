@@ -10,6 +10,7 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 | createSignatureReviewLink | `createSignatureReviewLink()` | `create_signature_review_link()` | `CreateSignatureReviewLink()` | `createSignatureReviewLink()` | `createSignatureReviewLink()` | `create_signature_review_link()` |
 | sendSignature | `sendSignature()` | `send_signature()` | `SendSignature()` | `sendSignature()` | `sendSignature()` | `send_signature()` |
 | getStatus | `getStatus()` | `get_status()` | `GetStatus()` | `getStatus()` | `getStatus()` | `get_status()` |
+| getRecipients | `getRecipients()` | `get_recipients()` | `GetRecipients()` | `getRecipients()` | `getRecipients()` | `get_recipients()` |
 | download | `download()` | `download()` | `Download()` | `download()` | `download()` | `download()` |
 | void | `void()` | `void_document()` | `VoidDocument()` | `void()` | `voidDocument()` | `void_document()` |
 | resend | `resend()` | `resend_email()` | `ResendEmail()` | `resend()` | `resendEmail()` | `resend_email()` |
@@ -23,6 +24,17 @@ the sanctioned idiomatic form, not a parity gap.
 **PHP void note:** PHP ships `TurboSign::void()` (not `voidDocument()`) — `void` is a valid PHP
 method name and the method is published; renaming would break users. The table above reflects the
 shipped name.
+
+**getRecipients return-shape note:** JS, Go, PHP and Java return a typed model
+(`DocumentRecipientsResponse`); Python and Ruby return the raw `Dict`/`Hash`, matching how
+those two already handle every other TurboSign read (`get_status`, `get_audit_trail`). That is
+the sanctioned idiomatic split, not a parity gap.
+
+**Recipient status has three values only** — `pending`, `viewed`, `completed`. There is no
+per-recipient declined/expired/voided state, so on a voided or expired document every unsigned
+recipient still reads `pending`. Every SDK therefore returns the document-level status
+alongside the roster, and callers must overlay it to tell "still waiting" from "this document
+is dead". Keep that caveat in each language's docstring.
 
 ## Required TurboPartner Operations
 

@@ -251,19 +251,38 @@ result.recipients.forEach(r => {
 
 #### `getStatus(documentId)`
 
-Check the current status of a document.
+Check the document-level status. For per-recipient detail, use
+[`getRecipients()`](#getrecipientsdocumentid).
 
 ```typescript
 const status = await TurboSign.getStatus('doc-uuid-here');
 
-console.log('Document Status:', status.status);  // 'pending' | 'completed' | 'voided'
-console.log('Recipients:', status.recipients);
-
-// Check individual recipient status
-status.recipients.forEach(r => {
-  console.log(`${r.name}: ${r.status}`);  // 'pending' | 'signed' | 'declined'
-});
+console.log('Document Status:', status.status);  // 'under_review' | 'completed' | 'voided' | ...
 ```
+
+#### `getRecipients(documentId)`
+
+See who the document went to, who has signed, who you are still waiting on, and who sent it.
+
+```typescript
+const { document, recipients, summary } = await TurboSign.getRecipients('doc-uuid-here');
+
+console.log(`Sent by ${document.sentBy.name} <${document.sentBy.email}>`);
+console.log(`${summary.completed} of ${summary.total} signed, ${summary.pending} not started`);
+
+recipients.forEach(r => {
+  console.log(`${r.name} <${r.email}>: ${r.status}`);  // 'pending' | 'viewed' | 'completed'
+  if (r.signedOn) console.log(`  signed ${r.signedOn}`);
+});
+
+// Who are we chasing?
+const waitingOn = recipients.filter(r => r.status !== 'completed');
+```
+
+> **Overlay the document status.** Recipient status is only `pending` / `viewed` / `completed` —
+> there is no per-recipient declined or expired state. On a voided or expired document every
+> unsigned recipient still reads `pending`, so check `document.status` before treating someone
+> as "still to sign".
 
 #### `download(documentId)`
 
@@ -892,6 +911,7 @@ The `manual-test.ts` file tests all SDK methods:
 - ✅ `createSignatureReviewLink()` - Document upload for review
 - ✅ `sendSignature()` - Send for signature
 - ✅ `getStatus()` - Check document status
+- ✅ `getRecipients()` - Per-recipient signing status (who signed, who is pending)
 - ✅ `download()` - Download signed document
 - ✅ `void()` - Cancel signature request
 - ✅ `resend()` - Resend signature emails

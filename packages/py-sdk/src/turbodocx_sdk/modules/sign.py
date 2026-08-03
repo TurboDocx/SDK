@@ -334,6 +334,37 @@ class TurboSign:
         return await client.get(f"/turbosign/documents/{document_id}/status")
 
     @classmethod
+    async def get_recipients(cls, document_id: str) -> Dict[str, Any]:
+        """
+        Get every recipient on a document with their signing status
+
+        Answers "who has signed and who are we still waiting on" in one call, and
+        reports who sent the document.
+
+        Args:
+            document_id: ID of the document
+
+        Returns:
+            Dict with:
+                - document: id, name, status, createdOn, expiresAt, and
+                  sentBy {name, email} — who sent it
+                - recipients: list of {id, name, email, status, signedOn, signingOrder}
+                  where status is 'pending', 'viewed' or 'completed'
+                - summary: {total, pending, viewed, completed}
+
+            There is no per-recipient declined/expired/voided state, so on a voided or
+            expired document every unsigned recipient still reads 'pending' — read
+            document['status'] to tell "still waiting" apart from "this document is dead".
+
+        Example:
+            >>> result = await TurboSign.get_recipients("doc-123")
+            >>> print(f"{result['summary']['completed']}/{result['summary']['total']} signed")
+            >>> waiting = [r for r in result["recipients"] if r["status"] != "completed"]
+        """
+        client = cls._get_client()
+        return await client.get(f"/turbosign/documents/{document_id}/recipients")
+
+    @classmethod
     async def download(cls, document_id: str) -> bytes:
         """
         Download the signed document

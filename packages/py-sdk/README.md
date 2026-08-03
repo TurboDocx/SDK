@@ -287,16 +287,41 @@ for recipient in result["recipients"]:
 
 #### `get_status()`
 
-Check the current status of a document.
+Check the document-level status. For per-recipient detail, use `get_recipients()`.
 
 ```python
 status = await TurboSign.get_status("doc-uuid-here")
 
-print(f"Status: {status['status']}")  # 'pending', 'completed', 'voided'
-
-for recipient in status["recipients"]:
-    print(f"{recipient['name']}: {recipient['status']}")
+print(f"Status: {status['status']}")  # 'under_review', 'completed', 'voided', ...
 ```
+
+#### `get_recipients()`
+
+See who the document went to, who has signed, who you are still waiting on, and who sent it.
+
+```python
+result = await TurboSign.get_recipients("doc-uuid-here")
+
+sender = result["document"]["sentBy"]
+print(f"Sent by {sender['name']} <{sender['email']}>")
+
+summary = result["summary"]
+print(f"{summary['completed']} of {summary['total']} signed, {summary['pending']} not started")
+
+for r in result["recipients"]:
+    # 'pending' | 'viewed' | 'completed'
+    print(f"{r['name']} <{r['email']}>: {r['status']}")
+    if r["signedOn"]:
+        print(f"  signed {r['signedOn']}")
+
+# Who are we chasing?
+waiting_on = [r for r in result["recipients"] if r["status"] != "completed"]
+```
+
+> **Overlay the document status.** Recipient status is only `pending` / `viewed` / `completed` —
+> there is no per-recipient declined or expired state. On a voided or expired document every
+> unsigned recipient still reads `pending`, so check `result["document"]["status"]` before
+> treating someone as "still to sign".
 
 #### `download()`
 
@@ -857,6 +882,7 @@ The `manual_test.py` file tests all SDK methods:
 - ✅ `create_signature_review_link()` - Document upload for review
 - ✅ `send_signature()` - Send for signature
 - ✅ `get_status()` - Check document status
+- ✅ `get_recipients()` - Per-recipient signing status (who signed, who is pending)
 - ✅ `download()` - Download signed document
 - ✅ `void_document()` - Cancel signature request
 - ✅ `resend_email()` - Resend signature emails

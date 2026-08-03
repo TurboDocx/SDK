@@ -289,22 +289,38 @@ foreach ($status->recipients as $recipient) {
 
 #### `getStatus()`
 
-Check the current status of a document.
+Check the document-level status. For per-recipient detail, use `getRecipients()`.
 
 ```php
 $status = TurboSign::getStatus('doc-uuid-here');
 
-echo "Document Status: {$status->status->value}\n";  // 'pending', 'completed', 'voided'
-echo "Recipients:\n";
+echo "Document Status: {$status->status}\n";  // 'under_review', 'completed', 'voided', ...
+```
 
-// Check individual recipient status
-foreach ($status->recipients as $recipient) {
-    echo "  {$recipient->name}: {$recipient->status->value}\n";
-    if ($recipient->signedAt) {
-        echo "    Signed at: {$recipient->signedAt}\n";
+#### `getRecipients()`
+
+See who the document went to, who has signed, who you are still waiting on, and who sent it.
+
+```php
+$result = TurboSign::getRecipients('doc-uuid-here');
+
+echo "Sent by {$result->document->sentBy->name} <{$result->document->sentBy->email}>\n";
+echo "{$result->summary->completed} of {$result->summary->total} signed, ";
+echo "{$result->summary->pending} not started\n";
+
+foreach ($result->recipients as $recipient) {
+    // 'pending' | 'viewed' | 'completed'
+    echo "  {$recipient->name} <{$recipient->email}>: {$recipient->status}\n";
+    if ($recipient->signedOn !== null) {
+        echo "    Signed on: {$recipient->signedOn}\n";
     }
 }
 ```
+
+> **Overlay the document status.** Recipient status is only `pending` / `viewed` / `completed` —
+> there is no per-recipient declined or expired state. On a voided or expired document every
+> unsigned recipient still reads `pending`, so check `$result->document->status` before treating
+> someone as "still to sign".
 
 #### `download()`
 

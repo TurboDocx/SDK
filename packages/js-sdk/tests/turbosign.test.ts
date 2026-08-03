@@ -13,7 +13,7 @@
 
 import { TurboSign } from "../src/modules/sign";
 import { HttpClient } from "../src/http";
-import { NetworkError } from "../src/utils/errors";
+import { NetworkError, NotFoundError } from "../src/utils/errors";
 import type { Recipient, Field } from "../src/types/sign";
 
 // Mock the HttpClient
@@ -425,6 +425,94 @@ describe("TurboSign Module", () => {
       expect(result.status).toBe("under_review");
       expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
         "/turbosign/documents/doc-123/status"
+      );
+    });
+  });
+
+  describe("getRecipients", () => {
+    // The wire shape after the HTTP client unwraps {data: ...}
+    const mockRecipientsResponse = {
+      document: {
+        id: "doc-123",
+        name: "Mutual NDA",
+        status: "under_review",
+        createdOn: "2026-01-01T00:00:00.000Z",
+        expiresAt: null,
+        sentBy: { name: "Jane Sender", email: "jane@acme.com" },
+      },
+      recipients: [
+        {
+          id: "rec-1",
+          name: "John Signer",
+          email: "john@example.com",
+          status: "completed",
+          signedOn: "2026-02-01T10:00:00.000Z",
+          signingOrder: 1,
+        },
+        {
+          id: "rec-2",
+          name: "Ada Signer",
+          email: "ada@example.com",
+          status: "pending",
+          signedOn: null,
+          signingOrder: 2,
+        },
+      ],
+      summary: { total: 2, pending: 1, viewed: 0, completed: 1 },
+    };
+
+    it("should get every recipient with their signing status", async () => {
+      MockedHttpClient.prototype.get = jest
+        .fn()
+        .mockResolvedValue(mockRecipientsResponse);
+      TurboSign.configure({ apiKey: "test-key" });
+
+      const result = await TurboSign.getRecipients("doc-123");
+
+      expect(result.recipients).toHaveLength(2);
+      expect(result.recipients[0].status).toBe("completed");
+      expect(result.recipients[0].email).toBe("john@example.com");
+      expect(result.recipients[0].signedOn).toBe("2026-02-01T10:00:00.000Z");
+      expect(result.recipients[0].signingOrder).toBe(1);
+      // A pending signer has no signedOn timestamp
+      expect(result.recipients[1].status).toBe("pending");
+      expect(result.recipients[1].signedOn).toBeNull();
+      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
+        "/turbosign/documents/doc-123/recipients"
+      );
+    });
+
+    it("should expose who sent the document and the pending/completed roll-up", async () => {
+      MockedHttpClient.prototype.get = jest
+        .fn()
+        .mockResolvedValue(mockRecipientsResponse);
+      TurboSign.configure({ apiKey: "test-key" });
+
+      const result = await TurboSign.getRecipients("doc-123");
+
+      expect(result.document.sentBy).toEqual({
+        name: "Jane Sender",
+        email: "jane@acme.com",
+      });
+      // Document status distinguishes a voided/expired doc from one still waiting
+      expect(result.document.status).toBe("under_review");
+      expect(result.summary).toEqual({
+        total: 2,
+        pending: 1,
+        viewed: 0,
+        completed: 1,
+      });
+    });
+
+    it("should propagate NotFoundError for an unknown document", async () => {
+      const notFound = new NotFoundError("Document not found");
+      MockedHttpClient.prototype.get = jest
+        .fn()
+        .mockRejectedValue(notFound);
+      TurboSign.configure({ apiKey: "test-key" });
+
+      await expect(TurboSign.getRecipients("missing-doc")).rejects.toThrow(
+        NotFoundError
       );
     });
   });
