@@ -280,10 +280,16 @@ $result = TurboSign::sendSignature(
     )
 );
 
-// Recipients (with their sign URLs) come back on the send result itself
-foreach ($result->recipients as $recipient) {
-    echo "{$recipient->name}: {$recipient->signUrl}\n";
+// The created recipients come back on the send result itself, as a plain array of
+// associative arrays (not objects). Each carries id, name and email.
+if ($result->recipients !== null) {
+    foreach ($result->recipients as $recipient) {
+        echo "{$recipient['name']} <{$recipient['email']}> — {$recipient['id']}\n";
+    }
 }
+
+// For signing progress afterwards, use getRecipients():
+$progress = TurboSign::getRecipients($result->documentId);
 ```
 
 #### `getStatus()`

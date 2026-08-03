@@ -6,17 +6,19 @@ import java.util.List;
 /**
  * Response from getting a document's recipients with their per-recipient signing status.
  *
- * <p>Recipient status is one of {@code pending}, {@code viewed} or {@code completed}. There is
- * no per-recipient declined/expired/voided state, so on a voided or expired document every
- * unsigned recipient still reads {@code pending} — read {@link RecipientsDocument#getStatus()}
- * to tell "still waiting" apart from "this document is dead".
+ * <p>Each recipient carries two status fields on purpose.
+ * {@link RecipientSignatureStatus#getStatus()} is the raw database value and is only ever
+ * {@code pending}, {@code viewed} or {@code completed} — the schema has no per-recipient
+ * declined/voided/expired state. {@link RecipientSignatureStatus#getEffectiveStatus()} layers
+ * the document's outcome on top ({@code voided}, {@code expired}) and is the one to display.
+ * A completed signature is never revoked.
  */
 public class DocumentRecipientsResponse {
     @SerializedName("document")
     private RecipientsDocument document;
 
     @SerializedName("recipients")
-    private List<RecipientStatus> recipients;
+    private List<RecipientSignatureStatus> recipients;
 
     @SerializedName("summary")
     private RecipientStatusSummary summary;
@@ -25,7 +27,7 @@ public class DocumentRecipientsResponse {
         return document;
     }
 
-    public List<RecipientStatus> getRecipients() {
+    public List<RecipientSignatureStatus> getRecipients() {
         return recipients;
     }
 
@@ -56,7 +58,7 @@ public class DocumentRecipientsResponse {
         private String expiresAt;
 
         @SerializedName("sentBy")
-        private Sender sentBy;
+        private DocumentSender sentBy;
 
         public String getId() {
             return id;
@@ -86,7 +88,7 @@ public class DocumentRecipientsResponse {
         }
 
         /** Who sent the document — never the synthetic API service account. */
-        public Sender getSentBy() {
+        public DocumentSender getSentBy() {
             return sentBy;
         }
     }
@@ -94,7 +96,7 @@ public class DocumentRecipientsResponse {
     /**
      * The identity that sent the document for signature.
      */
-    public static class Sender {
+    public static class DocumentSender {
         @SerializedName("name")
         private String name;
 
@@ -113,7 +115,7 @@ public class DocumentRecipientsResponse {
     /**
      * A single recipient and where they are in the signing process.
      */
-    public static class RecipientStatus {
+    public static class RecipientSignatureStatus {
         @SerializedName("id")
         private String id;
 

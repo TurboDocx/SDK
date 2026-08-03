@@ -243,10 +243,13 @@ const result = await TurboSign.sendSignature({
   ]
 });
 
-// Each recipient gets a unique signing URL
-result.recipients.forEach(r => {
-  console.log(`${r.name}: ${r.signUrl}`);
+// The created recipients come back on the send result (id, name, email).
+// Signing links are emailed to them — they are not returned here.
+result.recipients?.forEach(r => {
+  console.log(`${r.name} <${r.email}> — ${r.id}`);
 });
+
+// For signing progress afterwards, use getRecipients().
 ```
 
 #### `getStatus(documentId)`

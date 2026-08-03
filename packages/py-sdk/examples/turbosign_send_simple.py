@@ -107,15 +107,19 @@ async def send_directly_example():
         print(f"Document ID: {result['documentId']}")
         print(f"Message: {result['message']}")
 
-        # To get sign URLs and recipient details, use get_status
+        # Signing links are emailed to recipients — they are not returned by the API.
+        # get_recipients reports who has signed and who you are still waiting on.
         try:
-            status = await TurboSign.get_status(result['documentId'])
-            if status.get('recipients'):
-                print("\nSign URLs:")
-                for recipient in status['recipients']:
-                    print(f"  {recipient['name']}: {recipient.get('signUrl', 'N/A')}")
+            progress = await TurboSign.get_recipients(result['documentId'])
+            summary = progress['summary']
+            print(
+                f"\n{summary['completed']} of {summary['total']} signed, "
+                f"still waiting on {summary['waitingOn']}"
+            )
+            for recipient in progress['recipients']:
+                print(f"  {recipient['name']} <{recipient['email']}>: {recipient['effectiveStatus']}")
         except Exception as status_error:
-            print("\nNote: Could not fetch recipient sign URLs")
+            print("\nNote: Could not fetch recipient status")
 
     except Exception as error:
         print(f"Error: {error}")

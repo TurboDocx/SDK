@@ -176,24 +176,23 @@ export interface DocumentSender {
   email: string;
 }
 
+/** The document a set of recipients belongs to. */
+export interface RecipientsDocument {
+  id: string;
+  name: string;
+  /** Document-level status — the full SignatureDocumentStatus set. */
+  status: string;
+  createdOn: string;
+  /** When the document was dispatched to recipients; null while it is still a draft. */
+  sentOn: string | null;
+  /** When the signing window closes; null when the document never expires. */
+  expiresAt: string | null;
+  /** Who sent it — never the synthetic API service account. */
+  sentBy: DocumentSender;
+}
+
 export interface DocumentRecipientsResponse {
-  document: {
-    id: string;
-    name: string;
-    /**
-     * Document-level status. There is no per-recipient declined/expired/voided state, so on a
-     * voided or expired document every unsigned recipient still reads 'pending' — read this to
-     * tell "still waiting" apart from "this document is dead".
-     */
-    status: string;
-    createdOn: string;
-    /** When the document was dispatched to recipients; null while it is still a draft. */
-    sentOn: string | null;
-    /** When the signing window closes; null when the document never expires. */
-    expiresAt: string | null;
-    /** Who sent it — never the synthetic API service account. */
-    sentBy: DocumentSender;
-  };
+  document: RecipientsDocument;
   recipients: RecipientSignatureStatus[];
   summary: RecipientStatusSummary;
 }

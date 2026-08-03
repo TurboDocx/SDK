@@ -119,15 +119,17 @@ func main() {
 	fmt.Printf("Document ID: %s\n", result.DocumentID)
 	fmt.Printf("Message: %s\n", result.Message)
 
-	// To get sign URLs and recipient details, use GetStatus
-	status, err := client.TurboSign.GetStatus(ctx, result.DocumentID)
-	if err == nil && status.Recipients != nil {
-		fmt.Println("\nSign URLs:")
-		for _, recipient := range status.Recipients {
-			fmt.Printf("  %s: %s\n", recipient.Name, recipient.SignURL)
+	// Signing links are emailed to recipients — they are not returned by the API.
+	// GetRecipients reports who has signed and who you are still waiting on.
+	progress, err := client.TurboSign.GetRecipients(ctx, result.DocumentID)
+	if err == nil {
+		fmt.Printf("\n%d of %d signed, still waiting on %d\n",
+			progress.Summary.Completed, progress.Summary.Total, progress.Summary.WaitingOn)
+		for _, recipient := range progress.Recipients {
+			fmt.Printf("  %s <%s>: %s\n", recipient.Name, recipient.Email, recipient.EffectiveStatus)
 		}
 	} else {
-		fmt.Println("\nNote: Could not fetch recipient sign URLs")
+		fmt.Println("\nNote: Could not fetch recipient status")
 	}
 }
 

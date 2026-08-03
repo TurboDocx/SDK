@@ -103,17 +103,18 @@ async function sendDirectlyExample() {
     console.log('Document ID:', result.documentId);
     console.log('Message:', result.message);
 
-    // To get sign URLs and recipient details, use getStatus
+    // Signing links are emailed to recipients — they are not returned by the API.
+    // getRecipients reports who has signed and who you are still waiting on.
     try {
-      const status = await TurboSign.getStatus(result.documentId);
-      if (status?.recipients) {
-        console.log('\nSign URLs:');
-        status.recipients.forEach(recipient => {
-          console.log(`  ${recipient.name}: ${recipient.signUrl}`);
-        });
-      }
+      const { recipients, summary } = await TurboSign.getRecipients(result.documentId);
+      console.log(
+        `\n${summary.completed} of ${summary.total} signed, still waiting on ${summary.waitingOn}`
+      );
+      recipients.forEach(recipient => {
+        console.log(`  ${recipient.name} <${recipient.email}>: ${recipient.effectiveStatus}`);
+      });
     } catch (statusError) {
-      console.log('\nNote: Could not fetch recipient sign URLs');
+      console.log('\nNote: Could not fetch recipient status');
     }
 
   } catch (error) {

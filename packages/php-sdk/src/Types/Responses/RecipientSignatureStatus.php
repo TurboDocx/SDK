@@ -41,7 +41,12 @@ final class RecipientSignatureStatus
             name: $data['name'] ?? '',
             email: $data['email'] ?? '',
             status: $data['status'] ?? '',
-            effectiveStatus: $data['effectiveStatus'] ?? ($data['status'] ?? ''),
+            // Never fall back to `status` here. The two fields are deliberately different
+            // — on a voided document a stranded signer reads "voided" in effectiveStatus
+            // but still "pending" in status. Substituting one for the other would make a
+            // backend regression that stops emitting effectiveStatus invisible in PHP
+            // while it is visible in the other five SDKs.
+            effectiveStatus: $data['effectiveStatus'] ?? '',
             signedOn: $data['signedOn'] ?? null,
             signingOrder: (int) ($data['signingOrder'] ?? 0),
             delivery: RecipientDelivery::fromArray($data['delivery'] ?? []),

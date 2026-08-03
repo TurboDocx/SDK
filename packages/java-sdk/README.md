@@ -294,7 +294,7 @@ System.out.println(result.getSummary().getCompleted() + " of "
         + result.getSummary().getTotal() + " signed, still waiting on "
         + result.getSummary().getWaitingOn());
 
-for (DocumentRecipientsResponse.RecipientStatus r : result.getRecipients()) {
+for (DocumentRecipientsResponse.RecipientSignatureStatus r : result.getRecipients()) {
     // "pending" | "viewed" | "completed" | "voided" | "expired"
     System.out.println(r.getName() + " <" + r.getEmail() + ">: " + r.getEffectiveStatus());
     if (r.getSignedOn() != null) {
