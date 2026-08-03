@@ -171,10 +171,26 @@ type RecipientsDocument struct {
 	// declined/expired/voided state, so on a voided or expired document every unsigned
 	// recipient still reads "pending" — read this to tell "still waiting" apart from
 	// "this document is dead".
-	Status    string         `json:"status"`
-	CreatedOn string         `json:"createdOn"`
+	Status    string `json:"status"`
+	CreatedOn string `json:"createdOn"`
+	// SentOn is when the document was dispatched to recipients; nil while it is a draft.
+	SentOn    *string        `json:"sentOn"`
 	ExpiresAt *string        `json:"expiresAt"`
 	SentBy    DocumentSender `json:"sentBy"`
+}
+
+// RecipientDelivery is the email history for one recipient — every notification actually
+// sent to them. CC notifications are excluded; a CC address is not a signer.
+type RecipientDelivery struct {
+	// FirstSentOn is nil if this recipient has never been emailed.
+	FirstSentOn *string `json:"firstSentOn"`
+	LastSentOn  *string `json:"lastSentOn"`
+	// TotalSent counts the request, resends, reminders, warnings and terminal notices.
+	TotalSent      int     `json:"totalSent"`
+	ReminderCount  int     `json:"reminderCount"`
+	LastRemindedAt *string `json:"lastRemindedAt"`
+	WarningCount   int     `json:"warningCount"`
+	LastWarningAt  *string `json:"lastWarningAt"`
 }
 
 // RecipientSignatureStatus is where a single recipient is in the signing process.
@@ -182,20 +198,31 @@ type RecipientSignatureStatus struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Email string `json:"email"`
-	// Status is one of "pending", "viewed", "completed".
+	// Status is the raw database status — only ever "pending", "viewed" or "completed".
 	Status string `json:"status"`
+	// EffectiveStatus is Status with the document's terminal state layered on:
+	// "pending", "viewed", "completed", "voided" or "expired". Use this for display — a
+	// signer on a voided document reads "voided" here but still "pending" in Status.
+	// A completed signature is never revoked.
+	EffectiveStatus string `json:"effectiveStatus"`
 	// SignedOn is nil while the recipient is pending or has only viewed the document.
-	SignedOn     *string `json:"signedOn"`
-	SigningOrder int     `json:"signingOrder"`
+	SignedOn     *string           `json:"signedOn"`
+	SigningOrder int               `json:"signingOrder"`
+	Delivery     RecipientDelivery `json:"delivery"`
 }
 
-// RecipientStatusSummary rolls the roster up so callers can answer
+// RecipientStatusSummary rolls the roster up by effective status so callers can answer
 // "how many are we waiting on" without looping.
 type RecipientStatusSummary struct {
 	Total     int `json:"total"`
 	Pending   int `json:"pending"`
 	Viewed    int `json:"viewed"`
 	Completed int `json:"completed"`
+	// Voided and Expired count signers stranded by the document's terminal state.
+	Voided  int `json:"voided"`
+	Expired int `json:"expired"`
+	// WaitingOn is who can still act (pending + viewed). Zero once the document is terminal.
+	WaitingOn int `json:"waitingOn"`
 }
 
 // DocumentRecipientsResponse is the response from GetRecipients

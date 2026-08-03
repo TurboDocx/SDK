@@ -14,6 +14,7 @@ final class RecipientsDocument
      *   declined/expired/voided state, so on a voided or expired document every unsigned
      *   recipient still reads 'pending' — read this to tell "still waiting" apart from
      *   "this document is dead".
+     * @param string|null $sentOn When the document went out to recipients; null while a draft.
      * @param string|null $expiresAt When the signing window closes; null if it never expires.
      */
     public function __construct(
@@ -21,6 +22,7 @@ final class RecipientsDocument
         public string $name,
         public string $status,
         public string $createdOn,
+        public ?string $sentOn,
         public ?string $expiresAt,
         public DocumentSender $sentBy,
     ) {}
@@ -38,6 +40,7 @@ final class RecipientsDocument
             name: $data['name'] ?? '',
             status: $data['status'] ?? '',
             createdOn: $data['createdOn'] ?? '',
+            sentOn: $data['sentOn'] ?? null,
             expiresAt: $data['expiresAt'] ?? null,
             sentBy: DocumentSender::fromArray($data['sentBy'] ?? []),
         );

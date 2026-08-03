@@ -281,22 +281,38 @@ if err != nil {
 }
 
 fmt.Printf("Sent by %s <%s>\n", result.Document.SentBy.Name, result.Document.SentBy.Email)
-fmt.Printf("%d of %d signed, %d not started\n",
-    result.Summary.Completed, result.Summary.Total, result.Summary.Pending)
+fmt.Printf("%d of %d signed, still waiting on %d\n",
+    result.Summary.Completed, result.Summary.Total, result.Summary.WaitingOn)
 
 for _, r := range result.Recipients {
-    // "pending" | "viewed" | "completed"
-    fmt.Printf("%s <%s>: %s\n", r.Name, r.Email, r.Status)
+    // "pending" | "viewed" | "completed" | "voided" | "expired"
+    fmt.Printf("%s <%s>: %s\n", r.Name, r.Email, r.EffectiveStatus)
     if r.SignedOn != nil {
         fmt.Printf("  signed %s\n", *r.SignedOn)
     }
+    fmt.Printf("  emailed %dx\n", r.Delivery.TotalSent)
 }
 ```
 
-> **Overlay the document status.** Recipient status is only `pending` / `viewed` / `completed` —
-> there is no per-recipient declined or expired state. On a voided or expired document every
-> unsigned recipient still reads `pending`, so check `result.Document.Status` before treating
-> someone as "still to sign".
+**Two status fields, and they differ on purpose:**
+
+| Field | Values | Use it for |
+|---|---|---|
+| `Status` | `pending`, `viewed`, `completed` | The raw database value |
+| `EffectiveStatus` | `pending`, `viewed`, `completed`, `voided`, `expired` | Display |
+
+The database has no per-recipient declined/voided/expired state, so on a voided or expired
+document an unsigned signer still reads `pending` in `Status`. `EffectiveStatus` layers the
+document's outcome on top — that's the one to show a user. A completed signature is never
+revoked: someone who signed before the document was voided still reads `completed`.
+
+`Summary` counts by effective status, and `WaitingOn` (pending + viewed) drops to zero once
+the document is terminal.
+
+**`Delivery`** is that recipient's email history — `FirstSentOn`, `LastSentOn`, `TotalSent`,
+`ReminderCount`, `LastRemindedAt`, `WarningCount`, `LastWarningAt`. It counts the signature
+request, resends, reminders, expiry warnings and terminal notices. CC notifications are
+excluded, since a CC address is not a signer.
 
 #### `Download`
 

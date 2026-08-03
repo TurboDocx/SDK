@@ -113,24 +113,61 @@ export interface DocumentStatusResponse {
   status: string;
 }
 
+/**
+ * A recipient's status once the document's own terminal state is layered on top.
+ * The database only stores pending/viewed/completed; voided and expired are projected
+ * from the document onto signers who had not finished.
+ */
+export type RecipientEffectiveStatus = 'pending' | 'viewed' | 'completed' | 'voided' | 'expired';
+
+/**
+ * Email history for one recipient — every notification actually sent to them.
+ * CC notifications are excluded; a CC address is not a signer.
+ */
+export interface RecipientDelivery {
+  /** First email of any kind to this recipient; null if they have never been emailed. */
+  firstSentOn: string | null;
+  /** Most recent email of any kind to this recipient. */
+  lastSentOn: string | null;
+  /** Total emails sent (request, resends, reminders, warnings, terminal notices). */
+  totalSent: number;
+  reminderCount: number;
+  lastRemindedAt: string | null;
+  warningCount: number;
+  lastWarningAt: string | null;
+}
+
 /** Where a single recipient is in the signing process. */
 export interface RecipientSignatureStatus {
   id: string;
   name: string;
   email: string;
-  /** One of 'pending', 'viewed', 'completed'. */
+  /** Raw database status — only ever 'pending', 'viewed' or 'completed'. */
   status: string;
+  /**
+   * Raw status with the document's terminal state layered on. Use this for display: a
+   * signer on a voided document reads 'voided' here but still 'pending' in `status`.
+   * A completed signature is never revoked.
+   */
+  effectiveStatus: RecipientEffectiveStatus;
   /** ISO timestamp when this recipient signed; null while pending or viewed. */
   signedOn: string | null;
   signingOrder: number;
+  delivery: RecipientDelivery;
 }
 
-/** Roll-up of the roster, so callers can answer "how many are left" without looping. */
+/** Roll-up of the roster by effective status, so callers can skip the loop. */
 export interface RecipientStatusSummary {
   total: number;
   pending: number;
   viewed: number;
   completed: number;
+  /** Signers stranded by a voided document. */
+  voided: number;
+  /** Signers stranded by an expired document. */
+  expired: number;
+  /** Recipients who can still act (pending + viewed). Zero once the document is terminal. */
+  waitingOn: number;
 }
 
 /** The identity that sent a document for signature. */
@@ -150,6 +187,8 @@ export interface DocumentRecipientsResponse {
      */
     status: string;
     createdOn: string;
+    /** When the document was dispatched to recipients; null while it is still a draft. */
+    sentOn: string | null;
     /** When the signing window closes; null when the document never expires. */
     expiresAt: string | null;
     /** Who sent it — never the synthetic API service account. */

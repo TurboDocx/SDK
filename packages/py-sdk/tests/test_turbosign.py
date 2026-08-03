@@ -339,6 +339,7 @@ class TestGetRecipients:
                 "name": "Mutual NDA",
                 "status": "under_review",
                 "createdOn": "2026-01-01T00:00:00.000Z",
+                "sentOn": "2026-01-02T08:59:00.000Z",
                 "expiresAt": None,
                 "sentBy": {"name": "Jane Sender", "email": "jane@acme.com"},
             },
@@ -348,20 +349,94 @@ class TestGetRecipients:
                     "name": "John Signer",
                     "email": "john@example.com",
                     "status": "completed",
+                    "effectiveStatus": "completed",
                     "signedOn": "2026-02-01T10:00:00.000Z",
                     "signingOrder": 1,
+                    "delivery": {
+                        "firstSentOn": "2026-01-02T09:00:00.000Z",
+                        "lastSentOn": "2026-01-09T09:00:00.000Z",
+                        "totalSent": 3,
+                        "reminderCount": 1,
+                        "lastRemindedAt": "2026-01-09T09:00:00.000Z",
+                        "warningCount": 0,
+                        "lastWarningAt": None,
+                    },
                 },
                 {
                     "id": "rec-2",
                     "name": "Ada Signer",
                     "email": "ada@example.com",
                     "status": "pending",
+                    "effectiveStatus": "pending",
                     "signedOn": None,
                     "signingOrder": 2,
+                    "delivery": {
+                        "firstSentOn": "2026-01-02T09:00:00.000Z",
+                        "lastSentOn": "2026-01-02T09:00:00.000Z",
+                        "totalSent": 1,
+                        "reminderCount": 0,
+                        "lastRemindedAt": None,
+                        "warningCount": 0,
+                        "lastWarningAt": None,
+                    },
                 },
             ],
-            "summary": {"total": 2, "pending": 1, "viewed": 0, "completed": 1},
+            "summary": {
+                "total": 2, "pending": 1, "viewed": 0, "completed": 1,
+                "voided": 0, "expired": 0, "waitingOn": 1,
+            },
         }
+
+    def voided_response(self):
+        """A voided document: the unsigned signer is stranded, the signed one is not."""
+        payload = self.mock_response()
+        payload["document"]["status"] = "voided"
+        payload["recipients"][1]["effectiveStatus"] = "voided"
+        payload["summary"] = {
+            "total": 2, "pending": 0, "viewed": 0, "completed": 1,
+            "voided": 1, "expired": 0, "waitingOn": 0,
+        }
+        return payload
+
+    @pytest.mark.asyncio
+    async def test_reports_email_history_per_recipient(self):
+        """Should report when each recipient was emailed and how many times"""
+        with patch.object(TurboSign, '_get_client') as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.get = AsyncMock(return_value=self.mock_response())
+            mock_get_client.return_value = mock_client
+
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
+            result = await TurboSign.get_recipients("doc-123")
+
+            chased = result["recipients"][0]["delivery"]
+            assert chased["totalSent"] == 3
+            assert chased["firstSentOn"] == "2026-01-02T09:00:00.000Z"
+            assert chased["lastSentOn"] == "2026-01-09T09:00:00.000Z"
+            assert chased["reminderCount"] == 1
+            # A recipient emailed once has no reminders
+            assert result["recipients"][1]["delivery"]["totalSent"] == 1
+            assert result["recipients"][1]["delivery"]["lastRemindedAt"] is None
+            assert result["document"]["sentOn"] == "2026-01-02T08:59:00.000Z"
+
+    @pytest.mark.asyncio
+    async def test_surfaces_voided_effective_status_without_revoking_a_signature(self):
+        """Should strand unsigned recipients on a voided document but keep completed ones"""
+        with patch.object(TurboSign, '_get_client') as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.get = AsyncMock(return_value=self.voided_response())
+            mock_get_client.return_value = mock_client
+
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
+            result = await TurboSign.get_recipients("doc-123")
+
+            # Someone who signed still signed — voiding the document does not undo it
+            assert result["recipients"][0]["effectiveStatus"] == "completed"
+            # The unsigned signer is stranded, though the raw DB status is still "pending"
+            assert result["recipients"][1]["status"] == "pending"
+            assert result["recipients"][1]["effectiveStatus"] == "voided"
+            assert result["summary"]["voided"] == 1
+            assert result["summary"]["waitingOn"] == 0
 
     @pytest.mark.asyncio
     async def test_get_every_recipient_with_status(self):
@@ -376,6 +451,7 @@ class TestGetRecipients:
 
             assert len(result["recipients"]) == 2
             assert result["recipients"][0]["status"] == "completed"
+            assert result["recipients"][0]["effectiveStatus"] == "completed"
             assert result["recipients"][0]["email"] == "john@example.com"
             assert result["recipients"][0]["signedOn"] == "2026-02-01T10:00:00.000Z"
             assert result["recipients"][0]["signingOrder"] == 1
@@ -398,7 +474,10 @@ class TestGetRecipients:
             assert result["document"]["sentBy"] == {"name": "Jane Sender", "email": "jane@acme.com"}
             # Document status distinguishes a voided/expired doc from one still waiting
             assert result["document"]["status"] == "under_review"
-            assert result["summary"] == {"total": 2, "pending": 1, "viewed": 0, "completed": 1}
+            assert result["summary"] == {
+                "total": 2, "pending": 1, "viewed": 0, "completed": 1,
+                "voided": 0, "expired": 0, "waitingOn": 1,
+            }
 
     @pytest.mark.asyncio
     async def test_raises_not_found_for_unknown_document(self):

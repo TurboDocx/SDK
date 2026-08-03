@@ -280,9 +280,8 @@ $result = TurboSign::sendSignature(
     )
 );
 
-// Get recipient sign URLs
-$status = TurboSign::getStatus($result->documentId);
-foreach ($status->recipients as $recipient) {
+// Recipients (with their sign URLs) come back on the send result itself
+foreach ($result->recipients as $recipient) {
     echo "{$recipient->name}: {$recipient->signUrl}\n";
 }
 ```
@@ -306,21 +305,37 @@ $result = TurboSign::getRecipients('doc-uuid-here');
 
 echo "Sent by {$result->document->sentBy->name} <{$result->document->sentBy->email}>\n";
 echo "{$result->summary->completed} of {$result->summary->total} signed, ";
-echo "{$result->summary->pending} not started\n";
+echo "still waiting on {$result->summary->waitingOn}\n";
 
 foreach ($result->recipients as $recipient) {
-    // 'pending' | 'viewed' | 'completed'
-    echo "  {$recipient->name} <{$recipient->email}>: {$recipient->status}\n";
+    // 'pending' | 'viewed' | 'completed' | 'voided' | 'expired'
+    echo "  {$recipient->name} <{$recipient->email}>: {$recipient->effectiveStatus}\n";
     if ($recipient->signedOn !== null) {
         echo "    Signed on: {$recipient->signedOn}\n";
     }
+    echo "    Emailed {$recipient->delivery->totalSent}x\n";
 }
 ```
 
-> **Overlay the document status.** Recipient status is only `pending` / `viewed` / `completed` —
-> there is no per-recipient declined or expired state. On a voided or expired document every
-> unsigned recipient still reads `pending`, so check `$result->document->status` before treating
-> someone as "still to sign".
+**Two status fields, and they differ on purpose:**
+
+| Field | Values | Use it for |
+|---|---|---|
+| `status` | `pending`, `viewed`, `completed` | The raw database value |
+| `effectiveStatus` | `pending`, `viewed`, `completed`, `voided`, `expired` | Display |
+
+The database has no per-recipient declined/voided/expired state, so on a voided or expired
+document an unsigned signer still reads `pending` in `status`. `effectiveStatus` layers the
+document's outcome on top — that's the one to show a user. A completed signature is never
+revoked: someone who signed before the document was voided still reads `completed`.
+
+`summary` counts by `effectiveStatus`, and `waitingOn` (pending + viewed) drops to zero once
+the document is terminal.
+
+**`delivery`** is that recipient's email history — `firstSentOn`, `lastSentOn`, `totalSent`,
+`reminderCount`, `lastRemindedAt`, `warningCount`, `lastWarningAt`. It counts the signature
+request, resends, reminders, expiry warnings and terminal notices. CC notifications are
+excluded, since a CC address is not a signer.
 
 #### `download()`
 

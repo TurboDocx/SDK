@@ -250,22 +250,38 @@ sender = result["document"]["sentBy"]
 puts "Sent by #{sender['name']} <#{sender['email']}>"
 
 summary = result["summary"]
-puts "#{summary['completed']} of #{summary['total']} signed, #{summary['pending']} not started"
+puts "#{summary['completed']} of #{summary['total']} signed, waiting on #{summary['waitingOn']}"
 
 result["recipients"].each do |r|
-  # "pending" | "viewed" | "completed"
-  puts "#{r['name']} <#{r['email']}>: #{r['status']}"
+  # "pending" | "viewed" | "completed" | "voided" | "expired"
+  puts "#{r['name']} <#{r['email']}>: #{r['effectiveStatus']}"
   puts "  signed #{r['signedOn']}" if r["signedOn"]
+  puts "  emailed #{r['delivery']['totalSent']}x"
 end
 
 # Who are we chasing?
-waiting_on = result["recipients"].reject { |r| r["status"] == "completed" }
+chasing = result["recipients"].select { |r| %w[pending viewed].include?(r["effectiveStatus"]) }
 ```
 
-> **Overlay the document status.** Recipient status is only `pending` / `viewed` / `completed` —
-> there is no per-recipient declined or expired state. On a voided or expired document every
-> unsigned recipient still reads `pending`, so check `result["document"]["status"]` before
-> treating someone as "still to sign".
+**Two status fields, and they differ on purpose:**
+
+| Field | Values | Use it for |
+|---|---|---|
+| `status` | `pending`, `viewed`, `completed` | The raw database value |
+| `effectiveStatus` | `pending`, `viewed`, `completed`, `voided`, `expired` | Display |
+
+The database has no per-recipient declined/voided/expired state, so on a voided or expired
+document an unsigned signer still reads `pending` in `status`. `effectiveStatus` layers the
+document's outcome on top — that's the one to show a user. A completed signature is never
+revoked: someone who signed before the document was voided still reads `completed`.
+
+`summary` counts by `effectiveStatus`, and `waitingOn` (pending + viewed) drops to zero once
+the document is terminal.
+
+**`delivery`** is that recipient's email history — `firstSentOn`, `lastSentOn`, `totalSent`,
+`reminderCount`, `lastRemindedAt`, `warningCount`, `lastWarningAt`. It counts the signature
+request, resends, reminders, expiry warnings and terminal notices. CC notifications are
+excluded, since a CC address is not a signer.
 
 #### `download(document_id)`
 

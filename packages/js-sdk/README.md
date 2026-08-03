@@ -268,21 +268,40 @@ See who the document went to, who has signed, who you are still waiting on, and 
 const { document, recipients, summary } = await TurboSign.getRecipients('doc-uuid-here');
 
 console.log(`Sent by ${document.sentBy.name} <${document.sentBy.email}>`);
-console.log(`${summary.completed} of ${summary.total} signed, ${summary.pending} not started`);
+console.log(`Sent on ${document.sentOn ?? 'not sent yet'}`);
+console.log(`${summary.completed} of ${summary.total} signed, still waiting on ${summary.waitingOn}`);
 
 recipients.forEach(r => {
-  console.log(`${r.name} <${r.email}>: ${r.status}`);  // 'pending' | 'viewed' | 'completed'
+  // 'pending' | 'viewed' | 'completed' | 'voided' | 'expired'
+  console.log(`${r.name} <${r.email}>: ${r.effectiveStatus}`);
   if (r.signedOn) console.log(`  signed ${r.signedOn}`);
+  console.log(`  emailed ${r.delivery.totalSent}x, last ${r.delivery.lastSentOn ?? 'never'}`);
+  if (r.delivery.reminderCount) console.log(`  reminded ${r.delivery.reminderCount}x`);
 });
 
 // Who are we chasing?
-const waitingOn = recipients.filter(r => r.status !== 'completed');
+const chasing = recipients.filter(r => r.effectiveStatus === 'pending' || r.effectiveStatus === 'viewed');
 ```
 
-> **Overlay the document status.** Recipient status is only `pending` / `viewed` / `completed` —
-> there is no per-recipient declined or expired state. On a voided or expired document every
-> unsigned recipient still reads `pending`, so check `document.status` before treating someone
-> as "still to sign".
+**Two status fields, and they differ on purpose:**
+
+| Field | Values | Use it for |
+|---|---|---|
+| `status` | `pending`, `viewed`, `completed` | The raw database value |
+| `effectiveStatus` | `pending`, `viewed`, `completed`, `voided`, `expired` | Display |
+
+The database has no per-recipient declined/voided/expired state, so on a voided or expired
+document an unsigned signer still reads `pending` in `status`. `effectiveStatus` layers the
+document's outcome on top — that's the one to show a user. A completed signature is never
+revoked: someone who signed before the document was voided still reads `completed`.
+
+`summary` counts by `effectiveStatus`, and `waitingOn` (pending + viewed) drops to zero once
+the document is terminal.
+
+**`delivery`** is that recipient's email history — `firstSentOn`, `lastSentOn`, `totalSent`,
+`reminderCount`, `lastRemindedAt`, `warningCount`, `lastWarningAt`. It counts the signature
+request, resends, reminders, expiry warnings and terminal notices. CC notifications are
+excluded, since a CC address is not a signer.
 
 #### `download(documentId)`
 

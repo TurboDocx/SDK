@@ -291,22 +291,38 @@ DocumentRecipientsResponse result = client.turboSign().getRecipients("doc-uuid-h
 System.out.println("Sent by " + result.getDocument().getSentBy().getName()
         + " <" + result.getDocument().getSentBy().getEmail() + ">");
 System.out.println(result.getSummary().getCompleted() + " of "
-        + result.getSummary().getTotal() + " signed, "
-        + result.getSummary().getPending() + " not started");
+        + result.getSummary().getTotal() + " signed, still waiting on "
+        + result.getSummary().getWaitingOn());
 
 for (DocumentRecipientsResponse.RecipientStatus r : result.getRecipients()) {
-    // "pending" | "viewed" | "completed"
-    System.out.println(r.getName() + " <" + r.getEmail() + ">: " + r.getStatus());
+    // "pending" | "viewed" | "completed" | "voided" | "expired"
+    System.out.println(r.getName() + " <" + r.getEmail() + ">: " + r.getEffectiveStatus());
     if (r.getSignedOn() != null) {
         System.out.println("  signed " + r.getSignedOn());
     }
+    System.out.println("  emailed " + r.getDelivery().getTotalSent() + "x");
 }
 ```
 
-> **Overlay the document status.** Recipient status is only `pending` / `viewed` / `completed` —
-> there is no per-recipient declined or expired state. On a voided or expired document every
-> unsigned recipient still reads `pending`, so check `result.getDocument().getStatus()` before
-> treating someone as "still to sign".
+**Two status fields, and they differ on purpose:**
+
+| Field | Values | Use it for |
+|---|---|---|
+| `getStatus()` | `pending`, `viewed`, `completed` | The raw database value |
+| `getEffectiveStatus()` | `pending`, `viewed`, `completed`, `voided`, `expired` | Display |
+
+The database has no per-recipient declined/voided/expired state, so on a voided or expired
+document an unsigned signer still reads `pending` in `getStatus()`. `getEffectiveStatus()`
+layers the document's outcome on top — that's the one to show a user. A completed signature
+is never revoked: someone who signed before the document was voided still reads `completed`.
+
+`getSummary()` counts by effective status, and `getWaitingOn()` (pending + viewed) drops to
+zero once the document is terminal.
+
+**`getDelivery()`** is that recipient's email history — `getFirstSentOn()`, `getLastSentOn()`,
+`getTotalSent()`, `getReminderCount()`, `getLastRemindedAt()`, `getWarningCount()`,
+`getLastWarningAt()`. It counts the signature request, resends, reminders, expiry warnings and
+terminal notices. CC notifications are excluded, since a CC address is not a signer.
 
 #### `download()`
 

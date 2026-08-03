@@ -30,11 +30,21 @@ shipped name.
 those two already handle every other TurboSign read (`get_status`, `get_audit_trail`). That is
 the sanctioned idiomatic split, not a parity gap.
 
-**Recipient status has three values only** — `pending`, `viewed`, `completed`. There is no
-per-recipient declined/expired/voided state, so on a voided or expired document every unsigned
-recipient still reads `pending`. Every SDK therefore returns the document-level status
-alongside the roster, and callers must overlay it to tell "still waiting" from "this document
-is dead". Keep that caveat in each language's docstring.
+**`getRecipients` returns two status fields per recipient, and they differ on purpose.**
+`status` is the raw database value and has three values only — `pending`, `viewed`,
+`completed`. There is no per-recipient declined/expired/voided state in the schema, so on a
+voided or expired document an unsigned signer still reads `pending` there. `effectiveStatus`
+is the backend's overlay — `pending`, `viewed`, `completed`, `voided`, `expired` — and is what
+UIs should display. A completed signature is never revoked, so someone who signed before the
+document was voided still reads `completed`. `summary` counts by `effectiveStatus` and carries
+`waitingOn` (pending + viewed), which is zero once the document is terminal. Keep both fields,
+and that distinction, in every language's docs — dropping `status` or aliasing it to
+`effectiveStatus` breaks callers who need the raw value.
+
+**Each recipient also carries a `delivery` block** — `firstSentOn`, `lastSentOn`, `totalSent`,
+`reminderCount`, `lastRemindedAt`, `warningCount`, `lastWarningAt` — the email history for that
+signer. It counts the signature request, resends, reminders, expiry warnings and terminal
+notices, and deliberately excludes CC notifications (a CC address is not a signer).
 
 ## Required TurboPartner Operations
 

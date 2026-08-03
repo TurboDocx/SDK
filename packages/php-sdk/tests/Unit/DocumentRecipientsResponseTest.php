@@ -27,6 +27,7 @@ final class DocumentRecipientsResponseTest extends TestCase
                 'name' => 'Mutual NDA',
                 'status' => 'under_review',
                 'createdOn' => '2026-01-01T00:00:00.000Z',
+                'sentOn' => '2026-01-02T08:59:00.000Z',
                 'expiresAt' => null,
                 'sentBy' => ['name' => 'Jane Sender', 'email' => 'jane@acme.com'],
             ],
@@ -36,20 +37,85 @@ final class DocumentRecipientsResponseTest extends TestCase
                     'name' => 'John Signer',
                     'email' => 'john@example.com',
                     'status' => 'completed',
+                    'effectiveStatus' => 'completed',
                     'signedOn' => '2026-02-01T10:00:00.000Z',
                     'signingOrder' => 1,
+                    'delivery' => [
+                        'firstSentOn' => '2026-01-02T09:00:00.000Z',
+                        'lastSentOn' => '2026-01-09T09:00:00.000Z',
+                        'totalSent' => 3,
+                        'reminderCount' => 1,
+                        'lastRemindedAt' => '2026-01-09T09:00:00.000Z',
+                        'warningCount' => 0,
+                        'lastWarningAt' => null,
+                    ],
                 ],
                 [
                     'id' => 'rec-2',
                     'name' => 'Ada Signer',
                     'email' => 'ada@example.com',
                     'status' => 'pending',
+                    'effectiveStatus' => 'pending',
                     'signedOn' => null,
                     'signingOrder' => 2,
+                    'delivery' => [
+                        'firstSentOn' => '2026-01-02T09:00:00.000Z',
+                        'lastSentOn' => '2026-01-02T09:00:00.000Z',
+                        'totalSent' => 1,
+                        'reminderCount' => 0,
+                        'lastRemindedAt' => null,
+                        'warningCount' => 0,
+                        'lastWarningAt' => null,
+                    ],
                 ],
             ],
-            'summary' => ['total' => 2, 'pending' => 1, 'viewed' => 0, 'completed' => 1],
+            'summary' => [
+                'total' => 2, 'pending' => 1, 'viewed' => 0, 'completed' => 1,
+                'voided' => 0, 'expired' => 0, 'waitingOn' => 1,
+            ],
         ];
+    }
+
+    public function testMapsEachRecipientsEmailHistory(): void
+    {
+        $result = DocumentRecipientsResponse::fromArray($this->wirePayload());
+
+        $chased = $result->recipients[0]->delivery;
+        $this->assertSame(3, $chased->totalSent);
+        $this->assertSame('2026-01-02T09:00:00.000Z', $chased->firstSentOn);
+        $this->assertSame('2026-01-09T09:00:00.000Z', $chased->lastSentOn);
+        $this->assertSame(1, $chased->reminderCount);
+        // A recipient emailed once has no reminders
+        $this->assertSame(1, $result->recipients[1]->delivery->totalSent);
+        $this->assertNull($result->recipients[1]->delivery->lastRemindedAt);
+    }
+
+    public function testSurfacesVoidedEffectiveStatusWithoutRevokingASignature(): void
+    {
+        $payload = $this->wirePayload();
+        $payload['document']['status'] = 'voided';
+        $payload['recipients'][1]['effectiveStatus'] = 'voided';
+        $payload['summary'] = [
+            'total' => 2, 'pending' => 0, 'viewed' => 0, 'completed' => 1,
+            'voided' => 1, 'expired' => 0, 'waitingOn' => 0,
+        ];
+
+        $result = DocumentRecipientsResponse::fromArray($payload);
+
+        // Someone who signed still signed — voiding the document does not undo it
+        $this->assertSame('completed', $result->recipients[0]->effectiveStatus);
+        // The unsigned signer is stranded, though the raw DB status is still 'pending'
+        $this->assertSame('pending', $result->recipients[1]->status);
+        $this->assertSame('voided', $result->recipients[1]->effectiveStatus);
+        $this->assertSame(1, $result->summary->voided);
+        $this->assertSame(0, $result->summary->waitingOn);
+    }
+
+    public function testDocumentReportsWhenItWasSent(): void
+    {
+        $result = DocumentRecipientsResponse::fromArray($this->wirePayload());
+
+        $this->assertSame('2026-01-02T08:59:00.000Z', $result->document->sentOn);
     }
 
     public function testMapsEveryRecipientWithTheirSigningStatus(): void
@@ -78,13 +144,19 @@ final class DocumentRecipientsResponseTest extends TestCase
         $this->assertSame(1, $result->summary->pending);
         $this->assertSame(0, $result->summary->viewed);
         $this->assertSame(1, $result->summary->completed);
+        $this->assertSame(0, $result->summary->voided);
+        $this->assertSame(0, $result->summary->expired);
+        $this->assertSame(1, $result->summary->waitingOn);
     }
 
     public function testHandlesADocumentWithNoRecipients(): void
     {
         $payload = $this->wirePayload();
         $payload['recipients'] = [];
-        $payload['summary'] = ['total' => 0, 'pending' => 0, 'viewed' => 0, 'completed' => 0];
+        $payload['summary'] = [
+            'total' => 0, 'pending' => 0, 'viewed' => 0, 'completed' => 0,
+            'voided' => 0, 'expired' => 0, 'waitingOn' => 0,
+        ];
 
         $result = DocumentRecipientsResponse::fromArray($payload);
 

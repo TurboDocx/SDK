@@ -49,6 +49,9 @@ public class DocumentRecipientsResponse {
         @SerializedName("createdOn")
         private String createdOn;
 
+        @SerializedName("sentOn")
+        private String sentOn;
+
         @SerializedName("expiresAt")
         private String expiresAt;
 
@@ -70,6 +73,11 @@ public class DocumentRecipientsResponse {
 
         public String getCreatedOn() {
             return createdOn;
+        }
+
+        /** When the document was dispatched to recipients; null while it is still a draft. */
+        public String getSentOn() {
+            return sentOn;
         }
 
         /** When the signing window closes; null when the document never expires. */
@@ -118,11 +126,17 @@ public class DocumentRecipientsResponse {
         @SerializedName("status")
         private String status;
 
+        @SerializedName("effectiveStatus")
+        private String effectiveStatus;
+
         @SerializedName("signedOn")
         private String signedOn;
 
         @SerializedName("signingOrder")
         private int signingOrder;
+
+        @SerializedName("delivery")
+        private RecipientDelivery delivery;
 
         public String getId() {
             return id;
@@ -136,9 +150,19 @@ public class DocumentRecipientsResponse {
             return email;
         }
 
-        /** One of {@code pending}, {@code viewed}, {@code completed}. */
+        /** Raw database status — only ever {@code pending}, {@code viewed} or {@code completed}. */
         public String getStatus() {
             return status;
+        }
+
+        /**
+         * Raw status with the document's terminal state layered on: {@code pending},
+         * {@code viewed}, {@code completed}, {@code voided} or {@code expired}. Use this for
+         * display — a signer on a voided document reads {@code voided} here but still
+         * {@code pending} in {@link #getStatus()}. A completed signature is never revoked.
+         */
+        public String getEffectiveStatus() {
+            return effectiveStatus;
         }
 
         /** When this recipient completed signing; null while pending or viewed. */
@@ -148,6 +172,69 @@ public class DocumentRecipientsResponse {
 
         public int getSigningOrder() {
             return signingOrder;
+        }
+
+        /** Email history for this recipient. */
+        public RecipientDelivery getDelivery() {
+            return delivery;
+        }
+    }
+
+    /**
+     * Email history for one recipient — every notification actually sent to them.
+     * CC notifications are excluded; a CC address is not a signer.
+     */
+    public static class RecipientDelivery {
+        @SerializedName("firstSentOn")
+        private String firstSentOn;
+
+        @SerializedName("lastSentOn")
+        private String lastSentOn;
+
+        @SerializedName("totalSent")
+        private int totalSent;
+
+        @SerializedName("reminderCount")
+        private int reminderCount;
+
+        @SerializedName("lastRemindedAt")
+        private String lastRemindedAt;
+
+        @SerializedName("warningCount")
+        private int warningCount;
+
+        @SerializedName("lastWarningAt")
+        private String lastWarningAt;
+
+        /** First email of any kind to this recipient; null if they have never been emailed. */
+        public String getFirstSentOn() {
+            return firstSentOn;
+        }
+
+        /** Most recent email of any kind to this recipient. */
+        public String getLastSentOn() {
+            return lastSentOn;
+        }
+
+        /** Total emails sent (request, resends, reminders, warnings, terminal notices). */
+        public int getTotalSent() {
+            return totalSent;
+        }
+
+        public int getReminderCount() {
+            return reminderCount;
+        }
+
+        public String getLastRemindedAt() {
+            return lastRemindedAt;
+        }
+
+        public int getWarningCount() {
+            return warningCount;
+        }
+
+        public String getLastWarningAt() {
+            return lastWarningAt;
         }
     }
 
@@ -167,6 +254,15 @@ public class DocumentRecipientsResponse {
         @SerializedName("completed")
         private int completed;
 
+        @SerializedName("voided")
+        private int voided;
+
+        @SerializedName("expired")
+        private int expired;
+
+        @SerializedName("waitingOn")
+        private int waitingOn;
+
         public int getTotal() {
             return total;
         }
@@ -181,6 +277,21 @@ public class DocumentRecipientsResponse {
 
         public int getCompleted() {
             return completed;
+        }
+
+        /** Signers stranded by a voided document. */
+        public int getVoided() {
+            return voided;
+        }
+
+        /** Signers stranded by an expired document. */
+        public int getExpired() {
+            return expired;
+        }
+
+        /** Recipients who can still act (pending + viewed). Zero once the document is terminal. */
+        public int getWaitingOn() {
+            return waitingOn;
         }
     }
 }

@@ -312,6 +312,7 @@ func recipientsPayload() map[string]interface{} {
 				"name":      "Mutual NDA",
 				"status":    "under_review",
 				"createdOn": "2026-01-01T00:00:00.000Z",
+				"sentOn":    "2026-01-02T08:59:00.000Z",
 				"expiresAt": nil,
 				"sentBy": map[string]interface{}{
 					"name":  "Jane Sender",
@@ -320,24 +321,41 @@ func recipientsPayload() map[string]interface{} {
 			},
 			"recipients": []map[string]interface{}{
 				{
-					"id":           "rec-1",
-					"name":         "John Signer",
-					"email":        "john@example.com",
-					"status":       "completed",
-					"signedOn":     "2026-02-01T10:00:00.000Z",
-					"signingOrder": 1,
+					"id":              "rec-1",
+					"name":            "John Signer",
+					"email":           "john@example.com",
+					"status":          "completed",
+					"effectiveStatus": "completed",
+					"signedOn":        "2026-02-01T10:00:00.000Z",
+					"signingOrder":    1,
+					"delivery": map[string]interface{}{
+						"firstSentOn": "2026-01-02T09:00:00.000Z",
+						"lastSentOn":  "2026-01-09T09:00:00.000Z",
+						"totalSent":   3, "reminderCount": 1,
+						"lastRemindedAt": "2026-01-09T09:00:00.000Z",
+						"warningCount":   0, "lastWarningAt": nil,
+					},
 				},
 				{
-					"id":           "rec-2",
-					"name":         "Ada Signer",
-					"email":        "ada@example.com",
-					"status":       "pending",
-					"signedOn":     nil,
-					"signingOrder": 2,
+					"id":              "rec-2",
+					"name":            "Ada Signer",
+					"email":           "ada@example.com",
+					"status":          "pending",
+					"effectiveStatus": "pending",
+					"signedOn":        nil,
+					"signingOrder":    2,
+					"delivery": map[string]interface{}{
+						"firstSentOn": "2026-01-02T09:00:00.000Z",
+						"lastSentOn":  "2026-01-02T09:00:00.000Z",
+						"totalSent":   1, "reminderCount": 0,
+						"lastRemindedAt": nil,
+						"warningCount":   0, "lastWarningAt": nil,
+					},
 				},
 			},
 			"summary": map[string]interface{}{
 				"total": 2, "pending": 1, "viewed": 0, "completed": 1,
+				"voided": 0, "expired": 0, "waitingOn": 1,
 			},
 		},
 	}
@@ -369,6 +387,7 @@ func TestTurboSignClient_GetRecipients(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, result.Recipients, 2)
 	assert.Equal(t, "completed", result.Recipients[0].Status)
+	assert.Equal(t, "completed", result.Recipients[0].EffectiveStatus)
 	assert.Equal(t, "john@example.com", result.Recipients[0].Email)
 	require.NotNil(t, result.Recipients[0].SignedOn)
 	assert.Equal(t, "2026-02-01T10:00:00.000Z", *result.Recipients[0].SignedOn)
@@ -396,10 +415,95 @@ func TestTurboSignClient_GetRecipientsSummaryAndSender(t *testing.T) {
 	assert.Equal(t, "jane@acme.com", result.Document.SentBy.Email)
 	// Document status distinguishes a voided/expired doc from one still waiting
 	assert.Equal(t, "under_review", result.Document.Status)
+	require.NotNil(t, result.Document.SentOn)
+	assert.Equal(t, "2026-01-02T08:59:00.000Z", *result.Document.SentOn)
 	assert.Equal(t, 2, result.Summary.Total)
 	assert.Equal(t, 1, result.Summary.Pending)
 	assert.Equal(t, 0, result.Summary.Viewed)
 	assert.Equal(t, 1, result.Summary.Completed)
+	assert.Equal(t, 0, result.Summary.Voided)
+	assert.Equal(t, 0, result.Summary.Expired)
+	assert.Equal(t, 1, result.Summary.WaitingOn)
+}
+
+func TestTurboSignClient_GetRecipientsDelivery(t *testing.T) {
+	server := newRecipientsServer(t)
+	defer server.Close()
+
+	client, _ := NewClientWithConfig(ClientConfig{
+		APIKey:      "test-api-key",
+		OrgID:       "test-org-id",
+		BaseURL:     server.URL,
+		SenderEmail: "test@example.com",
+	})
+
+	result, err := client.TurboSign.GetRecipients(context.Background(), "doc-123")
+
+	require.NoError(t, err)
+	chased := result.Recipients[0].Delivery
+	assert.Equal(t, 3, chased.TotalSent)
+	require.NotNil(t, chased.FirstSentOn)
+	assert.Equal(t, "2026-01-02T09:00:00.000Z", *chased.FirstSentOn)
+	require.NotNil(t, chased.LastSentOn)
+	assert.Equal(t, "2026-01-09T09:00:00.000Z", *chased.LastSentOn)
+	assert.Equal(t, 1, chased.ReminderCount)
+	// A recipient emailed once has no reminders
+	once := result.Recipients[1].Delivery
+	assert.Equal(t, 1, once.TotalSent)
+	assert.Nil(t, once.LastRemindedAt)
+}
+
+func TestTurboSignClient_GetRecipientsEffectiveStatusOnVoidedDocument(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"data": map[string]interface{}{
+				"document": map[string]interface{}{
+					"id": "doc-123", "name": "Mutual NDA", "status": "voided",
+					"createdOn": "2026-01-01T00:00:00.000Z", "sentOn": "2026-01-02T08:59:00.000Z",
+					"expiresAt": nil,
+					"sentBy":    map[string]interface{}{"name": "Jane Sender", "email": "jane@acme.com"},
+				},
+				"recipients": []map[string]interface{}{
+					{
+						"id": "rec-1", "name": "John Signer", "email": "john@example.com",
+						"status": "completed", "effectiveStatus": "completed",
+						"signedOn": "2026-02-01T10:00:00.000Z", "signingOrder": 1,
+						"delivery": map[string]interface{}{"totalSent": 1},
+					},
+					{
+						"id": "rec-2", "name": "Ada Signer", "email": "ada@example.com",
+						"status": "pending", "effectiveStatus": "voided",
+						"signedOn": nil, "signingOrder": 2,
+						"delivery": map[string]interface{}{"totalSent": 1},
+					},
+				},
+				"summary": map[string]interface{}{
+					"total": 2, "pending": 0, "viewed": 0, "completed": 1,
+					"voided": 1, "expired": 0, "waitingOn": 0,
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClientWithConfig(ClientConfig{
+		APIKey:      "test-api-key",
+		OrgID:       "test-org-id",
+		BaseURL:     server.URL,
+		SenderEmail: "test@example.com",
+	})
+
+	result, err := client.TurboSign.GetRecipients(context.Background(), "doc-123")
+
+	require.NoError(t, err)
+	// Someone who signed still signed — voiding the document does not undo it
+	assert.Equal(t, "completed", result.Recipients[0].EffectiveStatus)
+	// The unsigned signer is stranded, though the raw DB status is still "pending"
+	assert.Equal(t, "pending", result.Recipients[1].Status)
+	assert.Equal(t, "voided", result.Recipients[1].EffectiveStatus)
+	assert.Equal(t, 1, result.Summary.Voided)
+	assert.Equal(t, 0, result.Summary.WaitingOn)
 }
 
 func TestTurboSignClient_GetRecipientsNotFound(t *testing.T) {

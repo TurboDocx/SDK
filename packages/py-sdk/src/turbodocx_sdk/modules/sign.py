@@ -346,20 +346,29 @@ class TurboSign:
 
         Returns:
             Dict with:
-                - document: id, name, status, createdOn, expiresAt, and
-                  sentBy {name, email} — who sent it
-                - recipients: list of {id, name, email, status, signedOn, signingOrder}
-                  where status is 'pending', 'viewed' or 'completed'
-                - summary: {total, pending, viewed, completed}
+                - document: id, name, status, createdOn, sentOn (null while a draft),
+                  expiresAt, and sentBy {name, email} — who sent it
+                - recipients: list of {id, name, email, status, effectiveStatus, signedOn,
+                  signingOrder, delivery}
+                - summary: {total, pending, viewed, completed, voided, expired, waitingOn}
 
-            There is no per-recipient declined/expired/voided state, so on a voided or
-            expired document every unsigned recipient still reads 'pending' — read
-            document['status'] to tell "still waiting" apart from "this document is dead".
+            `status` is the raw database value and is only ever 'pending', 'viewed' or
+            'completed'. `effectiveStatus` layers the document's terminal state on top and
+            is what you should display: a signer on a voided or expired document reads
+            'voided'/'expired' there while `status` still says 'pending'. A completed
+            signature is never revoked.
+
+            `delivery` is that recipient's email history:
+            {firstSentOn, lastSentOn, totalSent, reminderCount, lastRemindedAt,
+            warningCount, lastWarningAt}. CC notifications are excluded — a CC address
+            is not a signer.
 
         Example:
             >>> result = await TurboSign.get_recipients("doc-123")
             >>> print(f"{result['summary']['completed']}/{result['summary']['total']} signed")
-            >>> waiting = [r for r in result["recipients"] if r["status"] != "completed"]
+            >>> print(f"still waiting on {result['summary']['waitingOn']}")
+            >>> for r in result["recipients"]:
+            ...     print(r["name"], r["effectiveStatus"], r["delivery"]["totalSent"])
         """
         client = cls._get_client()
         return await client.get(f"/turbosign/documents/{document_id}/recipients")

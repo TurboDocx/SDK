@@ -410,6 +410,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
           "name" => "Mutual NDA",
           "status" => "under_review",
           "createdOn" => "2026-01-01T00:00:00.000Z",
+          "sentOn" => "2026-01-02T08:59:00.000Z",
           "expiresAt" => nil,
           "sentBy" => { "name" => "Jane Sender", "email" => "jane@acme.com" }
         },
@@ -419,20 +420,58 @@ RSpec.describe TurboDocxSdk::TurboSign do
             "name" => "John Signer",
             "email" => "john@example.com",
             "status" => "completed",
+            "effectiveStatus" => "completed",
             "signedOn" => "2026-02-01T10:00:00.000Z",
-            "signingOrder" => 1
+            "signingOrder" => 1,
+            "delivery" => {
+              "firstSentOn" => "2026-01-02T09:00:00.000Z",
+              "lastSentOn" => "2026-01-09T09:00:00.000Z",
+              "totalSent" => 3,
+              "reminderCount" => 1,
+              "lastRemindedAt" => "2026-01-09T09:00:00.000Z",
+              "warningCount" => 0,
+              "lastWarningAt" => nil
+            }
           },
           {
             "id" => "rec-2",
             "name" => "Ada Signer",
             "email" => "ada@example.com",
             "status" => "pending",
+            "effectiveStatus" => "pending",
             "signedOn" => nil,
-            "signingOrder" => 2
+            "signingOrder" => 2,
+            "delivery" => {
+              "firstSentOn" => "2026-01-02T09:00:00.000Z",
+              "lastSentOn" => "2026-01-02T09:00:00.000Z",
+              "totalSent" => 1,
+              "reminderCount" => 0,
+              "lastRemindedAt" => nil,
+              "warningCount" => 0,
+              "lastWarningAt" => nil
+            }
           }
         ],
-        "summary" => { "total" => 2, "pending" => 1, "viewed" => 0, "completed" => 1 }
+        "summary" => {
+          "total" => 2, "pending" => 1, "viewed" => 0, "completed" => 1,
+          "voided" => 0, "expired" => 0, "waitingOn" => 1
+        }
       }
+    end
+
+    # A voided document: the unsigned signer is stranded, the signed one keeps their signature.
+    let(:mock_voided_response) do
+      mock_recipients_response.merge(
+        "document" => mock_recipients_response["document"].merge("status" => "voided"),
+        "recipients" => [
+          mock_recipients_response["recipients"][0],
+          mock_recipients_response["recipients"][1].merge("effectiveStatus" => "voided")
+        ],
+        "summary" => {
+          "total" => 2, "pending" => 0, "viewed" => 0, "completed" => 1,
+          "voided" => 1, "expired" => 0, "waitingOn" => 0
+        }
+      )
     end
 
     before do
@@ -450,6 +489,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
 
       expect(result["recipients"].length).to eq(2)
       expect(result["recipients"][0]["status"]).to eq("completed")
+      expect(result["recipients"][0]["effectiveStatus"]).to eq("completed")
       expect(result["recipients"][0]["email"]).to eq("john@example.com")
       expect(result["recipients"][0]["signedOn"]).to eq("2026-02-01T10:00:00.000Z")
       expect(result["recipients"][0]["signingOrder"]).to eq(1)
@@ -471,9 +511,42 @@ RSpec.describe TurboDocxSdk::TurboSign do
       )
       # Document status distinguishes a voided/expired doc from one still waiting
       expect(result["document"]["status"]).to eq("under_review")
+      expect(result["document"]["sentOn"]).to eq("2026-01-02T08:59:00.000Z")
       expect(result["summary"]).to eq(
-        { "total" => 2, "pending" => 1, "viewed" => 0, "completed" => 1 }
+        {
+          "total" => 2, "pending" => 1, "viewed" => 0, "completed" => 1,
+          "voided" => 0, "expired" => 0, "waitingOn" => 1
+        }
       )
+    end
+
+    it "reports each recipient's email history" do
+      allow(mock_client).to receive(:get).and_return(mock_recipients_response)
+
+      result = described_class.get_recipients("doc-123")
+
+      chased = result["recipients"][0]["delivery"]
+      expect(chased["totalSent"]).to eq(3)
+      expect(chased["firstSentOn"]).to eq("2026-01-02T09:00:00.000Z")
+      expect(chased["lastSentOn"]).to eq("2026-01-09T09:00:00.000Z")
+      expect(chased["reminderCount"]).to eq(1)
+      # A recipient emailed once has no reminders
+      expect(result["recipients"][1]["delivery"]["totalSent"]).to eq(1)
+      expect(result["recipients"][1]["delivery"]["lastRemindedAt"]).to be_nil
+    end
+
+    it "surfaces voided as an effective status without revoking a signature" do
+      allow(mock_client).to receive(:get).and_return(mock_voided_response)
+
+      result = described_class.get_recipients("doc-123")
+
+      # Someone who signed still signed — voiding the document does not undo it
+      expect(result["recipients"][0]["effectiveStatus"]).to eq("completed")
+      # The unsigned signer is stranded, though the raw DB status is still "pending"
+      expect(result["recipients"][1]["status"]).to eq("pending")
+      expect(result["recipients"][1]["effectiveStatus"]).to eq("voided")
+      expect(result["summary"]["voided"]).to eq(1)
+      expect(result["summary"]["waitingOn"]).to eq(0)
     end
 
     it "propagates a not found error for an unknown document" do

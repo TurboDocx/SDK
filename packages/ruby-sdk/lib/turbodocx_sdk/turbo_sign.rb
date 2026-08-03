@@ -178,15 +178,21 @@ module TurboDocxSdk
       # Answers "who has signed and who are we still waiting on" in one call, and
       # reports who sent the document.
       #
-      # There is no per-recipient declined/expired/voided state, so on a voided or
-      # expired document every unsigned recipient still reads "pending" — read
-      # result["document"]["status"] to tell "still waiting" apart from
-      # "this document is dead".
+      # "status" is the raw database value and is only ever "pending", "viewed" or
+      # "completed". "effectiveStatus" layers the document's terminal state on top and is
+      # what you should display: a signer on a voided or expired document reads
+      # "voided"/"expired" there while "status" still says "pending". A completed
+      # signature is never revoked.
+      #
+      # Each recipient's "delivery" is their email history — CC notifications are
+      # excluded, since a CC address is not a signer.
       #
       # @param document_id [String]
-      # @return [Hash] with "document" (including "sentBy"), "recipients"
-      #   (each with "status", "signedOn", "signingOrder") and "summary"
-      #   ("total", "pending", "viewed", "completed")
+      # @return [Hash] with "document" (id, name, status, createdOn, sentOn, expiresAt,
+      #   sentBy), "recipients" (each with "status", "effectiveStatus", "signedOn",
+      #   "signingOrder" and "delivery" = firstSentOn/lastSentOn/totalSent/
+      #   reminderCount/lastRemindedAt/warningCount/lastWarningAt) and "summary"
+      #   ("total", "pending", "viewed", "completed", "voided", "expired", "waitingOn")
       # @raise [NotFoundError] if the document does not exist
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
