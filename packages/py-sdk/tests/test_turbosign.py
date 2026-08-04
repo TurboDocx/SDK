@@ -375,7 +375,8 @@ class TestGetRecipients:
                         "lastSentOn": "2026-01-02T09:00:00.000Z",
                         "totalSent": 1,
                         "reminderCount": 0,
-                        "lastRemindedAt": None,
+                        # Stamped by the initial send — NOT evidence of a reminder.
+                        "lastRemindedAt": "2026-01-02T09:00:00.000Z",
                         "warningCount": 0,
                         "lastWarningAt": None,
                     },
@@ -414,9 +415,12 @@ class TestGetRecipients:
             assert chased["firstSentOn"] == "2026-01-02T09:00:00.000Z"
             assert chased["lastSentOn"] == "2026-01-09T09:00:00.000Z"
             assert chased["reminderCount"] == 1
-            # A recipient emailed once has no reminders
-            assert result["recipients"][1]["delivery"]["totalSent"] == 1
-            assert result["recipients"][1]["delivery"]["lastRemindedAt"] is None
+            # Emailed once and never reminded: reminderCount stays 0, but lastRemindedAt
+            # is NOT None — the initial send stamps it as the reminder cadence clock.
+            once = result["recipients"][1]["delivery"]
+            assert once["totalSent"] == 1
+            assert once["reminderCount"] == 0
+            assert once["lastRemindedAt"] == once["firstSentOn"]
             assert result["document"]["sentOn"] == "2026-01-02T08:59:00.000Z"
 
     @pytest.mark.asyncio

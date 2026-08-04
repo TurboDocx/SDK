@@ -473,7 +473,8 @@ describe("TurboSign Module", () => {
             lastSentOn: "2026-01-02T09:00:00.000Z",
             totalSent: 1,
             reminderCount: 0,
-            lastRemindedAt: null,
+            // Stamped by the initial send — NOT evidence of a reminder.
+            lastRemindedAt: "2026-01-02T09:00:00.000Z",
             warningCount: 0,
             lastWarningAt: null,
           },
@@ -558,8 +559,14 @@ describe("TurboSign Module", () => {
       );
       expect(result.recipients[0].delivery.reminderCount).toBe(1);
       // A recipient emailed once has matching first/last and no reminders
+      // Emailed once and never reminded: reminderCount stays 0, but lastRemindedAt is
+      // NOT null — the initial send stamps it as the reminder cadence clock. Asserting
+      // null here would enshrine the exact misreading the field docs warn about.
       expect(result.recipients[1].delivery.totalSent).toBe(1);
-      expect(result.recipients[1].delivery.lastRemindedAt).toBeNull();
+      expect(result.recipients[1].delivery.reminderCount).toBe(0);
+      expect(result.recipients[1].delivery.lastRemindedAt).toBe(
+        result.recipients[1].delivery.firstSentOn,
+      );
     });
 
     it("should surface voided as an effective status without revoking a signature", async () => {

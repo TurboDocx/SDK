@@ -63,7 +63,8 @@ final class DocumentRecipientsResponseTest extends TestCase
                         'lastSentOn' => '2026-01-02T09:00:00.000Z',
                         'totalSent' => 1,
                         'reminderCount' => 0,
-                        'lastRemindedAt' => null,
+                        // Stamped by the initial send — NOT evidence of a reminder.
+                        'lastRemindedAt' => '2026-01-02T09:00:00.000Z',
                         'warningCount' => 0,
                         'lastWarningAt' => null,
                     ],
@@ -85,9 +86,12 @@ final class DocumentRecipientsResponseTest extends TestCase
         $this->assertSame('2026-01-02T09:00:00.000Z', $chased->firstSentOn);
         $this->assertSame('2026-01-09T09:00:00.000Z', $chased->lastSentOn);
         $this->assertSame(1, $chased->reminderCount);
-        // A recipient emailed once has no reminders
-        $this->assertSame(1, $result->recipients[1]->delivery->totalSent);
-        $this->assertNull($result->recipients[1]->delivery->lastRemindedAt);
+        // Emailed once and never reminded: reminderCount stays 0, but lastRemindedAt is
+        // NOT null — the initial send stamps it as the reminder cadence clock.
+        $once = $result->recipients[1]->delivery;
+        $this->assertSame(1, $once->totalSent);
+        $this->assertSame(0, $once->reminderCount);
+        $this->assertSame($once->firstSentOn, $once->lastRemindedAt);
     }
 
     public function testSurfacesVoidedEffectiveStatusWithoutRevokingASignature(): void

@@ -361,7 +361,7 @@ class TurboSignTest {
             + "\"signedOn\":null,\"signingOrder\":2,"
             + "\"delivery\":{\"firstSentOn\":\"2026-01-02T09:00:00.000Z\","
             + "\"lastSentOn\":\"2026-01-02T09:00:00.000Z\",\"totalSent\":1,"
-            + "\"reminderCount\":0,\"lastRemindedAt\":null,"
+            + "\"reminderCount\":0,\"lastRemindedAt\":\"2026-01-02T09:00:00.000Z\","
             + "\"warningCount\":0,\"lastWarningAt\":null}}],"
             + "\"summary\":{\"total\":2,\"pending\":1,\"viewed\":0,\"completed\":1,"
             + "\"voided\":0,\"expired\":0,\"waitingOn\":1}}}";
@@ -450,11 +450,13 @@ class TurboSignTest {
         assertEquals(1, chased.getReminderCount());
         assertEquals(0, chased.getWarningCount());
 
-        // A recipient emailed once has matching first/last and no reminders
+        // Emailed once and never reminded: reminder count stays 0, but lastRemindedAt is
+        // NOT null — the initial send stamps it as the reminder cadence clock.
         DocumentRecipientsResponse.RecipientDelivery once = result.getRecipients().get(1).getDelivery();
         assertEquals(1, once.getTotalSent());
+        assertEquals(0, once.getReminderCount());
         assertEquals(once.getFirstSentOn(), once.getLastSentOn());
-        assertNull(once.getLastRemindedAt());
+        assertEquals(once.getFirstSentOn(), once.getLastRemindedAt());
     }
 
     @Test

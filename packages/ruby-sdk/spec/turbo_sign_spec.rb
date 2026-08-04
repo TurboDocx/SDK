@@ -446,7 +446,8 @@ RSpec.describe TurboDocxSdk::TurboSign do
               "lastSentOn" => "2026-01-02T09:00:00.000Z",
               "totalSent" => 1,
               "reminderCount" => 0,
-              "lastRemindedAt" => nil,
+              # Stamped by the initial send — NOT evidence of a reminder.
+              "lastRemindedAt" => "2026-01-02T09:00:00.000Z",
               "warningCount" => 0,
               "lastWarningAt" => nil
             }
@@ -530,9 +531,12 @@ RSpec.describe TurboDocxSdk::TurboSign do
       expect(chased["firstSentOn"]).to eq("2026-01-02T09:00:00.000Z")
       expect(chased["lastSentOn"]).to eq("2026-01-09T09:00:00.000Z")
       expect(chased["reminderCount"]).to eq(1)
-      # A recipient emailed once has no reminders
-      expect(result["recipients"][1]["delivery"]["totalSent"]).to eq(1)
-      expect(result["recipients"][1]["delivery"]["lastRemindedAt"]).to be_nil
+      # Emailed once and never reminded: reminderCount stays 0, but lastRemindedAt is
+      # NOT nil — the initial send stamps it as the reminder cadence clock.
+      once = result["recipients"][1]["delivery"]
+      expect(once["totalSent"]).to eq(1)
+      expect(once["reminderCount"]).to eq(0)
+      expect(once["lastRemindedAt"]).to eq(once["firstSentOn"])
     end
 
     it "surfaces voided as an effective status without revoking a signature" do

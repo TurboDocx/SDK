@@ -348,7 +348,8 @@ func recipientsPayload() map[string]interface{} {
 						"firstSentOn": "2026-01-02T09:00:00.000Z",
 						"lastSentOn":  "2026-01-02T09:00:00.000Z",
 						"totalSent":   1, "reminderCount": 0,
-						"lastRemindedAt": nil,
+						// Stamped by the initial send — NOT evidence of a reminder.
+						"lastRemindedAt": "2026-01-02T09:00:00.000Z",
 						"warningCount":   0, "lastWarningAt": nil,
 					},
 				},
@@ -447,10 +448,13 @@ func TestTurboSignClient_GetRecipientsDelivery(t *testing.T) {
 	require.NotNil(t, chased.LastSentOn)
 	assert.Equal(t, "2026-01-09T09:00:00.000Z", *chased.LastSentOn)
 	assert.Equal(t, 1, chased.ReminderCount)
-	// A recipient emailed once has no reminders
+	// Emailed once and never reminded: ReminderCount stays 0, but LastRemindedAt is NOT
+	// nil — the initial send stamps it as the reminder cadence clock.
 	once := result.Recipients[1].Delivery
 	assert.Equal(t, 1, once.TotalSent)
-	assert.Nil(t, once.LastRemindedAt)
+	assert.Equal(t, 0, once.ReminderCount)
+	assert.NotNil(t, once.LastRemindedAt)
+	assert.Equal(t, *once.FirstSentOn, *once.LastRemindedAt)
 }
 
 func TestTurboSignClient_GetRecipientsEffectiveStatusOnVoidedDocument(t *testing.T) {
