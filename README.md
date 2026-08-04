@@ -200,7 +200,9 @@ const { documentId, recipients } = await TurboSign.sendSignature({
   ]
 });
 
-console.log(`✅ Document sent! Sign URL: ${recipients[0].signUrl}`);
+// The created recipients come back on the send result (id, name, email).
+// Signing links are emailed to them — they are not returned here.
+console.log(`✅ Document sent to ${recipients[0].name} <${recipients[0].email}>`);
 ```
 
 ---

@@ -10,10 +10,11 @@ namespace TurboDocx\Types\Responses;
 final class RecipientsDocument
 {
     /**
-     * @param string $status Document-level status. There is no per-recipient
-     *   declined/expired/voided state, so on a voided or expired document every unsigned
-     *   recipient still reads 'pending' — read this to tell "still waiting" apart from
-     *   "this document is dead".
+     * @param string $status Document-level status — the full SignatureDocumentStatus set
+     *   ('draft', 'under_review', 'completed', 'voided', 'expired', …). For per-recipient
+     *   display you do not need to overlay this yourself: each RecipientSignatureStatus
+     *   already carries $effectiveStatus, the raw recipient status with this
+     *   document-level outcome layered on.
      * @param string|null $sentOn When the document went out to recipients; null while a draft.
      * @param string|null $expiresAt When the signing window closes; null if it never expires.
      */

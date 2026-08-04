@@ -223,9 +223,13 @@ result = TurboDocxSdk::TurboSign.send_signature(
   ]
 )
 
+# The created recipients come back on the send result — each carries id, name and email.
+# Signing links are emailed to them; they are not returned here.
 result["recipients"].each do |r|
-  puts "#{r['name']}: #{r['signUrl']}"
+  puts "#{r['name']} <#{r['email']}> — #{r['id']}"
 end
+
+# For signing progress afterwards, use get_recipients.
 ```
 
 The document source can also be raw bytes or a local file path (`file: File.binread("contract.pdf")` or `file: "contract.pdf"` — the file type is detected from magic bytes), a TurboDocx deliverable (`deliverableId:`), or a TurboSign template (`templateId:`).

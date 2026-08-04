@@ -167,10 +167,12 @@ type DocumentSender struct {
 type RecipientsDocument struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
-	// Status is the document-level status. There is no per-recipient
-	// declined/expired/voided state, so on a voided or expired document every unsigned
-	// recipient still reads "pending" — read this to tell "still waiting" apart from
-	// "this document is dead".
+	// Status is the document-level status — the full SignatureDocumentStatus set
+	// ("draft", "under_review", "completed", "voided", "expired", …).
+	//
+	// For per-recipient display you do NOT need to overlay this yourself: each
+	// RecipientSignatureStatus already carries EffectiveStatus, which is the raw
+	// recipient status with this document-level outcome layered on.
 	Status    string `json:"status"`
 	CreatedOn string `json:"createdOn"`
 	// SentOn is when the document was dispatched to recipients; nil while it is a draft.

@@ -266,9 +266,14 @@ SendSignatureResponse result = client.turboSign().sendSignature(
         .build()
 );
 
+// The created recipients come back on the send result — each carries id, name and email.
+// Signing links are emailed to them; they are not returned here.
+// (RecipientResponse also exposes getSignUrl(), but the API never populates it.)
 for (RecipientResponse r : result.getRecipients()) {
-    System.out.println(r.getName() + ": " + r.getSignUrl());
+    System.out.println(r.getName() + " <" + r.getEmail() + "> — " + r.getId());
 }
+
+// For signing progress afterwards, use getRecipients().
 ```
 
 #### `getStatus()`

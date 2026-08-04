@@ -281,8 +281,12 @@ result = await TurboSign.send_signature(
     ]
 )
 
+# The created recipients come back on the send result — each carries id, name and email.
+# Signing links are emailed to them; they are not returned here.
 for recipient in result["recipients"]:
-    print(f"{recipient['name']}: {recipient['signUrl']}")
+    print(f"{recipient['name']} <{recipient['email']}> — {recipient['id']}")
+
+# For signing progress afterwards, use get_recipients().
 ```
 
 #### `get_status()`
