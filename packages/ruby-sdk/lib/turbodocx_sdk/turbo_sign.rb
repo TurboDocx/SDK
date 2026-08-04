@@ -187,6 +187,19 @@ module TurboDocxSdk
       # Each recipient's "delivery" is their email history — CC notifications are
       # excluded, since a CC address is not a signer.
       #
+      # Two delivery fields are easy to misread:
+      #   * "reminderCount" counts AUTOMATIC (scheduled) reminders only — the counter
+      #     maxReminders caps. A manual "remind now" does not increment it (it must not
+      #     consume the cap budget), though it does land in "totalSent". So it can read 0
+      #     while reminder emails have genuinely been sent.
+      #   * "lastRemindedAt" is when the reminder CADENCE CLOCK was last reset, not
+      #     necessarily when a reminder was sent. The initial signature-request send, each
+      #     scheduled reminder, each manual "remind now" and each expiry warning all stamp
+      #     it — so a freshly-sent document normally reads a non-nil "lastRemindedAt"
+      #     alongside "reminderCount" of 0.
+      #
+      # "warningCount" / "lastWarningAt" are touched only by an expiry warning.
+      #
       # @param document_id [String]
       # @return [Hash] with "document" (id, name, status, createdOn, sentOn, expiresAt,
       #   sentBy), "recipients" (each with "status", "effectiveStatus", "signedOn",

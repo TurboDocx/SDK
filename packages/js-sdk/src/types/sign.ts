@@ -131,9 +131,24 @@ export interface RecipientDelivery {
   lastSentOn: string | null;
   /** Total emails sent (request, resends, reminders, warnings, terminal notices). */
   totalSent: number;
+  /**
+   * Automatic (scheduled) reminders only — the counter `maxReminders` caps. A manual
+   * "remind now" does NOT increment it (it is a standalone nudge that must not consume
+   * the cap budget), though it does land in `totalSent`. So this can read 0 while
+   * reminder emails have genuinely been sent.
+   */
   reminderCount: number;
+  /**
+   * When the reminder cadence clock was last reset — NOT necessarily when a reminder was
+   * sent. Stamped by the initial signature-request send, each scheduled reminder, each
+   * manual "remind now", and each expiry warning. Only scheduled reminders bump
+   * `reminderCount`, so a freshly-sent document normally shows a non-null value here
+   * alongside `reminderCount: 0`. Null means "never emailed on this cadence".
+   */
   lastRemindedAt: string | null;
+  /** Expiry warnings sent. Only a warning touches this. */
   warningCount: number;
+  /** When the last expiry warning went out. Only a warning touches this. */
   lastWarningAt: string | null;
 }
 

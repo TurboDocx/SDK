@@ -223,18 +223,34 @@ public class DocumentRecipientsResponse {
             return totalSent;
         }
 
+        /**
+         * Automatic (scheduled) reminders only — the counter {@code maxReminders} caps.
+         * A manual "remind now" does NOT increment it (it must not consume the cap budget),
+         * though it does land in {@link #getTotalSent()}. So this can read 0 while reminder
+         * emails have genuinely been sent.
+         */
         public int getReminderCount() {
             return reminderCount;
         }
 
+        /**
+         * When the reminder cadence clock was last reset — NOT necessarily when a reminder
+         * was sent. Stamped by the initial signature-request send, each scheduled reminder,
+         * each manual "remind now", and each expiry warning. Only scheduled reminders bump
+         * {@link #getReminderCount()}, so a freshly-sent document normally shows a non-null
+         * value here alongside a reminder count of 0. Null means "never emailed on this
+         * cadence".
+         */
         public String getLastRemindedAt() {
             return lastRemindedAt;
         }
 
+        /** Expiry warnings sent. Only a warning touches this. */
         public int getWarningCount() {
             return warningCount;
         }
 
+        /** When the last expiry warning went out. Only a warning touches this. */
         public String getLastWarningAt() {
             return lastWarningAt;
         }

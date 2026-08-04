@@ -363,6 +363,20 @@ class TurboSign:
             warningCount, lastWarningAt}. CC notifications are excluded — a CC address
             is not a signer.
 
+            Two `delivery` fields are easy to misread:
+
+            - `reminderCount` counts AUTOMATIC (scheduled) reminders only — it is the
+              counter `maxReminders` caps. A manual "remind now" does not increment it
+              (it must not consume the cap budget), though it does land in `totalSent`.
+              So it can read 0 while reminder emails have genuinely been sent.
+            - `lastRemindedAt` is when the reminder CADENCE CLOCK was last reset, not
+              necessarily when a reminder was sent. The initial signature-request send,
+              each scheduled reminder, each manual "remind now" and each expiry warning
+              all stamp it. A freshly-sent document therefore normally reads a non-null
+              `lastRemindedAt` alongside `reminderCount` of 0.
+
+            `warningCount` / `lastWarningAt` are touched only by an expiry warning.
+
         Example:
             >>> result = await TurboSign.get_recipients("doc-123")
             >>> print(f"{result['summary']['completed']}/{result['summary']['total']} signed")

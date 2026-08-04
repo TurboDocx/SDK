@@ -46,6 +46,16 @@ and that distinction, in every language's docs — dropping `status` or aliasing
 signer. It counts the signature request, resends, reminders, expiry warnings and terminal
 notices, and deliberately excludes CC notifications (a CC address is not a signer).
 
+**Two `delivery` fields do not mean what their names suggest, and every language's docs must
+say so.** `reminderCount` counts **automatic (scheduled) reminders only** — it is the counter
+`maxReminders` caps; a manual "remind now" deliberately does not increment it (a standalone
+nudge must not consume the cap budget) even though it does land in `totalSent`, so it can read
+0 while reminder emails have genuinely been sent. `lastRemindedAt` is **when the reminder
+cadence clock was last reset**, not when a reminder was sent: the initial signature-request
+send, each scheduled reminder, each manual "remind now" and each expiry warning all stamp it,
+so a freshly-sent document normally reads a non-null `lastRemindedAt` alongside
+`reminderCount` of 0. Only `warningCount` / `lastWarningAt` mean exactly what they say.
+
 ## Required TurboPartner Operations
 
 - Organization CRUD: create, list, getDetails, update, delete

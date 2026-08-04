@@ -329,6 +329,15 @@ zero once the document is terminal.
 `getLastWarningAt()`. It counts the signature request, resends, reminders, expiry warnings and
 terminal notices. CC notifications are excluded, since a CC address is not a signer.
 
+Two `delivery` fields are easy to misread:
+
+| Field | What it actually means |
+|---|---|
+| `getReminderCount()` | **Automatic (scheduled) reminders only** — the counter `maxReminders` caps. A manual "remind now" does **not** increment it (it must not consume the cap budget), though it does land in `getTotalSent()`. So it can read `0` while reminder emails have genuinely been sent. |
+| `getLastRemindedAt()` | **When the reminder cadence clock was last reset** — not necessarily when a reminder was sent. The initial signature-request send, each scheduled reminder, each manual "remind now" and each expiry warning all stamp it. A freshly-sent document therefore normally reads a non-null `getLastRemindedAt()` alongside `getReminderCount()` of `0`. |
+
+`getWarningCount()` and `getLastWarningAt()` are touched only by an expiry warning.
+
 #### `download()`
 
 Download the signed document.

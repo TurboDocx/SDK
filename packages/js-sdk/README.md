@@ -306,6 +306,15 @@ the document is terminal.
 request, resends, reminders, expiry warnings and terminal notices. CC notifications are
 excluded, since a CC address is not a signer.
 
+Two `delivery` fields are easy to misread:
+
+| Field | What it actually means |
+|---|---|
+| `reminderCount` | **Automatic (scheduled) reminders only** — the counter `maxReminders` caps. A manual "remind now" does **not** increment it (it must not consume the cap budget), though it does land in `totalSent`. So it can read `0` while reminder emails have genuinely been sent. |
+| `lastRemindedAt` | **When the reminder cadence clock was last reset** — not necessarily when a reminder was sent. The initial signature-request send, each scheduled reminder, each manual "remind now" and each expiry warning all stamp it. A freshly-sent document therefore normally reads a non-null `lastRemindedAt` alongside `reminderCount` of `0`. |
+
+`warningCount` and `lastWarningAt` are touched only by an expiry warning.
+
 #### `download(documentId)`
 
 Download the signed document as a Buffer/Blob.

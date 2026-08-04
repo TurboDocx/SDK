@@ -188,11 +188,21 @@ type RecipientDelivery struct {
 	FirstSentOn *string `json:"firstSentOn"`
 	LastSentOn  *string `json:"lastSentOn"`
 	// TotalSent counts the request, resends, reminders, warnings and terminal notices.
-	TotalSent      int     `json:"totalSent"`
-	ReminderCount  int     `json:"reminderCount"`
+	TotalSent int `json:"totalSent"`
+	// ReminderCount counts AUTOMATIC (scheduled) reminders only — the counter maxReminders
+	// caps. A manual "remind now" does not increment it (it must not consume the cap
+	// budget), though it does land in TotalSent. So this can read 0 while reminder emails
+	// have genuinely been sent.
+	ReminderCount int `json:"reminderCount"`
+	// LastRemindedAt is when the reminder CADENCE CLOCK was last reset — not necessarily
+	// when a reminder was sent. Stamped by the initial signature-request send, each
+	// scheduled reminder, each manual "remind now", and each expiry warning. Only
+	// scheduled reminders bump ReminderCount, so a freshly-sent document normally shows a
+	// non-nil value here alongside ReminderCount 0. Nil means "never emailed on this cadence".
 	LastRemindedAt *string `json:"lastRemindedAt"`
-	WarningCount   int     `json:"warningCount"`
-	LastWarningAt  *string `json:"lastWarningAt"`
+	// WarningCount and LastWarningAt are touched only by an expiry warning.
+	WarningCount  int     `json:"warningCount"`
+	LastWarningAt *string `json:"lastWarningAt"`
 }
 
 // RecipientSignatureStatus is where a single recipient is in the signing process.
