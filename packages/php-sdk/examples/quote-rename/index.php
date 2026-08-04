@@ -43,7 +43,7 @@ function record(string $id, string $description, bool $passed, string $detail): 
 {
     global $results;
     $results[] = ['id' => $id, 'description' => $description,
-                  'outcome' => $passed ? 'pass' : 'fail', 'detail' => $detail];
+        'outcome' => $passed ? 'pass' : 'fail', 'detail' => $detail];
     printf("  %s  %s  %s\n        %s\n", $passed ? 'PASS' : 'FAIL', $id, $description, $detail);
 }
 
@@ -62,8 +62,12 @@ function expectRejection(string $id, string $description, callable $call): void
         record($id, $description, false, 'the call SUCCEEDED — a 400 was expected');
     } catch (TurboDocxException $error) {
         $statusCode = $error->getStatusCode();
-        record($id, $description, $statusCode === 400,
-            sprintf('status=%s message=%s', $statusCode, $error->getMessage()));
+        record(
+            $id,
+            $description,
+            $statusCode === 400,
+            sprintf('status=%s message=%s', $statusCode, $error->getMessage())
+        );
     }
 }
 
@@ -103,7 +107,9 @@ function quoteRenameExample(): void
 
         $newQuote = function (string $name) use ($companyId, $contactId, &$createdQuoteIds) {
             $quote = TurboQuote::createQuote(new CreateQuoteRequest(
-                name: $name, companyId: $companyId, contactId: $contactId,
+                name: $name,
+                companyId: $companyId,
+                contactId: $contactId,
             ));
             $createdQuoteIds[] = $quote->id;
             return $quote;
@@ -115,28 +121,58 @@ function quoteRenameExample(): void
         echo "\n2. Trimming on create\n\n";
 
         $padded = $newQuote('  Acme Q3  ');
-        record('S20', 'createQuote trims leading/trailing whitespace',
-            $padded->name === 'Acme Q3', sprintf('name=%s', var_export($padded->name, true)));
+        record(
+            'S20',
+            'createQuote trims leading/trailing whitespace',
+            $padded->name === 'Acme Q3',
+            sprintf('name=%s', var_export($padded->name, true))
+        );
 
         $interior = $newQuote('Acme  Corp');
-        record('S44', 'interior whitespace is preserved (trim is not a normalise)',
-            $interior->name === 'Acme  Corp', sprintf('name=%s', var_export($interior->name, true)));
+        record(
+            'S44',
+            'interior whitespace is preserved (trim is not a normalise)',
+            $interior->name === 'Acme  Corp',
+            sprintf('name=%s', var_export($interior->name, true))
+        );
 
         $unicode = $newQuote('案件 🚀 Ünïcode');
-        record('S31', 'unicode and emoji survive round-trip',
-            $unicode->name === '案件 🚀 Ünïcode', sprintf('name=%s', var_export($unicode->name, true)));
+        record(
+            'S31',
+            'unicode and emoji survive round-trip',
+            $unicode->name === '案件 🚀 Ünïcode',
+            sprintf('name=%s', var_export($unicode->name, true))
+        );
 
-        expectRejection('S22', 'whitespace-only name is rejected on create',
-            fn () => TurboQuote::createQuote(new CreateQuoteRequest(
-                name: '   ', companyId: $companyId, contactId: $contactId)));
+        expectRejection(
+            'S22',
+            'whitespace-only name is rejected on create',
+            fn() => TurboQuote::createQuote(new CreateQuoteRequest(
+                name: '   ',
+                companyId: $companyId,
+                contactId: $contactId
+            ))
+        );
 
-        expectRejection('S24', 'tab/newline-only name is rejected on create',
-            fn () => TurboQuote::createQuote(new CreateQuoteRequest(
-                name: "\t\n", companyId: $companyId, contactId: $contactId)));
+        expectRejection(
+            'S24',
+            'tab/newline-only name is rejected on create',
+            fn() => TurboQuote::createQuote(new CreateQuoteRequest(
+                name: "\t\n",
+                companyId: $companyId,
+                contactId: $contactId
+            ))
+        );
 
-        expectRejection('S25', 'empty name is rejected on create',
-            fn () => TurboQuote::createQuote(new CreateQuoteRequest(
-                name: '', companyId: $companyId, contactId: $contactId)));
+        expectRejection(
+            'S25',
+            'empty name is rejected on create',
+            fn() => TurboQuote::createQuote(new CreateQuoteRequest(
+                name: '',
+                companyId: $companyId,
+                contactId: $contactId
+            ))
+        );
 
         // ============================================================
         // 3. LENGTH BOUNDARIES — the limit applies AFTER trimming
@@ -144,16 +180,30 @@ function quoteRenameExample(): void
         echo "\n3. Length boundaries\n\n";
 
         $atLimit = $newQuote(str_repeat('A', 255));
-        record('S26', '255 characters is accepted (inclusive maximum)',
-            mb_strlen($atLimit->name) === 255, sprintf('length=%d', mb_strlen($atLimit->name)));
+        record(
+            'S26',
+            '255 characters is accepted (inclusive maximum)',
+            mb_strlen($atLimit->name) === 255,
+            sprintf('length=%d', mb_strlen($atLimit->name))
+        );
 
-        expectRejection('S27', '256 characters is rejected',
-            fn () => TurboQuote::createQuote(new CreateQuoteRequest(
-                name: str_repeat('A', 256), companyId: $companyId, contactId: $contactId)));
+        expectRejection(
+            'S27',
+            '256 characters is rejected',
+            fn() => TurboQuote::createQuote(new CreateQuoteRequest(
+                name: str_repeat('A', 256),
+                companyId: $companyId,
+                contactId: $contactId
+            ))
+        );
 
         $paddedToLimit = $newQuote('  ' . str_repeat('B', 255) . '  ');
-        record('S28', '255 chars wrapped in whitespace is accepted — trim runs before the length check',
-            mb_strlen($paddedToLimit->name) === 255, sprintf('length=%d', mb_strlen($paddedToLimit->name)));
+        record(
+            'S28',
+            '255 chars wrapped in whitespace is accepted — trim runs before the length check',
+            mb_strlen($paddedToLimit->name) === 255,
+            sprintf('length=%d', mb_strlen($paddedToLimit->name))
+        );
 
         // ============================================================
         // 4. RENAMING A DRAFT
@@ -162,20 +212,34 @@ function quoteRenameExample(): void
 
         $source = $newQuote('Acme Q3');
         $renamed = TurboQuote::updateQuote($source->id, new UpdateQuoteRequest(name: 'Acme Q3 — Revised'));
-        record('S2', 'updateQuote renames a draft',
-            $renamed->name === 'Acme Q3 — Revised', sprintf('name=%s', var_export($renamed->name, true)));
+        record(
+            'S2',
+            'updateQuote renames a draft',
+            $renamed->name === 'Acme Q3 — Revised',
+            sprintf('name=%s', var_export($renamed->name, true))
+        );
 
         $trimmed = TurboQuote::updateQuote($source->id, new UpdateQuoteRequest(name: '  Acme Q3 — Final  '));
-        record('S21', 'updateQuote trims the new name',
-            $trimmed->name === 'Acme Q3 — Final', sprintf('name=%s', var_export($trimmed->name, true)));
+        record(
+            'S21',
+            'updateQuote trims the new name',
+            $trimmed->name === 'Acme Q3 — Final',
+            sprintf('name=%s', var_export($trimmed->name, true))
+        );
 
-        expectRejection('S23a', 'whitespace-only name is rejected on update',
-            fn () => TurboQuote::updateQuote($source->id, new UpdateQuoteRequest(name: '   ')));
+        expectRejection(
+            'S23a',
+            'whitespace-only name is rejected on update',
+            fn() => TurboQuote::updateQuote($source->id, new UpdateQuoteRequest(name: '   '))
+        );
 
         $afterRejection = TurboQuote::getQuote($source->id);
-        record('S23b', 'the rejected rename left the stored name untouched',
+        record(
+            'S23b',
+            'the rejected rename left the stored name untouched',
             $afterRejection->name === 'Acme Q3 — Final',
-            sprintf('name=%s', var_export($afterRejection->name, true)));
+            sprintf('name=%s', var_export($afterRejection->name, true))
+        );
 
         // ============================================================
         // 5. DUPLICATE NAMING
@@ -184,25 +248,38 @@ function quoteRenameExample(): void
 
         $copy = TurboQuote::duplicateQuote($source->id);
         $createdQuoteIds[] = $copy->id;
-        record('S3', 'duplicateQuote prefixes the copy with "Copy of "',
-            $copy->name === 'Copy of Acme Q3 — Final', sprintf('name=%s', var_export($copy->name, true)));
+        record(
+            'S3',
+            'duplicateQuote prefixes the copy with "Copy of "',
+            $copy->name === 'Copy of Acme Q3 — Final',
+            sprintf('name=%s', var_export($copy->name, true))
+        );
 
-        record('S13', 'the copy is built from the CURRENT name, not the name at creation',
+        record(
+            'S13',
+            'the copy is built from the CURRENT name, not the name at creation',
             !str_contains($copy->name, 'Revised') && str_contains($copy->name, 'Final'),
-            sprintf('source was renamed twice; copy=%s', var_export($copy->name, true)));
+            sprintf('source was renamed twice; copy=%s', var_export($copy->name, true))
+        );
 
         $copyOfCopy = TurboQuote::duplicateQuote($copy->id);
         $createdQuoteIds[] = $copyOfCopy->id;
-        record('S30', 'duplicating a copy genuinely stacks the prefix (unlike a renewal)',
+        record(
+            'S30',
+            'duplicating a copy genuinely stacks the prefix (unlike a renewal)',
             $copyOfCopy->name === 'Copy of ' . $copy->name,
-            sprintf('name=%s', var_export($copyOfCopy->name, true)));
+            sprintf('name=%s', var_export($copyOfCopy->name, true))
+        );
 
         $longSource = $newQuote(str_repeat('C', 255));
         $longCopy = TurboQuote::duplicateQuote($longSource->id);
         $createdQuoteIds[] = $longCopy->id;
-        record('S29', 'a copy of a 255-char name is truncated to 255, so the insert cannot overflow',
+        record(
+            'S29',
+            'a copy of a 255-char name is truncated to 255, so the insert cannot overflow',
             mb_strlen($longCopy->name) === 255 && str_starts_with($longCopy->name, 'Copy of '),
-            sprintf('length=%d prefix=%s', mb_strlen($longCopy->name), var_export(mb_substr($longCopy->name, 0, 12), true)));
+            sprintf('length=%d prefix=%s', mb_strlen($longCopy->name), var_export(mb_substr($longCopy->name, 0, 12), true))
+        );
 
         // ============================================================
         // 6. RENAME IS DRAFT-ONLY
@@ -212,21 +289,29 @@ function quoteRenameExample(): void
         if (getenv('RUN_SEND_CHECKS') === '1') {
             $toSend = $newQuote('Sent Quote Rename Check');
             TurboQuote::sendQuote($toSend->id);
-            expectRejection('S72', 'a sent quote refuses a rename',
-                fn () => TurboQuote::updateQuote($toSend->id,
-                    new UpdateQuoteRequest(name: 'Renamed After Send')));
+            expectRejection(
+                'S72',
+                'a sent quote refuses a rename',
+                fn() => TurboQuote::updateQuote(
+                    $toSend->id,
+                    new UpdateQuoteRequest(name: 'Renamed After Send')
+                )
+            );
         } else {
-            skipRow('S72', 'a sent quote refuses a rename',
+            skipRow(
+                'S72',
+                'a sent quote refuses a rename',
                 'set RUN_SEND_CHECKS=1 with a send-capable org '
-                . '(sender name + email on the org quote template)');
+                . '(sender name + email on the org quote template)'
+            );
         }
 
         // ============================================================
         // 7. SUMMARY
         // ============================================================
-        $passed = count(array_filter($results, fn ($r) => $r['outcome'] === 'pass'));
-        $failed = count(array_filter($results, fn ($r) => $r['outcome'] === 'fail'));
-        $skipped = count(array_filter($results, fn ($r) => $r['outcome'] === 'skip'));
+        $passed = count(array_filter($results, fn($r) => $r['outcome'] === 'pass'));
+        $failed = count(array_filter($results, fn($r) => $r['outcome'] === 'fail'));
+        $skipped = count(array_filter($results, fn($r) => $r['outcome'] === 'skip'));
 
         echo "\n" . str_repeat('=', 60) . "\n";
         printf("  %d passed · %d failed · %d skipped\n", $passed, $failed, $skipped);
@@ -234,7 +319,7 @@ function quoteRenameExample(): void
 
         if ($failed > 0) {
             echo "Failed rows:\n";
-            foreach (array_filter($results, fn ($r) => $r['outcome'] === 'fail') as $result) {
+            foreach (array_filter($results, fn($r) => $r['outcome'] === 'fail') as $result) {
                 printf("  %s  %s — %s\n", $result['id'], $result['description'], $result['detail']);
             }
             exit(1);
