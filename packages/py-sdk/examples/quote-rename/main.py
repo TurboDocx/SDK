@@ -75,14 +75,14 @@ async def main():
         company = await TurboQuote.create_company({
             "name": f"Rename Example Co {int(time.time() * 1000)}",
             "country": "US",
-            "contacts": [{"name": "Dana Reed", "email": "dana@rename-example.test"}],
+            "contacts": [{"name": "Dana Reed", "email": "dana@rename-example.example.com"}],
         })
         company_id = company["id"]
 
         contact = await TurboQuote.create_contact({
             "name": "Dana Reed",
             "companyId": company_id,
-            "email": "dana@rename-example.test",
+            "email": "dana@rename-example.example.com",
         })
         contact_id = contact["id"]
 

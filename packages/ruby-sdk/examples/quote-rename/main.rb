@@ -67,14 +67,14 @@ begin
   company = TurboDocxSdk::TurboQuote.create_company(
     "name"     => "Rename Example Co #{(Time.now.to_f * 1000).to_i}",
     "country"  => "US",
-    "contacts" => [{ "name" => "Dana Reed", "email" => "dana@rename-example.test" }]
+    "contacts" => [{ "name" => "Dana Reed", "email" => "dana@rename-example.example.com" }]
   )
   company_id = company["id"]
 
   contact = TurboDocxSdk::TurboQuote.create_contact(
     "name"      => "Dana Reed",
     "companyId" => company_id,
-    "email"     => "dana@rename-example.test"
+    "email"     => "dana@rename-example.example.com"
   )
   contact_id = contact["id"]
 

@@ -100,6 +100,9 @@ func run() (exitCode int) {
 
 	ctx := context.Background()
 
+	// BaseURL is deliberately omitted: NewQuoteClient already falls back to TURBODOCX_BASE_URL
+	// (turboquote.go), so setting it here would be redundant. The PHP and Java examples DO pass
+	// it explicitly — their clients default straight to production without reading the env var.
 	client, err := turbodocx.NewQuoteClient(turbodocx.QuoteClientConfig{
 		APIKey: os.Getenv("TURBODOCX_API_KEY"),
 		OrgID:  os.Getenv("TURBODOCX_ORG_ID"),
@@ -135,7 +138,7 @@ func run() (exitCode int) {
 		Name:    fmt.Sprintf("Rename Example Co %d", time.Now().UnixMilli()),
 		Country: strPtr("US"),
 		Contacts: []turbodocx.CreateCompanyContactInput{
-			{Name: "Dana Reed", Email: "dana@rename-example.test"},
+			{Name: "Dana Reed", Email: "dana@rename-example.example.com"},
 		},
 	})
 	if err != nil {
@@ -147,7 +150,7 @@ func run() (exitCode int) {
 	contact, err := client.CreateContact(ctx, &turbodocx.CreateContactRequest{
 		Name:      "Dana Reed",
 		CompanyID: companyID,
-		Email:     strPtr("dana@rename-example.test"),
+		Email:     strPtr("dana@rename-example.example.com"),
 	})
 	if err != nil {
 		fmt.Printf("Error creating contact: %v\n", err)

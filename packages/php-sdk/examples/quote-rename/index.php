@@ -61,7 +61,8 @@ function expectRejection(string $id, string $description, callable $call): void
         $call();
         record($id, $description, false, 'the call SUCCEEDED — a 400 was expected');
     } catch (TurboDocxException $error) {
-        $statusCode = $error->getStatusCode();
+        // Public readonly property, not a getter — the PHP SDK exposes it as `->statusCode`.
+        $statusCode = $error->statusCode;
         record(
             $id,
             $description,
@@ -75,8 +76,12 @@ function quoteRenameExample(): void
 {
     global $results;
 
+    // baseUrl is passed explicitly: QuoteClientConfig defaults it to the production host, so
+    // without this the example would silently run against production instead of the host in
+    // TURBODOCX_BASE_URL — and it creates and deletes real records.
     TurboQuote::configure(new QuoteClientConfig(
         apiKey: getenv('TURBODOCX_API_KEY') ?: 'your-api-key-here',
+        baseUrl: getenv('TURBODOCX_BASE_URL') ?: 'https://api.turbodocx.com',
         orgId: getenv('TURBODOCX_ORG_ID') ?: 'your-org-id-here',
     ));
 
@@ -93,7 +98,7 @@ function quoteRenameExample(): void
 
         $company = TurboQuote::createCompany(new CreateCompanyRequest(
             name: 'Rename Example Co ' . (int) (microtime(true) * 1000),
-            contacts: [['name' => 'Dana Reed', 'email' => 'dana@rename-example.test']],
+            contacts: [['name' => 'Dana Reed', 'email' => 'dana@rename-example.example.com']],
             country: 'US',
         ));
         $companyId = $company->id;
@@ -101,7 +106,7 @@ function quoteRenameExample(): void
         $contact = TurboQuote::createContact(new CreateContactRequest(
             name: 'Dana Reed',
             companyId: $companyId,
-            email: 'dana@rename-example.test',
+            email: 'dana@rename-example.example.com',
         ));
         $contactId = $contact->id;
 

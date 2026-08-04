@@ -77,7 +77,7 @@ async function quoteRenameExample(): Promise<void> {
 
     const company = await TurboQuote.createCompany({
       name: `Rename Example Co ${Date.now()}`,
-      contacts: [{ name: 'Dana Reed', email: 'dana@rename-example.test' }],
+      contacts: [{ name: 'Dana Reed', email: 'dana@rename-example.example.com' }],
       country: 'US',
     });
     companyId = company.id;
@@ -85,7 +85,7 @@ async function quoteRenameExample(): Promise<void> {
     const contact = await TurboQuote.createContact({
       name: 'Dana Reed',
       companyId: company.id,
-      email: 'dana@rename-example.test',
+      email: 'dana@rename-example.example.com',
     });
     contactId = contact.id;
 

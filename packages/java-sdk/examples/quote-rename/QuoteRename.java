@@ -73,9 +73,15 @@ public class QuoteRename {
     }
 
     public static void main(String[] args) {
+        // baseUrl is set explicitly: HttpClient defaults it to the production host and does not
+        // read TURBODOCX_BASE_URL itself, so without this the example would silently run against
+        // production — and it creates and deletes real records.
+        String baseUrl = System.getenv("TURBODOCX_BASE_URL");
+
         TurboQuoteClient client = new TurboQuoteClient.Builder()
                 .apiKey(System.getenv("TURBODOCX_API_KEY"))
                 .orgId(System.getenv("TURBODOCX_ORG_ID"))
+                .baseUrl(baseUrl != null ? baseUrl : "https://api.turbodocx.com")
                 .build();
 
         TurboQuote tq = client.turboQuote();
@@ -94,7 +100,7 @@ public class QuoteRename {
 
             CreateCompanyContactInput contactInput = new CreateCompanyContactInput();
             contactInput.setName("Dana Reed");
-            contactInput.setEmail("dana@rename-example.test");
+            contactInput.setEmail("dana@rename-example.example.com");
 
             CreateCompanyRequest companyReq = new CreateCompanyRequest();
             companyReq.setName("Rename Example Co " + System.currentTimeMillis());
@@ -107,7 +113,7 @@ public class QuoteRename {
             CreateContactRequest contactReq = new CreateContactRequest();
             contactReq.setName("Dana Reed");
             contactReq.setCompanyId(companyId);
-            contactReq.setEmail("dana@rename-example.test");
+            contactReq.setEmail("dana@rename-example.example.com");
 
             Contact contact = tq.createContact(contactReq);
             contactId = contact.getId();
