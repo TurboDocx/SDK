@@ -1,6 +1,9 @@
 package com.turbodocx;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.turbodocx.models.PartnerOrgPreferences;
+import com.turbodocx.models.PartnerOrgPreferencesResponse;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -29,6 +32,7 @@ public final class TurboPartner {
 
     private final PartnerHttpClient httpClient;
     private final String partnerId;
+    private final Gson gson = new Gson();
 
     TurboPartner(PartnerHttpClient httpClient, String partnerId) {
         this.httpClient = httpClient;
@@ -147,6 +151,53 @@ public final class TurboPartner {
             body.put("tracking", tracking);
         }
         return httpClient.patch(basePath() + "/organizations/" + organizationId + "/entitlements", body);
+    }
+
+    /**
+     * Read the TurboSign display preferences for one of the partner's organizations.
+     *
+     * <p>Returns only the partner-settable preference keys, each with its effective
+     * value (defaults applied for keys the org never set). Lets a partner see a
+     * tenant's current settings before changing them.</p>
+     *
+     * @param organizationId Organization UUID
+     * @return the organization's partner-settable preferences ({@code success}, {@code data.preferences})
+     * @throws IOException if the request fails
+     */
+    public PartnerOrgPreferencesResponse getOrganizationPreferences(String organizationId) throws IOException {
+        JsonObject response = httpClient.get(basePath() + "/organizations/" + organizationId + "/preferences");
+        return gson.fromJson(response, PartnerOrgPreferencesResponse.class);
+    }
+
+    /**
+     * Set TurboSign display preferences for one of the partner's organizations.
+     *
+     * <p>Pass only the keys you want to change; leave the rest null and they are
+     * omitted from the request body. Any key the partner isn't permitted to set is
+     * rejected by the API. The full effective preferences are returned.</p>
+     *
+     * @param organizationId Organization UUID
+     * @param preferences    The preference keys to change (null-valued fields are omitted)
+     * @return the organization's updated partner-settable preferences
+     * @throws IOException if the request fails
+     */
+    public PartnerOrgPreferencesResponse updateOrganizationPreferences(String organizationId, PartnerOrgPreferences preferences) throws IOException {
+        Map<String, Object> preferencesBody = new LinkedHashMap<>();
+        if (preferences != null) {
+            if (preferences.getHideSignatureOutline() != null) {
+                preferencesBody.put("hideSignatureOutline", preferences.getHideSignatureOutline());
+            }
+            if (preferences.getHideSignatureHash() != null) {
+                preferencesBody.put("hideSignatureHash", preferences.getHideSignatureHash());
+            }
+            if (preferences.getLockedFieldsBackground() != null) {
+                preferencesBody.put("lockedFieldsBackground", preferences.getLockedFieldsBackground());
+            }
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("preferences", preferencesBody);
+        JsonObject response = httpClient.patch(basePath() + "/organizations/" + organizationId + "/preferences", body);
+        return gson.fromJson(response, PartnerOrgPreferencesResponse.class);
     }
 
     // =========================================================================

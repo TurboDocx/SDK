@@ -300,6 +300,14 @@ type UpdateEntitlementsRequest struct {
 	Tracking *Tracking `json:"tracking,omitempty"`
 }
 
+// UpdateOrgPreferencesRequest is the partial set of TurboSign display preferences to change.
+// Only the keys you set are sent (pointers with omitempty); a nil field is left untouched.
+type UpdateOrgPreferencesRequest struct {
+	HideSignatureOutline   *bool `json:"hideSignatureOutline,omitempty"`
+	HideSignatureHash      *bool `json:"hideSignatureHash,omitempty"`
+	LockedFieldsBackground *bool `json:"lockedFieldsBackground,omitempty"`
+}
+
 // AddOrgUserRequest is the request to add a user to an organization
 type AddOrgUserRequest struct {
 	Email string `json:"email"`
@@ -436,6 +444,23 @@ type EntitlementsResponse struct {
 	Data    struct {
 		Features *Features `json:"features,omitempty"`
 		Tracking *Tracking `json:"tracking,omitempty"`
+	} `json:"data"`
+}
+
+// PartnerOrgPreferences is the partner-settable slice of an organization's TurboSign
+// display preferences. Every key is present with its effective boolean value when read.
+type PartnerOrgPreferences struct {
+	HideSignatureOutline   bool `json:"hideSignatureOutline"`
+	HideSignatureHash      bool `json:"hideSignatureHash"`
+	LockedFieldsBackground bool `json:"lockedFieldsBackground"`
+}
+
+// PartnerOrgPreferencesResponse is the response for reading or updating an organization's
+// partner-settable preferences.
+type PartnerOrgPreferencesResponse struct {
+	Success bool `json:"success"`
+	Data    struct {
+		Preferences PartnerOrgPreferences `json:"preferences"`
 	} `json:"data"`
 }
 
@@ -623,6 +648,29 @@ func (c *PartnerClient) DeleteOrganization(ctx context.Context, organizationID s
 func (c *PartnerClient) UpdateOrganizationEntitlements(ctx context.Context, organizationID string, req *UpdateEntitlementsRequest) (*EntitlementsResponse, error) {
 	var response EntitlementsResponse
 	err := c.http.Patch(ctx, c.basePath()+"/organizations/"+organizationID+"/entitlements", req, &response)
+	if err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
+// GetOrganizationPreferences reads the TurboSign display preferences for one of the
+// partner's organizations. Returns each partner-settable key with its effective value.
+func (c *PartnerClient) GetOrganizationPreferences(ctx context.Context, organizationID string) (*PartnerOrgPreferencesResponse, error) {
+	var response PartnerOrgPreferencesResponse
+	err := c.http.Get(ctx, c.basePath()+"/organizations/"+organizationID+"/preferences", &response)
+	if err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
+// UpdateOrganizationPreferences sets TurboSign display preferences for one of the partner's
+// organizations. Only the keys set on preferences are sent, wrapped under a "preferences" key.
+func (c *PartnerClient) UpdateOrganizationPreferences(ctx context.Context, organizationID string, preferences *UpdateOrgPreferencesRequest) (*PartnerOrgPreferencesResponse, error) {
+	body := map[string]*UpdateOrgPreferencesRequest{"preferences": preferences}
+	var response PartnerOrgPreferencesResponse
+	err := c.http.Patch(ctx, c.basePath()+"/organizations/"+organizationID+"/preferences", body, &response)
 	if err != nil {
 		return nil, err
 	}

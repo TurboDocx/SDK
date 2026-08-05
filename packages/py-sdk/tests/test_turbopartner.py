@@ -339,6 +339,74 @@ class TestUpdateOrganizationEntitlements:
             )
 
 
+class TestGetOrganizationPreferences:
+    def setup_method(self):
+        TurboPartner._client = None
+        TurboPartner._partner_id = None
+
+    @pytest.mark.asyncio
+    async def test_get_organization_preferences(self):
+        mock_response = {
+            "success": True,
+            "data": {
+                "preferences": {
+                    "hideSignatureOutline": False,
+                    "hideSignatureHash": False,
+                    "lockedFieldsBackground": True
+                }
+            }
+        }
+
+        with patch.object(TurboPartner, '_get_client') as mock_get:
+            mock_client = MagicMock()
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_get.return_value = mock_client
+            TurboPartner._partner_id = PARTNER_ID
+
+            result = await TurboPartner.get_organization_preferences("org-123")
+
+            assert result["data"]["preferences"]["lockedFieldsBackground"] is True
+            mock_client.get.assert_called_once_with(
+                f"/partner/{PARTNER_ID}/organizations/org-123/preferences"
+            )
+
+
+class TestUpdateOrganizationPreferences:
+    def setup_method(self):
+        TurboPartner._client = None
+        TurboPartner._partner_id = None
+
+    @pytest.mark.asyncio
+    async def test_update_organization_preferences(self):
+        mock_response = {
+            "success": True,
+            "data": {
+                "preferences": {
+                    "hideSignatureOutline": False,
+                    "hideSignatureHash": False,
+                    "lockedFieldsBackground": False
+                }
+            }
+        }
+
+        with patch.object(TurboPartner, '_get_client') as mock_get:
+            mock_client = MagicMock()
+            mock_client.patch = AsyncMock(return_value=mock_response)
+            mock_get.return_value = mock_client
+            TurboPartner._partner_id = PARTNER_ID
+
+            result = await TurboPartner.update_organization_preferences(
+                "org-123", {"lockedFieldsBackground": False}
+            )
+
+            assert result["data"]["preferences"]["lockedFieldsBackground"] is False
+            # Only the given key, wrapped in a camelCase-verbatim "preferences" body
+            mock_client.patch.assert_called_once_with(
+                f"/partner/{PARTNER_ID}/organizations/org-123/preferences",
+                data={"preferences": {"lockedFieldsBackground": False}}
+            )
+
+
 # =========================================================================
 # Organization User Management
 # =========================================================================

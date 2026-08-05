@@ -247,6 +247,55 @@ class TurboPartner:
             data=body
         )
 
+    @classmethod
+    async def get_organization_preferences(cls, organization_id: str) -> Dict[str, Any]:
+        """
+        Read an organization's TurboSign display preferences
+
+        Returns only the partner-settable preference keys, each with its effective
+        value (defaults applied for keys the org never set). Lets a partner see a
+        tenant's current settings before changing them.
+
+        Args:
+            organization_id: Organization UUID
+
+        Returns:
+            Dict with success and data (preferences: hideSignatureOutline,
+            hideSignatureHash, lockedFieldsBackground)
+        """
+        client = cls._get_client()
+        return await client.get(
+            f"{cls._base_path()}/organizations/{organization_id}/preferences"
+        )
+
+    @classmethod
+    async def update_organization_preferences(
+        cls,
+        organization_id: str,
+        preferences: Dict[str, bool]
+    ) -> Dict[str, Any]:
+        """
+        Set an organization's TurboSign display preferences
+
+        Pass only the keys you want to change; each must be a boolean. Keys stay
+        camelCase verbatim -- they are sent to the API unchanged. Any key the
+        partner isn't permitted to set is rejected by the API. The full effective
+        preferences are returned.
+
+        Args:
+            organization_id: Organization UUID
+            preferences: The preference keys to change (camelCase), e.g.
+                hideSignatureOutline, hideSignatureHash, lockedFieldsBackground
+
+        Returns:
+            Dict with success and data (updated preferences)
+        """
+        client = cls._get_client()
+        return await client.patch(
+            f"{cls._base_path()}/organizations/{organization_id}/preferences",
+            data={"preferences": preferences}
+        )
+
     # =========================================================================
     # Organization User Management
     # =========================================================================

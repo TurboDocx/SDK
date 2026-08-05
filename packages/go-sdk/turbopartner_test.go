@@ -3,8 +3,10 @@ package turbodocx
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -315,6 +317,71 @@ func TestUpdateOrganizationEntitlements(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.Success)
 		assert.Equal(t, 100, *result.Data.Features.MaxUsers)
+	})
+}
+
+func TestGetOrganizationPreferences(t *testing.T) {
+	t.Run("gets preferences", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "GET", r.Method)
+			assert.Equal(t, "/partner/test-partner-id/organizations/org-123/preferences", r.URL.Path)
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": true,
+				"data": map[string]interface{}{
+					"preferences": map[string]interface{}{
+						"hideSignatureOutline":   true,
+						"hideSignatureHash":      false,
+						"lockedFieldsBackground": true,
+					},
+				},
+			})
+		}))
+		defer server.Close()
+
+		client := newTestPartnerClient(t, server.URL)
+		result, err := client.GetOrganizationPreferences(context.Background(), "org-123")
+
+		require.NoError(t, err)
+		assert.True(t, result.Success)
+		assert.True(t, result.Data.Preferences.HideSignatureOutline)
+		assert.False(t, result.Data.Preferences.HideSignatureHash)
+		assert.True(t, result.Data.Preferences.LockedFieldsBackground)
+	})
+}
+
+func TestUpdateOrganizationPreferences(t *testing.T) {
+	t.Run("updates preferences", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "PATCH", r.Method)
+			assert.Equal(t, "/partner/test-partner-id/organizations/org-123/preferences", r.URL.Path)
+
+			rawBody, _ := io.ReadAll(r.Body)
+			assert.Equal(t, `{"preferences":{"lockedFieldsBackground":false}}`, strings.TrimSpace(string(rawBody)))
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": true,
+				"data": map[string]interface{}{
+					"preferences": map[string]interface{}{
+						"hideSignatureOutline":   true,
+						"hideSignatureHash":      false,
+						"lockedFieldsBackground": false,
+					},
+				},
+			})
+		}))
+		defer server.Close()
+
+		client := newTestPartnerClient(t, server.URL)
+		result, err := client.UpdateOrganizationPreferences(context.Background(), "org-123", &UpdateOrgPreferencesRequest{
+			LockedFieldsBackground: BoolPtr(false),
+		})
+
+		require.NoError(t, err)
+		assert.True(t, result.Success)
+		assert.False(t, result.Data.Preferences.LockedFieldsBackground)
 	})
 }
 

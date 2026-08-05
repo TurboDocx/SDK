@@ -79,6 +79,7 @@ so a freshly-sent document normally reads a non-null `lastRemindedAt` alongside
 
 - Organization CRUD: create, list, getDetails, update, delete
 - Organization entitlements: updateEntitlements
+- Organization display preferences: getOrganizationPreferences, updateOrganizationPreferences
 - Organization users: list, add, update role, remove, resend invitation
 - Organization API keys: list, create, update, revoke
 - Partner API keys: list, create, update, revoke
