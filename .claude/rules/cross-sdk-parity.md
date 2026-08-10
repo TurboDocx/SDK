@@ -10,6 +10,7 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 | createSignatureReviewLink | `createSignatureReviewLink()` | `create_signature_review_link()` | `CreateSignatureReviewLink()` | `createSignatureReviewLink()` | `createSignatureReviewLink()` | `create_signature_review_link()` |
 | sendSignature | `sendSignature()` | `send_signature()` | `SendSignature()` | `sendSignature()` | `sendSignature()` | `send_signature()` |
 | getStatus | `getStatus()` | `get_status()` | `GetStatus()` | `getStatus()` | `getStatus()` | `get_status()` |
+| getRecipients | `getRecipients()` | `get_recipients()` | `GetRecipients()` | `getRecipients()` | `getRecipients()` | `get_recipients()` |
 | download | `download()` | `download()` | `Download()` | `download()` | `download()` | `download()` |
 | void | `void()` | `void_document()` | `VoidDocument()` | `void()` | `voidDocument()` | `void_document()` |
 | resend | `resend()` | `resend_email()` | `ResendEmail()` | `resend()` | `resendEmail()` | `resend_email()` |
@@ -23,6 +24,37 @@ the sanctioned idiomatic form, not a parity gap.
 **PHP void note:** PHP ships `TurboSign::void()` (not `voidDocument()`) — `void` is a valid PHP
 method name and the method is published; renaming would break users. The table above reflects the
 shipped name.
+
+**getRecipients return-shape note:** JS, Go, PHP and Java return a typed model
+(`DocumentRecipientsResponse`); Python and Ruby return the raw `Dict`/`Hash`, matching how
+those two already handle every other TurboSign read (`get_status`, `get_audit_trail`). That is
+the sanctioned idiomatic split, not a parity gap.
+
+**`getRecipients` returns two status fields per recipient, and they differ on purpose.**
+`status` is the raw database value and has three values only — `pending`, `viewed`,
+`completed`. There is no per-recipient declined/expired/voided state in the schema, so on a
+voided or expired document an unsigned signer still reads `pending` there. `effectiveStatus`
+is the backend's overlay — `pending`, `viewed`, `completed`, `voided`, `expired` — and is what
+UIs should display. A completed signature is never revoked, so someone who signed before the
+document was voided still reads `completed`. `summary` counts by `effectiveStatus` and carries
+`waitingOn` (pending + viewed), which is zero once the document is terminal. Keep both fields,
+and that distinction, in every language's docs — dropping `status` or aliasing it to
+`effectiveStatus` breaks callers who need the raw value.
+
+**Each recipient also carries a `delivery` block** — `firstSentOn`, `lastSentOn`, `totalSent`,
+`reminderCount`, `lastRemindedAt`, `warningCount`, `lastWarningAt` — the email history for that
+signer. It counts the signature request, resends, reminders, expiry warnings and terminal
+notices, and deliberately excludes CC notifications (a CC address is not a signer).
+
+**Two `delivery` fields do not mean what their names suggest, and every language's docs must
+say so.** `reminderCount` counts **automatic (scheduled) reminders only** — it is the counter
+`maxReminders` caps; a manual "remind now" deliberately does not increment it (a standalone
+nudge must not consume the cap budget) even though it does land in `totalSent`, so it can read
+0 while reminder emails have genuinely been sent. `lastRemindedAt` is **when the reminder
+cadence clock was last reset**, not when a reminder was sent: the initial signature-request
+send, each scheduled reminder, each manual "remind now" and each expiry warning all stamp it,
+so a freshly-sent document normally reads a non-null `lastRemindedAt` alongside
+`reminderCount` of 0. Only `warningCount` / `lastWarningAt` mean exactly what they say.
 
 ## Required TurboPartner Operations
 

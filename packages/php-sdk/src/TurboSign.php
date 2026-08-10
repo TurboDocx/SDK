@@ -10,6 +10,7 @@ use TurboDocx\Types\Requests\CreateSignatureReviewLinkRequest;
 use TurboDocx\Types\Requests\SendSignatureRequest;
 use TurboDocx\Types\Responses\AuditTrailResponse;
 use TurboDocx\Types\Responses\CreateSignatureReviewLinkResponse;
+use TurboDocx\Types\Responses\DocumentRecipientsResponse;
 use TurboDocx\Types\Responses\DocumentStatusResponse;
 use TurboDocx\Types\Responses\ResendEmailResponse;
 use TurboDocx\Types\Responses\SendSignatureResponse;
@@ -247,6 +248,29 @@ final class TurboSign
         $client = self::getClient();
         $response = $client->get("/turbosign/documents/{$documentId}/status");
         return DocumentStatusResponse::fromArray($response);
+    }
+
+    /**
+     * Get every recipient on a document with their signing status
+     *
+     * Answers "who has signed and who are we still waiting on" in one call, and reports
+     * who sent the document. The summary carries the pending/viewed/completed counts.
+     *
+     * @param string $documentId ID of the document
+     * @return DocumentRecipientsResponse
+     *
+     * @example
+     * ```php
+     * $result = TurboSign::getRecipients($documentId);
+     * echo "{$result->summary->completed}/{$result->summary->total} signed";
+     * echo "sent by {$result->document->sentBy->name}";
+     * ```
+     */
+    public static function getRecipients(string $documentId): DocumentRecipientsResponse
+    {
+        $client = self::getClient();
+        $response = $client->get("/turbosign/documents/{$documentId}/recipients");
+        return DocumentRecipientsResponse::fromArray($response);
     }
 
     /**

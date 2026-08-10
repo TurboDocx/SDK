@@ -334,6 +334,60 @@ class TurboSign:
         return await client.get(f"/turbosign/documents/{document_id}/status")
 
     @classmethod
+    async def get_recipients(cls, document_id: str) -> Dict[str, Any]:
+        """
+        Get every recipient on a document with their signing status
+
+        Answers "who has signed and who are we still waiting on" in one call, and
+        reports who sent the document.
+
+        Args:
+            document_id: ID of the document
+
+        Returns:
+            Dict with:
+                - document: id, name, status, createdOn, sentOn (null while a draft),
+                  expiresAt, and sentBy {name, email} — who sent it
+                - recipients: list of {id, name, email, status, effectiveStatus, signedOn,
+                  signingOrder, delivery}
+                - summary: {total, pending, viewed, completed, voided, expired, waitingOn}
+
+            `status` is the raw database value and is only ever 'pending', 'viewed' or
+            'completed'. `effectiveStatus` layers the document's terminal state on top and
+            is what you should display: a signer on a voided or expired document reads
+            'voided'/'expired' there while `status` still says 'pending'. A completed
+            signature is never revoked.
+
+            `delivery` is that recipient's email history:
+            {firstSentOn, lastSentOn, totalSent, reminderCount, lastRemindedAt,
+            warningCount, lastWarningAt}. CC notifications are excluded — a CC address
+            is not a signer.
+
+            Two `delivery` fields are easy to misread:
+
+            - `reminderCount` counts AUTOMATIC (scheduled) reminders only — it is the
+              counter `maxReminders` caps. A manual "remind now" does not increment it
+              (it must not consume the cap budget), though it does land in `totalSent`.
+              So it can read 0 while reminder emails have genuinely been sent.
+            - `lastRemindedAt` is when the reminder CADENCE CLOCK was last reset, not
+              necessarily when a reminder was sent. The initial signature-request send,
+              each scheduled reminder, each manual "remind now" and each expiry warning
+              all stamp it. A freshly-sent document therefore normally reads a non-null
+              `lastRemindedAt` alongside `reminderCount` of 0.
+
+            `warningCount` / `lastWarningAt` are touched only by an expiry warning.
+
+        Example:
+            >>> result = await TurboSign.get_recipients("doc-123")
+            >>> print(f"{result['summary']['completed']}/{result['summary']['total']} signed")
+            >>> print(f"still waiting on {result['summary']['waitingOn']}")
+            >>> for r in result["recipients"]:
+            ...     print(r["name"], r["effectiveStatus"], r["delivery"]["totalSent"])
+        """
+        client = cls._get_client()
+        return await client.get(f"/turbosign/documents/{document_id}/recipients")
+
+    @classmethod
     async def download(cls, document_id: str) -> bytes:
         """
         Download the signed document

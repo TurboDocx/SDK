@@ -173,6 +173,47 @@ module TurboDocxSdk
         client.get("/turbosign/documents/#{document_id}/status")
       end
 
+      # Get every recipient on a document with their signing status.
+      #
+      # Answers "who has signed and who are we still waiting on" in one call, and
+      # reports who sent the document.
+      #
+      # "status" is the raw database value and is only ever "pending", "viewed" or
+      # "completed". "effectiveStatus" layers the document's terminal state on top and is
+      # what you should display: a signer on a voided or expired document reads
+      # "voided"/"expired" there while "status" still says "pending". A completed
+      # signature is never revoked.
+      #
+      # Each recipient's "delivery" is their email history — CC notifications are
+      # excluded, since a CC address is not a signer.
+      #
+      # Two delivery fields are easy to misread:
+      #   * "reminderCount" counts AUTOMATIC (scheduled) reminders only — the counter
+      #     maxReminders caps. A manual "remind now" does not increment it (it must not
+      #     consume the cap budget), though it does land in "totalSent". So it can read 0
+      #     while reminder emails have genuinely been sent.
+      #   * "lastRemindedAt" is when the reminder CADENCE CLOCK was last reset, not
+      #     necessarily when a reminder was sent. The initial signature-request send, each
+      #     scheduled reminder, each manual "remind now" and each expiry warning all stamp
+      #     it — so a freshly-sent document normally reads a non-nil "lastRemindedAt"
+      #     alongside "reminderCount" of 0.
+      #
+      # "warningCount" / "lastWarningAt" are touched only by an expiry warning.
+      #
+      # @param document_id [String]
+      # @return [Hash] with "document" (id, name, status, createdOn, sentOn, expiresAt,
+      #   sentBy), "recipients" (each with "status", "effectiveStatus", "signedOn",
+      #   "signingOrder" and "delivery" = firstSentOn/lastSentOn/totalSent/
+      #   reminderCount/lastRemindedAt/warningCount/lastWarningAt) and "summary"
+      #   ("total", "pending", "viewed", "completed", "voided", "expired", "waitingOn")
+      # @raise [NotFoundError] if the document does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def get_recipients(document_id)
+        client = get_client
+        client.get("/turbosign/documents/#{document_id}/recipients")
+      end
+
       private
 
       def get_client

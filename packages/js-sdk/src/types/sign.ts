@@ -113,6 +113,105 @@ export interface DocumentStatusResponse {
   status: string;
 }
 
+/**
+ * A recipient's status once the document's own terminal state is layered on top.
+ * The database only stores pending/viewed/completed; voided and expired are projected
+ * from the document onto signers who had not finished.
+ */
+export type RecipientEffectiveStatus = 'pending' | 'viewed' | 'completed' | 'voided' | 'expired';
+
+/**
+ * Email history for one recipient — every notification actually sent to them.
+ * CC notifications are excluded; a CC address is not a signer.
+ */
+export interface RecipientDelivery {
+  /** First email of any kind to this recipient; null if they have never been emailed. */
+  firstSentOn: string | null;
+  /** Most recent email of any kind to this recipient. */
+  lastSentOn: string | null;
+  /** Total emails sent (request, resends, reminders, warnings, terminal notices). */
+  totalSent: number;
+  /**
+   * Automatic (scheduled) reminders only — the counter `maxReminders` caps. A manual
+   * "remind now" does NOT increment it (it is a standalone nudge that must not consume
+   * the cap budget), though it does land in `totalSent`. So this can read 0 while
+   * reminder emails have genuinely been sent.
+   */
+  reminderCount: number;
+  /**
+   * When the reminder cadence clock was last reset — NOT necessarily when a reminder was
+   * sent. Stamped by the initial signature-request send, each scheduled reminder, each
+   * manual "remind now", and each expiry warning. Only scheduled reminders bump
+   * `reminderCount`, so a freshly-sent document normally shows a non-null value here
+   * alongside `reminderCount: 0`. Null means "never emailed on this cadence".
+   */
+  lastRemindedAt: string | null;
+  /** Expiry warnings sent. Only a warning touches this. */
+  warningCount: number;
+  /** When the last expiry warning went out. Only a warning touches this. */
+  lastWarningAt: string | null;
+}
+
+/** Where a single recipient is in the signing process. */
+export interface RecipientSignatureStatus {
+  id: string;
+  name: string;
+  email: string;
+  /** Raw database status — only ever 'pending', 'viewed' or 'completed'. */
+  status: string;
+  /**
+   * Raw status with the document's terminal state layered on. Use this for display: a
+   * signer on a voided document reads 'voided' here but still 'pending' in `status`.
+   * A completed signature is never revoked.
+   */
+  effectiveStatus: RecipientEffectiveStatus;
+  /** ISO timestamp when this recipient signed; null while pending or viewed. */
+  signedOn: string | null;
+  signingOrder: number;
+  delivery: RecipientDelivery;
+}
+
+/** Roll-up of the roster by effective status, so callers can skip the loop. */
+export interface RecipientStatusSummary {
+  total: number;
+  pending: number;
+  viewed: number;
+  completed: number;
+  /** Signers stranded by a voided document. */
+  voided: number;
+  /** Signers stranded by an expired document. */
+  expired: number;
+  /** Recipients who can still act (pending + viewed). Zero once the document is terminal. */
+  waitingOn: number;
+}
+
+/** The identity that sent a document for signature. */
+export interface DocumentSender {
+  name: string;
+  email: string;
+}
+
+/** The document a set of recipients belongs to. */
+export interface RecipientsDocument {
+  id: string;
+  name: string;
+  /** Document-level status — the full SignatureDocumentStatus set. */
+  status: string;
+  createdOn: string;
+  /** When the document was dispatched to recipients; null while it is still a draft. */
+  sentOn: string | null;
+  /** When the signing window closes; null when the document never expires. */
+  expiresAt: string | null;
+  /** Who sent it — never the synthetic API service account. */
+  sentBy: DocumentSender;
+}
+
+export interface DocumentRecipientsResponse {
+  document: RecipientsDocument;
+  recipients: RecipientSignatureStatus[];
+  summary: RecipientStatusSummary;
+}
+
 // ============================================
 // SINGLE-STEP OPERATION TYPES
 // ============================================

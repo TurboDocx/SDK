@@ -281,22 +281,77 @@ result = await TurboSign.send_signature(
     ]
 )
 
+# The created recipients come back on the send result — each carries id, name and email.
+# Signing links are emailed to them; they are not returned here.
 for recipient in result["recipients"]:
-    print(f"{recipient['name']}: {recipient['signUrl']}")
+    print(f"{recipient['name']} <{recipient['email']}> — {recipient['id']}")
+
+# For signing progress afterwards, use get_recipients().
 ```
 
 #### `get_status()`
 
-Check the current status of a document.
+Check the document-level status. For per-recipient detail, use `get_recipients()`.
 
 ```python
 status = await TurboSign.get_status("doc-uuid-here")
 
-print(f"Status: {status['status']}")  # 'pending', 'completed', 'voided'
-
-for recipient in status["recipients"]:
-    print(f"{recipient['name']}: {recipient['status']}")
+print(f"Status: {status['status']}")  # 'under_review', 'completed', 'voided', ...
 ```
+
+#### `get_recipients()`
+
+See who the document went to, who has signed, who you are still waiting on, and who sent it.
+
+```python
+result = await TurboSign.get_recipients("doc-uuid-here")
+
+sender = result["document"]["sentBy"]
+print(f"Sent by {sender['name']} <{sender['email']}>")
+print(f"Sent on {result['document']['sentOn'] or 'not sent yet'}")
+
+summary = result["summary"]
+print(f"{summary['completed']} of {summary['total']} signed, waiting on {summary['waitingOn']}")
+
+for r in result["recipients"]:
+    # 'pending' | 'viewed' | 'completed' | 'voided' | 'expired'
+    print(f"{r['name']} <{r['email']}>: {r['effectiveStatus']}")
+    if r["signedOn"]:
+        print(f"  signed {r['signedOn']}")
+    print(f"  emailed {r['delivery']['totalSent']}x, last {r['delivery']['lastSentOn'] or 'never'}")
+
+# Who are we chasing?
+chasing = [r for r in result["recipients"] if r["effectiveStatus"] in ("pending", "viewed")]
+```
+
+**Two status fields, and they differ on purpose:**
+
+| Field | Values | Use it for |
+|---|---|---|
+| `status` | `pending`, `viewed`, `completed` | The raw database value |
+| `effectiveStatus` | `pending`, `viewed`, `completed`, `voided`, `expired` | Display |
+
+The database has no per-recipient declined/voided/expired state, so on a voided or expired
+document an unsigned signer still reads `pending` in `status`. `effectiveStatus` layers the
+document's outcome on top — that's the one to show a user. A completed signature is never
+revoked: someone who signed before the document was voided still reads `completed`.
+
+`summary` counts by `effectiveStatus`, and `waitingOn` (pending + viewed) drops to zero once
+the document is terminal.
+
+**`delivery`** is that recipient's email history — `firstSentOn`, `lastSentOn`, `totalSent`,
+`reminderCount`, `lastRemindedAt`, `warningCount`, `lastWarningAt`. It counts the signature
+request, resends, reminders, expiry warnings and terminal notices. CC notifications are
+excluded, since a CC address is not a signer.
+
+Two `delivery` fields are easy to misread:
+
+| Field | What it actually means |
+|---|---|
+| `reminderCount` | **Automatic (scheduled) reminders only** — the counter `maxReminders` caps. A manual "remind now" does **not** increment it (it must not consume the cap budget), though it does land in `totalSent`. So it can read `0` while reminder emails have genuinely been sent. |
+| `lastRemindedAt` | **When the reminder cadence clock was last reset** — not necessarily when a reminder was sent. The initial signature-request send, each scheduled reminder, each manual "remind now" and each expiry warning all stamp it. A freshly-sent document therefore normally reads a non-null `lastRemindedAt` alongside `reminderCount` of `0`. |
+
+`warningCount` and `lastWarningAt` are touched only by an expiry warning.
 
 #### `download()`
 
@@ -857,6 +912,7 @@ The `manual_test.py` file tests all SDK methods:
 - ✅ `create_signature_review_link()` - Document upload for review
 - ✅ `send_signature()` - Send for signature
 - ✅ `get_status()` - Check document status
+- ✅ `get_recipients()` - Per-recipient signing status (who signed, who is pending)
 - ✅ `download()` - Download signed document
 - ✅ `void_document()` - Cancel signature request
 - ✅ `resend_email()` - Resend signature emails

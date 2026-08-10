@@ -110,17 +110,18 @@ begin
   puts "Document ID: #{result['documentId']}"
   puts "Message: #{result['message']}"
 
-  # To get sign URLs and recipient details, use get_status
+  # Signing links are emailed to recipients — they are not returned by the API.
+  # get_recipients reports who has signed and who you are still waiting on.
   begin
-    status = TurboDocxSdk::TurboSign.get_status(result["documentId"])
-    if status["recipients"]
-      puts "\nSign URLs:"
-      status["recipients"].each do |recipient|
-        puts "  #{recipient['name']}: #{recipient['signUrl'] || 'N/A'}"
-      end
+    progress = TurboDocxSdk::TurboSign.get_recipients(result["documentId"])
+    summary = progress["summary"]
+    puts "\n#{summary['completed']} of #{summary['total']} signed, " \
+         "still waiting on #{summary['waitingOn']}"
+    progress["recipients"].each do |recipient|
+      puts "  #{recipient['name']} <#{recipient['email']}>: #{recipient['effectiveStatus']}"
     end
   rescue TurboDocxSdk::TurboDocxError
-    puts "\nNote: Could not fetch recipient sign URLs"
+    puts "\nNote: Could not fetch recipient status"
   end
 rescue TurboDocxSdk::TurboDocxError => e
   puts "Error: #{e.message}"

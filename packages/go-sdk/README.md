@@ -262,17 +262,66 @@ fmt.Printf("Message: %s\n", result.Message)
 
 #### `GetStatus`
 
-Check the current status of a document.
+Check the document-level status. For per-recipient detail, use `GetRecipients`.
 
 ```go
 status, err := client.TurboSign.GetStatus(ctx, "doc-uuid-here")
 
-fmt.Printf("Status: %s\n", status.Status)  // "pending", "completed", "voided"
+fmt.Printf("Status: %s\n", status.Status)  // "under_review", "completed", "voided", ...
+```
 
-for _, r := range status.Recipients {
-    fmt.Printf("%s: %s\n", r.Name, r.Status)
+#### `GetRecipients`
+
+See who the document went to, who has signed, who you are still waiting on, and who sent it.
+
+```go
+result, err := client.TurboSign.GetRecipients(ctx, "doc-uuid-here")
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Sent by %s <%s>\n", result.Document.SentBy.Name, result.Document.SentBy.Email)
+fmt.Printf("%d of %d signed, still waiting on %d\n",
+    result.Summary.Completed, result.Summary.Total, result.Summary.WaitingOn)
+
+for _, r := range result.Recipients {
+    // "pending" | "viewed" | "completed" | "voided" | "expired"
+    fmt.Printf("%s <%s>: %s\n", r.Name, r.Email, r.EffectiveStatus)
+    if r.SignedOn != nil {
+        fmt.Printf("  signed %s\n", *r.SignedOn)
+    }
+    fmt.Printf("  emailed %dx\n", r.Delivery.TotalSent)
 }
 ```
+
+**Two status fields, and they differ on purpose:**
+
+| Field | Values | Use it for |
+|---|---|---|
+| `Status` | `pending`, `viewed`, `completed` | The raw database value |
+| `EffectiveStatus` | `pending`, `viewed`, `completed`, `voided`, `expired` | Display |
+
+The database has no per-recipient declined/voided/expired state, so on a voided or expired
+document an unsigned signer still reads `pending` in `Status`. `EffectiveStatus` layers the
+document's outcome on top — that's the one to show a user. A completed signature is never
+revoked: someone who signed before the document was voided still reads `completed`.
+
+`Summary` counts by effective status, and `WaitingOn` (pending + viewed) drops to zero once
+the document is terminal.
+
+**`Delivery`** is that recipient's email history — `FirstSentOn`, `LastSentOn`, `TotalSent`,
+`ReminderCount`, `LastRemindedAt`, `WarningCount`, `LastWarningAt`. It counts the signature
+request, resends, reminders, expiry warnings and terminal notices. CC notifications are
+excluded, since a CC address is not a signer.
+
+Two `delivery` fields are easy to misread:
+
+| Field | What it actually means |
+|---|---|
+| `ReminderCount` | **Automatic (scheduled) reminders only** — the counter `maxReminders` caps. A manual "remind now" does **not** increment it (it must not consume the cap budget), though it does land in `TotalSent`. So it can read `0` while reminder emails have genuinely been sent. |
+| `LastRemindedAt` | **When the reminder cadence clock was last reset** — not necessarily when a reminder was sent. The initial signature-request send, each scheduled reminder, each manual "remind now" and each expiry warning all stamp it. A freshly-sent document therefore normally reads a non-null `LastRemindedAt` alongside `ReminderCount` of `0`. |
+
+`WarningCount` and `LastWarningAt` are touched only by an expiry warning.
 
 #### `Download`
 
@@ -1164,6 +1213,7 @@ The `cmd/manual/main.go` program tests all SDK methods:
 - ✅ `CreateSignatureReviewLink()` - Document upload for review
 - ✅ `SendSignature()` - Send for signature
 - ✅ `GetStatus()` - Check document status
+- ✅ `GetRecipients()` - Per-recipient signing status (who signed, who is pending)
 - ✅ `Download()` - Download signed document
 - ✅ `VoidDocument()` - Cancel signature request
 - ✅ `ResendEmail()` - Resend signature emails

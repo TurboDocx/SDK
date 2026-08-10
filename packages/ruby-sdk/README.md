@@ -223,25 +223,78 @@ result = TurboDocxSdk::TurboSign.send_signature(
   ]
 )
 
+# The created recipients come back on the send result — each carries id, name and email.
+# Signing links are emailed to them; they are not returned here.
 result["recipients"].each do |r|
-  puts "#{r['name']}: #{r['signUrl']}"
+  puts "#{r['name']} <#{r['email']}> — #{r['id']}"
 end
+
+# For signing progress afterwards, use get_recipients.
 ```
 
 The document source can also be raw bytes or a local file path (`file: File.binread("contract.pdf")` or `file: "contract.pdf"` — the file type is detected from magic bytes), a TurboDocx deliverable (`deliverableId:`), or a TurboSign template (`templateId:`).
 
 #### `get_status(document_id)`
 
-Check the status of a document.
+Check the document-level status. For per-recipient detail, use `get_recipients`.
 
 ```ruby
 status = TurboDocxSdk::TurboSign.get_status("doc-uuid")
-puts "Status: #{status['status']}"  # "pending" | "completed" | "voided"
-
-status["recipients"].each do |r|
-  puts "#{r['name']}: #{r['status']}"
-end
+puts "Status: #{status['status']}"  # "under_review" | "completed" | "voided" | ...
 ```
+
+#### `get_recipients(document_id)`
+
+See who the document went to, who has signed, who you are still waiting on, and who sent it.
+
+```ruby
+result = TurboDocxSdk::TurboSign.get_recipients("doc-uuid")
+
+sender = result["document"]["sentBy"]
+puts "Sent by #{sender['name']} <#{sender['email']}>"
+
+summary = result["summary"]
+puts "#{summary['completed']} of #{summary['total']} signed, waiting on #{summary['waitingOn']}"
+
+result["recipients"].each do |r|
+  # "pending" | "viewed" | "completed" | "voided" | "expired"
+  puts "#{r['name']} <#{r['email']}>: #{r['effectiveStatus']}"
+  puts "  signed #{r['signedOn']}" if r["signedOn"]
+  puts "  emailed #{r['delivery']['totalSent']}x"
+end
+
+# Who are we chasing?
+chasing = result["recipients"].select { |r| %w[pending viewed].include?(r["effectiveStatus"]) }
+```
+
+**Two status fields, and they differ on purpose:**
+
+| Field | Values | Use it for |
+|---|---|---|
+| `status` | `pending`, `viewed`, `completed` | The raw database value |
+| `effectiveStatus` | `pending`, `viewed`, `completed`, `voided`, `expired` | Display |
+
+The database has no per-recipient declined/voided/expired state, so on a voided or expired
+document an unsigned signer still reads `pending` in `status`. `effectiveStatus` layers the
+document's outcome on top — that's the one to show a user. A completed signature is never
+revoked: someone who signed before the document was voided still reads `completed`.
+
+`summary` counts by `effectiveStatus`, and `waitingOn` (pending + viewed) drops to zero once
+the document is terminal.
+
+**`delivery`** is that recipient's email history — `firstSentOn`, `lastSentOn`, `totalSent`,
+`reminderCount`, `lastRemindedAt`, `warningCount`, `lastWarningAt`. It counts the signature
+request, resends, reminders, expiry warnings and terminal notices. CC notifications are
+excluded, since a CC address is not a signer.
+
+Two `delivery` fields are easy to misread:
+
+| Field | What it actually means |
+|---|---|
+| `reminderCount` | **Automatic (scheduled) reminders only** — the counter `maxReminders` caps. A manual "remind now" does **not** increment it (it must not consume the cap budget), though it does land in `totalSent`. So it can read `0` while reminder emails have genuinely been sent. |
+| `lastRemindedAt` | **When the reminder cadence clock was last reset** — not necessarily when a reminder was sent. The initial signature-request send, each scheduled reminder, each manual "remind now" and each expiry warning all stamp it. A freshly-sent document therefore normally reads a non-null `lastRemindedAt` alongside `reminderCount` of `0`. |
+
+`warningCount` and `lastWarningAt` are touched only by an expiry warning.
 
 #### `download(document_id)`
 

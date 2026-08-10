@@ -156,6 +156,94 @@ type DocumentStatusResponse struct {
 	Status string `json:"status"`
 }
 
+// DocumentSender is the identity that sent a document for signature.
+// Never the synthetic API service account.
+type DocumentSender struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+// RecipientsDocument is the document the recipients belong to.
+type RecipientsDocument struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// Status is the document-level status — the full SignatureDocumentStatus set
+	// ("draft", "under_review", "completed", "voided", "expired", …).
+	//
+	// For per-recipient display you do NOT need to overlay this yourself: each
+	// RecipientSignatureStatus already carries EffectiveStatus, which is the raw
+	// recipient status with this document-level outcome layered on.
+	Status    string `json:"status"`
+	CreatedOn string `json:"createdOn"`
+	// SentOn is when the document was dispatched to recipients; nil while it is a draft.
+	SentOn    *string        `json:"sentOn"`
+	ExpiresAt *string        `json:"expiresAt"`
+	SentBy    DocumentSender `json:"sentBy"`
+}
+
+// RecipientDelivery is the email history for one recipient — every notification actually
+// sent to them. CC notifications are excluded; a CC address is not a signer.
+type RecipientDelivery struct {
+	// FirstSentOn is nil if this recipient has never been emailed.
+	FirstSentOn *string `json:"firstSentOn"`
+	LastSentOn  *string `json:"lastSentOn"`
+	// TotalSent counts the request, resends, reminders, warnings and terminal notices.
+	TotalSent int `json:"totalSent"`
+	// ReminderCount counts AUTOMATIC (scheduled) reminders only — the counter maxReminders
+	// caps. A manual "remind now" does not increment it (it must not consume the cap
+	// budget), though it does land in TotalSent. So this can read 0 while reminder emails
+	// have genuinely been sent.
+	ReminderCount int `json:"reminderCount"`
+	// LastRemindedAt is when the reminder CADENCE CLOCK was last reset — not necessarily
+	// when a reminder was sent. Stamped by the initial signature-request send, each
+	// scheduled reminder, each manual "remind now", and each expiry warning. Only
+	// scheduled reminders bump ReminderCount, so a freshly-sent document normally shows a
+	// non-nil value here alongside ReminderCount 0. Nil means "never emailed on this cadence".
+	LastRemindedAt *string `json:"lastRemindedAt"`
+	// WarningCount and LastWarningAt are touched only by an expiry warning.
+	WarningCount  int     `json:"warningCount"`
+	LastWarningAt *string `json:"lastWarningAt"`
+}
+
+// RecipientSignatureStatus is where a single recipient is in the signing process.
+type RecipientSignatureStatus struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	// Status is the raw database status — only ever "pending", "viewed" or "completed".
+	Status string `json:"status"`
+	// EffectiveStatus is Status with the document's terminal state layered on:
+	// "pending", "viewed", "completed", "voided" or "expired". Use this for display — a
+	// signer on a voided document reads "voided" here but still "pending" in Status.
+	// A completed signature is never revoked.
+	EffectiveStatus string `json:"effectiveStatus"`
+	// SignedOn is nil while the recipient is pending or has only viewed the document.
+	SignedOn     *string           `json:"signedOn"`
+	SigningOrder int               `json:"signingOrder"`
+	Delivery     RecipientDelivery `json:"delivery"`
+}
+
+// RecipientStatusSummary rolls the roster up by effective status so callers can answer
+// "how many are we waiting on" without looping.
+type RecipientStatusSummary struct {
+	Total     int `json:"total"`
+	Pending   int `json:"pending"`
+	Viewed    int `json:"viewed"`
+	Completed int `json:"completed"`
+	// Voided and Expired count signers stranded by the document's terminal state.
+	Voided  int `json:"voided"`
+	Expired int `json:"expired"`
+	// WaitingOn is who can still act (pending + viewed). Zero once the document is terminal.
+	WaitingOn int `json:"waitingOn"`
+}
+
+// DocumentRecipientsResponse is the response from GetRecipients
+type DocumentRecipientsResponse struct {
+	Document   RecipientsDocument         `json:"document"`
+	Recipients []RecipientSignatureStatus `json:"recipients"`
+	Summary    RecipientStatusSummary     `json:"summary"`
+}
+
 // VoidDocumentResponse is the response from VoidDocument
 type VoidDocumentResponse struct {
 	ID         string `json:"id"`
@@ -370,6 +458,21 @@ func (c *TurboSignClient) GetStatus(ctx context.Context, documentID string) (*Do
 	var response DocumentStatusResponse
 
 	err := c.http.Get(ctx, "/turbosign/documents/"+documentID+"/status", &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
+// GetRecipients gets every recipient on a document with their signing status.
+//
+// Answers "who has signed and who are we still waiting on" in one call, and reports
+// who sent the document. Summary carries the pending/viewed/completed counts.
+func (c *TurboSignClient) GetRecipients(ctx context.Context, documentID string) (*DocumentRecipientsResponse, error) {
+	var response DocumentRecipientsResponse
+
+	err := c.http.Get(ctx, "/turbosign/documents/"+documentID+"/recipients", &response)
 	if err != nil {
 		return nil, err
 	}
