@@ -124,6 +124,37 @@ module TurboDocxSdk
         client.post("/turbosign/documents/#{document_id}/resend-email", { "recipientIds" => recipient_ids })
       end
 
+      # Send a reminder email to a document's outstanding signers.
+      #
+      # This is a standalone nudge, deliberately decoupled from the automatic reminder schedule:
+      # it ignores the configured cadence, works even when reminders are disabled or the
+      # per-signer cap is already spent, and does not consume that cap.
+      #
+      # Only signers at the CURRENT signing order are emailed. A recipient at a later order (or
+      # one who has already signed) is reported back as skipped rather than silently dropped, so
+      # the caller can tell that nobody was emailed.
+      #
+      # @param document_id [String]
+      # @param recipient_ids [Array<String>, nil] optional subset to remind. Omit to remind every
+      #   eligible signer. When supplied the request is all-or-nothing: if any id is not a
+      #   current-order pending signer the API rejects the whole call and sends nothing.
+      # @return [Hash] :results, one entry per recipient considered, each with recipientId and
+      #   status (e.g. "sent", "skipped_wrong_order")
+      # @raise [NotFoundError] if the document does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def send_reminder(document_id, recipient_ids = nil)
+        client = get_client
+
+        # Only include the filter when it actually names someone. The API requires at least one id
+        # when the key is present, so forwarding an empty array would guarantee a 400 -- an empty
+        # list is far more likely to mean "no filter" than "remind nobody".
+        body = {}
+        body["recipientIds"] = recipient_ids if recipient_ids && !recipient_ids.empty?
+
+        client.post("/turbosign/documents/#{document_id}/send-reminder", body)
+      end
+
       # Get the audit trail for a document.
       #
       # @param document_id [String]
@@ -246,7 +277,38 @@ module TurboDocxSdk
           form_data["ccEmails"] = JSON.generate(cc_array)
         end
 
+        apply_schedule_overrides(form_data, request)
+
         form_data
+      end
+
+      # Copy per-document reminder/expiration overrides onto an outgoing request body.
+      #
+      # Durations are JSON-encoded. multipart/form-data has no notion of a nested value, so a
+      # { value:, unit: } hash cannot survive the file-upload path as an object. The API decodes a
+      # JSON-string duration on both content types, so encoding uniformly keeps one code path for
+      # the multipart and JSON branches -- the same treatment recipients and fields already get.
+      #
+      # Presence is tested with nil?, never truthiness: false (feature off) and 0 (no reminders /
+      # never warn) are meaningful values, and Ruby treats 0 as truthy but false as falsey, so a
+      # truthiness check would silently drop an explicit "off" and fall back to the org default.
+      #
+      # Request-body keys stay camelCase -- the API is not snake_case-aware.
+      def apply_schedule_overrides(form_data, request)
+        scalar_keys = %w[remindersEnabled maxReminders expirationEnabled]
+        scalar_keys.each do |key|
+          value = request[key.to_sym]
+          value = request[key] if value.nil?
+          form_data[key] = value unless value.nil?
+        end
+
+        duration_keys = %w[reminderDelay reminderInterval expireAfter expirationWarning
+                           expirationWarningInterval]
+        duration_keys.each do |key|
+          duration = request[key.to_sym]
+          duration = request[key] if duration.nil?
+          form_data[key] = JSON.generate(duration) unless duration.nil?
+        end
       end
     end
   end

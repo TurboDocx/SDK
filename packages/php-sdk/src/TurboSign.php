@@ -117,6 +117,9 @@ final class TurboSign
             $formData['ccEmails'] = json_encode($request->ccEmails);
         }
 
+        // Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
+        self::applyScheduleOverrides($formData, $request);
+
         // Handle different file input methods
         if ($request->file !== null) {
             // File upload - use multipart form
@@ -200,6 +203,9 @@ final class TurboSign
         if ($request->ccEmails !== null) {
             $formData['ccEmails'] = json_encode($request->ccEmails);
         }
+
+        // Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
+        self::applyScheduleOverrides($formData, $request);
 
         // Handle different file input methods
         if ($request->file !== null) {
@@ -328,6 +334,79 @@ final class TurboSign
             ['reason' => $reason]
         );
         return VoidDocumentResponse::fromArray($response);
+    }
+
+    /**
+     * Copy per-document reminder/expiration overrides onto an outgoing request body.
+     *
+     * Durations are JSON-encoded. multipart/form-data has no notion of a nested value, so a
+     * {value, unit} array cannot survive the file-upload path as an object. The API decodes a
+     * JSON-string duration on both content types, so encoding uniformly keeps one code path for
+     * the multipart and JSON branches — the same treatment recipients and fields already get.
+     *
+     * Presence is tested with `!== null`, never truthiness: `false` (feature off) and `0`
+     * (no reminders / never warn) are meaningful values, and a truthiness check would drop them
+     * and silently fall back to the organization's default.
+     *
+     * @param array<string, mixed> $formData
+     * @param CreateSignatureReviewLinkRequest|SendSignatureRequest $request
+     */
+    private static function applyScheduleOverrides(array &$formData, object $request): void
+    {
+        if ($request->remindersEnabled !== null) {
+            $formData['remindersEnabled'] = $request->remindersEnabled;
+        }
+        if ($request->maxReminders !== null) {
+            $formData['maxReminders'] = $request->maxReminders;
+        }
+        if ($request->expirationEnabled !== null) {
+            $formData['expirationEnabled'] = $request->expirationEnabled;
+        }
+
+        $durations = [
+            'reminderDelay' => $request->reminderDelay,
+            'reminderInterval' => $request->reminderInterval,
+            'expireAfter' => $request->expireAfter,
+            'expirationWarning' => $request->expirationWarning,
+            'expirationWarningInterval' => $request->expirationWarningInterval,
+        ];
+        foreach ($durations as $key => $duration) {
+            if ($duration !== null) {
+                $formData[$key] = json_encode($duration);
+            }
+        }
+    }
+
+    /**
+     * Send a reminder email to a document's outstanding signers.
+     *
+     * This is a standalone nudge, deliberately decoupled from the automatic reminder schedule: it
+     * ignores the configured cadence, works even when reminders are disabled or the per-signer cap
+     * is already spent, and does not consume that cap.
+     *
+     * Only signers at the CURRENT signing order are emailed. A recipient at a later order (or one
+     * who has already signed) is reported back as skipped rather than silently dropped, so the
+     * caller can tell that nobody was emailed.
+     *
+     * @param string $documentId ID of the document
+     * @param array<string>|null $recipientIds Optional subset to remind. Omit to remind every
+     *     eligible signer. When supplied the request is all-or-nothing: if any id is not a
+     *     current-order pending signer the API rejects the whole call and sends nothing.
+     * @return array<string, mixed> Results, one entry per recipient considered
+     */
+    public static function sendReminder(string $documentId, ?array $recipientIds = null): array
+    {
+        $client = self::getClient();
+
+        // Only include the filter when it actually names someone. The API requires at least one
+        // id when the key is present, so forwarding an empty array would guarantee a 400 — an
+        // empty list is far more likely to mean "no filter" than "remind nobody".
+        $body = [];
+        if ($recipientIds !== null && count($recipientIds) > 0) {
+            $body['recipientIds'] = $recipientIds;
+        }
+
+        return $client->post("/turbosign/documents/{$documentId}/send-reminder", $body);
     }
 
     /**

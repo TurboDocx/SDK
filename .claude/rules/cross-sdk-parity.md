@@ -15,6 +15,25 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 | void | `void()` | `void_document()` | `VoidDocument()` | `void()` | `voidDocument()` | `void_document()` |
 | resend | `resend()` | `resend_email()` | `ResendEmail()` | `resend()` | `resendEmail()` | `resend_email()` |
 | getAuditTrail | `getAuditTrail()` | `get_audit_trail()` | `GetAuditTrail()` | `getAuditTrail()` | `getAuditTrail()` | `get_audit_trail()` |
+| sendReminder | `sendReminder()` | `send_reminder()` | `SendReminder()` | `sendReminder()` | `sendReminder()` | `send_reminder()` |
+
+**sendReminder note:** a standalone nudge, deliberately decoupled from the automatic reminder
+schedule — it ignores the configured cadence, works when reminders are disabled or the per-signer
+cap is spent, and does not consume that cap. Only CURRENT-signing-order signers are emailed; a
+later-order or already-signed recipient comes back as a `skipped_*` result rather than being
+dropped. `recipientIds` is optional (omit to remind everyone eligible); when supplied the API is
+all-or-nothing. Every SDK omits the key entirely for an empty list — the API requires at least one
+id when the key is present, so sending `[]` would guarantee a 400.
+
+**Schedule overrides:** both send paths (`createSignatureReviewLink`, `sendSignature`) accept the
+eight per-document reminder/expiration fields. Two rules every SDK follows:
+1. **Durations are JSON-encoded on BOTH paths.** `multipart/form-data` cannot carry a nested
+   `{value, unit}`, and the API decodes a JSON-string duration on either content type — so one
+   code path serves multipart and JSON, exactly as `recipients`/`fields` are already handled.
+2. **Presence is null-checked, never truthiness.** `false` (feature off), `0` (no reminders /
+   never warn) and `-1` (unlimited) are all meaningful. Go uses pointer fields and Java boxed
+   types specifically so "unset" stays distinguishable from a deliberate zero value; a truthiness
+   check would drop them and silently fall back to the org default.
 
 **Configure note:** Go and Java do NOT expose a named `configure()` — Go configures via per-module
 constructors (`NewTurboSignClient`, `NewQuoteClient`, `NewWebhooksClient`, …) and Java via

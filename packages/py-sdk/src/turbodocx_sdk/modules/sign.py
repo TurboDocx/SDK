@@ -79,6 +79,53 @@ class TurboSign:
             )
         return cls._client
 
+
+    @staticmethod
+    def _apply_schedule_overrides(
+        target: Dict[str, Any],
+        *,
+        reminders_enabled: Optional[bool] = None,
+        reminder_delay: Optional[Dict[str, Any]] = None,
+        reminder_interval: Optional[Dict[str, Any]] = None,
+        max_reminders: Optional[int] = None,
+        expiration_enabled: Optional[bool] = None,
+        expire_after: Optional[Dict[str, Any]] = None,
+        expiration_warning: Optional[Dict[str, Any]] = None,
+        expiration_warning_interval: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """
+        Copy per-document reminder/expiration overrides onto an outgoing request body.
+
+        Durations are JSON-encoded. multipart/form-data has no notion of a nested value, so a
+        ``{"value": n, "unit": "days"}`` dict cannot survive the file-upload path as an object.
+        The API decodes a JSON-string duration on both content types, so encoding uniformly keeps
+        one code path for the multipart and JSON branches -- the same treatment ``recipients`` and
+        ``fields`` already get.
+
+        Presence is tested with ``is not None``, never truthiness: ``False`` (feature off) and
+        ``0`` (no reminders / never warn) are meaningful values, and a truthiness check would drop
+        them and silently fall back to the organization's default.
+
+        Request-body keys stay camelCase -- the API is not snake_case-aware.
+        """
+        if reminders_enabled is not None:
+            target["remindersEnabled"] = reminders_enabled
+        if max_reminders is not None:
+            target["maxReminders"] = max_reminders
+        if expiration_enabled is not None:
+            target["expirationEnabled"] = expiration_enabled
+
+        durations = {
+            "reminderDelay": reminder_delay,
+            "reminderInterval": reminder_interval,
+            "expireAfter": expire_after,
+            "expirationWarning": expiration_warning,
+            "expirationWarningInterval": expiration_warning_interval,
+        }
+        for key, duration in durations.items():
+            if duration is not None:
+                target[key] = json.dumps(duration)
+
     @classmethod
     async def create_signature_review_link(
         cls,
@@ -94,7 +141,15 @@ class TurboSign:
         document_description: Optional[str] = None,
         sender_name: Optional[str] = None,
         sender_email: Optional[str] = None,
-        cc_emails: Optional[List[str]] = None
+        cc_emails: Optional[List[str]] = None,
+        reminders_enabled: Optional[bool] = None,
+        reminder_delay: Optional[Dict[str, Any]] = None,
+        reminder_interval: Optional[Dict[str, Any]] = None,
+        max_reminders: Optional[int] = None,
+        expiration_enabled: Optional[bool] = None,
+        expire_after: Optional[Dict[str, Any]] = None,
+        expiration_warning: Optional[Dict[str, Any]] = None,
+        expiration_warning_interval: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Create signature review link without sending emails
@@ -155,6 +210,17 @@ class TurboSign:
 
             if cc_emails:
                 form_data["ccEmails"] = json.dumps(cc_emails)
+            TurboSign._apply_schedule_overrides(
+                form_data,
+                reminders_enabled=reminders_enabled,
+                reminder_delay=reminder_delay,
+                reminder_interval=reminder_interval,
+                max_reminders=max_reminders,
+                expiration_enabled=expiration_enabled,
+                expire_after=expire_after,
+                expiration_warning=expiration_warning,
+                expiration_warning_interval=expiration_warning_interval,
+            )
 
             return await client.upload_file(
                 "/turbosign/single/prepare-for-review",
@@ -183,6 +249,17 @@ class TurboSign:
 
             if cc_emails:
                 json_body["ccEmails"] = json.dumps(cc_emails)
+            TurboSign._apply_schedule_overrides(
+                json_body,
+                reminders_enabled=reminders_enabled,
+                reminder_delay=reminder_delay,
+                reminder_interval=reminder_interval,
+                max_reminders=max_reminders,
+                expiration_enabled=expiration_enabled,
+                expire_after=expire_after,
+                expiration_warning=expiration_warning,
+                expiration_warning_interval=expiration_warning_interval,
+            )
 
             # URL, deliverable, or template
             if file_link:
@@ -212,7 +289,15 @@ class TurboSign:
         document_description: Optional[str] = None,
         sender_name: Optional[str] = None,
         sender_email: Optional[str] = None,
-        cc_emails: Optional[List[str]] = None
+        cc_emails: Optional[List[str]] = None,
+        reminders_enabled: Optional[bool] = None,
+        reminder_delay: Optional[Dict[str, Any]] = None,
+        reminder_interval: Optional[Dict[str, Any]] = None,
+        max_reminders: Optional[int] = None,
+        expiration_enabled: Optional[bool] = None,
+        expire_after: Optional[Dict[str, Any]] = None,
+        expiration_warning: Optional[Dict[str, Any]] = None,
+        expiration_warning_interval: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Send signature request and immediately send emails
@@ -272,6 +357,17 @@ class TurboSign:
 
             if cc_emails:
                 form_data["ccEmails"] = json.dumps(cc_emails)
+            TurboSign._apply_schedule_overrides(
+                form_data,
+                reminders_enabled=reminders_enabled,
+                reminder_delay=reminder_delay,
+                reminder_interval=reminder_interval,
+                max_reminders=max_reminders,
+                expiration_enabled=expiration_enabled,
+                expire_after=expire_after,
+                expiration_warning=expiration_warning,
+                expiration_warning_interval=expiration_warning_interval,
+            )
 
             return await client.upload_file(
                 "/turbosign/single/prepare-for-signing",
@@ -300,6 +396,17 @@ class TurboSign:
 
             if cc_emails:
                 json_body["ccEmails"] = json.dumps(cc_emails)
+            TurboSign._apply_schedule_overrides(
+                json_body,
+                reminders_enabled=reminders_enabled,
+                reminder_delay=reminder_delay,
+                reminder_interval=reminder_interval,
+                max_reminders=max_reminders,
+                expiration_enabled=expiration_enabled,
+                expire_after=expire_after,
+                expiration_warning=expiration_warning,
+                expiration_warning_interval=expiration_warning_interval,
+            )
 
             # URL, deliverable, or template
             if file_link:
@@ -452,6 +559,55 @@ class TurboSign:
         return await client.post(
             f"/turbosign/documents/{document_id}/void",
             data={"reason": reason}
+        )
+
+    @classmethod
+    async def send_reminder(
+        cls,
+        document_id: str,
+        recipient_ids: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Send a reminder email to a document's outstanding signers
+
+        This is a standalone nudge, deliberately decoupled from the automatic reminder schedule:
+        it ignores the configured cadence, works even when reminders are disabled or the
+        per-signer cap is already spent, and does not consume that cap.
+
+        Only signers at the CURRENT signing order are emailed. A recipient at a later order (or
+        one who has already signed) is reported back as skipped rather than silently dropped, so
+        the caller can tell that nobody was emailed.
+
+        Args:
+            document_id: ID of the document
+            recipient_ids: Optional subset to remind. Omit to remind every eligible signer.
+                When supplied, the request is all-or-nothing: if any id is not a current-order
+                pending signer the API rejects the whole call and sends nothing.
+
+        Returns:
+            Dict with:
+                - results: One entry per recipient considered, each with recipientId, status
+                  (e.g. "sent", "skipped_wrong_order"), and optionally reminderCount and phase
+
+        Example:
+            >>> result = await TurboSign.send_reminder("doc-123")
+            >>> for entry in result["results"]:
+            ...     print(entry["recipientId"], entry["status"])
+            >>> # Nudge one specific signer
+            >>> await TurboSign.send_reminder("doc-123", ["rec-1"])
+        """
+        client = cls._get_client()
+
+        # Only include the filter when it actually names someone. The API requires at least one
+        # id when the key is present, so forwarding an empty list would guarantee a 400 -- an
+        # empty list is far more likely to mean "no filter" than "remind nobody".
+        body: Dict[str, Any] = {}
+        if recipient_ids:
+            body["recipientIds"] = recipient_ids
+
+        return await client.post(
+            f"/turbosign/documents/{document_id}/send-reminder",
+            data=body
         )
 
     @classmethod

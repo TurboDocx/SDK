@@ -25,6 +25,15 @@ final class CreateSignatureReviewLinkRequest
      * @param string|null $senderName Sender name (overrides configured value)
      * @param string|null $senderEmail Sender email (overrides configured value)
      * @param array<string>|null $ccEmails CC emails
+     * @param bool|null $remindersEnabled Send reminder emails to signers who haven't signed
+     * @param array{value:int,unit:string}|null $reminderDelay Time to the FIRST reminder
+     * @param array{value:int,unit:string}|null $reminderInterval Gap between later reminders
+     * @param int|null $maxReminders Cap per signer. -1 unlimited, 0 none. Never caps warnings.
+     * @param bool|null $expirationEnabled Close the signing window after $expireAfter
+     * @param array{value:int,unit:string}|null $expireAfter How long the document stays signable
+     * @param array{value:int,unit:string}|null $expirationWarning How far before expiry warnings
+     *     start. A zero value means no warnings at all.
+     * @param array{value:int,unit:string}|null $expirationWarningInterval Gap between warnings
      */
     public function __construct(
         public array $recipients,
@@ -39,5 +48,13 @@ final class CreateSignatureReviewLinkRequest
         public ?string $senderName = null,
         public ?string $senderEmail = null,
         public ?array $ccEmails = null,
+        public ?bool $remindersEnabled = null,
+        public ?array $reminderDelay = null,
+        public ?array $reminderInterval = null,
+        public ?int $maxReminders = null,
+        public ?bool $expirationEnabled = null,
+        public ?array $expireAfter = null,
+        public ?array $expirationWarning = null,
+        public ?array $expirationWarningInterval = null,
     ) {}
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 )
 
 // TurboSignClient provides digital signature operations
@@ -70,6 +71,48 @@ type Field struct {
 }
 
 // CreateSignatureReviewLinkRequest is the request for CreateSignatureReviewLink
+// Duration is a configured length of time.
+//
+// The unit is carried alongside the value rather than normalised away, so "48 hours" stays
+// "48 hours" instead of reading back as "2 days".
+type Duration struct {
+	// Value is a whole number of units. Minimum 1, except ExpirationWarning where 0 means
+	// "never warn".
+	Value int `json:"value"`
+	// Unit is "hours" or "days".
+	Unit string `json:"unit"`
+}
+
+// SignatureSchedule holds per-document reminder + expiration overrides.
+//
+// Every field is a POINTER because "unset" must stay distinguishable from a deliberate false or
+// 0: RemindersEnabled=false (feature off), MaxReminders=0 (no reminders) and MaxReminders=-1
+// (unlimited) are all meaningful, and Go's zero values would otherwise silently fall back to the
+// organization's default — the opposite of what the caller asked for.
+//
+// An omitted field inherits the org default; omitting the whole set means "use the org policy as
+// it stands at send time". Both features are off by default.
+type SignatureSchedule struct {
+	// RemindersEnabled turns reminder emails on for this document.
+	RemindersEnabled *bool
+	// ReminderDelay is how long after the invitation before the FIRST reminder.
+	ReminderDelay *Duration
+	// ReminderInterval is the gap between subsequent reminders.
+	ReminderInterval *Duration
+	// MaxReminders caps reminders per signer. -1 means unlimited, 0 means none. Never caps
+	// expiry warnings.
+	MaxReminders *int
+	// ExpirationEnabled closes the signing window after ExpireAfter.
+	ExpirationEnabled *bool
+	// ExpireAfter is how long the document stays signable, counted from sending.
+	ExpireAfter *Duration
+	// ExpirationWarning is how far BEFORE expiry warning emails start. A zero value means no
+	// warnings at all.
+	ExpirationWarning *Duration
+	// ExpirationWarningInterval is the gap between warnings once the window is open.
+	ExpirationWarningInterval *Duration
+}
+
 type CreateSignatureReviewLinkRequest struct {
 	// File content (use this OR FileLink/DeliverableID/TemplateID)
 	File     []byte
@@ -90,6 +133,9 @@ type CreateSignatureReviewLinkRequest struct {
 	SenderName          string
 	SenderEmail         string
 	CCEmails            []string
+
+	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
+	SignatureSchedule
 }
 
 // ReviewRecipient represents a recipient in the review link response
@@ -131,6 +177,9 @@ type SendSignatureRequest struct {
 	SenderName          string
 	SenderEmail         string
 	CCEmails            []string
+
+	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
+	SignatureSchedule
 }
 
 // SendSignatureResponse is the response from SendSignature
@@ -154,6 +203,26 @@ type RecipientResponse struct {
 // DocumentStatusResponse is the response from GetStatus
 type DocumentStatusResponse struct {
 	Status string `json:"status"`
+	// ExpiresAt is when the signing window closes, if the document has a deadline. Empty when
+	// expiration is off (the default), which means the document never expires.
+	ExpiresAt string `json:"expiresAt,omitempty"`
+}
+
+// ReminderResult is the outcome for one recipient of a reminder request.
+type ReminderResult struct {
+	RecipientID string `json:"recipientId"`
+	// Status is e.g. "sent", "skipped_wrong_order", "skipped_completed".
+	Status string `json:"status"`
+	// ReminderCount is the count after the send; only meaningful when Status is "sent".
+	ReminderCount int `json:"reminderCount,omitempty"`
+	// Phase is "reminder" or "expiring" — which email was sent.
+	Phase string `json:"phase,omitempty"`
+}
+
+// SendReminderResponse is the response from SendReminder.
+type SendReminderResponse struct {
+	// Results holds one entry per recipient considered, including those skipped and why.
+	Results []ReminderResult `json:"results"`
 }
 
 // DocumentSender is the identity that sent a document for signature.
@@ -351,6 +420,11 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 		formData["ccEmails"] = string(ccEmailsJSON)
 	}
 
+	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
+	if err := applyScheduleOverrides(formData, req.SignatureSchedule); err != nil {
+		return nil, err
+	}
+
 	var response CreateSignatureReviewLinkResponse
 
 	if len(req.File) > 0 {
@@ -423,6 +497,11 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 			return nil, fmt.Errorf("marshal ccEmails: %w", err)
 		}
 		formData["ccEmails"] = string(ccEmailsJSON)
+	}
+
+	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
+	if err := applyScheduleOverrides(formData, req.SignatureSchedule); err != nil {
+		return nil, err
 	}
 
 	var response SendSignatureResponse
@@ -530,6 +609,86 @@ func (c *TurboSignClient) ResendEmail(ctx context.Context, documentID string, re
 	var response ResendEmailResponse
 
 	err := c.http.Post(ctx, "/turbosign/documents/"+documentID+"/resend-email", map[string][]string{"recipientIds": recipientIDs}, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
+// applyScheduleOverrides copies per-document reminder/expiration overrides onto an outgoing
+// request body.
+//
+// Durations are JSON-encoded. multipart/form-data has no notion of a nested value, so a
+// {value, unit} object cannot survive the file-upload path as an object. The API decodes a
+// JSON-string duration on both content types, so encoding uniformly keeps one code path for the
+// multipart and JSON branches — the same treatment recipients and fields already get.
+//
+// Nil pointers are skipped, which is what preserves "unset" as distinct from a deliberate false
+// or 0.
+// Scalars are formatted as strings because formData is map[string]string on both the multipart
+// and JSON branches — the API's validation coerces them, exactly as it already does for the
+// JSON-encoded recipients, fields and ccEmails this SDK sends.
+func applyScheduleOverrides(formData map[string]string, schedule SignatureSchedule) error {
+	if schedule.RemindersEnabled != nil {
+		formData["remindersEnabled"] = strconv.FormatBool(*schedule.RemindersEnabled)
+	}
+	if schedule.MaxReminders != nil {
+		formData["maxReminders"] = strconv.Itoa(*schedule.MaxReminders)
+	}
+	if schedule.ExpirationEnabled != nil {
+		formData["expirationEnabled"] = strconv.FormatBool(*schedule.ExpirationEnabled)
+	}
+
+	durations := []struct {
+		key      string
+		duration *Duration
+	}{
+		{"reminderDelay", schedule.ReminderDelay},
+		{"reminderInterval", schedule.ReminderInterval},
+		{"expireAfter", schedule.ExpireAfter},
+		{"expirationWarning", schedule.ExpirationWarning},
+		{"expirationWarningInterval", schedule.ExpirationWarningInterval},
+	}
+	for _, d := range durations {
+		if d.duration == nil {
+			continue
+		}
+		encoded, err := json.Marshal(d.duration)
+		if err != nil {
+			return fmt.Errorf("marshal %s: %w", d.key, err)
+		}
+		formData[d.key] = string(encoded)
+	}
+
+	return nil
+}
+
+// SendReminder sends a reminder email to a document's outstanding signers.
+//
+// This is a standalone nudge, deliberately decoupled from the automatic reminder schedule: it
+// ignores the configured cadence, works even when reminders are disabled or the per-signer cap is
+// already spent, and does not consume that cap.
+//
+// Only signers at the CURRENT signing order are emailed. A recipient at a later order (or one who
+// has already signed) is reported back as skipped rather than silently dropped, so the caller can
+// tell that nobody was emailed.
+//
+// Pass nil (or an empty slice) for recipientIDs to remind every eligible signer. When ids are
+// supplied the request is all-or-nothing: if any is not a current-order pending signer the API
+// rejects the whole call and sends nothing.
+func (c *TurboSignClient) SendReminder(ctx context.Context, documentID string, recipientIDs []string) (*SendReminderResponse, error) {
+	var response SendReminderResponse
+
+	// Only include the filter when it actually names someone. The API requires at least one id
+	// when the key is present, so forwarding an empty slice would guarantee a 400 — an empty list
+	// is far more likely to mean "no filter" than "remind nobody".
+	body := map[string]interface{}{}
+	if len(recipientIDs) > 0 {
+		body["recipientIds"] = recipientIDs
+	}
+
+	err := c.http.Post(ctx, "/turbosign/documents/"+documentID+"/send-reminder", body, &response)
 	if err != nil {
 		return nil, err
 	}

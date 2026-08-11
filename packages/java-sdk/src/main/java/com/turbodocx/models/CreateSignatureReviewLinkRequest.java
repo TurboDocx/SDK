@@ -18,8 +18,11 @@ public class CreateSignatureReviewLinkRequest {
     private final String senderName;
     private final String senderEmail;
     private final List<String> ccEmails;
+    /** Per-document reminder + expiration overrides; null inherits the org defaults. */
+    private final SignatureSchedule schedule;
 
     private CreateSignatureReviewLinkRequest(Builder builder) {
+        this.schedule = builder.schedule;
         this.file = builder.file;
         this.fileName = builder.fileName;
         this.fileLink = builder.fileLink;
@@ -82,6 +85,10 @@ public class CreateSignatureReviewLinkRequest {
         return ccEmails;
     }
 
+    public SignatureSchedule getSchedule() {
+        return schedule;
+    }
+
     public boolean hasFile() {
         return file != null && file.length > 0;
     }
@@ -99,6 +106,7 @@ public class CreateSignatureReviewLinkRequest {
         private String senderName;
         private String senderEmail;
         private List<String> ccEmails;
+        private SignatureSchedule schedule;
 
         public Builder file(byte[] file) {
             this.file = file;
@@ -157,6 +165,12 @@ public class CreateSignatureReviewLinkRequest {
 
         public Builder ccEmails(List<String> ccEmails) {
             this.ccEmails = ccEmails;
+            return this;
+        }
+
+        /** Per-document reminder + expiration overrides. Omit to inherit the org defaults. */
+        public Builder schedule(SignatureSchedule schedule) {
+            this.schedule = schedule;
             return this;
         }
 
