@@ -280,31 +280,77 @@ $result = TurboSign::sendSignature(
     )
 );
 
-// Get recipient sign URLs
-$status = TurboSign::getStatus($result->documentId);
-foreach ($status->recipients as $recipient) {
-    echo "{$recipient->name}: {$recipient->signUrl}\n";
+// The created recipients come back on the send result itself, as a plain array of
+// associative arrays (not objects). Each carries id, name and email.
+if ($result->recipients !== null) {
+    foreach ($result->recipients as $recipient) {
+        echo "{$recipient['name']} <{$recipient['email']}> — {$recipient['id']}\n";
+    }
 }
+
+// For signing progress afterwards, use getRecipients():
+$progress = TurboSign::getRecipients($result->documentId);
 ```
 
 #### `getStatus()`
 
-Check the current status of a document.
+Check the document-level status. For per-recipient detail, use `getRecipients()`.
 
 ```php
 $status = TurboSign::getStatus('doc-uuid-here');
 
-echo "Document Status: {$status->status->value}\n";  // 'pending', 'completed', 'voided'
-echo "Recipients:\n";
+echo "Document Status: {$status->status}\n";  // 'under_review', 'completed', 'voided', ...
+```
 
-// Check individual recipient status
-foreach ($status->recipients as $recipient) {
-    echo "  {$recipient->name}: {$recipient->status->value}\n";
-    if ($recipient->signedAt) {
-        echo "    Signed at: {$recipient->signedAt}\n";
+#### `getRecipients()`
+
+See who the document went to, who has signed, who you are still waiting on, and who sent it.
+
+```php
+$result = TurboSign::getRecipients('doc-uuid-here');
+
+echo "Sent by {$result->document->sentBy->name} <{$result->document->sentBy->email}>\n";
+echo "{$result->summary->completed} of {$result->summary->total} signed, ";
+echo "still waiting on {$result->summary->waitingOn}\n";
+
+foreach ($result->recipients as $recipient) {
+    // 'pending' | 'viewed' | 'completed' | 'voided' | 'expired'
+    echo "  {$recipient->name} <{$recipient->email}>: {$recipient->effectiveStatus}\n";
+    if ($recipient->signedOn !== null) {
+        echo "    Signed on: {$recipient->signedOn}\n";
     }
+    echo "    Emailed {$recipient->delivery->totalSent}x\n";
 }
 ```
+
+**Two status fields, and they differ on purpose:**
+
+| Field | Values | Use it for |
+|---|---|---|
+| `status` | `pending`, `viewed`, `completed` | The raw database value |
+| `effectiveStatus` | `pending`, `viewed`, `completed`, `voided`, `expired` | Display |
+
+The database has no per-recipient declined/voided/expired state, so on a voided or expired
+document an unsigned signer still reads `pending` in `status`. `effectiveStatus` layers the
+document's outcome on top — that's the one to show a user. A completed signature is never
+revoked: someone who signed before the document was voided still reads `completed`.
+
+`summary` counts by `effectiveStatus`, and `waitingOn` (pending + viewed) drops to zero once
+the document is terminal.
+
+**`delivery`** is that recipient's email history — `firstSentOn`, `lastSentOn`, `totalSent`,
+`reminderCount`, `lastRemindedAt`, `warningCount`, `lastWarningAt`. It counts the signature
+request, resends, reminders, expiry warnings and terminal notices. CC notifications are
+excluded, since a CC address is not a signer.
+
+Two `delivery` fields are easy to misread:
+
+| Field | What it actually means |
+|---|---|
+| `reminderCount` | **Automatic (scheduled) reminders only** — the counter `maxReminders` caps. A manual "remind now" does **not** increment it (it must not consume the cap budget), though it does land in `totalSent`. So it can read `0` while reminder emails have genuinely been sent. |
+| `lastRemindedAt` | **When the reminder cadence clock was last reset** — not necessarily when a reminder was sent. The initial signature-request send, each scheduled reminder, each manual "remind now" and each expiry warning all stamp it. A freshly-sent document therefore normally reads a non-null `lastRemindedAt` alongside `reminderCount` of `0`. |
+
+`warningCount` and `lastWarningAt` are touched only by an expiry warning.
 
 #### `download()`
 

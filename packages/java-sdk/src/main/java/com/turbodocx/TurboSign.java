@@ -125,6 +125,20 @@ public final class TurboSign {
     }
 
     /**
+     * Get every recipient on a document with their signing status.
+     *
+     * <p>Answers "who has signed and who are we still waiting on" in one call, and reports who
+     * sent the document. {@link DocumentRecipientsResponse#getSummary()} carries the
+     * pending/viewed/completed counts.
+     */
+    public DocumentRecipientsResponse getRecipients(String documentId) throws IOException {
+        return httpClient.get(
+                "/turbosign/documents/" + documentId + "/recipients",
+                DocumentRecipientsResponse.class
+        );
+    }
+
+    /**
      * Download the signed document.
      * The backend returns a presigned S3 URL, which this method fetches.
      */

@@ -110,17 +110,17 @@ function sendDirectlyExample(): void
         echo "Document ID: {$result->documentId}\n";
         echo "Message: {$result->message}\n";
 
-        // To get sign URLs and recipient details, use getStatus
+        // Signing links are emailed to recipients — they are not returned by the API.
+        // getRecipients reports who has signed and who you are still waiting on.
         try {
-            $status = TurboSign::getStatus($result->documentId);
-            if (!empty($status->recipients)) {
-                echo "\nSign URLs:\n";
-                foreach ($status->recipients as $recipient) {
-                    echo "  {$recipient->name}: {$recipient->signUrl}\n";
-                }
+            $progress = TurboSign::getRecipients($result->documentId);
+            echo "\n{$progress->summary->completed} of {$progress->summary->total} signed, ";
+            echo "still waiting on {$progress->summary->waitingOn}\n";
+            foreach ($progress->recipients as $recipient) {
+                echo "  {$recipient->name} <{$recipient->email}>: {$recipient->effectiveStatus}\n";
             }
         } catch (Exception $statusError) {
-            echo "\nNote: Could not fetch recipient sign URLs\n";
+            echo "\nNote: Could not fetch recipient status\n";
         }
 
     } catch (Exception $error) {

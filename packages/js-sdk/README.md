@@ -243,27 +243,77 @@ const result = await TurboSign.sendSignature({
   ]
 });
 
-// Each recipient gets a unique signing URL
-result.recipients.forEach(r => {
-  console.log(`${r.name}: ${r.signUrl}`);
+// The created recipients come back on the send result (id, name, email).
+// Signing links are emailed to them — they are not returned here.
+result.recipients?.forEach(r => {
+  console.log(`${r.name} <${r.email}> — ${r.id}`);
 });
+
+// For signing progress afterwards, use getRecipients().
 ```
 
 #### `getStatus(documentId)`
 
-Check the current status of a document.
+Check the document-level status. For per-recipient detail, use
+[`getRecipients()`](#getrecipientsdocumentid).
 
 ```typescript
 const status = await TurboSign.getStatus('doc-uuid-here');
 
-console.log('Document Status:', status.status);  // 'pending' | 'completed' | 'voided'
-console.log('Recipients:', status.recipients);
-
-// Check individual recipient status
-status.recipients.forEach(r => {
-  console.log(`${r.name}: ${r.status}`);  // 'pending' | 'signed' | 'declined'
-});
+console.log('Document Status:', status.status);  // 'under_review' | 'completed' | 'voided' | ...
 ```
+
+#### `getRecipients(documentId)`
+
+See who the document went to, who has signed, who you are still waiting on, and who sent it.
+
+```typescript
+const { document, recipients, summary } = await TurboSign.getRecipients('doc-uuid-here');
+
+console.log(`Sent by ${document.sentBy.name} <${document.sentBy.email}>`);
+console.log(`Sent on ${document.sentOn ?? 'not sent yet'}`);
+console.log(`${summary.completed} of ${summary.total} signed, still waiting on ${summary.waitingOn}`);
+
+recipients.forEach(r => {
+  // 'pending' | 'viewed' | 'completed' | 'voided' | 'expired'
+  console.log(`${r.name} <${r.email}>: ${r.effectiveStatus}`);
+  if (r.signedOn) console.log(`  signed ${r.signedOn}`);
+  console.log(`  emailed ${r.delivery.totalSent}x, last ${r.delivery.lastSentOn ?? 'never'}`);
+  if (r.delivery.reminderCount) console.log(`  reminded ${r.delivery.reminderCount}x`);
+});
+
+// Who are we chasing?
+const chasing = recipients.filter(r => r.effectiveStatus === 'pending' || r.effectiveStatus === 'viewed');
+```
+
+**Two status fields, and they differ on purpose:**
+
+| Field | Values | Use it for |
+|---|---|---|
+| `status` | `pending`, `viewed`, `completed` | The raw database value |
+| `effectiveStatus` | `pending`, `viewed`, `completed`, `voided`, `expired` | Display |
+
+The database has no per-recipient declined/voided/expired state, so on a voided or expired
+document an unsigned signer still reads `pending` in `status`. `effectiveStatus` layers the
+document's outcome on top — that's the one to show a user. A completed signature is never
+revoked: someone who signed before the document was voided still reads `completed`.
+
+`summary` counts by `effectiveStatus`, and `waitingOn` (pending + viewed) drops to zero once
+the document is terminal.
+
+**`delivery`** is that recipient's email history — `firstSentOn`, `lastSentOn`, `totalSent`,
+`reminderCount`, `lastRemindedAt`, `warningCount`, `lastWarningAt`. It counts the signature
+request, resends, reminders, expiry warnings and terminal notices. CC notifications are
+excluded, since a CC address is not a signer.
+
+Two `delivery` fields are easy to misread:
+
+| Field | What it actually means |
+|---|---|
+| `reminderCount` | **Automatic (scheduled) reminders only** — the counter `maxReminders` caps. A manual "remind now" does **not** increment it (it must not consume the cap budget), though it does land in `totalSent`. So it can read `0` while reminder emails have genuinely been sent. |
+| `lastRemindedAt` | **When the reminder cadence clock was last reset** — not necessarily when a reminder was sent. The initial signature-request send, each scheduled reminder, each manual "remind now" and each expiry warning all stamp it. A freshly-sent document therefore normally reads a non-null `lastRemindedAt` alongside `reminderCount` of `0`. |
+
+`warningCount` and `lastWarningAt` are touched only by an expiry warning.
 
 #### `download(documentId)`
 
@@ -892,6 +942,7 @@ The `manual-test.ts` file tests all SDK methods:
 - ✅ `createSignatureReviewLink()` - Document upload for review
 - ✅ `sendSignature()` - Send for signature
 - ✅ `getStatus()` - Check document status
+- ✅ `getRecipients()` - Per-recipient signing status (who signed, who is pending)
 - ✅ `download()` - Download signed document
 - ✅ `void()` - Cancel signature request
 - ✅ `resend()` - Resend signature emails

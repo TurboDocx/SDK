@@ -106,17 +106,20 @@ public class TurboSignSendSimple {
             System.out.println("Document ID: " + result.getDocumentId());
             System.out.println("Message: " + result.getMessage());
 
-            // To get sign URLs and recipient details, use getStatus
+            // Signing links are emailed to recipients — they are not returned by the API.
+            // getRecipients reports who has signed and who you are still waiting on.
             try {
-                DocumentStatusResponse status = client.turboSign().getStatus(result.getDocumentId());
-                if (status.getRecipients() != null) {
-                    System.out.println("\nSign URLs:");
-                    for (RecipientResponse recipient : status.getRecipients()) {
-                        System.out.println("  " + recipient.getName() + ": " + recipient.getSignUrl());
-                    }
+                DocumentRecipientsResponse progress =
+                        client.turboSign().getRecipients(result.getDocumentId());
+                System.out.println("\n" + progress.getSummary().getCompleted() + " of "
+                        + progress.getSummary().getTotal() + " signed, still waiting on "
+                        + progress.getSummary().getWaitingOn());
+                for (DocumentRecipientsResponse.RecipientSignatureStatus recipient : progress.getRecipients()) {
+                    System.out.println("  " + recipient.getName() + " <" + recipient.getEmail()
+                            + ">: " + recipient.getEffectiveStatus());
                 }
             } catch (Exception statusError) {
-                System.out.println("\nNote: Could not fetch recipient sign URLs");
+                System.out.println("\nNote: Could not fetch recipient status");
             }
 
         } catch (Exception error) {

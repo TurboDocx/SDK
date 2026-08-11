@@ -9,6 +9,7 @@ import {
   ResendEmailResponse,
   AuditTrailResponse,
   DocumentStatusResponse,
+  DocumentRecipientsResponse,
   CreateSignatureReviewLinkRequest,
   CreateSignatureReviewLinkResponse,
   SendSignatureRequest,
@@ -443,5 +444,32 @@ export class TurboSign {
       `/turbosign/documents/${documentId}/send-reminder`,
       body
     );
+  }
+
+  /**
+   * Get every recipient on a document with their signing status
+   *
+   * Answers "who has signed and who are we still waiting on" in one call, and reports who
+   * sent the document. `summary` carries the counts, including `waitingOn`.
+   *
+   * Branch on `effectiveStatus`, not `status`: `status` is the raw database value and is
+   * only ever 'pending' | 'viewed' | 'completed', so on a voided or expired document an
+   * unsigned signer still reads 'pending' there. `effectiveStatus` layers the document's
+   * outcome on top, adding 'voided' and 'expired'.
+   *
+   * @example
+   * ```typescript
+   * const { recipients, summary, document } = await TurboSign.getRecipients(documentId);
+   * console.log(`${summary.completed}/${summary.total} signed, sent by ${document.sentBy.name}`);
+   * console.log(`still waiting on ${summary.waitingOn}`);
+   * const chasing = recipients.filter(
+   *   (r) => r.effectiveStatus === 'pending' || r.effectiveStatus === 'viewed',
+   * );
+   * ```
+   */
+  static async getRecipients(documentId: string): Promise<DocumentRecipientsResponse> {
+    const client = this.getClient();
+    // HTTP client auto-unwraps {data: ...} responses
+    return client.get<DocumentRecipientsResponse>(`/turbosign/documents/${documentId}/recipients`);
   }
 }

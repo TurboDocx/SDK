@@ -266,20 +266,77 @@ SendSignatureResponse result = client.turboSign().sendSignature(
         .build()
 );
 
+// The created recipients come back on the send result — each carries id, name and email.
+// Signing links are emailed to them; they are not returned here.
+// (RecipientResponse also exposes getSignUrl(), but the API never populates it.)
 for (RecipientResponse r : result.getRecipients()) {
-    System.out.println(r.getName() + ": " + r.getSignUrl());
+    System.out.println(r.getName() + " <" + r.getEmail() + "> — " + r.getId());
 }
+
+// For signing progress afterwards, use getRecipients().
 ```
 
 #### `getStatus()`
 
-Check the current status of a document.
+Check the document-level status. For per-recipient detail, use `getRecipients()`.
 
 ```java
 DocumentStatusResponse status = client.turboSign().getStatus("doc-uuid-here");
 
-System.out.println("Status: " + status.getStatus());  // "pending", "completed", "voided"
+System.out.println("Status: " + status.getStatus());  // "under_review", "completed", "voided"
 ```
+
+#### `getRecipients()`
+
+See who the document went to, who has signed, who you are still waiting on, and who sent it.
+
+```java
+DocumentRecipientsResponse result = client.turboSign().getRecipients("doc-uuid-here");
+
+System.out.println("Sent by " + result.getDocument().getSentBy().getName()
+        + " <" + result.getDocument().getSentBy().getEmail() + ">");
+System.out.println(result.getSummary().getCompleted() + " of "
+        + result.getSummary().getTotal() + " signed, still waiting on "
+        + result.getSummary().getWaitingOn());
+
+for (DocumentRecipientsResponse.RecipientSignatureStatus r : result.getRecipients()) {
+    // "pending" | "viewed" | "completed" | "voided" | "expired"
+    System.out.println(r.getName() + " <" + r.getEmail() + ">: " + r.getEffectiveStatus());
+    if (r.getSignedOn() != null) {
+        System.out.println("  signed " + r.getSignedOn());
+    }
+    System.out.println("  emailed " + r.getDelivery().getTotalSent() + "x");
+}
+```
+
+**Two status fields, and they differ on purpose:**
+
+| Field | Values | Use it for |
+|---|---|---|
+| `getStatus()` | `pending`, `viewed`, `completed` | The raw database value |
+| `getEffectiveStatus()` | `pending`, `viewed`, `completed`, `voided`, `expired` | Display |
+
+The database has no per-recipient declined/voided/expired state, so on a voided or expired
+document an unsigned signer still reads `pending` in `getStatus()`. `getEffectiveStatus()`
+layers the document's outcome on top — that's the one to show a user. A completed signature
+is never revoked: someone who signed before the document was voided still reads `completed`.
+
+`getSummary()` counts by effective status, and `getWaitingOn()` (pending + viewed) drops to
+zero once the document is terminal.
+
+**`getDelivery()`** is that recipient's email history — `getFirstSentOn()`, `getLastSentOn()`,
+`getTotalSent()`, `getReminderCount()`, `getLastRemindedAt()`, `getWarningCount()`,
+`getLastWarningAt()`. It counts the signature request, resends, reminders, expiry warnings and
+terminal notices. CC notifications are excluded, since a CC address is not a signer.
+
+Two `delivery` fields are easy to misread:
+
+| Field | What it actually means |
+|---|---|
+| `getReminderCount()` | **Automatic (scheduled) reminders only** — the counter `maxReminders` caps. A manual "remind now" does **not** increment it (it must not consume the cap budget), though it does land in `getTotalSent()`. So it can read `0` while reminder emails have genuinely been sent. |
+| `getLastRemindedAt()` | **When the reminder cadence clock was last reset** — not necessarily when a reminder was sent. The initial signature-request send, each scheduled reminder, each manual "remind now" and each expiry warning all stamp it. A freshly-sent document therefore normally reads a non-null `getLastRemindedAt()` alongside `getReminderCount()` of `0`. |
+
+`getWarningCount()` and `getLastWarningAt()` are touched only by an expiry warning.
 
 #### `download()`
 
@@ -990,6 +1047,7 @@ The `ManualTest.java` class tests all SDK methods:
 - ✅ `createSignatureReviewLink()` - Document upload for review
 - ✅ `sendSignature()` - Send for signature
 - ✅ `getStatus()` - Check document status
+- ✅ `getRecipients()` - Per-recipient signing status (who signed, who is pending)
 - ✅ `download()` - Download signed document
 - ✅ `voidDocument()` - Cancel signature request
 - ✅ `resendEmail()` - Resend signature emails

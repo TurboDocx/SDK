@@ -13,7 +13,7 @@
 
 import { TurboSign } from "../src/modules/sign";
 import { HttpClient } from "../src/http";
-import { NetworkError } from "../src/utils/errors";
+import { NetworkError, NotFoundError } from "../src/utils/errors";
 import type { Recipient, Field } from "../src/types/sign";
 
 // Mock the HttpClient
@@ -425,6 +425,176 @@ describe("TurboSign Module", () => {
       expect(result.status).toBe("under_review");
       expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
         "/turbosign/documents/doc-123/status"
+      );
+    });
+  });
+
+  describe("getRecipients", () => {
+    // The wire shape after the HTTP client unwraps {data: ...}
+    const mockRecipientsResponse = {
+      document: {
+        id: "doc-123",
+        name: "Mutual NDA",
+        status: "under_review",
+        createdOn: "2026-01-01T00:00:00.000Z",
+        sentOn: "2026-01-02T08:59:00.000Z",
+        expiresAt: null,
+        sentBy: { name: "Jane Sender", email: "jane@acme.com" },
+      },
+      recipients: [
+        {
+          id: "rec-1",
+          name: "John Signer",
+          email: "john@example.com",
+          status: "completed",
+          effectiveStatus: "completed",
+          signedOn: "2026-02-01T10:00:00.000Z",
+          signingOrder: 1,
+          delivery: {
+            firstSentOn: "2026-01-02T09:00:00.000Z",
+            lastSentOn: "2026-01-09T09:00:00.000Z",
+            totalSent: 3,
+            reminderCount: 1,
+            lastRemindedAt: "2026-01-09T09:00:00.000Z",
+            warningCount: 0,
+            lastWarningAt: null,
+          },
+        },
+        {
+          id: "rec-2",
+          name: "Ada Signer",
+          email: "ada@example.com",
+          status: "pending",
+          effectiveStatus: "pending",
+          signedOn: null,
+          signingOrder: 2,
+          delivery: {
+            firstSentOn: "2026-01-02T09:00:00.000Z",
+            lastSentOn: "2026-01-02T09:00:00.000Z",
+            totalSent: 1,
+            reminderCount: 0,
+            // Stamped by the initial send — NOT evidence of a reminder.
+            lastRemindedAt: "2026-01-02T09:00:00.000Z",
+            warningCount: 0,
+            lastWarningAt: null,
+          },
+        },
+      ],
+      summary: { total: 2, pending: 1, viewed: 0, completed: 1, voided: 0, expired: 0, waitingOn: 1 },
+    };
+
+    // A voided document: the unsigned signer is stranded, the signed one keeps their signature.
+    const mockVoidedRecipientsResponse = {
+      ...mockRecipientsResponse,
+      document: { ...mockRecipientsResponse.document, status: "voided" },
+      recipients: [
+        { ...mockRecipientsResponse.recipients[0] },
+        { ...mockRecipientsResponse.recipients[1], effectiveStatus: "voided" },
+      ],
+      summary: { total: 2, pending: 0, viewed: 0, completed: 1, voided: 1, expired: 0, waitingOn: 0 },
+    };
+
+    it("should get every recipient with their signing status", async () => {
+      MockedHttpClient.prototype.get = jest
+        .fn()
+        .mockResolvedValue(mockRecipientsResponse);
+      TurboSign.configure({ apiKey: "test-key" });
+
+      const result = await TurboSign.getRecipients("doc-123");
+
+      expect(result.recipients).toHaveLength(2);
+      expect(result.recipients[0].status).toBe("completed");
+      expect(result.recipients[0].effectiveStatus).toBe("completed");
+      expect(result.recipients[0].email).toBe("john@example.com");
+      expect(result.recipients[0].signedOn).toBe("2026-02-01T10:00:00.000Z");
+      expect(result.recipients[0].signingOrder).toBe(1);
+      // A pending signer has no signedOn timestamp
+      expect(result.recipients[1].status).toBe("pending");
+      expect(result.recipients[1].signedOn).toBeNull();
+      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
+        "/turbosign/documents/doc-123/recipients"
+      );
+    });
+
+    it("should expose who sent the document and the pending/completed roll-up", async () => {
+      MockedHttpClient.prototype.get = jest
+        .fn()
+        .mockResolvedValue(mockRecipientsResponse);
+      TurboSign.configure({ apiKey: "test-key" });
+
+      const result = await TurboSign.getRecipients("doc-123");
+
+      expect(result.document.sentBy).toEqual({
+        name: "Jane Sender",
+        email: "jane@acme.com",
+      });
+      // Document status distinguishes a voided/expired doc from one still waiting
+      expect(result.document.status).toBe("under_review");
+      expect(result.document.sentOn).toBe("2026-01-02T08:59:00.000Z");
+      expect(result.summary).toEqual({
+        total: 2,
+        pending: 1,
+        viewed: 0,
+        completed: 1,
+        voided: 0,
+        expired: 0,
+        waitingOn: 1,
+      });
+    });
+
+    it("should report each recipient's email history", async () => {
+      MockedHttpClient.prototype.get = jest
+        .fn()
+        .mockResolvedValue(mockRecipientsResponse);
+      TurboSign.configure({ apiKey: "test-key" });
+
+      const result = await TurboSign.getRecipients("doc-123");
+
+      expect(result.recipients[0].delivery.totalSent).toBe(3);
+      expect(result.recipients[0].delivery.firstSentOn).toBe(
+        "2026-01-02T09:00:00.000Z"
+      );
+      expect(result.recipients[0].delivery.lastSentOn).toBe(
+        "2026-01-09T09:00:00.000Z"
+      );
+      expect(result.recipients[0].delivery.reminderCount).toBe(1);
+      // A recipient emailed once has matching first/last and no reminders
+      // Emailed once and never reminded: reminderCount stays 0, but lastRemindedAt is
+      // NOT null — the initial send stamps it as the reminder cadence clock. Asserting
+      // null here would enshrine the exact misreading the field docs warn about.
+      expect(result.recipients[1].delivery.totalSent).toBe(1);
+      expect(result.recipients[1].delivery.reminderCount).toBe(0);
+      expect(result.recipients[1].delivery.lastRemindedAt).toBe(
+        result.recipients[1].delivery.firstSentOn,
+      );
+    });
+
+    it("should surface voided as an effective status without revoking a signature", async () => {
+      MockedHttpClient.prototype.get = jest
+        .fn()
+        .mockResolvedValue(mockVoidedRecipientsResponse);
+      TurboSign.configure({ apiKey: "test-key" });
+
+      const result = await TurboSign.getRecipients("doc-123");
+
+      // Someone who signed still signed — voiding the document does not undo it
+      expect(result.recipients[0].effectiveStatus).toBe("completed");
+      // The unsigned signer is stranded, though the raw DB status is still "pending"
+      expect(result.recipients[1].status).toBe("pending");
+      expect(result.recipients[1].effectiveStatus).toBe("voided");
+      expect(result.summary.voided).toBe(1);
+      expect(result.summary.waitingOn).toBe(0);
+    });
+
+    it("should propagate NotFoundError for an unknown document", async () => {
+      const notFound = new NotFoundError("Document not found");
+      MockedHttpClient.prototype.get = jest
+        .fn()
+        .mockRejectedValue(notFound);
+      TurboSign.configure({ apiKey: "test-key" });
+
+      await expect(TurboSign.getRecipients("missing-doc")).rejects.toThrow(
+        NotFoundError
       );
     });
   });

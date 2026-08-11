@@ -190,7 +190,7 @@ import { TurboSign } from '@turbodocx/sdk';
 TurboSign.configure({ apiKey: process.env.TURBODOCX_API_KEY });
 
 // Send for signature
-const { documentId, recipients } = await TurboSign.prepareForSigningSingle({
+const { documentId, recipients } = await TurboSign.sendSignature({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
     { name: 'John Doe', email: 'john@example.com', order: 1 }
@@ -200,7 +200,9 @@ const { documentId, recipients } = await TurboSign.prepareForSigningSingle({
   ]
 });
 
-console.log(`✅ Document sent! Sign URL: ${recipients[0].signUrl}`);
+// The created recipients come back on the send result (id, name, email).
+// Signing links are emailed to them — they are not returned here.
+console.log(`✅ Document sent to ${recipients[0].name} <${recipients[0].email}>`);
 ```
 
 ---
@@ -213,12 +215,14 @@ Send documents for legally-binding eSignatures with full audit trails.
 
 | Method | Description |
 |:-------|:------------|
-| `prepareForReview()` | Upload document for preview without sending emails |
-| `prepareForSigningSingle()` | Upload and immediately send signature requests |
-| `getStatus()` | Check document and recipient signing status |
+| `createSignatureReviewLink()` | Upload document for preview without sending emails |
+| `sendSignature()` | Upload and immediately send signature requests |
+| `getStatus()` | Check the document-level status |
+| `getRecipients()` | Per-signer status, email history, and who sent the document |
 | `download()` | Download the completed signed document |
 | `void()` | Cancel/void a signature request |
 | `resend()` | Resend signature request emails |
+| `getAuditTrail()` | Get the complete audit trail |
 
 ### TurboDocx — Document Generation *(Coming Soon)*
 
@@ -233,7 +237,7 @@ Generate documents from templates with dynamic data.
 Specify exact positions for signature fields using page coordinates:
 
 ```typescript
-const result = await TurboSign.prepareForSigningSingle({
+const result = await TurboSign.sendSignature({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
     { name: 'Alice Smith', email: 'alice@example.com', order: 1 },
@@ -263,7 +267,7 @@ const result = await TurboSign.prepareForSigningSingle({
 Use text anchors in your PDF to automatically position signature fields:
 
 ```typescript
-const result = await TurboSign.prepareForSigningSingle({
+const result = await TurboSign.sendSignature({
   fileLink: 'https://example.com/contract-with-placeholders.pdf',
   recipients: [
     { name: 'Alice Smith', email: 'alice@example.com', order: 1 },
@@ -293,7 +297,7 @@ import { TurboSign } from '@turbodocx/sdk';
 TurboSign.configure({ apiKey: process.env.TURBODOCX_API_KEY });
 
 // 1. Send document for signature
-const { documentId } = await TurboSign.prepareForSigningSingle({
+const { documentId } = await TurboSign.sendSignature({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
     { name: 'Alice', email: 'alice@example.com', order: 1 },
@@ -309,10 +313,15 @@ console.log(`Document ID: ${documentId}`);
 
 // 2. Check status
 const status = await TurboSign.getStatus(documentId);
-console.log(`Status: ${status.status}`);  // 'pending', 'completed', 'voided'
+console.log(`Status: ${status.status}`);  // 'under_review', 'completed', 'voided', ...
 
-for (const recipient of status.recipients) {
-  console.log(`  ${recipient.name}: ${recipient.status}`);
+// getStatus returns the document-level status only. For per-signer detail:
+const { recipients, summary } = await TurboSign.getRecipients(documentId);
+console.log(`${summary.completed}/${summary.total} signed, waiting on ${summary.waitingOn}`);
+
+for (const recipient of recipients) {
+  // 'pending' | 'viewed' | 'completed' | 'voided' | 'expired'
+  console.log(`  ${recipient.name}: ${recipient.effectiveStatus}`);
 }
 
 // 3. Download when complete

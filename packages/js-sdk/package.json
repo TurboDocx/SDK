@@ -1,6 +1,6 @@
 {
   "name": "@turbodocx/sdk",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "TurboDocx JavaScript SDK - Digital signatures, document generation, and AI-powered workflows",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -54,5 +54,10 @@
     "jest": "^30.4.2",
     "ts-jest": "^29.4.12",
     "typescript": "^6.0.3"
+  },
+  "overrides": {
+    "brace-expansion@1": "^1.1.18",
+    "brace-expansion@2": "^2.1.4",
+    "js-yaml": "^3.15.1"
   }
 }
