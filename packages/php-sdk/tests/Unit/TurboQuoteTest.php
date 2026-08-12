@@ -451,6 +451,26 @@ final class TurboQuoteTest extends TestCase
         $this->assertSame(['reason' => 'Budget not approved'], $this->mockClient->lastPostData);
     }
 
+    public function testDeclineQuoteOmitsReasonWhenNotProvided(): void
+    {
+        $this->mockClient->setPostReturn(['result' => ['id' => 'q-1', 'status' => 'declined'], 'message' => 'Quote declined']);
+        $this->injectMockClient();
+
+        // A draft quote never reached the customer, so the API accepts a decline with no reason
+        $result = TurboQuote::declineQuote('q-1', new DeclineQuoteRequest());
+
+        $this->assertInstanceOf(Quote::class, $result);
+        $this->assertSame('/v1/quotes/q-1/decline', $this->mockClient->lastPostPath);
+        $this->assertSame([], $this->mockClient->lastPostData);
+    }
+
+    public function testVoidQuoteStillRequiresReason(): void
+    {
+        $this->assertTrue(
+            (new \ReflectionParameter([VoidQuoteRequest::class, '__construct'], 'reason'))->isDefaultValueAvailable() === false,
+        );
+    }
+
     public function testVoidQuoteAndUnwrapResult(): void
     {
         $this->mockClient->setPostReturn(['result' => ['id' => 'q-1', 'status' => 'voided'], 'message' => 'Quote voided successfully']);

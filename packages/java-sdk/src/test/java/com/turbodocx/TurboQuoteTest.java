@@ -449,6 +449,24 @@ class TurboQuoteTest {
         }
 
         @Test
+        @DisplayName("should decline a draft quote without a reason and omit the key")
+        void declineQuoteWithoutReason() throws Exception {
+            Map<String, Object> response = new HashMap<>();
+            response.put("result", createQuoteMap("q-1", "Test Quote", "declined"));
+            response.put("message", "Quote declined");
+            server.enqueue(new MockResponse().setBody(wrapInData(response)));
+
+            DeclineQuoteRequest request = new DeclineQuoteRequest();
+            Quote result = client.turboQuote().declineQuote("q-1", request);
+
+            assertEquals("declined", result.getStatus());
+
+            RecordedRequest recorded = server.takeRequest();
+            String body = recorded.getBody().readUtf8();
+            assertFalse(body.contains("\"reason\""));
+        }
+
+        @Test
         @DisplayName("should void a quote and unwrap result")
         void voidQuote() throws Exception {
             Map<String, Object> response = new HashMap<>();
@@ -461,6 +479,10 @@ class TurboQuoteTest {
             Quote result = client.turboQuote().voidQuote("q-1", request);
 
             assertEquals("voided", result.getStatus());
+
+            RecordedRequest recorded = server.takeRequest();
+            String body = recorded.getBody().readUtf8();
+            assertTrue(body.contains("\"reason\":\"Replaced by new quote\""));
         }
 
         @Test

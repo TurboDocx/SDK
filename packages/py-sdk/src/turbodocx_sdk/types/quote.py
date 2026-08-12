@@ -140,7 +140,8 @@ class SendQuoteWithDeliverableResponse(TypedDict):
     documentId: str
 
 
-class DeclineQuoteRequest(TypedDict):
+class DeclineQuoteRequest(TypedDict, total=False):
+    # Optional because a draft quote never reached the customer; a sent quote still needs one.
     reason: str
 
 

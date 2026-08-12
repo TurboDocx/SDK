@@ -309,6 +309,26 @@ RSpec.describe TurboDocxSdk::TurboQuote do
       )
     end
 
+    it "declines a draft quote without a reason" do
+      mock_quote = { "id" => "q-1", "status" => "declined" }
+      allow(mock_client).to receive(:post).and_return({ "result" => mock_quote, "message" => "Quote declined" })
+
+      result = described_class.decline_quote("q-1", {})
+
+      expect(result["status"]).to eq("declined")
+      expect(mock_client).to have_received(:post).with("/v1/quotes/q-1/decline", {})
+    end
+
+    it "declines a draft quote with an empty reason" do
+      mock_quote = { "id" => "q-1", "status" => "declined" }
+      allow(mock_client).to receive(:post).and_return({ "result" => mock_quote, "message" => "Quote declined" })
+
+      result = described_class.decline_quote("q-1", "reason" => "")
+
+      expect(result["status"]).to eq("declined")
+      expect(mock_client).to have_received(:post).with("/v1/quotes/q-1/decline", { "reason" => "" })
+    end
+
     it "voids a quote with object param and unwraps result" do
       mock_quote = { "id" => "q-1", "status" => "voided" }
       allow(mock_client).to receive(:post).and_return({ "result" => mock_quote, "message" => "Quote voided successfully" })

@@ -22,6 +22,7 @@ from unittest.mock import AsyncMock, MagicMock, patch, call
 
 from turbodocx_sdk import TurboQuote
 from turbodocx_sdk.http import HttpClient
+from turbodocx_sdk.types import DeclineQuoteRequest, VoidQuoteRequest
 
 
 # ============================================
@@ -443,6 +444,44 @@ class TestQuoteStatus:
             "/v1/quotes/q-1/decline",
             {"reason": "Budget not approved"},
         )
+
+    @pytest.mark.asyncio
+    async def test_decline_quote_without_reason(self):
+        """Should decline a draft quote with no reason and send an empty body"""
+        mock_quote = {"id": "q-1", "status": "declined"}
+        self.mock_client.post = AsyncMock(
+            return_value={"result": mock_quote, "message": "Quote declined"}
+        )
+
+        result = await TurboQuote.decline_quote("q-1", {})
+
+        assert result["status"] == "declined"
+        self.mock_client.post.assert_called_once_with("/v1/quotes/q-1/decline", {})
+
+    @pytest.mark.asyncio
+    async def test_decline_quote_with_empty_reason(self):
+        """Should decline a draft quote with an empty reason string, sent verbatim"""
+        mock_quote = {"id": "q-1", "status": "declined"}
+        self.mock_client.post = AsyncMock(
+            return_value={"result": mock_quote, "message": "Quote declined"}
+        )
+
+        result = await TurboQuote.decline_quote("q-1", {"reason": ""})
+
+        assert result["status"] == "declined"
+        self.mock_client.post.assert_called_once_with(
+            "/v1/quotes/q-1/decline",
+            {"reason": ""},
+        )
+
+    def test_decline_request_type_marks_reason_optional(self):
+        """DeclineQuoteRequest should treat reason as optional (draft decline needs no reason)"""
+        assert DeclineQuoteRequest.__required_keys__ == frozenset()
+        assert "reason" in DeclineQuoteRequest.__optional_keys__
+
+    def test_void_request_type_still_requires_reason(self):
+        """VoidQuoteRequest is unchanged -- void always needs a reason"""
+        assert "reason" in VoidQuoteRequest.__required_keys__
 
     @pytest.mark.asyncio
     async def test_void_quote_and_unwrap_result(self):
