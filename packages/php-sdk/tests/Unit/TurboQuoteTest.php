@@ -461,7 +461,11 @@ final class TurboQuoteTest extends TestCase
 
         $this->assertInstanceOf(Quote::class, $result);
         $this->assertSame('/v1/quotes/q-1/decline', $this->mockClient->lastPostPath);
-        $this->assertSame([], $this->mockClient->lastPostData);
+        $this->assertSame([], (array) $this->mockClient->lastPostData);
+
+        // ...and it must serialize as a JSON OBJECT. An empty PHP array encodes as `[]`, which the
+        // API rejects with `"value" must be of type object` — asserting the array alone missed this.
+        $this->assertSame('{}', json_encode($this->mockClient->lastPostData));
     }
 
     public function testVoidQuoteStillRequiresReason(): void
@@ -2289,7 +2293,7 @@ class MockHttpClient extends \TurboDocx\HttpClient
         return $this->getReturn;
     }
 
-    public function post(string $path, ?array $data = null): mixed
+    public function post(string $path, array|\stdClass|null $data = null): mixed
     {
         if ($this->postException) {
             throw $this->postException;

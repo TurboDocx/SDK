@@ -19,10 +19,13 @@ final class DeclineQuoteRequest
     ) {}
 
     /**
-     * @return array<string, string>
+     * Returns an object (not an empty array) when there is no reason: PHP encodes `[]` as the JSON
+     * array `[]`, which the API rejects with `"value" must be of type object`.
+     *
+     * @return array<string, string>|\stdClass
      */
-    public function toArray(): array
+    public function toArray(): array|\stdClass
     {
-        return $this->reason === null ? [] : ['reason' => $this->reason];
+        return $this->reason === null ? new \stdClass() : ['reason' => $this->reason];
     }
 }
