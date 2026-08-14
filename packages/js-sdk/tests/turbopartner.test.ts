@@ -255,7 +255,7 @@ describe("TurboPartner Module", () => {
         const mockResponse = {
           success: true,
           data: {
-            preferences: { hideSignatureOutline: false, hideSignatureHash: false, lockedFieldsBackground: true },
+            preferences: { hideSignatureOutline: false, hideSignatureHash: false, lockedFieldsBackground: true, allowDownloadBeforeSigning: false },
           },
         };
         MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
@@ -275,7 +275,7 @@ describe("TurboPartner Module", () => {
         const mockResponse = {
           success: true,
           data: {
-            preferences: { hideSignatureOutline: false, hideSignatureHash: false, lockedFieldsBackground: false },
+            preferences: { hideSignatureOutline: false, hideSignatureHash: false, lockedFieldsBackground: false, allowDownloadBeforeSigning: true },
           },
         };
         MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue(mockResponse);
@@ -284,6 +284,7 @@ describe("TurboPartner Module", () => {
         const result = await TurboPartner.updateOrganizationPreferences("org-1", { lockedFieldsBackground: false });
 
         expect(result.data.preferences.lockedFieldsBackground).toBe(false);
+        expect(result.data.preferences.allowDownloadBeforeSigning).toBe(true);
         // The request body wraps the partial preferences under a `preferences` key,
         // matching the backend PATCH contract. Only the given key is sent.
         expect(MockedHttpClient.prototype.patch).toHaveBeenCalledWith(

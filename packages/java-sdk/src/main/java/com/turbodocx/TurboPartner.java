@@ -193,6 +193,9 @@ public final class TurboPartner {
             if (preferences.getLockedFieldsBackground() != null) {
                 preferencesBody.put("lockedFieldsBackground", preferences.getLockedFieldsBackground());
             }
+            if (preferences.getAllowDownloadBeforeSigning() != null) {
+                preferencesBody.put("allowDownloadBeforeSigning", preferences.getAllowDownloadBeforeSigning());
+            }
         }
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("preferences", preferencesBody);

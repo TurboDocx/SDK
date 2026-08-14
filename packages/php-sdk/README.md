@@ -910,6 +910,7 @@ $prefs = TurboPartner::getOrganizationPreferences('org-uuid-here')->preferences;
 var_dump($prefs->hideSignatureOutline);   // false by default
 var_dump($prefs->hideSignatureHash);      // false by default
 var_dump($prefs->lockedFieldsBackground); // true by default
+var_dump($prefs->allowDownloadBeforeSigning); // false by default
 ```
 
 #### `updateOrganizationPreferences()`
@@ -929,6 +930,7 @@ var_dump($result->preferences->lockedFieldsBackground); // false
 | `hideSignatureOutline` | `false` | Hide the outline/label drawn around signed fields |
 | `hideSignatureHash` | `false` | Hide the verification hash printed on signed fields |
 | `lockedFieldsBackground` | `true` | Grey box behind locked fields (`false` = plain text) |
+| `allowDownloadBeforeSigning` | `false` | When enabled, a signer can download the unsigned PDF from the signing page before they sign it (for example, to review it with their legal team). Defaults to off. |
 
 #### `deleteOrganization()`
 

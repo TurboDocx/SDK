@@ -230,7 +230,8 @@ RSpec.describe TurboDocxSdk::TurboPartner do
             "preferences" => {
               "hideSignatureOutline" => false,
               "hideSignatureHash" => false,
-              "lockedFieldsBackground" => true
+              "lockedFieldsBackground" => true,
+              "allowDownloadBeforeSigning" => false
             }
           }
         }
@@ -240,6 +241,7 @@ RSpec.describe TurboDocxSdk::TurboPartner do
 
         expect(result["data"]["preferences"]["lockedFieldsBackground"]).to eq(true)
         expect(result["data"]["preferences"]["hideSignatureOutline"]).to eq(false)
+        expect(result["data"]["preferences"]["allowDownloadBeforeSigning"]).to eq(false)
         expect(mock_client).to have_received(:get).with(
           "/partner/#{partner_id}/organizations/org-1/preferences"
         )
@@ -254,7 +256,8 @@ RSpec.describe TurboDocxSdk::TurboPartner do
             "preferences" => {
               "hideSignatureOutline" => false,
               "hideSignatureHash" => false,
-              "lockedFieldsBackground" => false
+              "lockedFieldsBackground" => false,
+              "allowDownloadBeforeSigning" => false
             }
           }
         }

@@ -352,7 +352,8 @@ class TestGetOrganizationPreferences:
                 "preferences": {
                     "hideSignatureOutline": False,
                     "hideSignatureHash": False,
-                    "lockedFieldsBackground": True
+                    "lockedFieldsBackground": True,
+                    "allowDownloadBeforeSigning": False
                 }
             }
         }
@@ -384,7 +385,8 @@ class TestUpdateOrganizationPreferences:
                 "preferences": {
                     "hideSignatureOutline": False,
                     "hideSignatureHash": False,
-                    "lockedFieldsBackground": False
+                    "lockedFieldsBackground": False,
+                    "allowDownloadBeforeSigning": True
                 }
             }
         }
@@ -400,6 +402,7 @@ class TestUpdateOrganizationPreferences:
             )
 
             assert result["data"]["preferences"]["lockedFieldsBackground"] is False
+            assert result["data"]["preferences"]["allowDownloadBeforeSigning"] is True
             # Only the given key, wrapped in a camelCase-verbatim "preferences" body
             mock_client.patch.assert_called_once_with(
                 f"/partner/{PARTNER_ID}/organizations/org-123/preferences",

@@ -303,9 +303,10 @@ type UpdateEntitlementsRequest struct {
 // UpdateOrgPreferencesRequest is the partial set of TurboSign display preferences to change.
 // Only the keys you set are sent (pointers with omitempty); a nil field is left untouched.
 type UpdateOrgPreferencesRequest struct {
-	HideSignatureOutline   *bool `json:"hideSignatureOutline,omitempty"`
-	HideSignatureHash      *bool `json:"hideSignatureHash,omitempty"`
-	LockedFieldsBackground *bool `json:"lockedFieldsBackground,omitempty"`
+	HideSignatureOutline       *bool `json:"hideSignatureOutline,omitempty"`
+	HideSignatureHash          *bool `json:"hideSignatureHash,omitempty"`
+	LockedFieldsBackground     *bool `json:"lockedFieldsBackground,omitempty"`
+	AllowDownloadBeforeSigning *bool `json:"allowDownloadBeforeSigning,omitempty"`
 }
 
 // AddOrgUserRequest is the request to add a user to an organization
@@ -450,9 +451,10 @@ type EntitlementsResponse struct {
 // PartnerOrgPreferences is the partner-settable slice of an organization's TurboSign
 // display preferences. Every key is present with its effective boolean value when read.
 type PartnerOrgPreferences struct {
-	HideSignatureOutline   bool `json:"hideSignatureOutline"`
-	HideSignatureHash      bool `json:"hideSignatureHash"`
-	LockedFieldsBackground bool `json:"lockedFieldsBackground"`
+	HideSignatureOutline       bool `json:"hideSignatureOutline"`
+	HideSignatureHash          bool `json:"hideSignatureHash"`
+	LockedFieldsBackground     bool `json:"lockedFieldsBackground"`
+	AllowDownloadBeforeSigning bool `json:"allowDownloadBeforeSigning"`
 }
 
 // PartnerOrgPreferencesResponse is the response for reading or updating an organization's

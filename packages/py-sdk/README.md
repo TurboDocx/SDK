@@ -447,7 +447,7 @@ print(prefs["lockedFieldsBackground"])  # True by default
 # Update them — pass only the keys you want to change; every other organization
 # setting is preserved. Keys stay camelCase: they are the API contract.
 await TurboPartner.update_organization_preferences(
-    org_id, {"lockedFieldsBackground": False}
+    org_id, {"lockedFieldsBackground": False, "allowDownloadBeforeSigning": True}
 )
 
 # Delete organization
@@ -461,6 +461,7 @@ await TurboPartner.delete_organization(org_id)
 | `hideSignatureOutline` | `False` | Hide the outline/label drawn around signed fields |
 | `hideSignatureHash` | `False` | Hide the verification hash printed on signed fields |
 | `lockedFieldsBackground` | `True` | Grey box behind locked fields (`False` = plain text) |
+| `allowDownloadBeforeSigning` | `False` | When enabled, a signer can download the unsigned PDF from the signing page before they sign it (for example, to review it with their legal team). Defaults to off. |
 
 #### Organization User & API Key Management
 

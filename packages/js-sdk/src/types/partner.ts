@@ -320,6 +320,12 @@ export interface PartnerOrgPreferences {
   hideSignatureOutline: boolean;
   hideSignatureHash: boolean;
   lockedFieldsBackground: boolean;
+  /**
+   * When enabled, a signer can download the unsigned PDF from the signing page
+   * before they sign it (for example, to review it with their legal team).
+   * Defaults to off.
+   */
+  allowDownloadBeforeSigning: boolean;
 }
 
 export interface PartnerOrgPreferencesResponse {
