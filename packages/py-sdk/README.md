@@ -461,7 +461,7 @@ await TurboPartner.delete_organization(org_id)
 | `hideSignatureOutline` | `False` | Hide the outline/label drawn around signed fields |
 | `hideSignatureHash` | `False` | Hide the verification hash printed on signed fields |
 | `lockedFieldsBackground` | `True` | Grey box behind locked fields (`False` = plain text) |
-| `allowDownloadBeforeSigning` | `False` | Let a signer download the unsigned PDF from the signing page before they sign (e.g. to review it with their legal team) |
+| `allowDownloadBeforeSigning` | `False` | When enabled, a signer can download the unsigned PDF from the signing page before they sign it (for example, to review it with their legal team). Defaults to off. |
 
 #### Organization User & API Key Management
 

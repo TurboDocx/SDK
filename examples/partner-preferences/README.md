@@ -17,7 +17,7 @@ The preferences a partner can set per tenant:
 | `hideSignatureOutline` | hide the outline/label on signed fields in the finished PDF |
 | `hideSignatureHash` | hide the verification hash on signed fields |
 | `lockedFieldsBackground` | show locked fields as a grey box (`true`) or plain text (`false`) |
-| `allowDownloadBeforeSigning` | let a signer download the unsigned PDF from the signing page before they sign (`true`), for example to review it with their legal team; defaults to off (`false`) |
+| `allowDownloadBeforeSigning` | When enabled, a signer can download the unsigned PDF from the signing page before they sign it (for example, to review it with their legal team). Defaults to off. |
 
 The API returns **only** these keys (never the org's other integration settings),
 each with its effective value (defaults applied for keys the org never set).

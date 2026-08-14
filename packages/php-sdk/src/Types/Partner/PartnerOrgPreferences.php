@@ -11,9 +11,10 @@ namespace TurboDocx\Types\Partner;
 final class PartnerOrgPreferences implements \JsonSerializable
 {
     // Defaults mirror the backend's PARTNER_PREFERENCE_DEFAULTS: the two "hide" flags
-    // are off, the locked-fields grey box is on. The API always sends all three keys,
-    // so these only surface on a hand-built instance or a truncated response -- but a
-    // `false` here would misreport the platform default for lockedFieldsBackground.
+    // and the download-before-signing flag are off, the locked-fields grey box is on. The
+    // API always sends all four keys, so these only surface on a hand-built instance or a
+    // truncated response -- but a `false` here would misreport the platform default for
+    // lockedFieldsBackground.
     public function __construct(
         public readonly bool $hideSignatureOutline = false,
         public readonly bool $hideSignatureHash = false,
