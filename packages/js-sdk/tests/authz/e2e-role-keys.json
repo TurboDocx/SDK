@@ -1,0 +1,38 @@
+[
+  {
+    "role": "admin",
+    "key": "TDX-e2e0000000004000800000000radmin1-c60ba954d3ec71c743198c27d2b739fc68810c9c3c18aff0ebcf81dfb0b0a834",
+    "userId": "e2e00000-0000-4000-8000-000000000061",
+    "mapId": "e2e00000-0000-4000-8000-000000000062",
+    "apiKeyId": "e2e00000-0000-4000-8000-000000000063",
+    "orgId": "e2e00000-0000-4000-8000-000000000001",
+    "email": "apiservice_e2e_admin@turbodocx.com"
+  },
+  {
+    "role": "contributor",
+    "key": "TDX-e2e00000000040008000000rcontrib1-14b15449ddb11d17ba77a0b0347eb6bb5fce885b6ef31d3f65097b2968d833c6",
+    "userId": "e2e00000-0000-4000-8000-000000000064",
+    "mapId": "e2e00000-0000-4000-8000-000000000065",
+    "apiKeyId": "e2e00000-0000-4000-8000-000000000066",
+    "orgId": "e2e00000-0000-4000-8000-000000000001",
+    "email": "apiservice_e2e_contributor@turbodocx.com"
+  },
+  {
+    "role": "user",
+    "key": "TDX-e2e000000000400080000000000ruser-f13194f61cf988c071fb68efdb74fd951caceb919f474a79ed7bed804b382eb0",
+    "userId": "e2e00000-0000-4000-8000-000000000067",
+    "mapId": "e2e00000-0000-4000-8000-000000000068",
+    "apiKeyId": "e2e00000-0000-4000-8000-000000000069",
+    "orgId": "e2e00000-0000-4000-8000-000000000001",
+    "email": "apiservice_e2e_user@turbodocx.com"
+  },
+  {
+    "role": "viewer",
+    "key": "TDX-e2e0000000004000800000000rviewer-89703c5d1381606e92ed19559f513f7d042d7075cabf36651935a4b611be3e8a",
+    "userId": "e2e00000-0000-4000-8000-000000000071",
+    "mapId": "e2e00000-0000-4000-8000-000000000072",
+    "apiKeyId": "e2e00000-0000-4000-8000-000000000073",
+    "orgId": "e2e00000-0000-4000-8000-000000000001",
+    "email": "apiservice_e2e_viewer@turbodocx.com"
+  }
+]

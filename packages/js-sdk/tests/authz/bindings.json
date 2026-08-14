@@ -1,0 +1,896 @@
+{
+ "deliverable.listDeliverables": {
+  "args": [],
+  "note": "optional options omitted",
+  "guard": ""
+ },
+ "deliverable.generateDeliverable": {
+  "args": [
+   {
+    "name": "t",
+    "templateId": "__BOGUS_UUID__",
+    "variables": []
+   }
+  ],
+  "note": "request posted as-is; no client-side iteration",
+  "guard": ""
+ },
+ "deliverable.getDeliverableDetails": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "optional options omitted",
+  "guard": ""
+ },
+ "deliverable.updateDeliverableInfo": {
+  "args": [
+   "__BOGUS_UUID__",
+   {}
+  ],
+  "note": "request body all-optional; empty object reaches gate",
+  "guard": ""
+ },
+ "deliverable.deleteDeliverable": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "deliverable.downloadSourceFile": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "getRaw request",
+  "guard": ""
+ },
+ "deliverable.downloadPDF": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "getRaw request",
+  "guard": ""
+ },
+ "sign.createSignatureReviewLink": {
+  "args": [
+   {
+    "recipients": [],
+    "fields": []
+   }
+  ],
+  "note": "No file => JSON post path to /turbosign/single/prepare-for-review; recipients/fields JSON.stringified (no .map, [] safe)",
+  "guard": "senderEmail required (configured globally by harness)"
+ },
+ "sign.sendSignature": {
+  "args": [
+   {
+    "recipients": [],
+    "fields": []
+   }
+  ],
+  "note": "No file => JSON post to /turbosign/single/prepare-for-signing",
+  "guard": "senderEmail required (configured globally by harness)"
+ },
+ "sign.void": {
+  "args": [
+   "__BOGUS_UUID__",
+   "t"
+  ],
+  "note": "POST /turbosign/documents/{id}/void",
+  "guard": "none"
+ },
+ "sign.resend": {
+  "args": [
+   "__BOGUS_UUID__",
+   []
+  ],
+  "note": "recipientIds sent as body, not iterated client-side",
+  "guard": "none"
+ },
+ "sign.getAuditTrail": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "GET /turbosign/documents/{id}/audit-trail",
+  "guard": "none"
+ },
+ "sign.download": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "GET /download hits gate first; S3 fetch only runs on success",
+  "guard": "none"
+ },
+ "sign.getStatus": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "GET /turbosign/documents/{id}/status",
+  "guard": "none"
+ },
+ "sign.sendReminder": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "Optional recipientIds omitted; POST /send-reminder with empty body",
+  "guard": "none"
+ },
+ "sign.getRecipients": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "GET /turbosign/documents/{id}/recipients",
+  "guard": "none"
+ },
+ "webhooks.createWebhook": {
+  "args": [
+   {
+    "urls": [],
+    "events": []
+   }
+  ],
+  "note": "body {name,...input}; no client iteration",
+  "guard": ""
+ },
+ "webhooks.getWebhook": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "webhooks.updateWebhook": {
+  "args": [
+   {}
+  ],
+  "note": "all patch fields optional",
+  "guard": ""
+ },
+ "webhooks.deleteWebhook": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "webhooks.testWebhook": {
+  "args": [
+   {
+    "eventType": "t",
+    "payload": {}
+   }
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "webhooks.notifyWebhook": {
+  "args": [
+   {
+    "eventType": "t",
+    "payload": {}
+   }
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "webhooks.regenerateWebhookSecret": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "webhooks.listWebhookDeliveries": {
+  "args": [],
+  "note": "optional input defaults to {}",
+  "guard": ""
+ },
+ "webhooks.replayWebhookDelivery": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "webhooks.getWebhookStats": {
+  "args": [],
+  "note": "optional input defaults to {}",
+  "guard": ""
+ },
+ "partner.createOrganization": {
+  "args": [
+   {
+    "name": "t"
+   }
+  ],
+  "note": "CreateOrganizationRequest.name required",
+  "guard": ""
+ },
+ "partner.listOrganizations": {
+  "args": [],
+  "note": "optional request omitted",
+  "guard": ""
+ },
+ "partner.getOrganizationDetails": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.updateOrganizationInfo": {
+  "args": [
+   "__BOGUS_UUID__",
+   {
+    "name": "t"
+   }
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.deleteOrganization": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.updateOrganizationEntitlements": {
+  "args": [
+   "__BOGUS_UUID__",
+   {}
+  ],
+  "note": "all body fields optional",
+  "guard": ""
+ },
+ "partner.listOrganizationUsers": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.addUserToOrganization": {
+  "args": [
+   "__BOGUS_UUID__",
+   {
+    "email": "t@t.co",
+    "role": "user"
+   }
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.updateOrganizationUserRole": {
+  "args": [
+   "__BOGUS_UUID__",
+   "__BOGUS_UUID__",
+   {
+    "role": "user"
+   }
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.removeUserFromOrganization": {
+  "args": [
+   "__BOGUS_UUID__",
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.resendOrganizationInvitationToUser": {
+  "args": [
+   "__BOGUS_UUID__",
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.listOrganizationApiKeys": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.createOrganizationApiKey": {
+  "args": [
+   "__BOGUS_UUID__",
+   {
+    "name": "t",
+    "role": "admin"
+   }
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.updateOrganizationApiKey": {
+  "args": [
+   "__BOGUS_UUID__",
+   "__BOGUS_UUID__",
+   {}
+  ],
+  "note": "body fields optional",
+  "guard": ""
+ },
+ "partner.revokeOrganizationApiKey": {
+  "args": [
+   "__BOGUS_UUID__",
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.listPartnerApiKeys": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "partner.createPartnerApiKey": {
+  "args": [
+   {
+    "name": "t",
+    "scopes": []
+   }
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.updatePartnerApiKey": {
+  "args": [
+   "__BOGUS_UUID__",
+   {}
+  ],
+  "note": "body fields optional",
+  "guard": ""
+ },
+ "partner.revokePartnerApiKey": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.listPartnerPortalUsers": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "partner.addUserToPartnerPortal": {
+  "args": [
+   {
+    "email": "t@t.co",
+    "role": "admin",
+    "permissions": {
+     "canManageOrgs": true,
+     "canManageOrgUsers": true,
+     "canManagePartnerUsers": false,
+     "canManageOrgAPIKeys": true,
+     "canManagePartnerAPIKeys": false,
+     "canUpdateEntitlements": true,
+     "canViewAuditLogs": true
+    }
+   }
+  ],
+  "note": "permissions required by type; all 7 keys supplied",
+  "guard": ""
+ },
+ "partner.updatePartnerUserPermissions": {
+  "args": [
+   "__BOGUS_UUID__",
+   {}
+  ],
+  "note": "role and permissions both optional",
+  "guard": ""
+ },
+ "partner.removeUserFromPartnerPortal": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.resendPartnerPortalInvitationToUser": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "partner.getPartnerAuditLogs": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "quote.getQuoteNumberConfig": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "quote.updateQuoteNumberConfig": {
+  "args": [
+   {}
+  ],
+  "note": "patch body passed through as-is",
+  "guard": ""
+ },
+ "quote.listQuotes": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "quote.createQuote": {
+  "args": [
+   {
+    "name": "t",
+    "companyId": "__BOGUS_UUID__",
+    "contactId": "__BOGUS_UUID__"
+   }
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.getQuote": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.updateQuote": {
+  "args": [
+   "__BOGUS_UUID__",
+   {}
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.deleteQuote": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.duplicateQuote": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.applyPriceBook": {
+  "args": [
+   "__BOGUS_UUID__",
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.removePriceBook": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.downloadQuotePdf": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.sendQuote": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "request optional, omitted",
+  "guard": ""
+ },
+ "quote.sendQuoteWithDeliverable": {
+  "args": [
+   "__BOGUS_UUID__",
+   {
+    "deliverableId": "__BOGUS_UUID__",
+    "mergePosition": "end"
+   }
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.declineQuote": {
+  "args": [
+   "__BOGUS_UUID__",
+   {
+    "reason": "t"
+   }
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.voidQuote": {
+  "args": [
+   "__BOGUS_UUID__",
+   {
+    "reason": "t"
+   }
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.handleExpiredQuote": {
+  "args": [
+   "__BOGUS_UUID__",
+   {
+    "action": "void",
+    "reason": "t",
+    "newValidUntil": "t"
+   }
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.listLineItems": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.addLineItems": {
+  "args": [
+   "__BOGUS_UUID__",
+   []
+  ],
+  "note": "empty array -> payload []",
+  "guard": ""
+ },
+ "quote.addBundleLineItems": {
+  "args": [
+   "__BOGUS_UUID__",
+   []
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.updateLineItem": {
+  "args": [
+   "__BOGUS_UUID__",
+   "__BOGUS_UUID__",
+   {}
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.removeLineItem": {
+  "args": [
+   "__BOGUS_UUID__",
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.listProducts": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "quote.createProduct": {
+  "args": [
+   {
+    "name": "t"
+   }
+  ],
+  "note": "",
+  "guard": "reads image files if request.images set; omitted"
+ },
+ "quote.bulkCreateProducts": {
+  "args": [
+   []
+  ],
+  "note": "rows -> {rows:[]}",
+  "guard": ""
+ },
+ "quote.getProduct": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.updateProduct": {
+  "args": [
+   "__BOGUS_UUID__",
+   {}
+  ],
+  "note": "",
+  "guard": "reads image files if request.images set; omitted"
+ },
+ "quote.deleteProduct": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.duplicateProduct": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.getProductPrimaryImages": {
+  "args": [
+   []
+  ],
+  "note": "-> {productIds:[]}",
+  "guard": ""
+ },
+ "quote.listPriceBooks": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "quote.createPriceBook": {
+  "args": [
+   {}
+  ],
+  "note": "spreads request + discountPercent",
+  "guard": ""
+ },
+ "quote.bulkCreatePriceBooks": {
+  "args": [
+   []
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.getPriceBook": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.updatePriceBook": {
+  "args": [
+   "__BOGUS_UUID__",
+   {}
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.deletePriceBook": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.duplicatePriceBook": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.listPriceBookProducts": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.listBundles": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "quote.createBundle": {
+  "args": [
+   {}
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.bulkCreateBundles": {
+  "args": [
+   []
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.getBundle": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.updateBundle": {
+  "args": [
+   "__BOGUS_UUID__",
+   {}
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.deleteBundle": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.duplicateBundle": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.listCompanies": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "quote.createCompany": {
+  "args": [
+   {}
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.bulkCreateCompanies": {
+  "args": [
+   []
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.getCompany": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.updateCompany": {
+  "args": [
+   "__BOGUS_UUID__",
+   {}
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.deleteCompany": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.listCompanyContacts": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.listContacts": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "quote.createContact": {
+  "args": [
+   {}
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.bulkCreateContacts": {
+  "args": [
+   []
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.updateContact": {
+  "args": [
+   "__BOGUS_UUID__",
+   {}
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.deleteContact": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.listTemplates": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "quote.getTemplate": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "quote.getTemplateById": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.createTemplate": {
+  "args": [
+   {}
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.updateTemplate": {
+  "args": [
+   "__BOGUS_UUID__",
+   {}
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.deleteTemplate": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.listTypes": {
+  "args": [],
+  "note": "",
+  "guard": ""
+ },
+ "quote.createType": {
+  "args": [
+   {}
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.bulkCreateTypes": {
+  "args": [
+   []
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.updateType": {
+  "args": [
+   "__BOGUS_UUID__",
+   {}
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.deleteType": {
+  "args": [
+   "__BOGUS_UUID__"
+  ],
+  "note": "",
+  "guard": ""
+ },
+ "quote.createAndSend": {
+  "args": [
+   {
+    "name": "t",
+    "companyId": "__BOGUS_UUID__",
+    "contactId": "__BOGUS_UUID__"
+   }
+  ],
+  "note": "",
+  "guard": "destructures request; must be an object (not undefined)"
+ }
+}
