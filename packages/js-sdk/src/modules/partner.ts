@@ -273,6 +273,7 @@ export class TurboPartner {
    * ```typescript
    * await TurboPartner.updateOrganizationPreferences('org-uuid', {
    *   lockedFieldsBackground: false,
+   *   allowDownloadBeforeSigning: true,
    * });
    * ```
    */

@@ -342,12 +342,14 @@ class TurboPartnerTest {
                 Map.of("preferences", Map.of(
                         "hideSignatureOutline", false,
                         "hideSignatureHash", false,
-                        "lockedFieldsBackground", true))));
+                        "lockedFieldsBackground", true,
+                        "allowDownloadBeforeSigning", false))));
 
         PartnerOrgPreferencesResponse result = client.turboPartner().getOrganizationPreferences("org-1");
 
         assertTrue(result.isSuccess());
         assertTrue(result.getData().getPreferences().getLockedFieldsBackground());
+        assertFalse(result.getData().getPreferences().getAllowDownloadBeforeSigning());
 
         RecordedRequest request = server.takeRequest();
         assertEquals("GET", request.getMethod());
@@ -361,7 +363,8 @@ class TurboPartnerTest {
                 Map.of("preferences", Map.of(
                         "hideSignatureOutline", false,
                         "hideSignatureHash", false,
-                        "lockedFieldsBackground", false))));
+                        "lockedFieldsBackground", false,
+                        "allowDownloadBeforeSigning", false))));
 
         PartnerOrgPreferencesResponse result = client.turboPartner().updateOrganizationPreferences(
                 "org-1",

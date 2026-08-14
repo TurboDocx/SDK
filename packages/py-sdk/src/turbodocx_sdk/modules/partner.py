@@ -261,7 +261,7 @@ class TurboPartner:
 
         Returns:
             Dict with success and data (preferences: hideSignatureOutline,
-            hideSignatureHash, lockedFieldsBackground)
+            hideSignatureHash, lockedFieldsBackground, allowDownloadBeforeSigning)
         """
         client = cls._get_client()
         return await client.get(
@@ -285,7 +285,8 @@ class TurboPartner:
         Args:
             organization_id: Organization UUID
             preferences: The preference keys to change (camelCase), e.g.
-                hideSignatureOutline, hideSignatureHash, lockedFieldsBackground
+                hideSignatureOutline, hideSignatureHash, lockedFieldsBackground,
+                allowDownloadBeforeSigning
 
         Returns:
             Dict with success and data (updated preferences)

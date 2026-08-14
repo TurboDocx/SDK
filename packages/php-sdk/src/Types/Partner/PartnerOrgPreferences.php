@@ -18,6 +18,10 @@ final class PartnerOrgPreferences implements \JsonSerializable
         public readonly bool $hideSignatureOutline = false,
         public readonly bool $hideSignatureHash = false,
         public readonly bool $lockedFieldsBackground = true,
+        // When enabled, a signer can download the unsigned PDF from the signing
+        // page before they sign it (for example, to review it with their legal
+        // team). Defaults to off.
+        public readonly bool $allowDownloadBeforeSigning = false,
     ) {}
 
     /**
@@ -30,6 +34,7 @@ final class PartnerOrgPreferences implements \JsonSerializable
             hideSignatureOutline: (bool) ($data['hideSignatureOutline'] ?? false),
             hideSignatureHash: (bool) ($data['hideSignatureHash'] ?? false),
             lockedFieldsBackground: (bool) ($data['lockedFieldsBackground'] ?? true),
+            allowDownloadBeforeSigning: (bool) ($data['allowDownloadBeforeSigning'] ?? false),
         );
     }
 
@@ -42,6 +47,7 @@ final class PartnerOrgPreferences implements \JsonSerializable
             'hideSignatureOutline' => $this->hideSignatureOutline,
             'hideSignatureHash' => $this->hideSignatureHash,
             'lockedFieldsBackground' => $this->lockedFieldsBackground,
+            'allowDownloadBeforeSigning' => $this->allowDownloadBeforeSigning,
         ];
     }
 

@@ -10,13 +10,14 @@ Each script does the same three steps:
 2. **Flip** the locked-fields background (`updateOrganizationPreferences`)
 3. **Read back** to confirm the value stuck
 
-The three preferences a partner can set per tenant:
+The preferences a partner can set per tenant:
 
 | Preference | Meaning |
 |------------|---------|
 | `hideSignatureOutline` | hide the outline/label on signed fields in the finished PDF |
 | `hideSignatureHash` | hide the verification hash on signed fields |
 | `lockedFieldsBackground` | show locked fields as a grey box (`true`) or plain text (`false`) |
+| `allowDownloadBeforeSigning` | let a signer download the unsigned PDF from the signing page before they sign (`true`), for example to review it with their legal team; defaults to off (`false`) |
 
 The API returns **only** these keys (never the org's other integration settings),
 each with its effective value (defaults applied for keys the org never set).
@@ -53,9 +54,9 @@ python3 python/read_and_set_preferences.py
 ## Expected output
 
 ```
-BEFORE: outline=true hash=true lockedGreyBackground=true
-UPDATED: outline=true hash=true lockedGreyBackground=false
-AFTER : outline=true hash=true lockedGreyBackground=false
+BEFORE: outline=true hash=true lockedGreyBackground=true download=false
+UPDATED: outline=true hash=true lockedGreyBackground=false download=false
+AFTER : outline=true hash=true lockedGreyBackground=false download=false
 
 OK — the partner changed lockedFieldsBackground to false and it stuck.
 ```

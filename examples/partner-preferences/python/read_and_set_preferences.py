@@ -22,7 +22,8 @@ def show(label, prefs):
     print(
         f"{label}: outline={not prefs['hideSignatureOutline']} "
         f"hash={not prefs['hideSignatureHash']} "
-        f"lockedGreyBackground={prefs['lockedFieldsBackground']}"
+        f"lockedGreyBackground={prefs['lockedFieldsBackground']} "
+        f"download={prefs['allowDownloadBeforeSigning']}"
     )
 
 

@@ -30,7 +30,8 @@ TurboPartner.configure({
 const show = (label, prefs) =>
   console.log(
     `${label}: outline=${!prefs.hideSignatureOutline} hash=${!prefs.hideSignatureHash} ` +
-      `lockedGreyBackground=${prefs.lockedFieldsBackground}`,
+      `lockedGreyBackground=${prefs.lockedFieldsBackground} ` +
+      `download=${prefs.allowDownloadBeforeSigning}`,
   );
 
 async function main() {

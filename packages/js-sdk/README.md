@@ -434,6 +434,7 @@ console.log(data.preferences.lockedFieldsBackground); // true by default
 // organization setting is preserved
 await TurboPartner.updateOrganizationPreferences('org-uuid', {
   lockedFieldsBackground: false, // render locked fields as plain text
+  allowDownloadBeforeSigning: true, // let signers download the unsigned PDF
 });
 ```
 
@@ -444,6 +445,7 @@ await TurboPartner.updateOrganizationPreferences('org-uuid', {
 | `hideSignatureOutline` | `false` | Hide the outline/label drawn around signed fields |
 | `hideSignatureHash` | `false` | Hide the verification hash printed on signed fields |
 | `lockedFieldsBackground` | `true` | Grey box behind locked fields (`false` = plain text) |
+| `allowDownloadBeforeSigning` | `false` | Let a signer download the unsigned PDF from the signing page before they sign (e.g. to review it with their legal team) |
 
 #### Organization User Management
 

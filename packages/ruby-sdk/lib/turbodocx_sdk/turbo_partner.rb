@@ -115,7 +115,8 @@ module TurboDocxSdk
       #
       # @param organization_id [String]
       # @return [Hash] the organization's partner-settable preferences under +data.preferences+
-      #   (+hideSignatureOutline+, +hideSignatureHash+, +lockedFieldsBackground+ booleans)
+      #   (+hideSignatureOutline+, +hideSignatureHash+, +lockedFieldsBackground+,
+      #   +allowDownloadBeforeSigning+ booleans)
       # @raise [NotFoundError] if the organization does not exist
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
@@ -128,7 +129,8 @@ module TurboDocxSdk
       #
       # Pass only the keys you want to change; each must be a boolean. The keys stay
       # camelCase verbatim (+hideSignatureOutline+, +hideSignatureHash+,
-      # +lockedFieldsBackground+) -- they are the API contract, not Ruby names.
+      # +lockedFieldsBackground+, +allowDownloadBeforeSigning+) -- they are the API
+      # contract, not Ruby names.
       #
       # @param organization_id [String]
       # @param preferences [Hash] the preference keys to change (only these are sent)

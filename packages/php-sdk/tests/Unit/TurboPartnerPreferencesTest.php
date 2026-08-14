@@ -102,6 +102,7 @@ final class TurboPartnerPreferencesTest extends TestCase
                     'hideSignatureOutline' => false,
                     'hideSignatureHash' => false,
                     'lockedFieldsBackground' => true,
+                    'allowDownloadBeforeSigning' => false,
                 ],
             ],
         ]) ?: '');
@@ -110,6 +111,7 @@ final class TurboPartnerPreferencesTest extends TestCase
 
         $this->assertTrue($result->preferences->lockedFieldsBackground);
         $this->assertFalse($result->preferences->hideSignatureOutline);
+        $this->assertFalse($result->preferences->allowDownloadBeforeSigning);
 
         $request = $this->lastRequest();
         $this->assertSame('GET', $request->getMethod());
@@ -128,6 +130,7 @@ final class TurboPartnerPreferencesTest extends TestCase
                     'hideSignatureOutline' => false,
                     'hideSignatureHash' => false,
                     'lockedFieldsBackground' => false,
+                    'allowDownloadBeforeSigning' => false,
                 ],
             ],
         ]) ?: '');

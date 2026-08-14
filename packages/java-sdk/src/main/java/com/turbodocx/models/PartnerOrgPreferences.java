@@ -23,6 +23,9 @@ public class PartnerOrgPreferences {
     @SerializedName("lockedFieldsBackground")
     private Boolean lockedFieldsBackground;
 
+    @SerializedName("allowDownloadBeforeSigning")
+    private Boolean allowDownloadBeforeSigning;
+
     public PartnerOrgPreferences() {
     }
 
@@ -50,6 +53,15 @@ public class PartnerOrgPreferences {
 
     public PartnerOrgPreferences setLockedFieldsBackground(Boolean lockedFieldsBackground) {
         this.lockedFieldsBackground = lockedFieldsBackground;
+        return this;
+    }
+
+    public Boolean getAllowDownloadBeforeSigning() {
+        return allowDownloadBeforeSigning;
+    }
+
+    public PartnerOrgPreferences setAllowDownloadBeforeSigning(Boolean allowDownloadBeforeSigning) {
+        this.allowDownloadBeforeSigning = allowDownloadBeforeSigning;
         return this;
     }
 }

@@ -331,9 +331,10 @@ func TestGetOrganizationPreferences(t *testing.T) {
 				"success": true,
 				"data": map[string]interface{}{
 					"preferences": map[string]interface{}{
-						"hideSignatureOutline":   true,
-						"hideSignatureHash":      false,
-						"lockedFieldsBackground": true,
+						"hideSignatureOutline":       true,
+						"hideSignatureHash":          false,
+						"lockedFieldsBackground":     true,
+						"allowDownloadBeforeSigning": false,
 					},
 				},
 			})
@@ -348,6 +349,7 @@ func TestGetOrganizationPreferences(t *testing.T) {
 		assert.True(t, result.Data.Preferences.HideSignatureOutline)
 		assert.False(t, result.Data.Preferences.HideSignatureHash)
 		assert.True(t, result.Data.Preferences.LockedFieldsBackground)
+		assert.False(t, result.Data.Preferences.AllowDownloadBeforeSigning)
 	})
 }
 
@@ -365,9 +367,10 @@ func TestUpdateOrganizationPreferences(t *testing.T) {
 				"success": true,
 				"data": map[string]interface{}{
 					"preferences": map[string]interface{}{
-						"hideSignatureOutline":   true,
-						"hideSignatureHash":      false,
-						"lockedFieldsBackground": false,
+						"hideSignatureOutline":       true,
+						"hideSignatureHash":          false,
+						"lockedFieldsBackground":     false,
+						"allowDownloadBeforeSigning": false,
 					},
 				},
 			})
