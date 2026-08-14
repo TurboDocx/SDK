@@ -900,6 +900,36 @@ $result = TurboPartner::updateOrganizationEntitlements(
 );
 ```
 
+#### `getOrganizationPreferences()`
+
+Read an organization's TurboSign display preferences. Returns only the partner-settable keys, each with its effective value (defaults applied for keys the org never set) — never the organization's other settings.
+
+```php
+$prefs = TurboPartner::getOrganizationPreferences('org-uuid-here')->preferences;
+
+var_dump($prefs->hideSignatureOutline);   // false by default
+var_dump($prefs->hideSignatureHash);      // false by default
+var_dump($prefs->lockedFieldsBackground); // true by default
+```
+
+#### `updateOrganizationPreferences()`
+
+Set an organization's TurboSign display preferences. Pass only the keys you want to change as a plain camelCase array — the SDK wraps them under `preferences`, and every other organization setting is preserved.
+
+```php
+$result = TurboPartner::updateOrganizationPreferences('org-uuid-here', [
+    'lockedFieldsBackground' => false,  // render locked fields as plain text
+]);
+
+var_dump($result->preferences->lockedFieldsBackground); // false
+```
+
+| Key | Default | Effect |
+|-----|---------|--------|
+| `hideSignatureOutline` | `false` | Hide the outline/label drawn around signed fields |
+| `hideSignatureHash` | `false` | Hide the verification hash printed on signed fields |
+| `lockedFieldsBackground` | `true` | Grey box behind locked fields (`false` = plain text) |
+
 #### `deleteOrganization()`
 
 Delete an organization (use with caution).

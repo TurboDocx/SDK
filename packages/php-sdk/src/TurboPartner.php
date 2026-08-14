@@ -29,6 +29,7 @@ use TurboDocx\Types\Responses\Partner\OrgApiKeyResponse;
 use TurboDocx\Types\Responses\Partner\OrganizationDetailResponse;
 use TurboDocx\Types\Responses\Partner\OrganizationListResponse;
 use TurboDocx\Types\Responses\Partner\OrganizationResponse;
+use TurboDocx\Types\Responses\Partner\PartnerOrgPreferencesResponse;
 use TurboDocx\Types\Responses\Partner\OrgUserListResponse;
 use TurboDocx\Types\Responses\Partner\OrgUserResponse;
 use TurboDocx\Types\Responses\Partner\PartnerApiKeyListResponse;
@@ -204,6 +205,49 @@ final class TurboPartner
             $request->toArray()
         );
         return EntitlementsResponse::fromArray($response);
+    }
+
+    /**
+     * Read the TurboSign display preferences for one of the partner's organizations.
+     *
+     * Returns only the partner-settable preference keys, each with its effective
+     * value (defaults applied for keys the org never set).
+     *
+     * @param string $organizationId Organization UUID
+     * @return PartnerOrgPreferencesResponse
+     */
+    public static function getOrganizationPreferences(
+        string $organizationId
+    ): PartnerOrgPreferencesResponse {
+        $client = self::getClient();
+        $partnerId = self::getPartnerId();
+        $response = $client->get(
+            "/partner/{$partnerId}/organizations/{$organizationId}/preferences"
+        );
+        return PartnerOrgPreferencesResponse::fromArray($response);
+    }
+
+    /**
+     * Set TurboSign display preferences for one of the partner's organizations.
+     *
+     * Pass only the keys you want to change; each must be a boolean. Keys and the
+     * `preferences` wrapper are sent to the API verbatim (camelCase).
+     *
+     * @param string $organizationId Organization UUID
+     * @param array<string, bool> $preferences The preference keys to change
+     * @return PartnerOrgPreferencesResponse
+     */
+    public static function updateOrganizationPreferences(
+        string $organizationId,
+        array $preferences
+    ): PartnerOrgPreferencesResponse {
+        $client = self::getClient();
+        $partnerId = self::getPartnerId();
+        $response = $client->patch(
+            "/partner/{$partnerId}/organizations/{$organizationId}/preferences",
+            ['preferences' => $preferences]
+        );
+        return PartnerOrgPreferencesResponse::fromArray($response);
     }
 
     // ==================== Organization User Management ====================

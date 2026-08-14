@@ -27,6 +27,8 @@ import {
   OrganizationListResponse,
   OrganizationDetailResponse,
   EntitlementsResponse,
+  PartnerOrgPreferences,
+  PartnerOrgPreferencesResponse,
   OrgUserResponse,
   OrgUserListResponse,
   OrgApiKeyResponse,
@@ -230,6 +232,60 @@ export class TurboPartner {
     const client = this.getClient();
     const partnerId = this.getPartnerId();
     return client.patch<EntitlementsResponse>(`/partner/${partnerId}/organizations/${organizationId}/entitlements`, request);
+  }
+
+  /**
+   * Read the TurboSign display preferences for one of the partner's organizations.
+   *
+   * Returns only the partner-settable preference keys, each with its effective
+   * value (defaults applied for keys the org never set). Lets a partner see a
+   * tenant's current settings before changing them.
+   *
+   * @param organizationId - Organization ID
+   * @returns The organization's partner-settable preferences
+   *
+   * @example
+   * ```typescript
+   * const { data } = await TurboPartner.getOrganizationPreferences('org-uuid');
+   * console.log(data.preferences.lockedFieldsBackground);
+   * ```
+   */
+  static async getOrganizationPreferences(organizationId: string): Promise<PartnerOrgPreferencesResponse> {
+    const client = this.getClient();
+    const partnerId = this.getPartnerId();
+    return client.get<PartnerOrgPreferencesResponse>(
+      `/partner/${partnerId}/organizations/${organizationId}/preferences`
+    );
+  }
+
+  /**
+   * Set TurboSign display preferences for one of the partner's organizations.
+   *
+   * Pass only the keys you want to change; each must be a boolean. Any key the
+   * partner isn't permitted to set is rejected by the API. The full effective
+   * preferences are returned.
+   *
+   * @param organizationId - Organization ID
+   * @param preferences - The preference keys to change
+   * @returns The organization's updated partner-settable preferences
+   *
+   * @example
+   * ```typescript
+   * await TurboPartner.updateOrganizationPreferences('org-uuid', {
+   *   lockedFieldsBackground: false,
+   * });
+   * ```
+   */
+  static async updateOrganizationPreferences(
+    organizationId: string,
+    preferences: Partial<PartnerOrgPreferences>
+  ): Promise<PartnerOrgPreferencesResponse> {
+    const client = this.getClient();
+    const partnerId = this.getPartnerId();
+    return client.patch<PartnerOrgPreferencesResponse>(
+      `/partner/${partnerId}/organizations/${organizationId}/preferences`,
+      { preferences }
+    );
   }
 
   // ============================================

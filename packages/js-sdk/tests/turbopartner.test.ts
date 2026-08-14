@@ -249,6 +249,49 @@ describe("TurboPartner Module", () => {
         );
       });
     });
+
+    describe("getOrganizationPreferences", () => {
+      it("should GET the org preferences and return the effective values", async () => {
+        const mockResponse = {
+          success: true,
+          data: {
+            preferences: { hideSignatureOutline: false, hideSignatureHash: false, lockedFieldsBackground: true },
+          },
+        };
+        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        setup();
+
+        const result = await TurboPartner.getOrganizationPreferences("org-1");
+
+        expect(result.data.preferences.lockedFieldsBackground).toBe(true);
+        expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith(
+          `/partner/${PARTNER_ID}/organizations/org-1/preferences`
+        );
+      });
+    });
+
+    describe("updateOrganizationPreferences", () => {
+      it("should PATCH only the given preferences wrapped in a preferences envelope", async () => {
+        const mockResponse = {
+          success: true,
+          data: {
+            preferences: { hideSignatureOutline: false, hideSignatureHash: false, lockedFieldsBackground: false },
+          },
+        };
+        MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue(mockResponse);
+        setup();
+
+        const result = await TurboPartner.updateOrganizationPreferences("org-1", { lockedFieldsBackground: false });
+
+        expect(result.data.preferences.lockedFieldsBackground).toBe(false);
+        // The request body wraps the partial preferences under a `preferences` key,
+        // matching the backend PATCH contract. Only the given key is sent.
+        expect(MockedHttpClient.prototype.patch).toHaveBeenCalledWith(
+          `/partner/${PARTNER_ID}/organizations/org-1/preferences`,
+          { preferences: { lockedFieldsBackground: false } }
+        );
+      });
+    });
   });
 
   // ============================================

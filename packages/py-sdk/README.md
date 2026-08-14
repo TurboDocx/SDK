@@ -439,9 +439,28 @@ await TurboPartner.update_organization_entitlements(
     org_id, features={"maxUsers": 50}
 )
 
+# Read the org's TurboSign display preferences
+# (returns only the partner-settable keys, with defaults applied)
+prefs = (await TurboPartner.get_organization_preferences(org_id))["data"]["preferences"]
+print(prefs["lockedFieldsBackground"])  # True by default
+
+# Update them — pass only the keys you want to change; every other organization
+# setting is preserved. Keys stay camelCase: they are the API contract.
+await TurboPartner.update_organization_preferences(
+    org_id, {"lockedFieldsBackground": False}
+)
+
 # Delete organization
 await TurboPartner.delete_organization(org_id)
 ```
+
+**Partner-settable display preferences**
+
+| Key | Default | Effect |
+|-----|---------|--------|
+| `hideSignatureOutline` | `False` | Hide the outline/label drawn around signed fields |
+| `hideSignatureHash` | `False` | Hide the verification hash printed on signed fields |
+| `lockedFieldsBackground` | `True` | Grey box behind locked fields (`False` = plain text) |
 
 #### Organization User & API Key Management
 
@@ -494,6 +513,7 @@ logs = await TurboPartner.get_partner_audit_logs(limit=10)
 | Category | Method |
 |:---------|:-------|
 | **Organizations** | `create_organization()`, `list_organizations()`, `get_organization_details()`, `update_organization_info()`, `delete_organization()`, `update_organization_entitlements()` |
+| **Org display preferences** | `get_organization_preferences()`, `update_organization_preferences()` |
 | **Org Users** | `add_user_to_organization()`, `list_organization_users()`, `update_organization_user_role()`, `remove_user_from_organization()`, `resend_organization_invitation_to_user()` |
 | **Org API Keys** | `create_organization_api_key()`, `list_organization_api_keys()`, `update_organization_api_key()`, `revoke_organization_api_key()` |
 | **Partner API Keys** | `create_partner_api_key()`, `list_partner_api_keys()`, `update_partner_api_key()`, `revoke_partner_api_key()` |

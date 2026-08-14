@@ -108,6 +108,44 @@ module TurboDocxSdk
         client.patch("/partner/#{partner_id}/organizations/#{organization_id}/entitlements", request)
       end
 
+      # Read the TurboSign display preferences for one of the partner's organizations.
+      #
+      # Returns only the partner-settable preference keys, each with its effective
+      # value (defaults applied for keys the org never set).
+      #
+      # @param organization_id [String]
+      # @return [Hash] the organization's partner-settable preferences under +data.preferences+
+      #   (+hideSignatureOutline+, +hideSignatureHash+, +lockedFieldsBackground+ booleans)
+      # @raise [NotFoundError] if the organization does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def get_organization_preferences(organization_id)
+        client = get_client
+        client.get("/partner/#{partner_id}/organizations/#{organization_id}/preferences")
+      end
+
+      # Set TurboSign display preferences for one of the partner's organizations.
+      #
+      # Pass only the keys you want to change; each must be a boolean. The keys stay
+      # camelCase verbatim (+hideSignatureOutline+, +hideSignatureHash+,
+      # +lockedFieldsBackground+) -- they are the API contract, not Ruby names.
+      #
+      # @param organization_id [String]
+      # @param preferences [Hash] the preference keys to change (only these are sent)
+      # @return [Hash] the organization's updated partner-settable preferences under +data.preferences+
+      # @raise [NotFoundError] if the organization does not exist
+      # @raise [ValidationError] on invalid request data
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def update_organization_preferences(organization_id, preferences)
+        client = get_client
+        # Wrap under :preferences without mutating the caller's hash.
+        client.patch(
+          "/partner/#{partner_id}/organizations/#{organization_id}/preferences",
+          { "preferences" => preferences.dup }
+        )
+      end
+
       # ============================================
       # ORGANIZATION USER MANAGEMENT
       # ============================================

@@ -2,6 +2,8 @@ package com.turbodocx;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.turbodocx.models.PartnerOrgPreferences;
+import com.turbodocx.models.PartnerOrgPreferencesResponse;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -331,6 +333,49 @@ class TurboPartnerTest {
         String body = request.getBody().readUtf8();
         assertTrue(body.contains("\"features\""));
         assertTrue(body.contains("\"tracking\""));
+    }
+
+    @Test
+    @DisplayName("should get organization preferences and return effective values")
+    void getOrganizationPreferences() throws Exception {
+        enqueueSuccess(Map.of("success", true, "data",
+                Map.of("preferences", Map.of(
+                        "hideSignatureOutline", false,
+                        "hideSignatureHash", false,
+                        "lockedFieldsBackground", true))));
+
+        PartnerOrgPreferencesResponse result = client.turboPartner().getOrganizationPreferences("org-1");
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.getData().getPreferences().getLockedFieldsBackground());
+
+        RecordedRequest request = server.takeRequest();
+        assertEquals("GET", request.getMethod());
+        assertEquals("/partner/" + PARTNER_ID + "/organizations/org-1/preferences", request.getPath());
+    }
+
+    @Test
+    @DisplayName("should PATCH only the given preferences wrapped in a preferences envelope")
+    void updateOrganizationPreferences() throws Exception {
+        enqueueSuccess(Map.of("success", true, "data",
+                Map.of("preferences", Map.of(
+                        "hideSignatureOutline", false,
+                        "hideSignatureHash", false,
+                        "lockedFieldsBackground", false))));
+
+        PartnerOrgPreferencesResponse result = client.turboPartner().updateOrganizationPreferences(
+                "org-1",
+                new PartnerOrgPreferences().setLockedFieldsBackground(false));
+
+        assertFalse(result.getData().getPreferences().getLockedFieldsBackground());
+
+        RecordedRequest request = server.takeRequest();
+        assertEquals("PATCH", request.getMethod());
+        assertEquals("/partner/" + PARTNER_ID + "/organizations/org-1/preferences", request.getPath());
+        // The request body wraps the partial preferences under a `preferences` key, and
+        // only the one key set by the caller is sent (the null fields are omitted).
+        String body = request.getBody().readUtf8();
+        assertEquals("{\"preferences\":{\"lockedFieldsBackground\":false}}", body);
     }
 
     // ============================================

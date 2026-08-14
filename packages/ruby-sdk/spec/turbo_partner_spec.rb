@@ -221,6 +221,65 @@ RSpec.describe TurboDocxSdk::TurboPartner do
         )
       end
     end
+
+    describe ".get_organization_preferences" do
+      it "reads the org's TurboSign display preferences" do
+        mock_response = {
+          "success" => true,
+          "data" => {
+            "preferences" => {
+              "hideSignatureOutline" => false,
+              "hideSignatureHash" => false,
+              "lockedFieldsBackground" => true
+            }
+          }
+        }
+        allow(mock_client).to receive(:get).and_return(mock_response)
+
+        result = described_class.get_organization_preferences("org-1")
+
+        expect(result["data"]["preferences"]["lockedFieldsBackground"]).to eq(true)
+        expect(result["data"]["preferences"]["hideSignatureOutline"]).to eq(false)
+        expect(mock_client).to have_received(:get).with(
+          "/partner/#{partner_id}/organizations/org-1/preferences"
+        )
+      end
+    end
+
+    describe ".update_organization_preferences" do
+      it "sends only the given keys wrapped under preferences (camelCase verbatim)" do
+        mock_response = {
+          "success" => true,
+          "data" => {
+            "preferences" => {
+              "hideSignatureOutline" => false,
+              "hideSignatureHash" => false,
+              "lockedFieldsBackground" => false
+            }
+          }
+        }
+        allow(mock_client).to receive(:patch).and_return(mock_response)
+
+        result = described_class.update_organization_preferences("org-1",
+          "lockedFieldsBackground" => false
+        )
+
+        expect(result["data"]["preferences"]["lockedFieldsBackground"]).to eq(false)
+        expect(mock_client).to have_received(:patch).with(
+          "/partner/#{partner_id}/organizations/org-1/preferences",
+          { "preferences" => { "lockedFieldsBackground" => false } }
+        )
+      end
+
+      it "does not mutate the caller's preferences hash" do
+        allow(mock_client).to receive(:patch).and_return("success" => true, "data" => { "preferences" => {} })
+
+        caller_preferences = { "hideSignatureHash" => true }
+        described_class.update_organization_preferences("org-1", caller_preferences)
+
+        expect(caller_preferences).to eq({ "hideSignatureHash" => true })
+      end
+    end
   end
 
   # ============================================

@@ -311,6 +311,24 @@ export interface EntitlementsResponse {
   };
 }
 
+/**
+ * The partner-settable slice of an organization's display preferences. Every key
+ * is present with its effective boolean value when read. Widening this interface
+ * later (as the backend allowlist grows) is additive and non-breaking.
+ */
+export interface PartnerOrgPreferences {
+  hideSignatureOutline: boolean;
+  hideSignatureHash: boolean;
+  lockedFieldsBackground: boolean;
+}
+
+export interface PartnerOrgPreferencesResponse {
+  success: boolean;
+  data: {
+    preferences: PartnerOrgPreferences;
+  };
+}
+
 export interface OrgUserResponse {
   success: boolean;
   data: OrganizationUser;

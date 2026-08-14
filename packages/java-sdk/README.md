@@ -398,6 +398,8 @@ The `TurboPartner` module provides partner portal operations for managing organi
 ```java
 import com.turbodocx.TurboPartnerClient;
 import com.turbodocx.PartnerScope;
+import com.turbodocx.models.PartnerOrgPreferences;
+import com.turbodocx.models.PartnerOrgPreferencesResponse;
 import com.google.gson.JsonObject;
 
 TurboPartnerClient client = new TurboPartnerClient.Builder()
@@ -438,9 +440,28 @@ client.turboPartner().updateOrganizationInfo(orgId, "Acme Corporation");
 Map<String, Object> newFeatures = Map.of("maxUsers", 100, "hasTDAI", true);
 client.turboPartner().updateOrganizationEntitlements(orgId, newFeatures, null);
 
+// Read the org's TurboSign display preferences
+// (returns only the partner-settable keys, with defaults applied)
+PartnerOrgPreferencesResponse read = client.turboPartner().getOrganizationPreferences(orgId);
+System.out.println(read.getData().getPreferences().getLockedFieldsBackground()); // true by default
+
+// Update them — any field left null is omitted, so you change only what you name
+// and every other organization setting is preserved. An explicit false IS sent.
+client.turboPartner().updateOrganizationPreferences(
+    orgId,
+    new PartnerOrgPreferences().setLockedFieldsBackground(false));
+
 // Delete an organization
 client.turboPartner().deleteOrganization(orgId);
 ```
+
+**Partner-settable display preferences**
+
+| Key | Default | Effect |
+|-----|---------|--------|
+| `hideSignatureOutline` | `false` | Hide the outline/label drawn around signed fields |
+| `hideSignatureHash` | `false` | Hide the verification hash printed on signed fields |
+| `lockedFieldsBackground` | `true` | Grey box behind locked fields (`false` = plain text) |
 
 ### Organization User Management
 
@@ -607,6 +628,7 @@ for (int i = 0; i < results.size(); i++) {
 | Category | Method |
 |:---------|:-------|
 | **Organizations** | `createOrganization()`, `listOrganizations()`, `getOrganizationDetails()`, `updateOrganizationInfo()`, `deleteOrganization()`, `updateOrganizationEntitlements()` |
+| **Org display preferences** | `getOrganizationPreferences()`, `updateOrganizationPreferences()` |
 | **Org Users** | `addUserToOrganization()`, `listOrganizationUsers()`, `updateOrganizationUserRole()`, `removeUserFromOrganization()`, `resendOrganizationInvitationToUser()` |
 | **Org API Keys** | `createOrganizationApiKey()`, `listOrganizationApiKeys()`, `updateOrganizationApiKey()`, `revokeOrganizationApiKey()` |
 | **Partner API Keys** | `createPartnerApiKey()`, `listPartnerApiKeys()`, `updatePartnerApiKey()`, `revokePartnerApiKey()` |
