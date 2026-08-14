@@ -434,9 +434,30 @@ entitlements, err := partner.UpdateOrganizationEntitlements(ctx, orgID, &turbodo
     },
 })
 
+// Read the org's TurboSign display preferences
+// (returns only the partner-settable keys, with defaults applied)
+prefs, err := partner.GetOrganizationPreferences(ctx, orgID)
+fmt.Println(prefs.Data.Preferences.LockedFieldsBackground) // true by default
+
+// Update them — every field is a *bool with omitempty, so a nil field is left
+// untouched and an explicit false is still sent. Every other organization
+// setting is preserved.
+updated, err := partner.UpdateOrganizationPreferences(ctx, orgID,
+    &turbodocx.UpdateOrgPreferencesRequest{
+        LockedFieldsBackground: turbodocx.BoolPtr(false),
+    })
+
 // Delete organization
 _, err := partner.DeleteOrganization(ctx, orgID)
 ```
+
+**Partner-settable display preferences**
+
+| Field | Default | Effect |
+|-------|---------|--------|
+| `HideSignatureOutline` | `false` | Hide the outline/label drawn around signed fields |
+| `HideSignatureHash` | `false` | Hide the verification hash printed on signed fields |
+| `LockedFieldsBackground` | `true` | Grey box behind locked fields (`false` = plain text) |
 
 #### Organization User Management
 

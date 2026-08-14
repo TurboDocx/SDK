@@ -506,7 +506,27 @@ TurboDocxSdk::TurboPartner.delete_organization("org-uuid")
 TurboDocxSdk::TurboPartner.update_organization_entitlements("org-uuid",
   features: { maxUsers: 100, hasTDAI: true }
 )
+
+# Read the org's TurboSign display preferences
+# (returns only the partner-settable keys, with defaults applied)
+prefs = TurboDocxSdk::TurboPartner.get_organization_preferences("org-uuid")["data"]["preferences"]
+prefs["lockedFieldsBackground"]   # => true by default
+
+# Update them — pass only the keys you want to change; every other organization
+# setting is preserved. Hash keys stay camelCase: they are the API contract, not
+# Ruby names, and a snake_case key is dropped by the backend allowlist.
+TurboDocxSdk::TurboPartner.update_organization_preferences("org-uuid",
+  "lockedFieldsBackground" => false
+)
 ```
+
+**Partner-settable display preferences**
+
+| Key | Default | Effect |
+|-----|---------|--------|
+| `hideSignatureOutline` | `false` | Hide the outline/label drawn around signed fields |
+| `hideSignatureHash` | `false` | Hide the verification hash printed on signed fields |
+| `lockedFieldsBackground` | `true` | Grey box behind locked fields (`false` = plain text) |
 
 #### Organization User Management
 
@@ -640,6 +660,7 @@ end
 | Category | Methods |
 |:---------|:--------|
 | **Organizations** | `create_organization`, `list_organizations`, `get_organization_details`, `update_organization_info`, `delete_organization`, `update_organization_entitlements` |
+| **Org display preferences** | `get_organization_preferences`, `update_organization_preferences` |
 | **Org Users** | `add_user_to_organization`, `list_organization_users`, `update_organization_user_role`, `remove_user_from_organization`, `resend_organization_invitation_to_user` |
 | **Org API Keys** | `create_organization_api_key`, `list_organization_api_keys`, `update_organization_api_key`, `revoke_organization_api_key` |
 | **Partner API Keys** | `create_partner_api_key`, `list_partner_api_keys`, `update_partner_api_key`, `revoke_partner_api_key` |

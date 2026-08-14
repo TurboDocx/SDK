@@ -424,7 +424,26 @@ await TurboPartner.deleteOrganization('org-uuid');
 await TurboPartner.updateOrganizationEntitlements('org-uuid', {
   features: { maxUsers: 100, hasTDAI: true },
 });
+
+// Read an organization's TurboSign display preferences
+// (returns only the partner-settable keys, with defaults applied)
+const { data } = await TurboPartner.getOrganizationPreferences('org-uuid');
+console.log(data.preferences.lockedFieldsBackground); // true by default
+
+// Update them — pass only the keys you want to change; every other
+// organization setting is preserved
+await TurboPartner.updateOrganizationPreferences('org-uuid', {
+  lockedFieldsBackground: false, // render locked fields as plain text
+});
 ```
+
+**Partner-settable display preferences**
+
+| Key | Default | Effect |
+|-----|---------|--------|
+| `hideSignatureOutline` | `false` | Hide the outline/label drawn around signed fields |
+| `hideSignatureHash` | `false` | Hide the verification hash printed on signed fields |
+| `lockedFieldsBackground` | `true` | Grey box behind locked fields (`false` = plain text) |
 
 #### Organization User Management
 
