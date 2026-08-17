@@ -17,6 +17,7 @@
 
 import { TurboQuote } from "../src/modules/quote";
 import { HttpClient } from "../src/http";
+import { DeclineQuoteRequest, VoidQuoteRequest } from "../src/types/quote";
 
 jest.mock("../src/http", () => {
   const actual = jest.requireActual("../src/http");
@@ -419,6 +420,25 @@ describe("TurboQuote Module", () => {
         "/v1/quotes/q-1/decline",
         { reason: "Budget not approved" }
       );
+    });
+
+    it("should decline a draft quote without a reason", async () => {
+      const mockQuote = { id: "q-1", status: "declined" };
+      mockClient.post.mockResolvedValue({ result: mockQuote, message: "Quote declined" });
+
+      const result = await TurboQuote.declineQuote("q-1", {});
+
+      expect(result.status).toBe("declined");
+      expect(mockClient.post).toHaveBeenCalledWith("/v1/quotes/q-1/decline", {});
+    });
+
+    it("should keep reason optional on decline but required on void", () => {
+      const declineWithoutReason: DeclineQuoteRequest = {};
+      expect(declineWithoutReason.reason).toBeUndefined();
+
+      // @ts-expect-error voidQuote still requires a reason, so an empty object must not type-check
+      const voidWithoutReason: VoidQuoteRequest = {};
+      expect(voidWithoutReason.reason).toBeUndefined();
     });
 
     it("should void a quote with object param and unwrap result", async () => {

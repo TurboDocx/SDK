@@ -301,7 +301,7 @@ type SendQuoteWithDeliverableRequest struct {
 
 // DeclineQuoteRequest is the request to decline a quote
 type DeclineQuoteRequest struct {
-	Reason string `json:"reason"`
+	Reason string `json:"reason,omitempty"` // optional on a draft quote; still required once the quote is sent
 }
 
 // VoidQuoteRequest is the request to void a quote

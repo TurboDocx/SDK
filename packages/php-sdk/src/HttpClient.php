@@ -107,11 +107,14 @@ class HttpClient
     /**
      * Generic POST request
      *
+     * Accepts \stdClass as well as array so a caller can send an empty JSON OBJECT (`{}`). An empty
+     * PHP array encodes as the JSON array `[]`, which endpoints expecting an object reject.
+     *
      * @param string $path
-     * @param array<string, mixed>|null $data
+     * @param array<string, mixed>|\stdClass|null $data
      * @return mixed
      */
-    public function post(string $path, ?array $data = null): mixed
+    public function post(string $path, array|\stdClass|null $data = null): mixed
     {
         try {
             $response = $this->client->post($path, [

@@ -671,6 +671,22 @@ func TestQuoteClient_DeclineQuote(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, QuoteStatusDeclined, result.Status)
 	})
+
+	t.Run("omits reason entirely when it is not set", func(t *testing.T) {
+		// A draft quote never reached the customer, so the API accepts a decline with no reason
+		encoded, err := json.Marshal(&DeclineQuoteRequest{})
+
+		require.NoError(t, err)
+		assert.Equal(t, "{}", string(encoded))
+		assert.NotContains(t, string(encoded), "reason")
+	})
+
+	t.Run("void still serializes reason when it is not set", func(t *testing.T) {
+		encoded, err := json.Marshal(&VoidQuoteRequest{})
+
+		require.NoError(t, err)
+		assert.Equal(t, `{"reason":""}`, string(encoded))
+	})
 }
 
 func TestQuoteClient_VoidQuote(t *testing.T) {

@@ -302,7 +302,7 @@ class TurboQuote:
 
     @classmethod
     async def decline_quote(cls, id: str, request: Dict[str, Any]) -> Dict[str, Any]:
-        """Decline a quote with a reason."""
+        """Decline a quote. The reason is optional for a draft, still required once sent."""
         client = cls._get_client()
         return cls._unwrap(await client.post(f"/v1/quotes/{id}/decline", request))
 

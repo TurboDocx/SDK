@@ -142,7 +142,7 @@ export interface SendQuoteWithDeliverableResponse {
 }
 
 export interface DeclineQuoteRequest {
-  reason: string;
+  reason?: string; // optional for a draft quote, still required by the backend once the quote is sent
 }
 
 export interface VoidQuoteRequest {
