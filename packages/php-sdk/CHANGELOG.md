@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Quote decline now supports `DRAFT` quotes — previously only quotes that had been sent could be declined.
+
+### Changed
+- The decline `reason` is now optional for a draft quote (it is still required once the quote has been sent). The void reason is unchanged and remains required.
+
 ## [0.1.0] - 2026-01-17
 
 ### Added
