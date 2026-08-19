@@ -128,6 +128,36 @@ func main() {
 					Size:      &turbodocx.Size{Width: 200, Height: 50},
 				},
 			},
+			// Conditional (IF/THEN) fields
+			// Controlling checkbox: carries a stable FieldKey that dependents reference.
+			{
+				Type:           "checkbox",
+				RecipientEmail: "john@example.com",
+				Template: &turbodocx.TemplateAnchor{
+					Anchor:    "{request_changes}",
+					Placement: "replace",
+					Size:      &turbodocx.Size{Width: 20, Height: 20},
+				},
+				Metadata: &turbodocx.FieldMetadata{FieldKey: "request_changes"},
+			},
+			// Dependent text field: hidden until the checkbox above is checked ("If checked, explain").
+			{
+				Type:           "text",
+				RecipientEmail: "john@example.com",
+				IsMultiline:    true,
+				Template: &turbodocx.TemplateAnchor{
+					Anchor:    "{change_details}",
+					Placement: "replace",
+					Size:      &turbodocx.Size{Width: 200, Height: 50},
+				},
+				Metadata: &turbodocx.FieldMetadata{
+					Conditional: &turbodocx.FieldConditional{
+						ControllingFieldKey: "request_changes",
+						Operator:            turbodocx.ConditionalOperatorIsChecked,
+						Action:              turbodocx.ConditionalActionShow,
+					},
+				},
+			},
 		},
 	})
 

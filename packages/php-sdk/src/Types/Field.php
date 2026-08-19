@@ -23,6 +23,7 @@ final class Field
      * @param bool $isReadonly Whether this field is read-only (pre-filled, non-editable)
      * @param bool $required Whether this field is required
      * @param string|null $backgroundColor Background color (hex, rgb, or named colors)
+     * @param FieldMetadata|null $metadata Conditional (IF/THEN) logic — a fieldKey on a controlling checkbox, or a conditional rule on a dependent field
      */
     public function __construct(
         public SignatureFieldType $type,
@@ -38,6 +39,7 @@ final class Field
         public bool $isReadonly = false,
         public bool $required = false,
         public ?string $backgroundColor = null,
+        public ?FieldMetadata $metadata = null,
     ) {}
 
     /**
@@ -89,6 +91,11 @@ final class Field
         }
         if ($this->backgroundColor !== null) {
             $data['backgroundColor'] = $this->backgroundColor;
+        }
+
+        // Add conditional (IF/THEN) metadata
+        if ($this->metadata !== null) {
+            $data['metadata'] = $this->metadata->toArray();
         }
 
         return $data;

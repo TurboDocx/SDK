@@ -116,6 +116,36 @@ async def advanced_fields_example():
                         "placement": "replace",
                         "size": {"width": 200, "height": 50}
                     }
+                },
+                # Conditional (IF/THEN) fields
+                # Controlling checkbox: carries a stable fieldKey that dependents reference
+                {
+                    "type": "checkbox",
+                    "recipientEmail": "john@example.com",
+                    "template": {
+                        "anchor": "{request_changes}",
+                        "placement": "replace",
+                        "size": {"width": 20, "height": 20}
+                    },
+                    "metadata": {"fieldKey": "request_changes"}
+                },
+                # Dependent text field: hidden until the checkbox above is checked ("If checked, explain")
+                {
+                    "type": "text",
+                    "recipientEmail": "john@example.com",
+                    "isMultiline": True,
+                    "template": {
+                        "anchor": "{change_details}",
+                        "placement": "replace",
+                        "size": {"width": 200, "height": 50}
+                    },
+                    "metadata": {
+                        "conditional": {
+                            "controllingFieldKey": "request_changes",
+                            "operator": "is_checked",
+                            "action": "show"
+                        }
+                    }
                 }
             ]
         )

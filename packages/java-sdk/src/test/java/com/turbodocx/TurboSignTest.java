@@ -682,4 +682,56 @@ class TurboSignTest {
 
         assertEquals(429, exception.getStatusCode());
     }
+
+    @Test
+    @DisplayName("should serialize conditional (IF/THEN) field metadata into the fields request part")
+    void sendSignatureSerializesConditionalMetadata() throws Exception {
+        server.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody(gson.toJson(Map.of(
+                        "success", true,
+                        "documentId", "doc-conditional",
+                        "status", "UNDER_REVIEW",
+                        "message", "Document sent for signing"
+                ))));
+
+        SendSignatureRequest request = new SendSignatureRequest.Builder()
+                .fileLink("https://example.com/doc.pdf")
+                .recipients(Collections.singletonList(
+                        new Recipient("John Doe", "john@example.com", 1)))
+                .fields(Arrays.asList(
+                        // Controlling checkbox
+                        new Field.Builder()
+                                .type("checkbox")
+                                .recipientEmail("john@example.com")
+                                .metadata(FieldMetadata.forFieldKey("request_changes"))
+                                .build(),
+                        // Dependent field
+                        new Field.Builder()
+                                .type("text")
+                                .recipientEmail("john@example.com")
+                                .metadata(FieldMetadata.forConditional(
+                                        new FieldConditional("request_changes", "is_checked", "show")))
+                                .build()))
+                .build();
+
+        SendSignatureResponse result = client.turboSign().sendSignature(request);
+        assertEquals("doc-conditional", result.getDocumentId());
+
+        // fields is JSON-stringified wholesale into the request body — metadata must ride along.
+        RecordedRequest recorded = server.takeRequest();
+        Map<?, ?> body = gson.fromJson(recorded.getBody().readUtf8(), Map.class);
+        String fieldsJson = (String) body.get("fields");
+        Field[] sentFields = gson.fromJson(fieldsJson, Field[].class);
+
+        assertNotNull(sentFields[0].getMetadata());
+        assertEquals("request_changes", sentFields[0].getMetadata().getFieldKey());
+        assertNotNull(sentFields[1].getMetadata());
+        FieldConditional conditional = sentFields[1].getMetadata().getConditional();
+        assertNotNull(conditional);
+        assertEquals("request_changes", conditional.getControllingFieldKey());
+        assertEquals("is_checked", conditional.getOperator());
+        assertEquals("show", conditional.getAction());
+    }
 }

@@ -406,6 +406,71 @@ describe("TurboSign Module", () => {
 
       expect(result.documentId).toBe("doc-checkbox");
     });
+
+    it("should serialize conditional (IF/THEN) field metadata into the fields request part", async () => {
+      const mockResponse = {
+        success: true,
+        documentId: "doc-conditional",
+        status: "UNDER_REVIEW",
+        recipients: [
+          { id: "r-1", name: "John Doe", email: "john@example.com", metadata: {} },
+        ],
+        message: "Document sent for signing",
+      };
+
+      // Controlling checkbox carries metadata.fieldKey; dependent field references it.
+      const conditionalFields: Field[] = [
+        {
+          type: "checkbox",
+          page: 1,
+          x: 100,
+          y: 600,
+          width: 20,
+          height: 20,
+          recipientEmail: "john@example.com",
+          metadata: { fieldKey: "request_changes" },
+        },
+        {
+          type: "text",
+          page: 1,
+          x: 100,
+          y: 650,
+          width: 200,
+          height: 50,
+          recipientEmail: "john@example.com",
+          metadata: {
+            conditional: {
+              controllingFieldKey: "request_changes",
+              operator: "is_checked",
+              action: "show",
+            },
+          },
+        },
+      ];
+
+      MockedHttpClient.prototype.post = jest
+        .fn()
+        .mockResolvedValue(mockResponse);
+      TurboSign.configure({ apiKey: "test-key" });
+
+      await TurboSign.sendSignature({
+        fileLink: "https://example.com/doc.pdf",
+        recipients: mockRecipients,
+        fields: conditionalFields,
+      });
+
+      // fields is JSON-stringified wholesale into the request body — metadata must ride along.
+      const [, formData] = (MockedHttpClient.prototype.post as jest.Mock).mock
+        .calls[0];
+      const sentFields = JSON.parse(formData.fields);
+
+      expect(sentFields[0].metadata).toEqual({ fieldKey: "request_changes" });
+      expect(sentFields[1].metadata.conditional).toEqual({
+        controllingFieldKey: "request_changes",
+        operator: "is_checked",
+        action: "show",
+      });
+    });
   });
 
   describe("getStatus", () => {

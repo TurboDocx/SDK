@@ -124,6 +124,33 @@ public class TurboSignAdvanced {
                                 .placement("replace")
                                 .size(new Field.Size(200, 50))
                                 .build())
+                            .build(),
+
+                        // Conditional (IF/THEN) fields
+                        // Controlling checkbox: carries a stable fieldKey that dependents reference
+                        new Field.Builder()
+                            .type("checkbox")
+                            .recipientEmail("john@example.com")
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{request_changes}")
+                                .placement("replace")
+                                .size(new Field.Size(20, 20))
+                                .build())
+                            .metadata(FieldMetadata.forFieldKey("request_changes"))
+                            .build(),
+
+                        // Dependent text field: hidden until the checkbox above is checked ("If checked, explain")
+                        new Field.Builder()
+                            .type("text")
+                            .recipientEmail("john@example.com")
+                            .isMultiline(true)
+                            .template(new Field.TemplateAnchor.Builder()
+                                .anchor("{change_details}")
+                                .placement("replace")
+                                .size(new Field.Size(200, 50))
+                                .build())
+                            .metadata(FieldMetadata.forConditional(
+                                new FieldConditional("request_changes", "is_checked", "show")))
                             .build()
                     ))
                     .build()

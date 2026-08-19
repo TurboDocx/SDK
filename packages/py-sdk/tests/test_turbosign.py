@@ -11,6 +11,7 @@ Tests for TurboSign operations:
 - get_audit_trail
 """
 
+import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from turbodocx_sdk import TurboSign, ValidationError, NotFoundError, AuthenticationError
@@ -210,6 +211,59 @@ class TestCreateSignatureReviewLink:
             assert data.get("documentDescription") == "A test contract"
             assert data.get("senderName") == "Sales Team"
             assert data.get("senderEmail") == "sales@company.com"
+
+    @pytest.mark.asyncio
+    async def test_conditional_field_metadata_serializes(self):
+        """Should serialize conditional (IF/THEN) field metadata into the fields request part"""
+        mock_response = {
+            "success": True,
+            "documentId": "doc-conditional",
+            "status": "review_ready",
+            "message": "Document prepared for review"
+        }
+
+        conditional_fields = [
+            # Controlling checkbox carries metadata.fieldKey
+            {
+                "type": "checkbox",
+                "recipientEmail": "john@example.com",
+                "metadata": {"fieldKey": "request_changes"}
+            },
+            # Dependent field references it
+            {
+                "type": "text",
+                "recipientEmail": "john@example.com",
+                "metadata": {
+                    "conditional": {
+                        "controllingFieldKey": "request_changes",
+                        "operator": "is_checked",
+                        "action": "show"
+                    }
+                }
+            }
+        ]
+
+        with patch.object(TurboSign, '_get_client') as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_get_client.return_value = mock_client
+
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
+            await TurboSign.create_signature_review_link(
+                file_link="https://example.com/doc.pdf",
+                recipients=self.mock_recipients(),
+                fields=conditional_fields
+            )
+
+            # fields is json.dumps'd wholesale into the request body — metadata must ride along.
+            data = mock_client.post.call_args[1]["data"]
+            sent_fields = json.loads(data["fields"])
+            assert sent_fields[0]["metadata"] == {"fieldKey": "request_changes"}
+            assert sent_fields[1]["metadata"]["conditional"] == {
+                "controllingFieldKey": "request_changes",
+                "operator": "is_checked",
+                "action": "show"
+            }
 
 
 class TestSendSignature:

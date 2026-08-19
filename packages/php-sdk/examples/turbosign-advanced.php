@@ -23,6 +23,10 @@ use TurboDocx\Types\Field;
 use TurboDocx\Types\SignatureFieldType;
 use TurboDocx\Types\TemplateConfig;
 use TurboDocx\Types\FieldPlacement;
+use TurboDocx\Types\FieldMetadata;
+use TurboDocx\Types\FieldConditional;
+use TurboDocx\Types\ConditionalOperator;
+use TurboDocx\Types\ConditionalAction;
 use TurboDocx\Types\Requests\CreateSignatureReviewLinkRequest;
 
 function advancedFieldsExample(): void
@@ -124,6 +128,38 @@ function advancedFieldsExample(): void
                             anchor: '{notes}',
                             placement: FieldPlacement::REPLACE,
                             size: ['width' => 200, 'height' => 50]
+                        )
+                    ),
+
+                    // Conditional (IF/THEN) fields
+                    // Controlling checkbox: carries a stable fieldKey that dependents reference
+                    new Field(
+                        type: SignatureFieldType::CHECKBOX,
+                        recipientEmail: 'john@example.com',
+                        template: new TemplateConfig(
+                            anchor: '{request_changes}',
+                            placement: FieldPlacement::REPLACE,
+                            size: ['width' => 20, 'height' => 20]
+                        ),
+                        metadata: new FieldMetadata(fieldKey: 'request_changes')
+                    ),
+
+                    // Dependent text field: hidden until the checkbox above is checked ("If checked, explain")
+                    new Field(
+                        type: SignatureFieldType::TEXT,
+                        recipientEmail: 'john@example.com',
+                        isMultiline: true,
+                        template: new TemplateConfig(
+                            anchor: '{change_details}',
+                            placement: FieldPlacement::REPLACE,
+                            size: ['width' => 200, 'height' => 50]
+                        ),
+                        metadata: new FieldMetadata(
+                            conditional: new FieldConditional(
+                                controllingFieldKey: 'request_changes',
+                                operator: ConditionalOperator::IS_CHECKED,
+                                action: ConditionalAction::SHOW
+                            )
                         )
                     ),
                 ],

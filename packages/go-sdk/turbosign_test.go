@@ -278,6 +278,74 @@ func TestTurboSignClient_SendSignature(t *testing.T) {
 	})
 }
 
+func TestTurboSignClient_SendSignatureConditionalMetadata(t *testing.T) {
+	// The whole Fields slice is JSON-marshaled into the "fields" form value, so conditional
+	// (IF/THEN) metadata must ride along untouched.
+	var capturedFields string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]string
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		capturedFields = body["fields"]
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":    true,
+			"documentId": "doc-conditional",
+			"status":     "UNDER_REVIEW",
+			"message":    "Document sent for signing",
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClientWithConfig(ClientConfig{
+		APIKey:      "test-api-key",
+		OrgID:       "test-org-id",
+		BaseURL:     server.URL,
+		SenderEmail: "test@example.com",
+	})
+
+	result, err := client.TurboSign.SendSignature(context.Background(), &SendSignatureRequest{
+		FileLink: "https://example.com/doc.pdf",
+		Recipients: []Recipient{
+			{Name: "John Doe", Email: "john@example.com", SigningOrder: 1},
+		},
+		Fields: []Field{
+			// Controlling checkbox
+			{
+				Type:           "checkbox",
+				RecipientEmail: "john@example.com",
+				Metadata:       &FieldMetadata{FieldKey: "request_changes"},
+			},
+			// Dependent field
+			{
+				Type:           "text",
+				RecipientEmail: "john@example.com",
+				Metadata: &FieldMetadata{
+					Conditional: &FieldConditional{
+						ControllingFieldKey: "request_changes",
+						Operator:            ConditionalOperatorIsChecked,
+						Action:              ConditionalActionShow,
+					},
+				},
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "doc-conditional", result.DocumentID)
+
+	var sentFields []Field
+	require.NoError(t, json.Unmarshal([]byte(capturedFields), &sentFields))
+	require.Len(t, sentFields, 2)
+	require.NotNil(t, sentFields[0].Metadata)
+	assert.Equal(t, "request_changes", sentFields[0].Metadata.FieldKey)
+	require.NotNil(t, sentFields[1].Metadata)
+	require.NotNil(t, sentFields[1].Metadata.Conditional)
+	assert.Equal(t, "request_changes", sentFields[1].Metadata.Conditional.ControllingFieldKey)
+	assert.Equal(t, ConditionalOperatorIsChecked, sentFields[1].Metadata.Conditional.Operator)
+	assert.Equal(t, ConditionalActionShow, sentFields[1].Metadata.Conditional.Action)
+}
+
 func TestTurboSignClient_GetStatus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/turbosign/documents/doc-123/status", r.URL.Path)

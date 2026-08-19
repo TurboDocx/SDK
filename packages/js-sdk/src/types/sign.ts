@@ -298,6 +298,50 @@ export interface DocumentRecipientsResponse {
 // ============================================
 
 /**
+ * How a dependent field's controlling checkbox is tested.
+ * - `is_checked` — the condition is met while the controlling checkbox is checked
+ * - `is_not_checked` — the condition is met while the controlling checkbox is unchecked
+ */
+export type ConditionalOperator = 'is_checked' | 'is_not_checked';
+
+/**
+ * What happens to a dependent field until its condition is met.
+ * - `show` — the field is hidden until the condition is met, then revealed
+ * - `unlock` — the field is visible but read-only until the condition is met, then editable
+ */
+export type ConditionalAction = 'show' | 'unlock';
+
+/**
+ * Conditional (IF/THEN) rule set on a DEPENDENT field.
+ *
+ * The dependent field reacts to a CONTROLLING checkbox elsewhere in the same `fields` array.
+ * The controlling field must be `type: 'checkbox'` and carry `metadata.fieldKey`; this rule
+ * references it by that exact key.
+ */
+export interface FieldConditional {
+  /** Must equal the controlling checkbox's `metadata.fieldKey`. */
+  controllingFieldKey: string;
+  /** Whether the rule fires when the controlling checkbox is checked or unchecked. */
+  operator: ConditionalOperator;
+  /** Whether the dependent field is hidden (`show`) or read-only (`unlock`) until met. */
+  action: ConditionalAction;
+}
+
+/**
+ * Optional per-field metadata for conditional (IF/THEN) logic.
+ *
+ * Set `fieldKey` on a CONTROLLING checkbox to give it a stable client id; set `conditional`
+ * on a DEPENDENT field to make it react to that checkbox. Both sides are authored by the
+ * caller in the same payload.
+ */
+export interface FieldMetadata {
+  /** Stable client id (≤100 chars) for a CONTROLLING checkbox, referenced by dependents. */
+  fieldKey?: string;
+  /** Conditional rule set on a DEPENDENT field. */
+  conditional?: FieldConditional;
+}
+
+/**
  * Field configuration for single-step operations
  * Supports both coordinate-based and template anchor-based positioning
  */
@@ -343,6 +387,11 @@ export interface Field {
     /** Use regex for anchor/searchText (default: false) */
     useRegex?: boolean;
   };
+  /**
+   * Optional metadata for conditional (IF/THEN) logic. Set `fieldKey` on a controlling
+   * checkbox; set `conditional` on a dependent field that reacts to it.
+   */
+  metadata?: FieldMetadata;
 }
 
 /**

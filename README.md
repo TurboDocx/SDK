@@ -345,13 +345,22 @@ await TurboSign.resend(documentId, ['recipient-uuid']);
 | `initials` | Initials field |
 | `text` | Free-form text input |
 | `date` | Date stamp |
-| `checkbox` | Checkbox / agreement |
+| `checkbox` | Checkbox / agreement — also the **controlling** field for conditional (IF/THEN) logic |
 | `full_name` | Full name |
 | `first_name` | First name |
 | `last_name` | Last name |
 | `email` | Email address |
 | `title` | Job title |
 | `company` | Company name |
+
+#### Conditional (IF/THEN) fields
+
+Any field accepts an optional `metadata` object for conditional logic. Set `metadata.fieldKey` on a
+controlling `checkbox`, then set `metadata.conditional` (`controllingFieldKey`, `operator`:
+`is_checked` | `is_not_checked`, `action`: `show` | `unlock`) on a dependent field that references
+that key. `show` hides the dependent field until the condition is met; `unlock` keeps it visible
+but read-only until met. See each SDK's README "Conditional (IF/THEN) Fields" section for the
+language-specific form.
 
 ---
 

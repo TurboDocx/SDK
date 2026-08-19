@@ -1070,6 +1070,48 @@ Non-admin callers receive `TurboDocxSdk::AuthorizationError`.
 | `title` | Job title |
 | `company` | Company name |
 
+The `checkbox` type doubles as the **controlling** field for conditional logic (see below).
+
+### Conditional (IF/THEN) Fields
+
+Any field hash may carry an optional `"metadata"` key that drives conditional logic. Set
+`metadata.fieldKey` on a **controlling** `checkbox` to give it a stable id, then set
+`metadata.conditional` on a **dependent** field that references that id. Field hashes are passed
+through verbatim, so the keys stay **camelCase**:
+
+```ruby
+"fields" => [
+  # Controlling checkbox — carries the fieldKey dependents reference
+  {
+    "type"           => "checkbox",
+    "recipientEmail" => "john@example.com",
+    "template"       => { "anchor" => "{request_changes}", "placement" => "replace", "size" => { "width" => 20, "height" => 20 } },
+    "metadata"       => { "fieldKey" => "request_changes" }
+  },
+  # Dependent text field — hidden until the checkbox is checked ("If checked, explain")
+  {
+    "type"           => "text",
+    "recipientEmail" => "john@example.com",
+    "isMultiline"    => true,
+    "template"       => { "anchor" => "{change_details}", "placement" => "replace", "size" => { "width" => 200, "height" => 50 } },
+    "metadata"       => {
+      "conditional" => {
+        "controllingFieldKey" => "request_changes", # must equal the checkbox's fieldKey
+        "operator"            => "is_checked",       # "is_checked" | "is_not_checked"
+        "action"              => "show"              # "show" (hidden until met) | "unlock" (read-only until met)
+      }
+    }
+  }
+]
+```
+
+| `metadata` key | Set on | Meaning |
+|:---------------|:-------|:--------|
+| `fieldKey` | controlling `checkbox` | Stable client id (≤100 chars) that dependents reference |
+| `conditional.controllingFieldKey` | dependent field | Must equal the controlling checkbox's `fieldKey` |
+| `conditional.operator` | dependent field | `"is_checked"` or `"is_not_checked"` |
+| `conditional.action` | dependent field | `"show"` (hidden until met) or `"unlock"` (visible but read-only until met) |
+
 ---
 
 ## Constants

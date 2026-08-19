@@ -120,7 +120,7 @@ public class ManualTest {
                 ))
                 .fields(Arrays.asList(
                         new Field("signature", 1, 100, 550, 200, 50, TEST_EMAIL),
-                        new Field("checkbox", 1, 320, 550, 50, 50, TEST_EMAIL, "true", null, null, null, null, null)
+                        new Field("checkbox", 1, 320, 550, 50, 50, TEST_EMAIL, "true", null, null, null, null, null, null)
                 ))
                 .documentName("Review Test Document (fileLink)")
                 .build();
@@ -160,7 +160,8 @@ public class ManualTest {
                 null,                // isReadonly
                 true,                // required
                 null,                // backgroundColor
-                templateAnchor       // template anchor config
+                templateAnchor,      // template anchor config
+                null                 // metadata (no conditional logic)
         );
 
         // Coordinate-based field (traditional approach)
@@ -177,7 +178,8 @@ public class ManualTest {
                 null,                // isReadonly
                 null,                // required
                 null,                // backgroundColor
-                null                 // no template (coordinate-based)
+                null,                // no template (coordinate-based)
+                null                 // metadata (no conditional logic)
         );
 
         SendSignatureRequest request = new SendSignatureRequest.Builder()

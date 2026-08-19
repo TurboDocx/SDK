@@ -47,15 +47,18 @@ public class Field {
     @SerializedName("template")
     private final TemplateAnchor template;
 
+    @SerializedName("metadata")
+    private final FieldMetadata metadata;
+
     // Simple constructor for coordinate-based fields
     public Field(String type, int page, int x, int y, int width, int height, String recipientEmail) {
-        this(type, page, x, y, width, height, recipientEmail, null, null, null, null, null, null);
+        this(type, page, x, y, width, height, recipientEmail, null, null, null, null, null, null, null);
     }
 
     // Full constructor
     public Field(String type, Integer page, Integer x, Integer y, Integer width, Integer height,
                  String recipientEmail, String defaultValue, Boolean isMultiline, Boolean isReadonly,
-                 Boolean required, String backgroundColor, TemplateAnchor template) {
+                 Boolean required, String backgroundColor, TemplateAnchor template, FieldMetadata metadata) {
         this.type = type;
         this.page = page;
         this.x = x;
@@ -69,6 +72,7 @@ public class Field {
         this.required = required;
         this.backgroundColor = backgroundColor;
         this.template = template;
+        this.metadata = metadata;
     }
 
     public String getType() { return type; }
@@ -84,6 +88,7 @@ public class Field {
     public Boolean getRequired() { return required; }
     public String getBackgroundColor() { return backgroundColor; }
     public TemplateAnchor getTemplate() { return template; }
+    public FieldMetadata getMetadata() { return metadata; }
 
     /**
      * Template anchor configuration for dynamic field positioning
@@ -246,6 +251,7 @@ public class Field {
         private Boolean required;
         private String backgroundColor;
         private TemplateAnchor template;
+        private FieldMetadata metadata;
 
         public Builder type(String type) {
             this.type = type;
@@ -312,6 +318,11 @@ public class Field {
             return this;
         }
 
+        public Builder metadata(FieldMetadata metadata) {
+            this.metadata = metadata;
+            return this;
+        }
+
         public Field build() {
             // Validation
             if (type == null || type.trim().isEmpty()) {
@@ -323,7 +334,7 @@ public class Field {
 
             return new Field(type, page, x, y, width, height, recipientEmail,
                            defaultValue, isMultiline, isReadonly, required,
-                           backgroundColor, template);
+                           backgroundColor, template, metadata);
         }
     }
 }
