@@ -56,24 +56,49 @@ function conditionalFieldsExample(): void
 
                     // show + is_checked -- HIDDEN until "request_changes" is checked.
                     new Field(
-                        type: SignatureFieldType::TEXT, recipientEmail: 'john@example.com', page: 1, x: 120, y: 120, width: 260, height: 40,
+                        type: SignatureFieldType::TEXT,
+                        recipientEmail: 'john@example.com',
+                        page: 1,
+                        x: 120,
+                        y: 120,
+                        width: 260,
+                        height: 40,
                         metadata: new FieldMetadata(conditional: new FieldConditional(controllingFieldKey: 'request_changes', operator: ConditionalOperator::IS_CHECKED, action: ConditionalAction::SHOW))
                     ),
                     // ONE checkbox driving a SECOND dependent (same controllingFieldKey) -- a signature.
                     new Field(
-                        type: SignatureFieldType::SIGNATURE, recipientEmail: 'john@example.com', page: 1, x: 120, y: 180, width: 200, height: 50,
+                        type: SignatureFieldType::SIGNATURE,
+                        recipientEmail: 'john@example.com',
+                        page: 1,
+                        x: 120,
+                        y: 180,
+                        width: 200,
+                        height: 50,
                         metadata: new FieldMetadata(conditional: new FieldConditional(controllingFieldKey: 'request_changes', operator: ConditionalOperator::IS_CHECKED, action: ConditionalAction::SHOW))
                     ),
 
                     // unlock + is_checked -- VISIBLE but locked until "override_amount" is checked.
                     new Field(
-                        type: SignatureFieldType::TEXT, recipientEmail: 'john@example.com', page: 1, x: 120, y: 300, width: 150, height: 30, defaultValue: '1000.00',
+                        type: SignatureFieldType::TEXT,
+                        recipientEmail: 'john@example.com',
+                        page: 1,
+                        x: 120,
+                        y: 300,
+                        width: 150,
+                        height: 30,
+                        defaultValue: '1000.00',
                         metadata: new FieldMetadata(conditional: new FieldConditional(controllingFieldKey: 'override_amount', operator: ConditionalOperator::IS_CHECKED, action: ConditionalAction::UNLOCK))
                     ),
 
                     // show + is_not_checked -- a "please explain" box shown only while consent is WITHHELD.
                     new Field(
-                        type: SignatureFieldType::TEXT, recipientEmail: 'john@example.com', page: 1, x: 120, y: 480, width: 260, height: 40,
+                        type: SignatureFieldType::TEXT,
+                        recipientEmail: 'john@example.com',
+                        page: 1,
+                        x: 120,
+                        y: 480,
+                        width: 260,
+                        height: 40,
                         metadata: new FieldMetadata(conditional: new FieldConditional(controllingFieldKey: 'consent', operator: ConditionalOperator::IS_NOT_CHECKED, action: ConditionalAction::SHOW))
                     ),
 
