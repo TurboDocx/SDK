@@ -947,6 +947,48 @@ if (quote.getPreparedBy() != null) {
 | `title` | Job title |
 | `company` | Company name |
 
+The `checkbox` type doubles as the **controlling** field for conditional logic (see below).
+
+### Conditional (IF/THEN) Fields
+
+Any field may carry an optional `FieldMetadata` that drives conditional logic. Set a `fieldKey` on
+a **controlling** `checkbox` to give it a stable id, then set a `FieldConditional` on a
+**dependent** field that references that id:
+
+```java
+import com.turbodocx.models.Field;
+import com.turbodocx.models.FieldMetadata;
+import com.turbodocx.models.FieldConditional;
+
+List<Field> fields = Arrays.asList(
+    // Controlling checkbox — carries the fieldKey dependents reference
+    new Field.Builder()
+        .type("checkbox")
+        .recipientEmail("john@example.com")
+        .template(new Field.TemplateAnchor.Builder().anchor("{request_changes}").placement("replace").size(new Field.Size(20, 20)).build())
+        .metadata(FieldMetadata.forFieldKey("request_changes"))
+        .build(),
+    // Dependent text field — hidden until the checkbox is checked ("If checked, explain")
+    new Field.Builder()
+        .type("text")
+        .recipientEmail("john@example.com")
+        .isMultiline(true)
+        .template(new Field.TemplateAnchor.Builder().anchor("{change_details}").placement("replace").size(new Field.Size(200, 50)).build())
+        .metadata(FieldMetadata.forConditional(
+            new FieldConditional("request_changes", "is_checked", "show")))
+        .build()
+);
+```
+
+`FieldConditional(controllingFieldKey, operator, action)`:
+
+| Argument | Set on | Meaning |
+|:---------|:-------|:--------|
+| `fieldKey` (on `FieldMetadata`) | controlling `checkbox` | Stable client id (≤100 chars) that dependents reference |
+| `controllingFieldKey` | dependent field | Must equal the controlling checkbox's `fieldKey` |
+| `operator` | dependent field | `"is_checked"` or `"is_not_checked"` |
+| `action` | dependent field | `"show"` (hidden until met) or `"unlock"` (visible but read-only until met) |
+
 ---
 
 ## Examples

@@ -163,6 +163,13 @@ class TurboSign:
                 Each recipient should have: name, email, signingOrder
             fields: Signature fields configuration
                 Each field should have: type, recipientEmail, and positioning info
+                Optional per-field "metadata" drives conditional (IF/THEN) logic:
+                  - On a controlling checkbox: {"metadata": {"fieldKey": "request_changes"}}
+                  - On a dependent field: {"metadata": {"conditional": {
+                      "controllingFieldKey": "request_changes",  # must equal the checkbox's fieldKey
+                      "operator": "is_checked" | "is_not_checked",
+                      "action": "show" | "unlock"}}}  # show = hidden until met; unlock = read-only until met
+                Field dicts are passed through verbatim, so keys stay camelCase.
             file: PDF file content as bytes
             file_name: Original filename
             file_link: URL to document file
@@ -310,6 +317,13 @@ class TurboSign:
                 Each recipient should have: name, email, signingOrder
             fields: Signature fields configuration
                 Each field should have: type, recipientEmail, and positioning info
+                Optional per-field "metadata" drives conditional (IF/THEN) logic:
+                  - On a controlling checkbox: {"metadata": {"fieldKey": "request_changes"}}
+                  - On a dependent field: {"metadata": {"conditional": {
+                      "controllingFieldKey": "request_changes",  # must equal the checkbox's fieldKey
+                      "operator": "is_checked" | "is_not_checked",
+                      "action": "show" | "unlock"}}}  # show = hidden until met; unlock = read-only until met
+                Field dicts are passed through verbatim, so keys stay camelCase.
             file: PDF file content as bytes
             file_name: Original filename
             file_link: URL to document file

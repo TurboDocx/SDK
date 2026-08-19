@@ -585,8 +585,56 @@ SignatureFieldType::LAST_NAME     // Last name
 SignatureFieldType::EMAIL         // Email address
 SignatureFieldType::TITLE         // Job title
 SignatureFieldType::COMPANY       // Company name
-SignatureFieldType::CHECKBOX      // Checkbox field
+SignatureFieldType::CHECKBOX      // Checkbox field (also the controlling field for conditional logic)
 ```
+
+### Conditional (IF/THEN) Fields
+
+Any field may carry an optional `FieldMetadata` that drives conditional logic. Set a `fieldKey` on
+a **controlling** `CHECKBOX` to give it a stable id, then set a `FieldConditional` on a
+**dependent** field that references that id:
+
+```php
+use TurboDocx\Types\Field;
+use TurboDocx\Types\SignatureFieldType;
+use TurboDocx\Types\TemplateConfig;
+use TurboDocx\Types\FieldPlacement;
+use TurboDocx\Types\FieldMetadata;
+use TurboDocx\Types\FieldConditional;
+use TurboDocx\Types\ConditionalOperator;
+use TurboDocx\Types\ConditionalAction;
+
+$fields = [
+    // Controlling checkbox — carries the fieldKey dependents reference
+    new Field(
+        type: SignatureFieldType::CHECKBOX,
+        recipientEmail: 'john@example.com',
+        template: new TemplateConfig(anchor: '{request_changes}', placement: FieldPlacement::REPLACE, size: ['width' => 20, 'height' => 20]),
+        metadata: new FieldMetadata(fieldKey: 'request_changes')
+    ),
+    // Dependent text field — hidden until the checkbox is checked ("If checked, explain")
+    new Field(
+        type: SignatureFieldType::TEXT,
+        recipientEmail: 'john@example.com',
+        isMultiline: true,
+        template: new TemplateConfig(anchor: '{change_details}', placement: FieldPlacement::REPLACE, size: ['width' => 200, 'height' => 50]),
+        metadata: new FieldMetadata(
+            conditional: new FieldConditional(
+                controllingFieldKey: 'request_changes',        // must equal the checkbox's fieldKey
+                operator: ConditionalOperator::IS_CHECKED,      // IS_CHECKED | IS_NOT_CHECKED
+                action: ConditionalAction::SHOW                 // SHOW (hidden until met) | UNLOCK (read-only until met)
+            )
+        )
+    ),
+];
+```
+
+| `FieldMetadata` field | Set on | Meaning |
+|:----------------------|:-------|:--------|
+| `fieldKey` | controlling `CHECKBOX` | Stable client id (≤100 chars) that dependents reference |
+| `conditional->controllingFieldKey` | dependent field | Must equal the controlling checkbox's `fieldKey` |
+| `conditional->operator` | dependent field | `ConditionalOperator::IS_CHECKED` (`"is_checked"`) or `IS_NOT_CHECKED` (`"is_not_checked"`) |
+| `conditional->action` | dependent field | `ConditionalAction::SHOW` (hidden until met) or `UNLOCK` (visible but read-only until met) |
 
 ### Field Positioning
 

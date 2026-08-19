@@ -68,6 +68,55 @@ type Field struct {
 	Required        bool            `json:"required,omitempty"`
 	BackgroundColor string          `json:"backgroundColor,omitempty"`
 	Template        *TemplateAnchor `json:"template,omitempty"`
+	// Metadata carries optional conditional (IF/THEN) logic — a FieldKey on a controlling
+	// checkbox, or a Conditional rule on a dependent field. Omitted when nil.
+	Metadata *FieldMetadata `json:"metadata,omitempty"`
+}
+
+// ConditionalOperator is how a dependent field's controlling checkbox is tested.
+type ConditionalOperator string
+
+const (
+	// ConditionalOperatorIsChecked fires while the controlling checkbox is checked.
+	ConditionalOperatorIsChecked ConditionalOperator = "is_checked"
+	// ConditionalOperatorIsNotChecked fires while the controlling checkbox is unchecked.
+	ConditionalOperatorIsNotChecked ConditionalOperator = "is_not_checked"
+)
+
+// ConditionalAction is what happens to a dependent field until its condition is met.
+type ConditionalAction string
+
+const (
+	// ConditionalActionShow keeps the field hidden until the condition is met.
+	ConditionalActionShow ConditionalAction = "show"
+	// ConditionalActionUnlock keeps the field visible but read-only until the condition is met.
+	ConditionalActionUnlock ConditionalAction = "unlock"
+)
+
+// FieldConditional is a conditional (IF/THEN) rule set on a DEPENDENT field.
+//
+// The dependent field reacts to a CONTROLLING checkbox elsewhere in the same Fields slice.
+// The controlling field must be Type "checkbox" and carry Metadata.FieldKey; this rule
+// references it by that exact key.
+type FieldConditional struct {
+	// ControllingFieldKey must equal the controlling checkbox's Metadata.FieldKey.
+	ControllingFieldKey string `json:"controllingFieldKey"`
+	// Operator is whether the rule fires when the checkbox is checked or unchecked.
+	Operator ConditionalOperator `json:"operator"`
+	// Action is whether the dependent field is hidden ("show") or read-only ("unlock") until met.
+	Action ConditionalAction `json:"action"`
+}
+
+// FieldMetadata is optional per-field metadata for conditional (IF/THEN) logic.
+//
+// Set FieldKey on a CONTROLLING checkbox to give it a stable client id; set Conditional on a
+// DEPENDENT field to make it react to that checkbox. Both sides are authored by the caller in
+// the same payload.
+type FieldMetadata struct {
+	// FieldKey is a stable client id (<=100 chars) for a controlling checkbox, referenced by dependents.
+	FieldKey string `json:"fieldKey,omitempty"`
+	// Conditional is the rule set on a dependent field.
+	Conditional *FieldConditional `json:"conditional,omitempty"`
 }
 
 // CreateSignatureReviewLinkRequest is the request for CreateSignatureReviewLink

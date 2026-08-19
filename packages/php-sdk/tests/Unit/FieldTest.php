@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace TurboDocx\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
+use TurboDocx\Types\ConditionalAction;
+use TurboDocx\Types\ConditionalOperator;
 use TurboDocx\Types\Field;
+use TurboDocx\Types\FieldConditional;
+use TurboDocx\Types\FieldMetadata;
 use TurboDocx\Types\FieldPlacement;
 use TurboDocx\Types\SignatureFieldType;
 use TurboDocx\Types\TemplateConfig;
@@ -143,5 +147,49 @@ final class FieldTest extends TestCase
         $this->assertArrayNotHasKey('required', $array);
         $this->assertArrayNotHasKey('backgroundColor', $array);
         $this->assertArrayNotHasKey('template', $array);
+        $this->assertArrayNotHasKey('metadata', $array);
+    }
+
+    public function testToArrayWithControllingCheckboxFieldKey(): void
+    {
+        // A controlling checkbox carries a stable fieldKey that dependents reference.
+        $field = new Field(
+            type: SignatureFieldType::CHECKBOX,
+            recipientEmail: 'john@example.com',
+            metadata: new FieldMetadata(fieldKey: 'request_changes')
+        );
+
+        $array = $field->toArray();
+
+        $this->assertArrayHasKey('metadata', $array);
+        $this->assertEquals(['fieldKey' => 'request_changes'], $array['metadata']);
+    }
+
+    public function testToArrayWithDependentConditional(): void
+    {
+        // A dependent field references the controlling checkbox by its fieldKey.
+        $field = new Field(
+            type: SignatureFieldType::TEXT,
+            recipientEmail: 'john@example.com',
+            isMultiline: true,
+            metadata: new FieldMetadata(
+                conditional: new FieldConditional(
+                    controllingFieldKey: 'request_changes',
+                    operator: ConditionalOperator::IS_CHECKED,
+                    action: ConditionalAction::SHOW
+                )
+            )
+        );
+
+        $array = $field->toArray();
+
+        $this->assertArrayHasKey('metadata', $array);
+        $this->assertEquals([
+            'conditional' => [
+                'controllingFieldKey' => 'request_changes',
+                'operator' => 'is_checked',
+                'action' => 'show',
+            ],
+        ], $array['metadata']);
     }
 }

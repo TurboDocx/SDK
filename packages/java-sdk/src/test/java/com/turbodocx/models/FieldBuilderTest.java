@@ -160,6 +160,56 @@ class FieldBuilderTest {
     }
 
     // ============================================
+    // Conditional (IF/THEN) metadata Tests
+    // ============================================
+
+    @Test
+    @DisplayName("should build a controlling checkbox carrying a metadata fieldKey")
+    void buildControllingCheckboxWithFieldKey() {
+        Field field = new Field.Builder()
+                .type("checkbox")
+                .recipientEmail("john@example.com")
+                .metadata(FieldMetadata.forFieldKey("request_changes"))
+                .build();
+
+        assertNotNull(field.getMetadata());
+        assertEquals("request_changes", field.getMetadata().getFieldKey());
+        assertNull(field.getMetadata().getConditional());
+    }
+
+    @Test
+    @DisplayName("should build a dependent field carrying a conditional rule")
+    void buildDependentFieldWithConditional() {
+        Field field = new Field.Builder()
+                .type("text")
+                .recipientEmail("john@example.com")
+                .isMultiline(true)
+                .metadata(FieldMetadata.forConditional(
+                        new FieldConditional("request_changes", "is_checked", "show")))
+                .build();
+
+        assertNotNull(field.getMetadata());
+        assertNull(field.getMetadata().getFieldKey());
+        FieldConditional conditional = field.getMetadata().getConditional();
+        assertNotNull(conditional);
+        assertEquals("request_changes", conditional.getControllingFieldKey());
+        assertEquals("is_checked", conditional.getOperator());
+        assertEquals("show", conditional.getAction());
+    }
+
+    @Test
+    @DisplayName("should leave metadata null when not set")
+    void metadataNullByDefault() {
+        Field field = new Field.Builder()
+                .type("signature")
+                .page(1).x(100).y(500).width(200).height(50)
+                .recipientEmail("john@example.com")
+                .build();
+
+        assertNull(field.getMetadata());
+    }
+
+    // ============================================
     // Field.TemplateAnchor.Builder Tests
     // ============================================
 

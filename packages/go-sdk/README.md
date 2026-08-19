@@ -949,6 +949,45 @@ if err == nil {
 | `title` | Job title |
 | `company` | Company name |
 
+The `checkbox` type doubles as the **controlling** field for conditional logic (see below).
+
+### Conditional (IF/THEN) Fields
+
+Any field may carry an optional `Metadata` (`*FieldMetadata`) that drives conditional logic. Set
+`FieldKey` on a **controlling** `checkbox` to give it a stable id, then set `Conditional` on a
+**dependent** field that references that id:
+
+```go
+Fields: []turbodocx.Field{
+    // Controlling checkbox — carries the FieldKey dependents reference
+    {
+        Type:           "checkbox",
+        RecipientEmail: "john@example.com",
+        Metadata:       &turbodocx.FieldMetadata{FieldKey: "request_changes"},
+    },
+    // Dependent text field — hidden until the checkbox is checked ("If checked, explain")
+    {
+        Type:           "text",
+        RecipientEmail: "john@example.com",
+        IsMultiline:    true,
+        Metadata: &turbodocx.FieldMetadata{
+            Conditional: &turbodocx.FieldConditional{
+                ControllingFieldKey: "request_changes",                    // must equal the checkbox's FieldKey
+                Operator:            turbodocx.ConditionalOperatorIsChecked, // IsChecked | IsNotChecked
+                Action:              turbodocx.ConditionalActionShow,        // Show (hidden until met) | Unlock (read-only until met)
+            },
+        },
+    },
+}
+```
+
+| `Metadata` field | Set on | Meaning |
+|:-----------------|:-------|:--------|
+| `FieldKey` | controlling `checkbox` | Stable client id (≤100 chars) that dependents reference |
+| `Conditional.ControllingFieldKey` | dependent field | Must equal the controlling checkbox's `FieldKey` |
+| `Conditional.Operator` | dependent field | `ConditionalOperatorIsChecked` (`"is_checked"`) or `ConditionalOperatorIsNotChecked` (`"is_not_checked"`) |
+| `Conditional.Action` | dependent field | `ConditionalActionShow` (hidden until met) or `ConditionalActionUnlock` (visible but read-only until met) |
+
 ---
 
 ## Type Reference
@@ -982,6 +1021,7 @@ type Field struct {
     Required        bool            `json:"required,omitempty"`        // Field is required
     BackgroundColor string          `json:"backgroundColor,omitempty"` // Background color (hex)
     Template        *TemplateAnchor `json:"template,omitempty"`        // Template anchor for dynamic positioning
+    Metadata        *FieldMetadata  `json:"metadata,omitempty"`        // Conditional (IF/THEN) logic — see "Conditional Fields"
 }
 ```
 

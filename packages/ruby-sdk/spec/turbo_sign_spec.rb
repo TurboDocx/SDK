@@ -166,6 +166,55 @@ RSpec.describe TurboDocxSdk::TurboSign do
       )
     end
 
+    it "serializes conditional (IF/THEN) field metadata into the fields request part" do
+      mock_response = {
+        "success" => true,
+        "documentId" => "doc-conditional",
+        "status" => "review_ready",
+        "message" => "Document prepared for review"
+      }
+
+      captured_data = nil
+      allow(mock_client).to receive(:post) do |_path, data|
+        captured_data = data
+        mock_response
+      end
+
+      described_class.create_signature_review_link(
+        "fileLink" => "https://example.com/doc.pdf",
+        "recipients" => [{ "name" => "John Doe", "email" => "john@example.com", "signingOrder" => 1 }],
+        "fields" => [
+          # Controlling checkbox carries metadata.fieldKey
+          {
+            "type" => "checkbox",
+            "recipientEmail" => "john@example.com",
+            "metadata" => { "fieldKey" => "request_changes" }
+          },
+          # Dependent field references it
+          {
+            "type" => "text",
+            "recipientEmail" => "john@example.com",
+            "metadata" => {
+              "conditional" => {
+                "controllingFieldKey" => "request_changes",
+                "operator" => "is_checked",
+                "action" => "show"
+              }
+            }
+          }
+        ]
+      )
+
+      # fields is JSON.generate'd wholesale into the request body -- metadata must ride along.
+      sent_fields = JSON.parse(captured_data["fields"])
+      expect(sent_fields[0]["metadata"]).to eq("fieldKey" => "request_changes")
+      expect(sent_fields[1]["metadata"]["conditional"]).to eq(
+        "controllingFieldKey" => "request_changes",
+        "operator" => "is_checked",
+        "action" => "show"
+      )
+    end
+
     it "prepares document for review with deliverable ID" do
       mock_response = {
         "success" => true,
