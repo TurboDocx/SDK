@@ -1015,7 +1015,7 @@ type Field struct {
     Width           int             `json:"width,omitempty"`           // Field width
     Height          int             `json:"height,omitempty"`          // Field height
     RecipientEmail  string          `json:"recipientEmail"`            // Email of the recipient who fills this field
-    DefaultValue    string          `json:"defaultValue,omitempty"`    // Pre-filled value (text fields)
+    DefaultValue    string          `json:"defaultValue,omitempty"`    // Pre-filled value (text, identity, and date fields)
     IsMultiline     bool            `json:"isMultiline,omitempty"`     // Allow multiple lines (text fields)
     IsReadonly      bool            `json:"isReadonly,omitempty"`      // Read-only field
     Required        bool            `json:"required,omitempty"`        // Field is required
