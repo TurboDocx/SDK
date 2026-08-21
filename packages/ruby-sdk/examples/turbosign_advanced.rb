@@ -59,6 +59,8 @@ begin
       {
         "type"           => "date",
         "recipientEmail" => "john@example.com",
+        # pins a fixed date in MM/DD/YYYY; omit defaultValue to auto-fill the recipient's signing date
+        "defaultValue"   => "12/31/2026",
         "template"       => {
           "anchor"    => "{date}",
           "placement" => "replace",

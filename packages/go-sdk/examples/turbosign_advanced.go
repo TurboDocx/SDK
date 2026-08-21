@@ -67,6 +67,8 @@ func main() {
 			{
 				Type:           "date",
 				RecipientEmail: "john@example.com",
+				// pins a fixed date in MM/DD/YYYY; omit DefaultValue to auto-fill the recipient's signing date
+				DefaultValue:   "12/31/2026",
 				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{date}",
 					Placement: "replace",
