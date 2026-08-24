@@ -52,7 +52,7 @@ final class TurboSignGetStatusTest extends TestCase
 
     public function testGetStatusParsesExpiresAtWhenTheDocumentHasADeadline(): void
     {
-        $this->configureWithResponse(json_encode(['data' => [
+        $this->configureWithResponse((string) json_encode(['data' => [
             'status' => 'under_review',
             'expiresAt' => '2026-08-02T23:59:59.000Z',
         ]]));
@@ -67,7 +67,7 @@ final class TurboSignGetStatusTest extends TestCase
     // Expiration is opt-in, so most documents never expire and the key is simply absent.
     public function testGetStatusLeavesExpiresAtNullWhenAbsent(): void
     {
-        $this->configureWithResponse(json_encode(['data' => [
+        $this->configureWithResponse((string) json_encode(['data' => [
             'status' => 'under_review',
         ]]));
 
@@ -79,7 +79,7 @@ final class TurboSignGetStatusTest extends TestCase
 
     public function testGetStatusReportsTheTerminalExpiredStatusWithExpiresAt(): void
     {
-        $this->configureWithResponse(json_encode(['data' => [
+        $this->configureWithResponse((string) json_encode(['data' => [
             'status' => 'expired',
             'expiresAt' => '2026-01-01T00:00:00.000Z',
         ]]));

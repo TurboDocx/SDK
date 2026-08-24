@@ -52,7 +52,7 @@ final class TurboSignMultipartBooleanTest extends TestCase
         // ...and replace its internal Guzzle client with one that records requests and returns a
         // canned success body instead of making a real call.
         $mock = new MockHandler([
-            new Response(200, [], json_encode(['data' => [
+            new Response(200, [], (string) json_encode(['data' => [
                 'documentId' => 'doc-1',
                 'status' => 'under_review',
                 'message' => 'ok',
