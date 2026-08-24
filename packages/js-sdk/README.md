@@ -252,6 +252,40 @@ result.recipients?.forEach(r => {
 // For signing progress afterwards, use getRecipients().
 ```
 
+#### `sendReminder(documentId, recipientIds?)`
+
+Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic
+reminder cadence — it works even when reminders are disabled or the cap is spent, does not
+consume that cap, and only emails signers at the CURRENT signing order. Omit the recipient ids
+to remind everyone eligible; do not pass an empty array, which the API rejects.
+
+```typescript
+const { results } = await TurboSign.sendReminder('doc-uuid-here');
+
+results.forEach(r => {
+  // Anyone not emailed comes back as a skipped_* status, so you can tell who was reached.
+  console.log(`${r.recipientId}: ${r.status}`);  // e.g. 'sent', 'skipped_wrong_order'
+});
+```
+
+Reminders and expiration can also be scheduled when you send. `sendSignature` accepts optional
+`remindersEnabled` / `reminderDelay` / `reminderInterval` / `maxReminders` and
+`expirationEnabled` / `expireAfter` / `expirationWarning` / `expirationWarningInterval` fields —
+both features are OFF by default, so omitting them preserves the original send behavior.
+Durations are `{ value, unit }` (`unit` is `'hours'` or `'days'`). The deadline is frozen onto
+the document at send time and is then readable via `getStatus().expiresAt`. See the runnable
+example in [`examples/turbosign-reminders-expiration.ts`](examples/turbosign-reminders-expiration.ts).
+
+```typescript
+const result = await TurboSign.sendSignature({
+  // ...recipients, fields, etc.
+  remindersEnabled: true,
+  reminderDelay: { value: 2, unit: 'days' },
+  expirationEnabled: true,
+  expireAfter: { value: 14, unit: 'days' }
+});
+```
+
 #### `getStatus(documentId)`
 
 Check the document-level status. For per-recipient detail, use
@@ -260,7 +294,9 @@ Check the document-level status. For per-recipient detail, use
 ```typescript
 const status = await TurboSign.getStatus('doc-uuid-here');
 
-console.log('Document Status:', status.status);  // 'under_review' | 'completed' | 'voided' | ...
+console.log('Document Status:', status.status);  // 'under_review' | 'completed' | 'voided' | 'expired' | ...
+// expiresAt is the signing-window deadline (ISO 8601), or undefined when expiration is off.
+console.log('Expires:', status.expiresAt ?? 'never');
 ```
 
 #### `getRecipients(documentId)`
@@ -794,6 +830,33 @@ console.log('Line item ID:', items[0].id);
 const sent = await TurboQuote.sendQuote(quote.id);
 console.log(sent.message);
 ```
+
+#### Scheduling — reminders & expiration on send
+
+Both `sendQuote()` and `sendQuoteWithDeliverable()` accept the same eight per-document
+reminder/expiration overrides as `sendSignature()`. They layer over your org defaults; omit
+them to inherit the org policy as it stands at send time. Because quote send is a JSON endpoint,
+durations are plain `{ value, unit }` objects (no JSON-string encoding).
+
+```typescript
+const sent = await TurboQuote.sendQuote(quote.id, {
+  ccEmails: ['legal@acme.com'],
+  validUntil: '2026-09-30',
+  remindersEnabled: true,
+  reminderDelay: { value: 2, unit: 'days' },       // first nudge 2 days after sending
+  reminderInterval: { value: 3, unit: 'days' },    // then every 3 days
+  maxReminders: 4,                                  // -1 = unlimited, 0 = none
+  expirationEnabled: true,
+  expirationWarning: { value: 2, unit: 'days' },   // warn starting 2 days before expiry
+  expirationWarningInterval: { value: 1, unit: 'days' },
+});
+```
+
+**Constraint — quote expiry is pinned to `validUntil`.** The backend anchors a quote's
+expiration to its `validUntil` date, so **`expireAfter` is ignored** when expiration is on
+(`expirationEnabled` still toggles expiration on/off). The reminder and expiration-warning
+cadence must fit **within** `validUntil` or the send is rejected — schedule reminders/warnings
+that all fall before the quote's valid-until date.
 
 #### Download a quote as PDF
 

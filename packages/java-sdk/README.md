@@ -276,6 +276,37 @@ for (RecipientResponse r : result.getRecipients()) {
 // For signing progress afterwards, use getRecipients().
 ```
 
+#### `sendReminder()`
+
+Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the cap is spent, does not consume that cap, and only emails signers at the current signing order. Use the single-arg overload to remind everyone eligible; do not pass an empty list, which the API rejects.
+
+```java
+SendReminderResponse reminder = client.turboSign().sendReminder("doc-uuid-here");
+
+for (SendReminderResponse.ReminderResult r : reminder.getResults()) {
+    // status is e.g. "sent", "skipped_wrong_order", "skipped_completed".
+    System.out.println(r.getRecipientId() + " — " + r.getStatus());
+}
+```
+
+Reminders and expiration can also be scheduled when you send. The send request accepts an optional `SignatureSchedule` with `remindersEnabled` / `reminderDelay` / `reminderInterval` / `maxReminders` and `expirationEnabled` / `expireAfter` / `expirationWarning` / `expirationWarningInterval` — both features are off by default, so omitting them preserves the original send behavior. The deadline is frozen onto the document at send time and is then readable via `getStatus().getExpiresAt()`.
+
+```java
+SignatureSchedule schedule = SignatureSchedule.builder()
+    .remindersEnabled(true)
+    .reminderDelay(new SignatureSchedule.Duration(2, "days"))
+    .expirationEnabled(true)
+    .expireAfter(new SignatureSchedule.Duration(14, "days"))
+    .build();
+
+SendSignatureResponse result = client.turboSign().sendSignature(
+    new SendSignatureRequest.Builder()
+        // ...file, recipients, fields, etc.
+        .schedule(schedule)
+        .build()
+);
+```
+
 #### `getStatus()`
 
 Check the document-level status. For per-recipient detail, use `getRecipients()`.
@@ -283,7 +314,9 @@ Check the document-level status. For per-recipient detail, use `getRecipients()`
 ```java
 DocumentStatusResponse status = client.turboSign().getStatus("doc-uuid-here");
 
-System.out.println("Status: " + status.getStatus());  // "under_review", "completed", "voided"
+System.out.println("Status: " + status.getStatus());  // "under_review", "completed", "voided", "expired"
+// getExpiresAt() is the signing-window deadline (ISO 8601), or null when expiration is off.
+System.out.println("Expires: " + status.getExpiresAt());
 ```
 
 #### `getRecipients()`
@@ -843,6 +876,27 @@ tq.addLineItems(quote.getId(), item);
 SendQuoteResponse sent = tq.sendQuote(quote.getId());
 System.out.println("Status: " + sent.getQuote().getStatus()); // "sent"
 ```
+
+### Scheduling reminders and expiration on a send
+
+Both `sendQuote` and `sendQuoteWithDeliverable` accept an optional `SignatureSchedule` — the same eight per-document fields TurboSign uses (`remindersEnabled` / `reminderDelay` / `reminderInterval` / `maxReminders` and `expirationEnabled` / `expireAfter` / `expirationWarning` / `expirationWarningInterval`). Durations are built with `new SignatureSchedule.Duration(n, "days")` (or `"hours"`), and the fields are sent flat on the send body, layered over your org defaults. Both features are off by default, so omitting `schedule` preserves the original send behavior.
+
+```java
+SendQuoteRequest sendReq = new SendQuoteRequest();
+sendReq.setValidUntil("2026-03-31");
+sendReq.setSchedule(SignatureSchedule.builder()
+    .remindersEnabled(true)
+    .reminderDelay(new SignatureSchedule.Duration(2, "days"))
+    .reminderInterval(new SignatureSchedule.Duration(3, "days"))
+    .maxReminders(4)
+    .expirationEnabled(true)
+    .expirationWarning(new SignatureSchedule.Duration(3, "days"))
+    .build());
+
+tq.sendQuote(quote.getId(), sendReq);
+```
+
+**Constraint:** a quote's expiry is pinned to its `validUntil`, not to `expireAfter`. When expiration is on, `expireAfter` is ignored (but `expirationEnabled` still toggles expiration on/off), and the reminder/warning cadence must fit within `validUntil` or the send is rejected.
 
 ### Quote terms and auto-renewal
 

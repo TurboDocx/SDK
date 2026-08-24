@@ -173,8 +173,20 @@ module TurboDocxSdk
 
       # Send a quote.
       #
+      # The +request+ hash is forwarded to the API verbatim as the JSON body, so any camelCase
+      # key the endpoint accepts flows through untouched -- no key is whitelisted or re-cased.
+      #
       # @param id [String]
-      # @param request [Hash, nil] :ccEmails, :validUntil
+      # @param request [Hash, nil] :ccEmails, :validUntil, and the optional reminder/expiration
+      #   SCHEDULE fields (same eight as +TurboSign.send_signature+, sent FLAT on the JSON body):
+      #   - +remindersEnabled+ [Boolean], +maxReminders+ [Integer], +expirationEnabled+ [Boolean]
+      #   - +reminderDelay+ / +reminderInterval+ / +expireAfter+ / +expirationWarning+ /
+      #     +expirationWarningInterval+ — each a duration +{ value:, unit: }+ (plain object; this
+      #     is a JSON endpoint, so durations are NOT JSON-encoded the way the multipart signature
+      #     path encodes them). Keys are camelCase like every other send key.
+      #   CONSTRAINT: quote expiry is pinned to +validUntil+, so +expireAfter+ is ignored when
+      #   expiration is on (+expirationEnabled+ still toggles it); the reminder/warning cadence
+      #   applies (layered over org defaults) and must fit within +validUntil+ or the send is rejected.
       # @return [Hash] { "quote" => {...}, "message" => "..." }
       # @raise [NotFoundError] if the quote does not exist
       # @raise [ValidationError] on invalid request data
@@ -191,8 +203,17 @@ module TurboDocxSdk
 
       # Send a quote with a deliverable attachment.
       #
+      # Like +send_quote+, the +request+ hash is forwarded to the API verbatim as the JSON body.
+      #
       # @param id [String]
-      # @param request [Hash] :deliverableId, :mergePosition, :ccEmails
+      # @param request [Hash] :deliverableId, :mergePosition, :ccEmails, and the same
+      #   optional reminder/expiration SCHEDULE fields as +send_quote+ (the eight camelCase keys:
+      #   +remindersEnabled+, +maxReminders+, +expirationEnabled+ scalars plus +reminderDelay+ /
+      #   +reminderInterval+ / +expireAfter+ / +expirationWarning+ / +expirationWarningInterval+
+      #   durations as plain +{ value:, unit: }+ objects), sent FLAT on the JSON body.
+      #   CONSTRAINT: quote expiry is pinned to +validUntil+, so +expireAfter+ is ignored when
+      #   expiration is on (+expirationEnabled+ still toggles it); the reminder/warning cadence
+      #   applies (layered over org defaults) and must fit within +validUntil+ or the send is rejected.
       # @return [Hash] { "quote" => {...}, "message" => "...", "documentId" => "..." }
       # @raise [NotFoundError] if the quote does not exist
       # @raise [ValidationError] on invalid request data

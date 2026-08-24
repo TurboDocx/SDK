@@ -313,9 +313,10 @@ console.log(`Document ID: ${documentId}`);
 
 // 2. Check status
 const status = await TurboSign.getStatus(documentId);
-console.log(`Status: ${status.status}`);  // 'under_review', 'completed', 'voided', ...
+console.log(`Status: ${status.status}`);  // 'under_review', 'completed', 'voided', 'expired', ...
+console.log(`Expires: ${status.expiresAt ?? 'never'}`);  // ISO deadline, or undefined when expiration is off
 
-// getStatus returns the document-level status only. For per-signer detail:
+// getStatus returns the document-level status (and the expiration deadline). For per-signer detail:
 const { recipients, summary } = await TurboSign.getRecipients(documentId);
 console.log(`${summary.completed}/${summary.total} signed, waiting on ${summary.waitingOn}`);
 

@@ -194,8 +194,12 @@ module TurboDocxSdk
 
       # Get the status of a document.
       #
+      # The returned Hash carries "status" (e.g. "under_review", "completed", "voided",
+      # "expired") and, when expiration is enabled, "expiresAt" — an ISO timestamp for when
+      # the signing window closes. "expiresAt" is absent (or nil) when the document never expires.
+      #
       # @param document_id [String]
-      # @return [Hash] document status
+      # @return [Hash] document status, including "expiresAt" when a deadline is set
       # @raise [NotFoundError] if the document does not exist
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure

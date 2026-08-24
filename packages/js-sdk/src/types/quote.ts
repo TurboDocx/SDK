@@ -14,6 +14,7 @@ import type { AddLineItemRequest, AddBundleLineItemRequest, LineItem } from './q
 import type { Company } from './company';
 import type { Contact } from './contact';
 import type { PriceBook } from './pricebook';
+import type { SignatureScheduleOptions } from './sign';
 
 // ============================================
 // DOMAIN TYPES
@@ -122,12 +123,48 @@ export interface ListQuotesOptions extends PaginationParams {
 export interface SendQuoteRequest {
   ccEmails?: string[];
   validUntil?: string;
+  /**
+   * Per-quote reminder + expiration overrides, layered over the org defaults. Omit to inherit
+   * the org policy as it stands at send time. Durations are plain `{ value, unit }` objects
+   * (quote send is a JSON endpoint).
+   *
+   * Quote expiry is pinned to `validUntil`, so `expireAfter` is ignored when expiration is on;
+   * `expirationEnabled` still toggles it. The reminder/warning cadence must fit within
+   * `validUntil` or the send is rejected.
+   * @see SignatureScheduleOptions
+   */
+  remindersEnabled?: SignatureScheduleOptions['remindersEnabled'];
+  reminderDelay?: SignatureScheduleOptions['reminderDelay'];
+  reminderInterval?: SignatureScheduleOptions['reminderInterval'];
+  maxReminders?: SignatureScheduleOptions['maxReminders'];
+  expirationEnabled?: SignatureScheduleOptions['expirationEnabled'];
+  expireAfter?: SignatureScheduleOptions['expireAfter'];
+  expirationWarning?: SignatureScheduleOptions['expirationWarning'];
+  expirationWarningInterval?: SignatureScheduleOptions['expirationWarningInterval'];
 }
 
 export interface SendQuoteWithDeliverableRequest {
   deliverableId: string;
   mergePosition: 'beginning' | 'end';
   ccEmails?: string[];
+  /**
+   * Per-quote reminder + expiration overrides, layered over the org defaults. Omit to inherit
+   * the org policy as it stands at send time. Durations are plain `{ value, unit }` objects
+   * (quote send is a JSON endpoint).
+   *
+   * Quote expiry is pinned to the quote's `validUntil`, so `expireAfter` is ignored when
+   * expiration is on; `expirationEnabled` still toggles it. The reminder/warning cadence must
+   * fit within `validUntil` or the send is rejected.
+   * @see SignatureScheduleOptions
+   */
+  remindersEnabled?: SignatureScheduleOptions['remindersEnabled'];
+  reminderDelay?: SignatureScheduleOptions['reminderDelay'];
+  reminderInterval?: SignatureScheduleOptions['reminderInterval'];
+  maxReminders?: SignatureScheduleOptions['maxReminders'];
+  expirationEnabled?: SignatureScheduleOptions['expirationEnabled'];
+  expireAfter?: SignatureScheduleOptions['expireAfter'];
+  expirationWarning?: SignatureScheduleOptions['expirationWarning'];
+  expirationWarningInterval?: SignatureScheduleOptions['expirationWarningInterval'];
 }
 
 export interface SendQuoteResponse {
