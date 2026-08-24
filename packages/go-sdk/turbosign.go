@@ -141,25 +141,31 @@ type Duration struct {
 //
 // An omitted field inherits the org default; omitting the whole set means "use the org policy as
 // it stands at send time". Both features are off by default.
+//
+// The json tags exist for the JSON send paths (e.g. TurboQuote's quote send, a JSON endpoint)
+// where the struct is embedded and marshalled directly: the fields must land FLAT and camelCase
+// with plain {value, unit} duration objects. The signature send paths do NOT rely on them — they
+// copy the fields onto a multipart formData map via applyScheduleOverrides, so the tags are inert
+// there. omitempty + pointer fields keep an unset field off the wire so it inherits the org default.
 type SignatureSchedule struct {
 	// RemindersEnabled turns reminder emails on for this document.
-	RemindersEnabled *bool
+	RemindersEnabled *bool `json:"remindersEnabled,omitempty"`
 	// ReminderDelay is how long after the invitation before the FIRST reminder.
-	ReminderDelay *Duration
+	ReminderDelay *Duration `json:"reminderDelay,omitempty"`
 	// ReminderInterval is the gap between subsequent reminders.
-	ReminderInterval *Duration
+	ReminderInterval *Duration `json:"reminderInterval,omitempty"`
 	// MaxReminders caps reminders per signer. -1 means unlimited, 0 means none. Never caps
 	// expiry warnings.
-	MaxReminders *int
+	MaxReminders *int `json:"maxReminders,omitempty"`
 	// ExpirationEnabled closes the signing window after ExpireAfter.
-	ExpirationEnabled *bool
+	ExpirationEnabled *bool `json:"expirationEnabled,omitempty"`
 	// ExpireAfter is how long the document stays signable, counted from sending.
-	ExpireAfter *Duration
+	ExpireAfter *Duration `json:"expireAfter,omitempty"`
 	// ExpirationWarning is how far BEFORE expiry warning emails start. A zero value means no
 	// warnings at all.
-	ExpirationWarning *Duration
+	ExpirationWarning *Duration `json:"expirationWarning,omitempty"`
 	// ExpirationWarningInterval is the gap between warnings once the window is open.
-	ExpirationWarningInterval *Duration
+	ExpirationWarningInterval *Duration `json:"expirationWarningInterval,omitempty"`
 }
 
 type CreateSignatureReviewLinkRequest struct {

@@ -6,6 +6,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
+import com.turbodocx.models.SignatureSchedule;
 import com.turbodocx.models.quote.*;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -154,8 +155,14 @@ public final class TurboQuote {
      * Send a quote with optional configuration.
      */
     public SendQuoteResponse sendQuote(String id, SendQuoteRequest request) throws IOException {
+        // The schedule must land FLAT on the body (remindersEnabled, reminderDelay, …) — not
+        // nested under a "schedule" key — so serialize the request to a tree and flatten it.
+        Object body = request == null
+                ? null
+                : flattenSchedule(gson.toJsonTree(request).getAsJsonObject(), request.getSchedule());
+
         // Response has: result (the quote), message
-        JsonObject response = httpClient.post("/v1/quotes/" + id + "/send", request, JsonObject.class);
+        JsonObject response = httpClient.post("/v1/quotes/" + id + "/send", body, JsonObject.class);
         Quote quote = gson.fromJson(response.get("result"), Quote.class);
         String message = response.has("message") ? response.get("message").getAsString() : null;
         return new SendQuoteResponse(quote, message);
@@ -172,7 +179,12 @@ public final class TurboQuote {
      * Send a quote with a document deliverable.
      */
     public SendQuoteWithDeliverableResponse sendQuoteWithDeliverable(String id, SendQuoteWithDeliverableRequest request) throws IOException {
-        JsonObject response = httpClient.post("/v1/quotes/" + id + "/send-with-deliverable", request, JsonObject.class);
+        // Flatten the schedule onto the top-level body, same as sendQuote.
+        Object body = request == null
+                ? null
+                : flattenSchedule(gson.toJsonTree(request).getAsJsonObject(), request.getSchedule());
+
+        JsonObject response = httpClient.post("/v1/quotes/" + id + "/send-with-deliverable", body, JsonObject.class);
         Quote quote = gson.fromJson(response.get("result"), Quote.class);
         String message = response.has("message") ? response.get("message").getAsString() : null;
         String documentId = response.has("documentId") ? response.get("documentId").getAsString() : null;
@@ -876,6 +888,53 @@ public final class TurboQuote {
     // ============================================
     // PRIVATE HELPERS
     // ============================================
+
+    /**
+     * Flattens a {@link SignatureSchedule} onto the send body as eight top-level keys.
+     *
+     * <p>Quote send is a JSON endpoint, so — unlike TurboSign's multipart path, which JSON-encodes
+     * each duration as a string — the durations are emitted as real {@code {value, unit}} objects
+     * and the booleans/integer as JSON primitives. The keys sit FLAT alongside {@code ccEmails} /
+     * {@code validUntil}; a "schedule" wrapper would be wrong. Any nested "schedule" left by
+     * serializing the request POJO is removed first.
+     *
+     * <p>Presence is null-checked, never truthiness: a deliberate {@code false} (feature off),
+     * {@code 0} (no reminders / never warn) or {@code -1} (unlimited) must survive; an omitted
+     * field is dropped so the org default stands.
+     *
+     * @return the same {@code body} object, for call-site chaining
+     */
+    private JsonObject flattenSchedule(JsonObject body, SignatureSchedule schedule) {
+        body.remove("schedule");
+        if (schedule == null) {
+            return body;
+        }
+
+        if (schedule.getRemindersEnabled() != null) {
+            body.addProperty("remindersEnabled", schedule.getRemindersEnabled());
+        }
+        if (schedule.getMaxReminders() != null) {
+            body.addProperty("maxReminders", schedule.getMaxReminders());
+        }
+        if (schedule.getExpirationEnabled() != null) {
+            body.addProperty("expirationEnabled", schedule.getExpirationEnabled());
+        }
+
+        putScheduleDuration(body, "reminderDelay", schedule.getReminderDelay());
+        putScheduleDuration(body, "reminderInterval", schedule.getReminderInterval());
+        putScheduleDuration(body, "expireAfter", schedule.getExpireAfter());
+        putScheduleDuration(body, "expirationWarning", schedule.getExpirationWarning());
+        putScheduleDuration(body, "expirationWarningInterval", schedule.getExpirationWarningInterval());
+
+        return body;
+    }
+
+    /** Emits a duration as a nested {@code {value, unit}} JSON object (JSON endpoint, not multipart). */
+    private void putScheduleDuration(JsonObject body, String key, SignatureSchedule.Duration duration) {
+        if (duration != null) {
+            body.add(key, gson.toJsonTree(duration));
+        }
+    }
 
     /**
      * Shared shape for the six bulk-create endpoints: POST {@code { "rows": [...] }}

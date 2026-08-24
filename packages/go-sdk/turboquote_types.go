@@ -286,17 +286,35 @@ type ListQuotesOptions struct {
 	CurrencyCode *string `json:"currency,omitempty"`
 }
 
-// SendQuoteRequest is the request to send a quote
+// SendQuoteRequest is the request to send a quote.
+//
+// The embedded SignatureSchedule carries the same eight reminder/expiration override fields the
+// signature send accepts. This is a JSON endpoint, so the fields serialize FLAT on the body
+// (camelCase) with plain {value, unit} duration objects — Go promotes the anonymous embedded
+// struct's fields, and omitted (nil) fields inherit the org defaults.
+//
+// Quote expiry is pinned to ValidUntil: ExpireAfter is ignored when expiration is on, though
+// ExpirationEnabled still toggles it. The reminder/warning cadence must fit within ValidUntil.
 type SendQuoteRequest struct {
 	CCEmails   []string `json:"ccEmails,omitempty"`
 	ValidUntil *string  `json:"validUntil,omitempty"`
+
+	// Per-send reminder + expiration overrides; omitted fields inherit the org defaults.
+	SignatureSchedule
 }
 
-// SendQuoteWithDeliverableRequest is the request to send a quote with a deliverable
+// SendQuoteWithDeliverableRequest is the request to send a quote with a deliverable.
+//
+// Like SendQuoteRequest, the embedded SignatureSchedule adds the eight reminder/expiration
+// override fields; they serialize FLAT (camelCase) with {value, unit} durations on this JSON body,
+// and the same ValidUntil-pinned expiry constraint applies.
 type SendQuoteWithDeliverableRequest struct {
 	DeliverableID string   `json:"deliverableId"`
 	MergePosition string   `json:"mergePosition"`
 	CCEmails      []string `json:"ccEmails,omitempty"`
+
+	// Per-send reminder + expiration overrides; omitted fields inherit the org defaults.
+	SignatureSchedule
 }
 
 // DeclineQuoteRequest is the request to decline a quote

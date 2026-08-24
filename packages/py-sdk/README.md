@@ -289,6 +289,30 @@ for recipient in result["recipients"]:
 # For signing progress afterwards, use get_recipients().
 ```
 
+#### `send_reminder()`
+
+Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the per-signer cap is already spent, does not consume that cap, and only emails signers at the *current* signing order. Omit `recipient_ids` to remind everyone eligible; do not pass an empty list, which the API rejects.
+
+```python
+result = await TurboSign.send_reminder("doc-uuid-here")
+
+for entry in result["results"]:
+    # status is e.g. 'sent' or 'skipped_wrong_order'
+    print(f"{entry['recipientId']}: {entry['status']}")
+```
+
+Reminders and expiration can also be scheduled when you send. `send_signature()` accepts optional `reminders_enabled` / `reminder_delay` / `reminder_interval` / `max_reminders` and `expiration_enabled` / `expire_after` / `expiration_warning` / `expiration_warning_interval` kwargs — both features are off by default, so omitting them preserves the original send behavior. The deadline is frozen onto the document at send time and is then readable via `get_status()["expiresAt"]`.
+
+```python
+result = await TurboSign.send_signature(
+    # ...recipients, fields, etc.
+    reminders_enabled=True,
+    reminder_delay={"value": 2, "unit": "days"},
+    expiration_enabled=True,
+    expire_after={"value": 14, "unit": "days"},
+)
+```
+
 #### `get_status()`
 
 Check the document-level status. For per-recipient detail, use `get_recipients()`.
@@ -296,7 +320,9 @@ Check the document-level status. For per-recipient detail, use `get_recipients()
 ```python
 status = await TurboSign.get_status("doc-uuid-here")
 
-print(f"Status: {status['status']}")  # 'under_review', 'completed', 'voided', ...
+print(f"Status: {status['status']}")  # 'under_review', 'completed', 'voided', 'expired', ...
+# expiresAt is the signing-window deadline (ISO 8601), or None when expiration is off.
+print(f"Expires: {status.get('expiresAt')}")
 ```
 
 #### `get_recipients()`
@@ -736,6 +762,29 @@ async def main():
 
 asyncio.run(main())
 ```
+
+#### Scheduling reminders and expiration on a quote send
+
+`send_quote()` and `send_quote_with_deliverable()` accept the same eight optional snake_case
+scheduling kwargs as `send_signature()` — `reminders_enabled` / `reminder_delay` /
+`reminder_interval` / `max_reminders` and `expiration_enabled` / `expire_after` /
+`expiration_warning` / `expiration_warning_interval`. Durations are `{"value": n, "unit": "days"}`
+dicts; the cadence layers over your org defaults. Both features are off unless you enable them, so
+omitting the kwargs preserves the original send behavior.
+
+```python
+result = await TurboQuote.send_quote(
+    quote["id"],
+    {"validUntil": "2025-12-31", "ccEmails": ["cc@example.com"]},
+    reminders_enabled=True,
+    reminder_delay={"value": 2, "unit": "days"},
+    expiration_enabled=True,
+)
+```
+
+**Constraint:** a quote's expiry is pinned to `validUntil`, so `expire_after` is ignored when
+expiration is on (`expiration_enabled` still toggles expiration on/off). The reminder/warning
+cadence must fit within `validUntil` or the send is rejected.
 
 #### Download the quote as PDF
 

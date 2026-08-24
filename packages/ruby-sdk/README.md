@@ -234,13 +234,49 @@ end
 
 The document source can also be raw bytes or a local file path (`file: File.binread("contract.pdf")` or `file: "contract.pdf"` — the file type is detected from magic bytes), a TurboDocx deliverable (`deliverableId:`), or a TurboSign template (`templateId:`).
 
+#### `send_reminder(document_id, recipient_ids = nil)`
+
+Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic
+reminder cadence — it works even when reminders are disabled or the cap is spent, does not
+consume that cap, and only emails signers at the CURRENT signing order. Omit the recipient ids
+to remind everyone eligible; do **not** pass an empty array, which the API rejects.
+
+```ruby
+result = TurboDocxSdk::TurboSign.send_reminder("doc-uuid")
+
+result["results"].each do |r|
+  # status is "sent", or a "skipped_*" reason (e.g. "skipped_wrong_order")
+  puts "#{r['recipientId']}: #{r['status']}"
+end
+```
+
+Reminders and expiration can also be scheduled when you send. `send_signature` accepts optional
+`remindersEnabled` / `reminderDelay` / `reminderInterval` / `maxReminders` and `expirationEnabled`
+/ `expireAfter` / `expirationWarning` / `expirationWarningInterval` options — both features are
+off by default, so omitting them preserves the original send behavior. These are camelCase like
+every other send key, and each duration takes a `{ value:, unit: }` shape. The deadline is frozen
+onto the document at send time and is then readable via `get_status(...)["expiresAt"]`.
+
+```ruby
+TurboDocxSdk::TurboSign.send_signature(
+  fileLink:          "https://example.com/contract.pdf",
+  remindersEnabled:  true,
+  reminderDelay:     { value: 3, unit: "days" },
+  expirationEnabled: true,
+  expireAfter:       { value: 14, unit: "days" }
+  # ...recipients, fields, etc.
+)
+```
+
 #### `get_status(document_id)`
 
 Check the document-level status. For per-recipient detail, use `get_recipients`.
 
 ```ruby
 status = TurboDocxSdk::TurboSign.get_status("doc-uuid")
-puts "Status: #{status['status']}"  # "under_review" | "completed" | "voided" | ...
+puts "Status: #{status['status']}"  # "under_review" | "completed" | "voided" | "expired" | ...
+# "expiresAt" is the signing-window deadline (ISO 8601), or nil when expiration is off.
+puts "Expires: #{status['expiresAt'] || 'never'}"
 ```
 
 #### `get_recipients(document_id)`
@@ -913,6 +949,34 @@ puts "Line item ID: #{items[0]['id']}"
 # 3. Send the quote
 sent = TurboDocxSdk::TurboQuote.send_quote(quote["id"])
 puts sent["message"]
+```
+
+#### Scheduling reminders and expiration on send
+
+`send_quote` and `send_quote_with_deliverable` accept the same eight optional
+reminder/expiration keys as `send_signature` — `remindersEnabled` / `reminderDelay` /
+`reminderInterval` / `maxReminders` and `expirationEnabled` / `expireAfter` /
+`expirationWarning` / `expirationWarningInterval`. They're camelCase like every other send key,
+each duration takes a `{ value:, unit: }` shape, and they ride flat on the JSON body alongside
+`ccEmails` / `validUntil`. Both features are off by default, so omitting them preserves the
+original send behavior.
+
+**Quote expiry is pinned to `validUntil`.** When expiration is on, `expireAfter` is ignored —
+the quote already carries its own deadline — though `expirationEnabled` still toggles the
+feature. The reminder and expiration-warning cadence applies (layered over your org defaults)
+and must fit within `validUntil`, or the send is rejected.
+
+```ruby
+TurboDocxSdk::TurboQuote.send_quote(quote["id"],
+  "ccEmails"          => ["legal@acme.com"],
+  "validUntil"        => "2026-09-30",
+  "remindersEnabled"  => true,
+  "reminderDelay"     => { "value" => 2, "unit" => "days" },
+  "reminderInterval"  => { "value" => 3, "unit" => "days" },
+  "maxReminders"      => 4,
+  "expirationEnabled" => true,
+  "expirationWarning" => { "value" => 2, "unit" => "days" }
+)
 ```
 
 #### Sender identity — "Prepared by"

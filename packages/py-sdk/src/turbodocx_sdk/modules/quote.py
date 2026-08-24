@@ -21,6 +21,7 @@ import os
 from typing import Any, Dict, List, Optional, Union
 
 from ..http import HttpClient, detect_file_type
+from .sign import TurboSign
 
 
 def _to_query_params(request: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
@@ -274,26 +275,101 @@ class TurboQuote:
     # ============================================
 
     @classmethod
-    async def send_quote(cls, id: str, request: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def send_quote(
+        cls,
+        id: str,
+        request: Optional[Dict[str, Any]] = None,
+        *,
+        reminders_enabled: Optional[bool] = None,
+        reminder_delay: Optional[Dict[str, Any]] = None,
+        reminder_interval: Optional[Dict[str, Any]] = None,
+        max_reminders: Optional[int] = None,
+        expiration_enabled: Optional[bool] = None,
+        expire_after: Optional[Dict[str, Any]] = None,
+        expiration_warning: Optional[Dict[str, Any]] = None,
+        expiration_warning_interval: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Send a quote. Returns dict with keys: quote, message.
+
+        `request` carries the send options (`ccEmails`, `validUntil`). Reminder/expiration
+        scheduling mirrors `TurboSign.send_signature`: pass the optional snake_case kwargs
+        `reminders_enabled` / `reminder_delay` / `reminder_interval` / `max_reminders` and
+        `expiration_enabled` / `expire_after` / `expiration_warning` /
+        `expiration_warning_interval`. Durations are `{"value": n, "unit": "days"}` dicts.
+        Presence is null-checked, so `False`/`0` are honored; omitted kwargs fall back to the
+        org default. The cadence layers over org defaults.
+
+        Constraint: the backend pins a quote's expiry to `validUntil`, so `expire_after` is
+        ignored when expiration is on (`expiration_enabled` still toggles it), and the
+        reminder/warning cadence must fit within `validUntil` or the send is rejected.
         """
         client = cls._get_client()
-        response = await client.post(f"/v1/quotes/{id}/send", request)
+        body: Dict[str, Any] = dict(request) if request else {}
+        TurboSign._apply_schedule_overrides(
+            body,
+            reminders_enabled=reminders_enabled,
+            reminder_delay=reminder_delay,
+            reminder_interval=reminder_interval,
+            max_reminders=max_reminders,
+            expiration_enabled=expiration_enabled,
+            expire_after=expire_after,
+            expiration_warning=expiration_warning,
+            expiration_warning_interval=expiration_warning_interval,
+            encode_durations=False,
+        )
+        response = await client.post(f"/v1/quotes/{id}/send", body or None)
         return {
             "quote": response["result"],
             "message": response["message"],
         }
 
     @classmethod
-    async def send_quote_with_deliverable(cls, id: str, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def send_quote_with_deliverable(
+        cls,
+        id: str,
+        request: Dict[str, Any],
+        *,
+        reminders_enabled: Optional[bool] = None,
+        reminder_delay: Optional[Dict[str, Any]] = None,
+        reminder_interval: Optional[Dict[str, Any]] = None,
+        max_reminders: Optional[int] = None,
+        expiration_enabled: Optional[bool] = None,
+        expire_after: Optional[Dict[str, Any]] = None,
+        expiration_warning: Optional[Dict[str, Any]] = None,
+        expiration_warning_interval: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Send a quote with an attached deliverable document.
 
         Returns dict with keys: quote, message, documentId.
+
+        Reminder/expiration scheduling mirrors `TurboSign.send_signature`: pass the optional
+        snake_case kwargs `reminders_enabled` / `reminder_delay` / `reminder_interval` /
+        `max_reminders` and `expiration_enabled` / `expire_after` / `expiration_warning` /
+        `expiration_warning_interval`. Durations are `{"value": n, "unit": "days"}` dicts.
+        Presence is null-checked, so `False`/`0` are honored; omitted kwargs fall back to the
+        org default. The cadence layers over org defaults.
+
+        Constraint: the backend pins a quote's expiry to `validUntil`, so `expire_after` is
+        ignored when expiration is on (`expiration_enabled` still toggles it), and the
+        reminder/warning cadence must fit within `validUntil` or the send is rejected.
         """
         client = cls._get_client()
-        response = await client.post(f"/v1/quotes/{id}/send-with-deliverable", request)
+        body: Dict[str, Any] = dict(request) if request else {}
+        TurboSign._apply_schedule_overrides(
+            body,
+            reminders_enabled=reminders_enabled,
+            reminder_delay=reminder_delay,
+            reminder_interval=reminder_interval,
+            max_reminders=max_reminders,
+            expiration_enabled=expiration_enabled,
+            expire_after=expire_after,
+            expiration_warning=expiration_warning,
+            expiration_warning_interval=expiration_warning_interval,
+            encode_durations=False,
+        )
+        response = await client.post(f"/v1/quotes/{id}/send-with-deliverable", body)
         return {
             "quote": response["result"],
             "message": response["message"],
@@ -750,7 +826,13 @@ class TurboQuote:
             request: Dict with keys from CreateQuoteRequest plus optional:
                 - items: List of AddLineItemRequest dicts
                 - bundleItems: List of AddBundleLineItemRequest dicts
-                - send: SendQuoteRequest dict (ccEmails, validUntil)
+                - send: SendQuoteRequest dict (ccEmails, validUntil, and optionally the eight
+                  camelCase reminder/expiration schedule keys — remindersEnabled, reminderDelay,
+                  reminderInterval, maxReminders, expirationEnabled, expireAfter,
+                  expirationWarning, expirationWarningInterval; durations are {"value", "unit"}).
+                  Quote expiry is pinned to validUntil, so expireAfter is ignored when expiration
+                  is on (expirationEnabled still toggles it); the reminder/warning cadence must
+                  fit within validUntil or the send is rejected.
 
         Returns:
             Dict with key: quote (the sent quote).
@@ -774,9 +856,11 @@ class TurboQuote:
         if bundle_items and len(bundle_items) > 0:
             await client.post(f"/v1/quotes/{quote['id']}/items/bundle", bundle_items)
 
-        # 4. Send quote
-        send_response = await client.post(f"/v1/quotes/{quote['id']}/send", send_options)
+        # 4. Send quote — delegate to send_quote so the send dict (including any camelCase
+        #    reminder/expiration schedule keys) goes through the exact same serialization path as
+        #    a standalone send_quote call, instead of re-posting it here.
+        send_response = await cls.send_quote(quote["id"], send_options)
 
         return {
-            "quote": send_response["result"],
+            "quote": send_response["quote"],
         }

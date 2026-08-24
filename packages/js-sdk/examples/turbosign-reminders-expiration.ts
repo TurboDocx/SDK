@@ -77,7 +77,7 @@ async function main() {
   //    defaults never move it. Read it back off the status endpoint.
   const status = await TurboSign.getStatus(sent.documentId);
   console.log('  status:', status.status);
-  console.log('  expiresAt:', status.expiresAt ?? '(never — expiration is off)');
+  console.log('  expiresAt:', status.expiresAt ?? '(no deadline set)');
 
   // 4. Nudge whoever's turn it is.
   //

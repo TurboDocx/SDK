@@ -292,6 +292,39 @@ if ($result->recipients !== null) {
 $progress = TurboSign::getRecipients($result->documentId);
 ```
 
+#### `sendReminder()`
+
+Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the per-signer cap is already spent, does not consume that cap, and only emails signers at the *current* signing order. Pass `null` (or omit the argument) to remind everyone eligible; do not pass an empty array, which the API rejects.
+
+```php
+// Remind everyone whose turn it is to sign.
+$result = TurboSign::sendReminder('doc-uuid-here');
+
+// The response is a plain array. Each entry reports a recipientId and what happened
+// to it — signers not at the current order come back as skipped rather than emailed.
+foreach ($result['results'] as $r) {
+    echo "{$r['recipientId']}: {$r['status']}\n";
+}
+
+// Optionally limit the reminder to specific recipients (all-or-nothing: every id must be
+// a current-order pending signer, or the whole call is rejected).
+TurboSign::sendReminder('doc-uuid-here', ['recipient-uuid-1', 'recipient-uuid-2']);
+```
+
+Reminders and expiration can also be scheduled when you send. `SendSignatureRequest` accepts optional `remindersEnabled` / `reminderDelay` / `reminderInterval` / `maxReminders` and `expirationEnabled` / `expireAfter` / `expirationWarning` / `expirationWarningInterval` — both features are off by default, so omitting them preserves the original send behavior. The deadline is frozen onto the document at send time and is then readable via `getStatus()->expiresAt`.
+
+```php
+$result = TurboSign::sendSignature(
+    new SendSignatureRequest(
+        // ...recipients, fields, file, etc.
+        remindersEnabled: true,
+        reminderDelay: ['value' => 2, 'unit' => 'days'],   // time to the first reminder
+        expirationEnabled: true,
+        expireAfter: ['value' => 14, 'unit' => 'days']     // how long the document stays signable
+    )
+);
+```
+
 #### `getStatus()`
 
 Check the document-level status. For per-recipient detail, use `getRecipients()`.
@@ -299,7 +332,9 @@ Check the document-level status. For per-recipient detail, use `getRecipients()`
 ```php
 $status = TurboSign::getStatus('doc-uuid-here');
 
-echo "Document Status: {$status->status}\n";  // 'under_review', 'completed', 'voided', ...
+echo "Document Status: {$status->status}\n";  // 'under_review', 'completed', 'voided', 'expired', ...
+// expiresAt is the signing-window deadline (ISO 8601), or null when expiration is off.
+echo "Expires: " . ($status->expiresAt ?? 'never') . "\n";
 ```
 
 #### `getRecipients()`
@@ -1467,6 +1502,31 @@ $result = TurboQuote::sendQuote($quote->id, new SendQuoteRequest(
 ));
 
 echo "Quote sent! Status: {$result->quote->status}\n";
+```
+
+### Scheduling — reminders and expiration
+
+Both send paths (`sendQuote` and `sendQuoteWithDeliverable`) accept the same eight optional
+reminder/expiration fields as signature send — `remindersEnabled` / `reminderDelay` /
+`reminderInterval` / `maxReminders` and `expirationEnabled` / `expireAfter` /
+`expirationWarning` / `expirationWarningInterval`. Durations are plain `['value' => N, 'unit'
+=> 'days']` arrays (quote send is a JSON endpoint — no JSON-string encoding). Omitting a field
+inherits the org default; the cadence you do pass is layered over those defaults.
+
+One quote-specific rule: **expiry is pinned to `validUntil`**, so `expireAfter` is ignored when
+expiration is on — `expirationEnabled` still toggles expiration on/off, and `validUntil` sets
+the deadline. The reminder and expiration-warning cadence must fit **within** `validUntil` or
+the send is rejected.
+
+```php
+$result = TurboQuote::sendQuote($quote->id, new SendQuoteRequest(
+    validUntil: date('Y-m-d', strtotime('+30 days')),  // the expiry date (expireAfter is ignored)
+    remindersEnabled: true,
+    reminderDelay: ['value' => 3, 'unit' => 'days'],    // time to the first reminder
+    reminderInterval: ['value' => 7, 'unit' => 'days'], // gap between later reminders
+    expirationEnabled: true,
+    expirationWarning: ['value' => 2, 'unit' => 'days'],// warn 2 days before validUntil
+));
 ```
 
 ### Sender Identity — "Prepared by"

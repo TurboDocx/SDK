@@ -260,6 +260,36 @@ fmt.Printf("Document ID: %s\n", result.DocumentID)
 fmt.Printf("Message: %s\n", result.Message)
 ```
 
+#### `SendReminder`
+
+Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the per-signer cap is spent, does not consume that cap, and only emails signers at the **current** signing order. Pass `nil` for `recipientIDs` to remind everyone eligible; do **not** pass an empty slice, which the API rejects.
+
+```go
+resp, err := client.TurboSign.SendReminder(ctx, "doc-uuid-here", nil)
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, r := range resp.Results {
+    // "sent", "skipped_wrong_order", "skipped_completed", ...
+    fmt.Printf("%s: %s\n", r.RecipientID, r.Status)
+}
+```
+
+Reminders and expiration can also be **scheduled when you send**. The send request embeds a `SignatureSchedule` with optional `RemindersEnabled` / `ReminderDelay` / `ReminderInterval` / `MaxReminders` and `ExpirationEnabled` / `ExpireAfter` / `ExpirationWarning` / `ExpirationWarningInterval` fields — every field is a pointer, and both features are **off by default**, so omitting them preserves the original send behavior. The deadline is frozen onto the document at send time and is then readable via `GetStatus(...).ExpiresAt`.
+
+```go
+result, err := client.TurboSign.SendSignature(ctx, &turbodocx.SendSignatureRequest{
+    // ...file, recipients, fields, etc.
+    SignatureSchedule: turbodocx.SignatureSchedule{
+        RemindersEnabled:  turbodocx.BoolPtr(true),
+        ReminderDelay:     &turbodocx.Duration{Value: 2, Unit: "days"},
+        ExpirationEnabled: turbodocx.BoolPtr(true),
+        ExpireAfter:       &turbodocx.Duration{Value: 14, Unit: "days"},
+    },
+})
+```
+
 #### `GetStatus`
 
 Check the document-level status. For per-recipient detail, use `GetRecipients`.
@@ -267,7 +297,9 @@ Check the document-level status. For per-recipient detail, use `GetRecipients`.
 ```go
 status, err := client.TurboSign.GetStatus(ctx, "doc-uuid-here")
 
-fmt.Printf("Status: %s\n", status.Status)  // "under_review", "completed", "voided", ...
+fmt.Printf("Status: %s\n", status.Status)  // "under_review", "completed", "voided", "expired", ...
+// ExpiresAt is the signing-window deadline (ISO 8601), or "" when expiration is off.
+fmt.Printf("Expires: %s\n", status.ExpiresAt)
 ```
 
 #### `GetRecipients`
@@ -851,6 +883,33 @@ items, err := client.AddLineItems(ctx, quote.ID, turbodocx.AddLineItemRequest{
     UnitPrice:        499.00,
     BillingFrequency: "annual",
     Quantity:         &qty,
+})
+```
+
+#### Send a quote — with reminder/expiration scheduling
+
+`SendQuote` and `SendQuoteWithDeliverable` accept the same eight per-send reminder/expiration
+override fields as the signature send, via an embedded `SignatureSchedule`: `RemindersEnabled` /
+`ReminderDelay` / `ReminderInterval` / `MaxReminders` and `ExpirationEnabled` / `ExpireAfter` /
+`ExpirationWarning` / `ExpirationWarningInterval`. Every field is a pointer, both features are
+**off by default**, and durations are `{value, unit}` objects (`turbodocx.Duration{Value, Unit}`,
+unit `"hours"` or `"days"`). Omitted fields inherit the org defaults.
+
+Quote expiry works a little differently from signature expiry: the backend **pins the deadline to
+the quote's `ValidUntil`**, so `ExpireAfter` is **ignored** when expiration is on — but
+`ExpirationEnabled` still toggles expiration on or off. The reminder and warning cadence is layered
+over the org defaults and **must fit within `ValidUntil`**, or the send is rejected.
+
+```go
+validUntil := time.Now().AddDate(0, 0, 30).Format("2006-01-02")
+
+resp, err := client.SendQuote(ctx, quote.ID, &turbodocx.SendQuoteRequest{
+    ValidUntil: &validUntil,
+    SignatureSchedule: turbodocx.SignatureSchedule{
+        RemindersEnabled: turbodocx.BoolPtr(true),
+        ReminderDelay:    &turbodocx.Duration{Value: 2, Unit: "days"},
+        ExpirationEnabled: turbodocx.BoolPtr(true), // deadline comes from ValidUntil, not ExpireAfter
+    },
 })
 ```
 

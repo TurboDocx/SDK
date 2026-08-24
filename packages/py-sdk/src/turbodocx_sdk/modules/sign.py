@@ -91,16 +91,21 @@ class TurboSign:
         expiration_enabled: Optional[bool] = None,
         expire_after: Optional[Dict[str, Any]] = None,
         expiration_warning: Optional[Dict[str, Any]] = None,
-        expiration_warning_interval: Optional[Dict[str, Any]] = None
+        expiration_warning_interval: Optional[Dict[str, Any]] = None,
+        encode_durations: bool = True
     ) -> None:
         """
         Copy per-document reminder/expiration overrides onto an outgoing request body.
 
-        Durations are JSON-encoded. multipart/form-data has no notion of a nested value, so a
-        ``{"value": n, "unit": "days"}`` dict cannot survive the file-upload path as an object.
-        The API decodes a JSON-string duration on both content types, so encoding uniformly keeps
-        one code path for the multipart and JSON branches -- the same treatment ``recipients`` and
-        ``fields`` already get.
+        By default durations are JSON-encoded. multipart/form-data has no notion of a nested
+        value, so a ``{"value": n, "unit": "days"}`` dict cannot survive the file-upload path as
+        an object. The API decodes a JSON-string duration on both content types, so encoding
+        uniformly keeps one code path for the TurboSign multipart and JSON branches -- the same
+        treatment ``recipients`` and ``fields`` already get.
+
+        A pure-JSON caller with no multipart path (the TurboQuote send endpoints) passes
+        ``encode_durations=False`` so durations land on the body as plain ``{"value", "unit"}``
+        dicts, which is what those JSON routes expect.
 
         Presence is tested with ``is not None``, never truthiness: ``False`` (feature off) and
         ``0`` (no reminders / never warn) are meaningful values, and a truthiness check would drop
@@ -124,7 +129,7 @@ class TurboSign:
         }
         for key, duration in durations.items():
             if duration is not None:
-                target[key] = json.dumps(duration)
+                target[key] = json.dumps(duration) if encode_durations else duration
 
     @classmethod
     async def create_signature_review_link(
@@ -444,12 +449,15 @@ class TurboSign:
             document_id: ID of the document
 
         Returns:
-            Dict with status field:
-                - status: Document status (e.g., 'under_review', 'completed', 'voided')
+            Dict with:
+                - status: Document status (e.g., 'under_review', 'completed', 'voided', 'expired')
+                - expiresAt: ISO timestamp when the signing window closes, present when
+                  expiration is enabled; absent (or null) when the document never expires.
 
         Example:
             >>> status = await TurboSign.get_status("doc-123")
             >>> print(status["status"])  # 'under_review', 'completed', etc.
+            >>> print(status.get("expiresAt"))  # deadline, or None when expiration is off
         """
         client = cls._get_client()
         return await client.get(f"/turbosign/documents/{document_id}/status")

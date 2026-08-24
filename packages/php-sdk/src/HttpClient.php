@@ -220,9 +220,19 @@ class HttpClient
 
         // Add additional fields
         foreach ($additionalData as $key => $value) {
+            // Booleans must serialize as "true"/"false" (what the backend's Joi.boolean() coerces),
+            // NOT PHP's default (string) cast which yields "1"/"" and is rejected as a 400. This
+            // matches the "true"/"false" the JS/Go/Java/Ruby SDKs emit on their multipart paths.
+            if (is_bool($value)) {
+                $contents = $value ? 'true' : 'false';
+            } elseif (is_array($value)) {
+                $contents = json_encode($value);
+            } else {
+                $contents = (string) $value;
+            }
             $multipart[] = [
                 'name' => $key,
-                'contents' => is_array($value) ? json_encode($value) : (string) $value,
+                'contents' => $contents,
             ];
         }
 
