@@ -73,7 +73,10 @@ final class TurboSignMultipartBooleanTest extends TestCase
      */
     private function multipartField(string $body, string $name): ?string
     {
-        $pattern = '/name="' . preg_quote($name, '/') . '"\r?\n\r?\n(.*?)\r?\n--/s';
+        // Guzzle emits per-part headers (e.g. Content-Length) between the Content-Disposition
+        // line and the value, so skip anything up to the first blank line, then capture the value
+        // up to the next boundary.
+        $pattern = '/name="' . preg_quote($name, '/') . '".*?\r?\n\r?\n(.*?)\r?\n--/s';
         if (preg_match($pattern, $body, $matches) === 1) {
             return $matches[1];
         }
