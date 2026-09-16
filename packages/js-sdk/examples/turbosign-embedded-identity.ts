@@ -1,14 +1,20 @@
 /**
- * Example: Embedded Signing with Identity Verification
+ * Example: Embedded Signing (with optional Identity Verification)
  *
  * Embedded signing takes a signer from your own app straight to a TurboSign signing page,
- * without sending signing-link emails. When the signer is ready, your backend asks TurboSign for a
- * short-lived signing URL and opens it (a new tab, a redirect, or an iframe).
+ * without sending signing-link emails. At its core it is two steps: your backend asks TurboSign
+ * for a short-lived signing URL for the recipient, then opens it (a new tab, a redirect, or an
+ * iframe). That is all embedded signing needs. A plain embedded recipient signs with no extra
+ * verification step.
  *
- * Every embedded signer is verified in one of three ways:
- *   - otp          TurboSign sends a one-time passcode (email or SMS)
+ * Identity verification is an OPTIONAL layer on top. Add `identityVerification` to a recipient
+ * ONLY when you want an extra check before they sign, in one of these modes:
+ *   - otp          TurboSign runs a one-time-passcode challenge (email or SMS)
  *   - external_idv your own identity provider verified them; you assert it when requesting the URL
- *   - override     no verification (development/testing; recorded as not-verified on the certificate)
+ *   - override     opt out of verification (development/testing; recorded as not-verified on the certificate)
+ *
+ * Without `identityVerification`, `createSigningUrl` still works: `identityVerificationMode` comes
+ * back null and `pendingChecks` is empty, and the signing page opens straight to the document.
  *
  * Use this when: you embed signing in your own product and control the signer's session yourself.
  */
@@ -26,9 +32,11 @@ async function embeddedIdentityExample() {
 
   const pdfFile = fs.readFileSync('../../ExampleAssets/sample-contract.pdf');
 
-  // 1) Prepare the document with an EMBEDDED recipient. The signer's real email is always the
-  //    signer of record. `externalId` is your own key for the signer (an Airtable row, a CRM id)
-  //    so you can request the signing URL later without storing TurboDocx's recipient id.
+  // 1) Prepare the document with an EMBEDDED recipient. This is the baseline: no
+  //    `identityVerification`, so the signer opens their signing URL and signs directly, with no
+  //    extra verification step. The signer's real email is always the signer of record.
+  //    `externalId` is your own key for the signer (an Airtable row, a CRM id) so you can request
+  //    the signing URL later without storing TurboDocx's recipient id.
   const sent = await TurboSign.sendSignature({
     file: pdfFile,
     documentName: 'Service Agreement',
@@ -36,13 +44,23 @@ async function embeddedIdentityExample() {
       {
         name: 'Jane Doe',
         email: 'jane@example.com',
-        phone: '+15551234567', // required if the passcode is delivered by SMS
         signingOrder: 1,
         externalId: 'your_customer_123',
-        // Pick ONE identity-verification mode:
-        identityVerification: { mode: 'otp', channel: 'email' },
-        // { mode: 'external_idv', provider: 'CAPA' }
-        // { mode: 'override', overrideIdentityVerification: true, reason: 'Sandbox testing' }
+
+        // OPTIONAL: add identity verification to require an extra check before signing.
+        // Leave this out entirely for a plain embedded recipient (the baseline above). To turn
+        // it on, uncomment exactly ONE of the modes below:
+        //
+        //   otp: TurboSign challenges the signer with a one-time passcode before the document
+        //   opens. Use channel 'sms' to text the passcode; then also set the recipient's `phone`.
+        // identityVerification: { mode: 'otp', channel: 'email' },
+        //
+        //   external_idv: your own identity provider already verified the signer; you assert it
+        //   when you request the signing URL (see step 2).
+        // identityVerification: { mode: 'external_idv', provider: 'CAPA' },
+        //
+        //   override: opt out of verification for development/testing (recorded as not-verified).
+        // identityVerification: { mode: 'override', overrideIdentityVerification: true, reason: 'Sandbox testing' },
       },
     ],
     fields: [
@@ -57,12 +75,13 @@ async function embeddedIdentityExample() {
   console.log(`Document ${sent.documentId} prepared.\n`);
 
   // 2) When the signer is ready (they clicked "Sign now" in YOUR app, and you have confirmed the
-  //    logged-in user is this recipient), request a signing URL. Request it at click time — never
-  //    store it: the single-use URLs expire quickly by design.
+  //    logged-in user is this recipient), request a signing URL. Request it at click time, never
+  //    store it: the single-use URLs expire quickly by design. This call works whether or not the
+  //    recipient has identity verification configured.
   const link = await TurboSign.createSigningUrl(sent.documentId, {
-    // Select the recipient by YOUR externalId (or pass recipientId instead — exactly one):
+    // Select the recipient by YOUR externalId (or pass recipientId instead, exactly one):
     externalId: 'your_customer_123',
-    // For external_idv recipients, pass the assertion from your own identity provider:
+    // OPTIONAL: only for external_idv recipients, pass the assertion from your identity provider:
     // identityAssertion: {
     //   provider: 'CAPA',
     //   verificationId: 'capa_verif_8f2a91',
@@ -74,16 +93,18 @@ async function embeddedIdentityExample() {
 
   console.log('Open this URL for the signer (new tab, redirect, or iframe):');
   console.log(`  ${link.url}`);
-  console.log(`  mode: ${link.identityVerificationMode}`);
+  // With no identityVerification, `identityVerificationMode` is null and `pendingChecks` is [].
+  console.log(`  mode: ${link.identityVerificationMode ?? '(none)'}`);
   // For `otp`, pendingChecks lists the passcode step the signer clears on the page
-  // (e.g. ['email_otp']); for external_idv/override it is [] and the URL is single-use.
+  // (e.g. ['email_otp']); with no verification, or for external_idv/override, it is [].
   console.log(`  pendingChecks: ${JSON.stringify(link.pendingChecks)}`);
   console.log(`  expiresAt: ${link.expiresAt ?? '(no separate expiry; follows the document window)'}`);
 
-  // 3) The signing page does the rest: for external_idv/override it redeems the single-use token
-  //    and shows the document; for otp it asks for the passcode first. Watch the `completed`
-  //    webhook to know when signing finishes, then download the signed PDF — its certificate of
-  //    completion carries the identity-verification line for this signer.
+  // 3) The signing page does the rest. With no identity verification (or for external_idv/override)
+  //    it redeems the single-use token and shows the document straight away; for otp it asks for
+  //    the passcode first. Watch the `completed` webhook to know when signing finishes, then
+  //    download the signed PDF. If a signer was verified, its certificate of completion carries
+  //    the identity-verification line for that signer.
   //
   // If you embed the page in an iframe, ask your org admin to add your app's origin to the
   // "Allowed embedding domains" list in the E-Signature settings (Identity & embedding tab).
