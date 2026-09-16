@@ -14,6 +14,7 @@ import {
   CreateSignatureReviewLinkResponse,
   CreateSigningUrlRequest,
   CreateSigningUrlResponse,
+  EmbeddedSigningSettings,
   Recipient,
   SendSignatureRequest,
   SendSignatureResponse,
@@ -377,8 +378,37 @@ export class TurboSign {
       throw new ValidationError('returnUrl must be an https URL.', 'InvalidReturnUrl');
     }
     const client = this.getClient();
-    // HTTP client auto-unwraps {data: ...} responses
-    return client.post<CreateSigningUrlResponse>(`/turbosign/documents/${documentId}/signing-url`, request);
+    // The endpoint replies { data: { results } }. The client strips the outer `data`, so unwrap the
+    // `results` envelope here (same convention as the quote/deliverable modules).
+    const response = await client.post<{ results: CreateSigningUrlResponse }>(
+      `/turbosign/documents/${documentId}/signing-url`,
+      request
+    );
+    return response.results;
+  }
+
+  /**
+   * Read the org's embedded-signing settings: the set-once, org-wide gates (embedded signing
+   * enabled, external identity verification allowed, override allowed), the default OTP channel,
+   * and the allowed iframe embedding origins. Use it to see what is permitted before you request
+   * signing URLs.
+   *
+   * Read-only. Change these in the E-Signature settings (Identity and embedding tab) or via the
+   * organization preferences API, where the change is recorded in the settings audit trail.
+   *
+   * @example
+   * ```typescript
+   * const settings = await TurboSign.getEmbeddedSigningSettings();
+   * if (!settings.enabled) throw new Error('Embedded signing is not enabled for this org.');
+   * ```
+   */
+  static async getEmbeddedSigningSettings(): Promise<EmbeddedSigningSettings> {
+    const client = this.getClient();
+    // { data: { results } } envelope, same as createSigningUrl above.
+    const response = await client.get<{ results: EmbeddedSigningSettings }>(
+      '/turbosign/embedded-signing-settings'
+    );
+    return response.results;
   }
 
   /**

@@ -25,7 +25,7 @@ describe("TurboSign embedded identity verification", () => {
 
   describe("createSigningUrl", () => {
     const okResponse = {
-      url: "https://app.turbodocx.com/e-signature/sign/doc-1?st=tok",
+      url: "https://app.turbodocx.com/e-signature/sign/doc-1?sut=tok",
       expiresAt: "2026-09-16T12:05:00Z",
       recipientId: "rec-1",
       externalId: "cust_1",
@@ -34,7 +34,8 @@ describe("TurboSign embedded identity verification", () => {
     };
 
     it("posts to the signing-url endpoint and returns the response", async () => {
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(okResponse);
+      // The real client returns the { results } envelope (the outer { data } is stripped for it).
+      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({ results: okResponse });
       TurboSign.configure({ apiKey: "k", orgId: "o", senderEmail: "test@company.com" });
 
       const res = await TurboSign.createSigningUrl("doc-1", { externalId: "cust_1" });
@@ -47,7 +48,7 @@ describe("TurboSign embedded identity verification", () => {
     });
 
     it("passes an identity assertion through for external_idv", async () => {
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(okResponse);
+      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({ results: okResponse });
       TurboSign.configure({ apiKey: "k", orgId: "o", senderEmail: "test@company.com" });
 
       const identityAssertion = {
@@ -84,6 +85,26 @@ describe("TurboSign embedded identity verification", () => {
       await expect(
         TurboSign.createSigningUrl("doc-1", { recipientId: "rec-1", returnUrl: "http://app.test" })
       ).rejects.toMatchObject({ code: "InvalidReturnUrl" });
+    });
+  });
+
+  describe("getEmbeddedSigningSettings", () => {
+    it("GETs the settings endpoint and unwraps the results envelope", async () => {
+      const settings = {
+        enabled: true,
+        allowExternalIdv: true,
+        allowIdentityOverride: false,
+        defaultChannel: "email",
+        allowedFrameAncestors: ["https://app.example.com"],
+      };
+      // Same envelope the real client yields for a { data: { results } } response.
+      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({ results: settings });
+      TurboSign.configure({ apiKey: "k", orgId: "o", senderEmail: "test@company.com" });
+
+      const res = await TurboSign.getEmbeddedSigningSettings();
+
+      expect(res).toEqual(settings);
+      expect(MockedHttpClient.prototype.get).toHaveBeenCalledWith("/turbosign/embedded-signing-settings");
     });
   });
 
