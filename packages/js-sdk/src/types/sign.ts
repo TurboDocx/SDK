@@ -346,6 +346,21 @@ export interface Field {
 }
 
 /**
+ * How an embedded recipient's identity is verified before they can sign.
+ *
+ * A discriminated union on `mode` — the compiler narrows the required fields for you:
+ * - `otp`: TurboSign emails or texts a one-time passcode (SMS requires `phone` on the recipient).
+ * - `external_idv`: your own identity provider (e.g. CAPA) verifies the signer; you pass the
+ *   assertion to {@link TurboSign.createSigningUrl} when you request the signing URL.
+ * - `override`: skip identity verification entirely. For development/testing; your org admin must
+ *   enable it, and every such signature is marked "not identity-verified" on the certificate.
+ */
+export type IdentityVerification =
+  | { mode: 'otp'; channel?: 'email' | 'sms' }
+  | { mode: 'external_idv'; provider: string; maxAgeMinutes?: number }
+  | { mode: 'override'; overrideIdentityVerification: true; reason: string };
+
+/**
  * Recipient configuration for single-step operations
  */
 export interface Recipient {
@@ -355,6 +370,55 @@ export interface Recipient {
   email: string;
   /** Signing order (1-indexed) */
   signingOrder: number;
+  /** E.164 phone number (e.g. +13055551234). Required when identity verification uses SMS OTP. */
+  phone?: string;
+  /**
+   * Your own identifier for this signer (e.g. an Airtable record id), unique within the document.
+   * Lets you request a signing URL by your key instead of storing TurboDocx's recipient id.
+   */
+  externalId?: string;
+  /** Identity verification for embedded signing. Omit for the default email-invite flow. */
+  identityVerification?: IdentityVerification;
+}
+
+/** An identity assertion from your own provider, passed when requesting an external_idv signing URL. */
+export interface IdentityAssertion {
+  /** Must match the recipient's configured provider. */
+  provider: string;
+  /** Your provider's unique id for this verification (used to detect replay). */
+  verificationId: string;
+  /** When your provider verified the signer (ISO 8601). Rejected if in the future or too old. */
+  verifiedAt: string;
+  /** The email your provider verified — must match the recipient's email. */
+  subjectEmail: string;
+}
+
+/** Request a single-use embedded signing URL for one recipient. Provide exactly one selector. */
+export interface CreateSigningUrlRequest {
+  /** Select the recipient by TurboDocx recipient id... */
+  recipientId?: string;
+  /** ...or by the externalId you set when creating the recipient. Provide exactly one. */
+  externalId?: string;
+  /** Required only when the recipient's mode is external_idv. */
+  identityAssertion?: IdentityAssertion;
+  /** Where TurboSign returns the signer after completion (https only). */
+  returnUrl?: string;
+}
+
+/** The single-use embedded signing URL and its metadata. */
+export interface CreateSigningUrlResponse {
+  /** The URL to open (new tab / redirect) or embed for the signer. */
+  url: string;
+  /**
+   * When the URL stops working (ISO 8601). Null for `otp`/no-verification recipients, whose link
+   * follows the document's own signing window rather than a short single-use expiry.
+   */
+  expiresAt: string | null;
+  recipientId: string;
+  externalId?: string;
+  identityVerificationMode: 'otp' | 'external_idv' | 'override' | null;
+  /** Passcode steps the signer must clear on the page. Non-empty only for `otp`. */
+  pendingChecks: Array<'email_otp' | 'sms_otp'>;
 }
 
 /**

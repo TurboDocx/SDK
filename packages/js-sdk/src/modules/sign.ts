@@ -3,7 +3,7 @@
  */
 
 import { HttpClient, HttpClientConfig } from '../http';
-import { NetworkError } from '../utils/errors';
+import { NetworkError, ValidationError } from '../utils/errors';
 import {
   VoidDocumentResponse,
   ResendEmailResponse,
@@ -12,11 +12,47 @@ import {
   DocumentRecipientsResponse,
   CreateSignatureReviewLinkRequest,
   CreateSignatureReviewLinkResponse,
+  CreateSigningUrlRequest,
+  CreateSigningUrlResponse,
+  Recipient,
   SendSignatureRequest,
   SendSignatureResponse,
   SignatureScheduleOptions,
   SendReminderResponse,
 } from '../types/sign';
+
+/**
+ * Client-side fail-fast validation of each recipient's identityVerification block. The server is
+ * the source of truth; this catches the common mistakes early with actionable messages so an
+ * integrator sees them at the call site rather than as an HTTP 400.
+ */
+function validateRecipientsIdentity(recipients: Recipient[] | undefined): void {
+  for (const r of recipients ?? []) {
+    const iv = r.identityVerification;
+    if (!iv) continue;
+    if (iv.mode === 'otp') {
+      if (iv.channel === 'sms' && !r.phone) {
+        throw new ValidationError(`Recipient "${r.email}" uses SMS OTP but has no phone (E.164).`, 'PhoneRequiredForSmsOtp');
+      }
+    } else if (iv.mode === 'external_idv') {
+      if (!iv.provider || !iv.provider.trim()) {
+        throw new ValidationError(`Recipient "${r.email}" uses external_idv but has no provider.`, 'IdvProviderRequired');
+      }
+    } else if (iv.mode === 'override') {
+      // Require the literal boolean true (not the string "true") plus a real reason — this is the
+      // acknowledgement that the signature will be recorded as not identity-verified.
+      if ((iv as { overrideIdentityVerification?: unknown }).overrideIdentityVerification !== true) {
+        throw new ValidationError(
+          `Recipient "${r.email}" override requires overrideIdentityVerification: true (boolean).`,
+          'OverrideNotAcknowledged'
+        );
+      }
+      if (!iv.reason || !iv.reason.trim()) {
+        throw new ValidationError(`Recipient "${r.email}" override requires a non-empty reason.`, 'OverrideNotAcknowledged');
+      }
+    }
+  }
+}
 
 export class TurboSign {
   private static client: HttpClient;
@@ -131,6 +167,7 @@ export class TurboSign {
    * ```
    */
   static async createSignatureReviewLink(request: CreateSignatureReviewLinkRequest): Promise<CreateSignatureReviewLinkResponse> {
+    validateRecipientsIdentity(request.recipients);
     const client = this.getClient();
 
     // Get sender config from client
@@ -215,6 +252,7 @@ export class TurboSign {
    * ```
    */
   static async sendSignature(request: SendSignatureRequest): Promise<SendSignatureResponse> {
+    validateRecipientsIdentity(request.recipients);
     const client = this.getClient();
 
     // Get sender config from client
@@ -298,6 +336,49 @@ export class TurboSign {
       `/turbosign/documents/${documentId}/void`,
       { reason }
     );
+  }
+
+  /**
+   * Mint a single-use embedded signing URL for one recipient — request it the moment the signer is
+   * ready (never store it). The counterpart of DocuSign's createRecipientView / BoldSign's
+   * GetEmbeddedSignLink. Open the returned `url` in a new tab or redirect to it.
+   *
+   * @param documentId - the document the recipient belongs to
+   * @param request - exactly one of `recipientId` / `externalId`; `identityAssertion` only for
+   *   external_idv recipients; optional https `returnUrl`
+   *
+   * @example
+   * ```typescript
+   * // OTP or override recipient:
+   * const { url, pendingChecks } = await TurboSign.createSigningUrl(documentId, {
+   *   externalId: 'baers_customer_123',
+   * });
+   *
+   * // external_idv recipient — pass the assertion from your own identity provider:
+   * const { url } = await TurboSign.createSigningUrl(documentId, {
+   *   recipientId,
+   *   identityAssertion: { provider: 'CAPA', verificationId, verifiedAt, subjectEmail },
+   * });
+   * ```
+   */
+  static async createSigningUrl(
+    documentId: string,
+    request: CreateSigningUrlRequest
+  ): Promise<CreateSigningUrlResponse> {
+    // Fail fast with actionable messages; the server still enforces everything.
+    const selectorCount = [request.recipientId, request.externalId].filter((v) => v !== undefined && v !== '').length;
+    if (selectorCount !== 1) {
+      throw new ValidationError(
+        'Provide exactly one of recipientId or externalId to createSigningUrl.',
+        'RecipientSelectorInvalid'
+      );
+    }
+    if (request.returnUrl && !/^https:\/\//i.test(request.returnUrl)) {
+      throw new ValidationError('returnUrl must be an https URL.', 'InvalidReturnUrl');
+    }
+    const client = this.getClient();
+    // HTTP client auto-unwraps {data: ...} responses
+    return client.post<CreateSigningUrlResponse>(`/turbosign/documents/${documentId}/signing-url`, request);
   }
 
   /**
