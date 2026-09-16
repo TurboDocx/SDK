@@ -421,6 +421,32 @@ export interface CreateSigningUrlResponse {
   pendingChecks: Array<'email_otp' | 'sms_otp'>;
 }
 
+/** The org-level identity-verification default channel for new recipients (interactive path only). */
+export type EmbeddedSigningDefaultChannel = 'none' | 'email' | 'sms';
+
+/**
+ * The org's embedded-signing configuration, read via {@link TurboSign.getEmbeddedSigningSettings}.
+ *
+ * These are the set-once, org-wide GATES plus the default channel. The per-recipient identity mode
+ * is chosen when you create each recipient (see {@link IdentityVerification}), not here.
+ */
+export interface EmbeddedSigningSettings {
+  /** Embedded signing (and OTP identity verification) is turned on for the org. */
+  enabled: boolean;
+  /** You may assert a signer's identity with your own provider (external_idv). */
+  allowExternalIdv: boolean;
+  /** A sender may issue a link that skips identity verification (override; development/testing). */
+  allowIdentityOverride: boolean;
+  /**
+   * Default OTP channel applied to recipients that do not specify one, on the interactive (UI)
+   * create path only. SDK/API sends must set identity per recipient, so this does not affect them.
+   * `none` means no default (recipients are unverified unless they opt in).
+   */
+  defaultChannel: EmbeddedSigningDefaultChannel;
+  /** Origins allowed to embed the signing page in an iframe (empty = no restriction configured). */
+  allowedFrameAncestors: string[];
+}
+
 /**
  * Request for createSignatureReviewLink - prepare document without sending emails
  */

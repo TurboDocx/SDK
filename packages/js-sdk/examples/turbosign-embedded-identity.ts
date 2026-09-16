@@ -3,9 +3,8 @@
  *
  * Embedded signing takes a signer from your own app straight to a TurboSign signing page,
  * without sending signing-link emails. At its core it is two steps: your backend asks TurboSign
- * for a short-lived signing URL for the recipient, then opens it (a new tab, a redirect, or an
- * iframe). That is all embedded signing needs. A plain embedded recipient signs with no extra
- * verification step.
+ * for a signing URL for the recipient, then opens it (a new tab, a redirect, or an iframe). That
+ * is all embedded signing needs. A plain embedded recipient signs with no extra verification step.
  *
  * Identity verification is an OPTIONAL layer on top. Add `identityVerification` to a recipient
  * ONLY when you want an extra check before they sign, in one of these modes:
@@ -31,6 +30,18 @@ async function embeddedIdentityExample() {
   });
 
   const pdfFile = fs.readFileSync('../../ExampleAssets/sample-contract.pdf');
+
+  // 0) OPTIONAL: check what your org allows before you start. These org-wide GATES are set once by
+  //    an admin (in E-Signature settings, on the Identity & embedding tab, or via the organization
+  //    preferences API) and apply to every send. They are read-only from the SDK. The per-recipient
+  //    MODE below is the part you choose on each signer, not here.
+  const settings = await TurboSign.getEmbeddedSigningSettings();
+  if (!settings.enabled) {
+    throw new Error('Embedded signing is not enabled for this organization. An admin can turn it on in E-Signature settings.');
+  }
+  console.log(
+    `Embedded signing enabled. external_idv allowed: ${settings.allowExternalIdv}, override allowed: ${settings.allowIdentityOverride}.\n`,
+  );
 
   // 1) Prepare the document with an EMBEDDED recipient. This is the baseline: no
   //    `identityVerification`, so the signer opens their signing URL and signs directly, with no
@@ -75,9 +86,9 @@ async function embeddedIdentityExample() {
   console.log(`Document ${sent.documentId} prepared.\n`);
 
   // 2) When the signer is ready (they clicked "Sign now" in YOUR app, and you have confirmed the
-  //    logged-in user is this recipient), request a signing URL. Request it at click time, never
-  //    store it: the single-use URLs expire quickly by design. This call works whether or not the
-  //    recipient has identity verification configured.
+  //    logged-in user is this recipient), request a signing URL. Mint it at click time and never
+  //    store it (for the bypass modes below the URL is single-use and expires in minutes). This
+  //    call works whether or not the recipient has identity verification configured.
   const link = await TurboSign.createSigningUrl(sent.documentId, {
     // Select the recipient by YOUR externalId (or pass recipientId instead, exactly one):
     externalId: 'your_customer_123',
@@ -100,14 +111,18 @@ async function embeddedIdentityExample() {
   console.log(`  pendingChecks: ${JSON.stringify(link.pendingChecks)}`);
   console.log(`  expiresAt: ${link.expiresAt ?? '(no separate expiry; follows the document window)'}`);
 
-  // 3) The signing page does the rest. With no identity verification (or for external_idv/override)
-  //    it redeems the single-use token and shows the document straight away; for otp it asks for
-  //    the passcode first. Watch the `completed` webhook to know when signing finishes, then
-  //    download the signed PDF. If a signer was verified, its certificate of completion carries
-  //    the identity-verification line for that signer.
+  // 3) The signing page does the rest. What `url` is depends on the recipient's mode:
+  //    - no verification or otp: the reusable signing link (a `?token=` URL). For otp the page asks
+  //      for the passcode first; with no verification it opens the document straight away. The link
+  //      follows the document's own signing window and survives a refresh.
+  //    - external_idv or override: a single-use, short-lived link (a `?sut=` URL) that the page
+  //      redeems once when opened. Mint a fresh one each time; do not reuse it.
+  //    Watch the `completed` webhook to know when signing finishes, then download the signed PDF.
+  //    If a signer was verified, the certificate of completion carries the identity-verification line.
   //
   // If you embed the page in an iframe, ask your org admin to add your app's origin to the
-  // "Allowed embedding domains" list in the E-Signature settings (Identity & embedding tab).
+  // "Allowed embedding domains" list in the E-Signature settings (Identity & embedding tab). You
+  // can read the current list from `settings.allowedFrameAncestors` above.
 }
 
 embeddedIdentityExample().catch((err) => {
