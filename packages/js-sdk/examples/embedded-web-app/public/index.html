@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Northwind Mutual — Sign your policy</title>
+    <style>
+      :root {
+        --ink: #12223a;
+        --muted: #5b6b82;
+        --brand: #1f6feb;
+        --line: #e3e8ef;
+        --ok: #14804a;
+        --bg: #f5f7fb;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 16px 24px;
+        background: #fff;
+        border-bottom: 1px solid var(--line);
+      }
+      header .logo {
+        width: 26px; height: 26px; border-radius: 6px;
+        background: linear-gradient(135deg, var(--brand), #4b9bff);
+      }
+      header b { font-size: 17px; letter-spacing: -0.01em; }
+      header span { color: var(--muted); font-size: 13px; margin-left: auto; }
+      main { max-width: 860px; margin: 32px auto; padding: 0 16px; }
+      .card {
+        background: #fff; border: 1px solid var(--line); border-radius: 12px;
+        padding: 24px; box-shadow: 0 1px 2px rgba(18, 34, 58, 0.04);
+      }
+      h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: -0.02em; }
+      p.lead { color: var(--muted); margin: 0 0 20px; line-height: 1.5; }
+      button {
+        appearance: none; border: 0; border-radius: 8px; cursor: pointer;
+        background: var(--brand); color: #fff; font-size: 15px; font-weight: 600;
+        padding: 11px 18px;
+      }
+      button:disabled { opacity: 0.55; cursor: default; }
+      .frame-wrap { margin-top: 20px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }
+      iframe { width: 100%; height: 720px; border: 0; display: block; }
+      .status { margin-top: 14px; font-size: 14px; color: var(--muted); min-height: 20px; }
+      .done {
+        margin-top: 20px; padding: 20px; border-radius: 12px;
+        background: #eafaf0; border: 1px solid #bfe9cf; color: var(--ok);
+      }
+      .done b { display: block; font-size: 16px; margin-bottom: 4px; }
+      .hidden { display: none; }
+      code { background: #eef2f7; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo" aria-hidden="true"></div>
+      <b>Northwind Mutual</b>
+      <span>My Policy Center</span>
+    </header>
+
+    <main>
+      <div class="card" id="card">
+        <h1>Complete your auto policy</h1>
+        <p class="lead">
+          Your policy documents are ready to sign. Signing happens right here in your account. No email
+          link, no new tab. When you finish, this page updates on its own.
+        </p>
+        <button id="start" type="button">Start signing</button>
+        <div class="status" id="status"></div>
+
+        <!-- The signing page is embedded here. Its src is minted by THIS app's server (server.ts),
+             which holds the API key, so the browser never sees it. -->
+        <div class="frame-wrap hidden" id="frameWrap">
+          <iframe id="signFrame" title="Sign your policy" allow="clipboard-write"></iframe>
+        </div>
+
+        <div class="done hidden" id="done">
+          <b>All set. Your policy is signed.</b>
+          Thanks. We have recorded your signature and your policy is now active.
+        </div>
+      </div>
+
+      <p class="status">
+        Embedding note: this only renders if <code>Northwind Mutual</code>'s origin
+        (<code id="origin"></code>) is on your org's embedded-signing allow-list. Otherwise the browser
+        blocks the frame (default-deny clickjacking protection).
+      </p>
+    </main>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      $('origin').textContent = window.location.origin;
+
+      // Where the signing iframe is hosted. In production, lock the postMessage check to this exact
+      // origin so only the real TurboSign page can report completion. For a local dev stack this is
+      // usually your wrangler/frontend origin; leave it null to accept any origin in the demo.
+      const TURBOSIGN_ORIGIN = null; // e.g. "https://app.turbodocx.com"
+
+      $('start').addEventListener('click', async () => {
+        $('start').disabled = true;
+        $('status').textContent = 'Preparing your document…';
+        try {
+          // Ask our OWN backend for the embeddable signing URL (keeps the API key server-side).
+          const res = await fetch('/api/signing-url');
+          if (!res.ok) throw new Error((await res.json()).error || 'Could not start signing');
+          const { url, mode } = await res.json();
+
+          $('signFrame').src = url;
+          $('frameWrap').classList.remove('hidden');
+          $('status').textContent = mode ? `Identity check required (${mode}) before signing.` : 'Sign the document below.';
+        } catch (err) {
+          $('status').textContent = `Could not start signing: ${err.message}`;
+          $('start').disabled = false;
+        }
+      });
+
+      // The signing page posts `{ type: "turbosign:completed", documentId, status }` to its parent
+      // when the signer finishes. That is how the host knows to advance WITHOUT polling.
+      window.addEventListener('message', (event) => {
+        // Only trust our known signing origin in production (the page posts to "*").
+        if (TURBOSIGN_ORIGIN && event.origin !== TURBOSIGN_ORIGIN) return;
+        if (event.data && event.data.type === 'turbosign:completed') {
+          $('frameWrap').classList.add('hidden');
+          $('status').textContent = '';
+          $('done').classList.remove('hidden');
+          // event.data.documentId is available if you want to reconcile against your own record.
+        }
+      });
+    </script>
+  </body>
+</html>
