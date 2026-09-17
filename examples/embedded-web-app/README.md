@@ -36,6 +36,8 @@ clickjacking protection (`frame-ancestors`) working, not a bug.
 
 ## Run
 
+From the SDK repo root (with `@turbodocx/sdk` available):
+
 ```bash
 TURBODOCX_API_KEY=your-key \
 TURBODOCX_ORG_ID=your-org \
