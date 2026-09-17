@@ -16,7 +16,7 @@
  * add `http://localhost:4000` to the org's embedded-signing allowed origins (dev-only http override;
  * production embedders must be https). Without it the browser refuses to render the iframe.
  *
- * Run (from the js-sdk package root):
+ * Run (from the SDK repo root, with @turbodocx/sdk installed):
  *   TURBODOCX_API_KEY=... TURBODOCX_ORG_ID=... TURBODOCX_SENDER_EMAIL=you@co.com \
  *   npx tsx examples/embedded-web-app/server.ts
  * then open http://localhost:4000
@@ -31,8 +31,8 @@ import { TurboSign } from '@turbodocx/sdk';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4000);
 const ORIGIN = `http://localhost:${PORT}`;
-// A PDF with signature/date anchors ({signature1}, {date1}). Ships with the SDK.
-const PDF_PATH = fileURLToPath(new URL('../../../../ExampleAssets/sample-contract.pdf', import.meta.url));
+// A PDF with signature/date anchors ({signature1}, {date1}). Ships with the SDK (repo ExampleAssets).
+const PDF_PATH = fileURLToPath(new URL('../../ExampleAssets/sample-contract.pdf', import.meta.url));
 
 TurboSign.configure({
   apiKey: process.env.TURBODOCX_API_KEY || 'your-api-key-here',
