@@ -16,11 +16,17 @@
  * add `http://localhost:4000` to the org's embedded-signing allowed origins (dev-only http override;
  * production embedders must be https). Without it the browser refuses to render the iframe.
  *
- * Run (from the SDK repo root, with @turbodocx/sdk installed):
- *   TURBODOCX_API_KEY=... TURBODOCX_ORG_ID=... TURBODOCX_SENDER_EMAIL=you@co.com \
- *   npx tsx examples/embedded-web-app/server.ts
+ * Run (from this example's directory, with @turbodocx/sdk installed):
+ *   cd examples/embedded-web-app
+ *   cp .env.example .env   # then fill in your credentials
+ *   npx tsx server.ts
  * then open http://localhost:4000
+ *
+ * Config is loaded from `.env` via `dotenv/config` (imported first, below). Running from this
+ * directory matters: dotenv reads `.env` from the current working directory.
  */
+import 'dotenv/config';
+
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';

@@ -36,17 +36,24 @@ clickjacking protection (`frame-ancestors`) working, not a bug.
 
 ## Run
 
-From the SDK repo root (with `@turbodocx/sdk` available):
+Configuration is read from a `.env` file (loaded by `dotenv/config`). Copy the template, fill it in,
+then run from this example's directory:
 
 ```bash
-TURBODOCX_API_KEY=your-key \
-TURBODOCX_ORG_ID=your-org \
-TURBODOCX_SENDER_EMAIL=you@yourcompany.com \
-npx tsx examples/embedded-web-app/server.ts
+cd examples/embedded-web-app
+cp .env.example .env      # then edit .env and fill in your values
+npx tsx server.ts
 ```
 
+`.env.example` documents every variable. At minimum set `TURBODOCX_API_KEY`, `TURBODOCX_ORG_ID`, and
+`TURBODOCX_SENDER_EMAIL`; set `TURBODOCX_API_URL` to point at a non-default backend (e.g.
+`http://localhost:3000` for local dev). Your real `.env` is gitignored — never commit it.
+
+> Run from this directory. `dotenv` reads `.env` from the current working directory, so running from
+> the repo root would not pick it up.
+
 Then open <http://localhost:4000>, enter your name + a real email you can receive at, and click **Start
-signing**. (Set `TURBODOCX_API_URL` to point at a non-default backend, e.g. a local dev server.)
+signing**.
 
 ## What to notice
 - **The API key never reaches the browser.** The page calls its own `/api/start`; only the server
