@@ -120,9 +120,12 @@ async function embeddedIdentityExample() {
   //    Watch the `completed` webhook to know when signing finishes, then download the signed PDF.
   //    If a signer was verified, the certificate of completion carries the identity-verification line.
   //
-  // If you embed the page in an iframe, ask your org admin to add your app's origin to the
-  // "Allowed embedding domains" list in the E-Signature settings (Identity & embedding tab). You
-  // can read the current list from `settings.allowedFrameAncestors` above.
+  // `link.url` is an embeddable signing URL (/e-signature/embed/...). If you frame it, the browser
+  // enforces a per-tenant Content-Security-Policy: frame-ancestors on the page, so an origin that is
+  // NOT on the org's allow-list is HARD-BLOCKED from embedding (not merely warned). Ask your org admin
+  // to add your app's origin to the "Allowed embedding domains" list in the E-Signature settings
+  // (Identity & embedding tab); you can read the current list from `settings.allowedFrameAncestors`
+  // above. The non-embedded email-invite signing links (/e-signature/sign/...) deny all framing.
 }
 
 embeddedIdentityExample().catch((err) => {
