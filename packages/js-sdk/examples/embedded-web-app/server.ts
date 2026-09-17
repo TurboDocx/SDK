@@ -1,24 +1,23 @@
 /**
- * Example host web-app: "Northwind Mutual" embeds TurboSign signing inside its own page.
+ * Example host web-app: "Northwind Mutual" embeds TurboSign signing inside its own page, with the
+ * signer's EMAIL collected in the host UI and EMAIL OTP as the identity check.
  *
- * This is the INTEGRATOR'S side of embedded signing — a fake customer app that puts the TurboSign
- * signing page in an <iframe> instead of emailing a signing link. It has two halves:
+ * The integrator's side of embedded signing, end to end:
+ *   1. The host page collects the signer's name + email (public/index.html).
+ *   2. This server (no framework) holds the TurboDocx API key and, per request, creates a signing
+ *      document for that email with `identityVerification: { mode: 'otp', channel: 'email' }`, then
+ *      mints an embeddable signing URL with the SDK. The API key stays SERVER-SIDE.
+ *   3. The host frames the URL. Inside the iframe TurboSign emails a 6-digit code to the signer, they
+ *      verify it, then sign. On completion the signing page posts `turbosign:completed` to the parent.
+ *   4. The COMPLETED SIGNED COPY is emailed to that same recipient email (plus any CC configured on the
+ *      document, plus a completion notification to the sender).
  *
- *   1. This tiny server (Node, no framework) holds your TurboDocx API key and mints an embeddable
- *      signing URL with the SDK. The API key stays SERVER-SIDE — never ship it to the browser.
- *   2. public/index.html is the host page: it fetches the URL from this server, frames it, and
- *      listens for the `turbosign:completed` postMessage the signing page sends when the signer is
- *      done. (See public/index.html.)
+ * IMPORTANT — the org must allow-list THIS app's origin (default-deny frame-ancestors). For this demo
+ * add `http://localhost:4000` to the org's embedded-signing allowed origins (dev-only http override;
+ * production embedders must be https). Without it the browser refuses to render the iframe.
  *
- * IMPORTANT — the org must allow-list THIS app's origin. Embedded signing is default-deny: the
- * browser will refuse to render the iframe unless the signer's org lists this app's origin
- * (e.g. http://localhost:4000) in its embedded-signing "allowed origins". Set that in the TurboDocx
- * E-Signature settings (Identity & embedding tab) or via the org preferences API. Without it you'll
- * see a blank/refused frame — that's the clickjacking protection working, not a bug.
- *
- * Run:
+ * Run (from the js-sdk package root):
  *   TURBODOCX_API_KEY=... TURBODOCX_ORG_ID=... TURBODOCX_SENDER_EMAIL=you@co.com \
- *   DEMO_DOCUMENT_ID=... DEMO_RECIPIENT_ID=... \
  *   npx tsx examples/embedded-web-app/server.ts
  * then open http://localhost:4000
  */
@@ -32,34 +31,54 @@ import { TurboSign } from '@turbodocx/sdk';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4000);
 const ORIGIN = `http://localhost:${PORT}`;
+// A PDF with signature/date anchors ({signature1}, {date1}). Ships with the SDK.
+const PDF_PATH = fileURLToPath(new URL('../../../../ExampleAssets/sample-contract.pdf', import.meta.url));
 
 TurboSign.configure({
   apiKey: process.env.TURBODOCX_API_KEY || 'your-api-key-here',
   orgId: process.env.TURBODOCX_ORG_ID || 'your-org-id-here',
   senderEmail: process.env.TURBODOCX_SENDER_EMAIL || 'support@yourcompany.com',
   senderName: process.env.TURBODOCX_SENDER_NAME || 'Northwind Mutual',
+  // Point at your API if not the default (e.g. a local backend during development).
+  ...(process.env.TURBODOCX_API_URL ? { baseUrl: process.env.TURBODOCX_API_URL } : {}),
 });
 
-// The document + recipient you want the signer to sign. In a real app these come from your own
-// records (you created the document earlier and know which recipient is signing now).
-const DOCUMENT_ID = process.env.DEMO_DOCUMENT_ID || '';
-const RECIPIENT_ID = process.env.DEMO_RECIPIENT_ID || '';
-// Optional: select the recipient by YOUR own key instead of TurboDocx's recipient id.
-const EXTERNAL_ID = process.env.DEMO_EXTERNAL_ID || '';
-
-/** Mint a fresh embeddable signing URL for this signer. Called by the host page's fetch. */
-async function mintSigningUrl(): Promise<{ url: string; mode: string | null }> {
-  if (!DOCUMENT_ID || (!RECIPIENT_ID && !EXTERNAL_ID)) {
-    throw new Error('Set DEMO_DOCUMENT_ID and DEMO_RECIPIENT_ID (or DEMO_EXTERNAL_ID) in the environment.');
+async function readBody(req: import('node:http').IncomingMessage): Promise<Record<string, unknown>> {
+  const chunks: Buffer[] = [];
+  for await (const c of req) chunks.push(c as Buffer);
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+  } catch {
+    return {};
   }
-  const link = await TurboSign.createSigningUrl(DOCUMENT_ID, {
-    // Pass exactly one selector — recipientId OR externalId.
-    ...(RECIPIENT_ID ? { recipientId: RECIPIENT_ID } : { externalId: EXTERNAL_ID }),
-    // After signing, the page bounces here; the host also learns completion via postMessage below.
+}
+
+/** Create a document for this signer (email OTP) and mint the embeddable signing URL. */
+async function startSigning(name: string, email: string): Promise<{ url: string; mode: string | null }> {
+  const pdf = await readFile(PDF_PATH);
+
+  // Create + send the document with ONE recipient who must clear an EMAIL OTP before signing.
+  const sent = await TurboSign.sendSignature({
+    file: pdf,
+    documentName: `Northwind Auto Policy - ${name}`,
+    recipients: [
+      {
+        name,
+        email, // <-- collected in the UI; the completed copy is emailed here
+        signingOrder: 1,
+        identityVerification: { mode: 'otp', channel: 'email' }, // email OTP step-up before signing
+      },
+    ],
+    fields: [
+      { type: 'signature', recipientEmail: email, template: { anchor: '{signature1}', placement: 'replace', size: { width: 100, height: 30 } } },
+      { type: 'date', recipientEmail: email, template: { anchor: '{date1}', placement: 'replace', size: { width: 75, height: 30 } } },
+    ],
+  });
+
+  // Mint the embeddable URL for that recipient. `identityVerificationMode` comes back as 'otp'.
+  const link = await TurboSign.createSigningUrl(sent.documentId, {
+    recipientId: sent.recipients[0].id,
     returnUrl: `${ORIGIN}/signed`,
-    // A plain embedded recipient signs directly. To require a step-up first, uncomment one:
-    // identityVerification: { mode: 'otp', channel: 'email' },
-    // identityVerification: { mode: 'external_idv', provider: 'CAPA' },
   });
   return { url: link.url, mode: link.identityVerificationMode ?? null };
 }
@@ -68,15 +87,21 @@ const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url || '/', ORIGIN);
 
-    // The host page mints a URL from its own backend so the API key stays server-side.
-    if (url.pathname === '/api/signing-url') {
-      const { url: signingUrl, mode } = await mintSigningUrl();
+    if (url.pathname === '/api/start' && req.method === 'POST') {
+      const body = await readBody(req);
+      const name = String(body.name || '').trim();
+      const email = String(body.email || '').trim();
+      if (!name || !email) {
+        res.writeHead(400, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Name and email are required.' }));
+        return;
+      }
+      const result = await startSigning(name, email);
       res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ url: signingUrl, mode }));
+      res.end(JSON.stringify(result));
       return;
     }
 
-    // Everything else serves the single host page.
     const html = await readFile(join(HERE, 'public', 'index.html'), 'utf8');
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end(html);
@@ -89,6 +114,6 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`\nNorthwind Mutual (embedded-signing demo) running at ${ORIGIN}`);
   console.log(
-    `\n>> Before the iframe will render, allow-list this origin in the signer's org:\n     ${ORIGIN}\n   (TurboDocx E-Signature settings -> Identity & embedding -> Allowed origins.)\n`,
+    `\n>> Allow-list this origin in the signer's org first, or the iframe will be blocked:\n     ${ORIGIN}\n   (TurboDocx E-Signature settings -> Identity & embedding -> Allowed origins.)\n`,
   );
 });
