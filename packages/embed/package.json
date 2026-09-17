@@ -1,0 +1,87 @@
+{
+  "name": "@turbodocx/embed",
+  "version": "0.1.0",
+  "description": "TurboSign embedded-signing widget - a framework-agnostic web component and a React component that frame an embed URL, pin the origin, and surface the turbosign:completed event",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo 'add eslint here'",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "turbodocx",
+    "turbosign",
+    "esignature",
+    "digital-signature",
+    "embedded-signing",
+    "web-component",
+    "custom-element",
+    "react",
+    "iframe",
+    "postmessage"
+  ],
+  "author": "TurboDocx",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TurboDocx/SDK.git",
+    "directory": "packages/embed"
+  },
+  "homepage": "https://www.turbodocx.com",
+  "bugs": {
+    "url": "https://github.com/TurboDocx/SDK/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@testing-library/react": "16.3.3",
+    "@types/jest": "30.0.0",
+    "@types/node": "26.1.2",
+    "@types/react": "19.3.0",
+    "jest": "30.4.2",
+    "jest-environment-jsdom": "30.5.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "ts-jest": "29.4.12",
+    "typescript": "6.0.3"
+  },
+  "overrides": {
+    "brace-expansion@1": "^1.1.18",
+    "brace-expansion@2": "^2.1.4",
+    "js-yaml": "^3.15.1"
+  }
+}

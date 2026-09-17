@@ -5,6 +5,11 @@ the signer's **name and email**, verifies them with an **email one-time passcode
 TurboSign signing page in its own `<iframe>` instead of emailing a signing link. It ties together the
 whole embedded ceremony:
 
+> This is the **raw** approach (hand-rolled iframe + message listener), shown so you can see what the
+> widget does under the hood. For most apps, use the [`embedded-web-app-widget`](../embedded-web-app-widget)
+> example with the `<turbosign-form>` / `<TurboSignForm>` widget from
+> [`@turbodocx/embed`](../../packages/embed) instead.
+
 - **`server.ts`** — a framework-free Node server that holds your TurboDocx API key. Per request it
   creates a signing document for the entered email with `identityVerification: { mode: 'otp', channel:
   'email' }`, then mints an embeddable signing URL with the SDK (`TurboSign.sendSignature` +
