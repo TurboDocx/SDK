@@ -78,7 +78,9 @@ async function startSigning(name: string, email: string): Promise<{ url: string;
   // Mint the embeddable URL for that recipient. `identityVerificationMode` comes back as 'otp'.
   const link = await TurboSign.createSigningUrl(sent.documentId, {
     recipientId: sent.recipients[0].id,
-    returnUrl: `${ORIGIN}/signed`,
+    // returnUrl must be an https URL. Include it only when this host is served over https (production);
+    // running locally over http, rely on the turbosign:completed postMessage for completion instead.
+    ...(ORIGIN.startsWith('https://') ? { returnUrl: `${ORIGIN}/signed` } : {}),
   });
   return { url: link.url, mode: link.identityVerificationMode ?? null };
 }
