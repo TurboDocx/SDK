@@ -227,5 +227,113 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
       "https://app/sign/doc-5?token=1",
       "https://app/sign/doc-5?token=2",
     ]);
+    // Both minted, so both are 'ready'.
+    expect(res.recipients.map((r) => r.status)).toEqual(["ready", "ready"]);
+  });
+
+  // Turn-aware: with a real (sequential) signing order, the backend refuses to mint an embed URL for
+  // a signer whose turn hasn't come — it 409s with code `RecipientNotInTurn`. createEmbeddedSignature
+  // must NOT throw the whole call away: the in-turn signer gets a URL now, the not-yet-turn signer
+  // comes back `status: 'pending'` with `embedUrl: null` (mint it later when the first one finishes).
+  it("returns pending (null URL) for a recipient the backend says is not in turn, ready for the one who is", async () => {
+    const fetchMock = jest
+      .fn()
+      // 1st: sendSignature returns both recipients.
+      .mockResolvedValueOnce({
+        ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
+        json: async () => sendEnvelope("doc-6", [
+          { id: "rec-1", name: "First", email: "first@example.com" },
+          { id: "rec-2", name: "Second", email: "second@example.com" },
+        ]),
+        text: async () => "",
+      })
+      // 2nd: createSigningUrl for First (order 1) succeeds.
+      .mockResolvedValueOnce({
+        ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
+        json: async () => signingUrlEnvelope("rec-1", "https://app/sign/doc-6?token=FIRST", "otp"),
+        text: async () => "",
+      })
+      // 3rd: createSigningUrl for Second (order 2) is refused — not their turn yet.
+      .mockResolvedValueOnce({
+        ok: false, status: 409, statusText: "Conflict", headers: { get: () => "application/json" },
+        json: async () => ({ message: "It is not this recipient's turn to sign yet.", code: "RecipientNotInTurn" }),
+        text: async () => "",
+      });
+    (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
+
+    const res = await TurboSign.createEmbeddedSignature({
+      templateId: "tmpl-1",
+      recipients: [
+        { name: "First", email: "first@example.com", signingOrder: 1, auth: { emailOtp: true } },
+        { name: "Second", email: "second@example.com", signingOrder: 2, auth: { emailOtp: true } },
+      ],
+    });
+
+    // The call did NOT throw — it degraded gracefully.
+    expect(res.recipients).toHaveLength(2);
+
+    // First is ready with a real URL.
+    expect(res.recipients[0].name).toBe("First");
+    expect(res.recipients[0].status).toBe("ready");
+    expect(res.recipients[0].embedUrl).toBe("https://app/sign/doc-6?token=FIRST");
+
+    // Second is pending: no URL yet, but we still know who they are and their identity mode.
+    expect(res.recipients[1].name).toBe("Second");
+    expect(res.recipients[1].status).toBe("pending");
+    expect(res.recipients[1].embedUrl).toBeNull();
+    expect(res.recipients[1].recipientId).toBe("rec-2");
+    expect(res.recipients[1].identityVerificationMode).toBe("otp");
+  });
+
+  // A recipient who has ALREADY signed (backend 409 `RecipientAlreadySigned`) comes back
+  // `status: 'completed'` with a null URL — not an error, and distinct from 'pending'.
+  it("returns completed (null URL) for a recipient the backend says already signed", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
+        json: async () => sendEnvelope("doc-7", [{ id: "rec-1", name: "Done", email: "done@example.com" }]),
+        text: async () => "",
+      })
+      .mockResolvedValueOnce({
+        ok: false, status: 409, statusText: "Conflict", headers: { get: () => "application/json" },
+        json: async () => ({ message: "This recipient has already signed.", code: "RecipientAlreadySigned" }),
+        text: async () => "",
+      });
+    (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
+
+    const res = await TurboSign.createEmbeddedSignature({
+      templateId: "tmpl-1",
+      recipients: [{ name: "Done", email: "done@example.com" }],
+    });
+
+    expect(res.recipients).toHaveLength(1);
+    expect(res.recipients[0].status).toBe("completed");
+    expect(res.recipients[0].embedUrl).toBeNull();
+  });
+
+  // A genuine failure (not a turn/already-signed conflict) must still propagate — we don't want to
+  // silently swallow a real error as a "pending" recipient.
+  it("rethrows a non-turn error from createSigningUrl instead of masking it as pending", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
+        json: async () => sendEnvelope("doc-8", [{ id: "rec-1", name: "X", email: "x@example.com" }]),
+        text: async () => "",
+      })
+      .mockResolvedValueOnce({
+        ok: false, status: 500, statusText: "Server Error", headers: { get: () => "application/json" },
+        json: async () => ({ message: "boom", code: "InternalError" }),
+        text: async () => "",
+      });
+    (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
+
+    await expect(
+      TurboSign.createEmbeddedSignature({
+        templateId: "tmpl-1",
+        recipients: [{ name: "X", email: "x@example.com" }],
+      })
+    ).rejects.toThrow();
   });
 });

@@ -74,7 +74,10 @@ async function startSigning(name: string, email: string): Promise<{ url: string;
     // running locally over http, rely on the turbosign:completed postMessage for completion instead.
     ...(ORIGIN.startsWith('https://') ? { returnUrl: `${ORIGIN}/signed` } : {}),
   });
-  return { url: recipients[0].embedUrl, mode: recipients[0].identityVerificationMode };
+  // A single, first-in-order signer is always `ready` with a URL; narrow the now-nullable type here.
+  const r = recipients[0];
+  if (!r.embedUrl) throw new Error(`Cannot start signing: recipient is ${r.status}.`);
+  return { url: r.embedUrl, mode: r.identityVerificationMode };
 }
 
 const server = createServer(async (req, res) => {
