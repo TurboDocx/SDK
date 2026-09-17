@@ -63,32 +63,18 @@ async function readBody(req: import('node:http').IncomingMessage): Promise<Recor
 async function startSigning(name: string, email: string): Promise<{ url: string; mode: string | null }> {
   const pdf = await readFile(PDF_PATH);
 
-  // Create + send the document with ONE recipient who must clear an EMAIL OTP before signing.
-  const sent = await TurboSign.sendSignature({
+  // ONE call: create + send the document for a single recipient who must clear an EMAIL OTP before
+  // signing, and mint the embeddable signing URL for them. `createEmbeddedSignature` maps the `auth`
+  // + `fields` shorthand onto sendSignature + createSigningUrl and returns a per-recipient embed URL.
+  const { recipients } = await TurboSign.createEmbeddedSignature({
     file: pdf,
     documentName: `Northwind Auto Policy - ${name}`,
-    recipients: [
-      {
-        name,
-        email, // <-- collected in the UI; the completed copy is emailed here
-        signingOrder: 1,
-        identityVerification: { mode: 'otp', channel: 'email' }, // email OTP step-up before signing
-      },
-    ],
-    fields: [
-      { type: 'signature', recipientEmail: email, template: { anchor: '{signature1}', placement: 'replace', size: { width: 100, height: 30 } } },
-      { type: 'date', recipientEmail: email, template: { anchor: '{date1}', placement: 'replace', size: { width: 75, height: 30 } } },
-    ],
-  });
-
-  // Mint the embeddable URL for that recipient. `identityVerificationMode` comes back as 'otp'.
-  const link = await TurboSign.createSigningUrl(sent.documentId, {
-    recipientId: sent.recipients[0].id,
+    recipients: [{ name, email, auth: { emailOtp: true }, fields: { signature: '{signature1}', date: '{date1}' } }],
     // returnUrl must be an https URL. Include it only when this host is served over https (production);
     // running locally over http, rely on the turbosign:completed postMessage for completion instead.
     ...(ORIGIN.startsWith('https://') ? { returnUrl: `${ORIGIN}/signed` } : {}),
   });
-  return { url: link.url, mode: link.identityVerificationMode ?? null };
+  return { url: recipients[0].embedUrl, mode: recipients[0].identityVerificationMode };
 }
 
 const server = createServer(async (req, res) => {

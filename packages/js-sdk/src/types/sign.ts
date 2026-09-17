@@ -294,6 +294,89 @@ export interface DocumentRecipientsResponse {
 }
 
 // ============================================
+// EMBEDDED SIGNATURE (one-call create + embed URL)
+// ============================================
+
+/**
+ * Per-recipient identity check for embedded signing, in ergonomic shorthand. Expands to the
+ * recipient's {@link IdentityVerification}. Omit both keys for no identity verification.
+ */
+export interface EmbeddedRecipientAuth {
+  /** Require an email OTP before signing. Maps to identityVerification { mode:'otp', channel:'email' }. */
+  emailOtp?: boolean;
+  /** Require an SMS OTP to this number. Maps to identityVerification { mode:'otp', channel:'sms' } + phone. */
+  sms?: { phoneNumber: string };
+}
+
+/**
+ * Shorthand field placement by text anchor; expands to full {@link Field} objects
+ * (placement:'replace' + a default size). Each value is the anchor text to replace.
+ */
+export interface EmbeddedRecipientFields {
+  signature?: string; // anchor text, e.g. '{signature1}'
+  date?: string;
+  initials?: string;
+  fullName?: string;
+}
+
+/** One signer in a {@link CreateEmbeddedSignatureRequest}. */
+export interface EmbeddedSignatureRecipient {
+  name: string;
+  email: string;
+  phone?: string;
+  /** Defaults to the recipient's index + 1 (sequential). */
+  signingOrder?: number;
+  auth?: EmbeddedRecipientAuth;
+  fields?: EmbeddedRecipientFields;
+}
+
+/**
+ * Request for {@link TurboSign.createEmbeddedSignature} — create a signature request and mint a
+ * per-recipient embed URL in one call.
+ */
+export interface CreateEmbeddedSignatureRequest {
+  file?: string | File | Buffer;
+  fileName?: string;
+  fileLink?: string;
+  templateId?: string;
+  deliverableId?: string;
+  documentName?: string;
+  documentDescription?: string;
+  senderName?: string;
+  senderEmail?: string;
+  ccEmails?: string | string[];
+  recipients: EmbeddedSignatureRecipient[];
+  /** Optional full field control; overrides the per-recipient `fields` shorthand when provided. */
+  fields?: Field[];
+  /**
+   * Embedded default: do not email the recipients (you own the UX). Forwarded to the backend; email
+   * suppression requires backend support — until then the backend may still send. Defaults to
+   * `false` for this flow. See the follow-up.
+   */
+  sendEmail?: boolean;
+  /**
+   * Optional completion fallback. Must be an https URL — enforced client-side by
+   * {@link TurboSign.createSigningUrl} when the signing URL is minted. Passed to each embed URL.
+   */
+  returnUrl?: string;
+}
+
+/** One resolved signer in a {@link CreateEmbeddedSignatureResponse}, with its embed URL. */
+export interface EmbeddedSignatureRecipientResult {
+  recipientId: string;
+  name: string;
+  email: string;
+  embedUrl: string;
+  identityVerificationMode: 'otp' | 'external_idv' | 'override' | null;
+}
+
+/** Response from {@link TurboSign.createEmbeddedSignature}: the document + a per-recipient embed URL. */
+export interface CreateEmbeddedSignatureResponse {
+  documentId: string;
+  recipients: EmbeddedSignatureRecipientResult[];
+}
+
+// ============================================
 // SINGLE-STEP OPERATION TYPES
 // ============================================
 
@@ -535,6 +618,14 @@ export interface SendSignatureRequest {
   senderEmail?: string;
   /** CC emails (comma-separated or array) */
   ccEmails?: string | string[];
+  /**
+   * Whether the backend should email the recipients. Omit to keep the backend default (emails
+   * sent). Set `false` to suppress recipient emails — used by the embedded flow, where the host
+   * owns the signing UX. Email suppression requires backend support; until then the backend may
+   * still send. Presence is tested with `!== undefined`, so `false` is forwarded rather than
+   * dropped.
+   */
+  sendEmail?: boolean;
   /**
    * Per-document reminder + expiration overrides. Omit to inherit the organization's defaults.
    * @see SignatureScheduleOptions

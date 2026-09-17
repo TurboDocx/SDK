@@ -14,13 +14,36 @@ import {
   CreateSignatureReviewLinkResponse,
   CreateSigningUrlRequest,
   CreateSigningUrlResponse,
+  CreateEmbeddedSignatureRequest,
+  CreateEmbeddedSignatureResponse,
+  EmbeddedSignatureRecipient,
+  EmbeddedSignatureRecipientResult,
   EmbeddedSigningSettings,
+  Field,
+  IdentityVerification,
   Recipient,
   SendSignatureRequest,
   SendSignatureResponse,
+  SignatureFieldType,
   SignatureScheduleOptions,
   SendReminderResponse,
 } from '../types/sign';
+
+/**
+ * Shorthand field key → the concrete {@link SignatureFieldType} it emits plus its default size.
+ *
+ * Note `initials` maps to the `'initial'` field type — that is the literal in the
+ * {@link SignatureFieldType} union (there is no `'initials'`).
+ */
+const EMBEDDED_FIELD_SPECS: Record<
+  keyof NonNullable<EmbeddedSignatureRecipient['fields']>,
+  { type: SignatureFieldType; size: { width: number; height: number } }
+> = {
+  signature: { type: 'signature', size: { width: 100, height: 30 } },
+  date: { type: 'date', size: { width: 75, height: 30 } },
+  initials: { type: 'initial', size: { width: 50, height: 30 } },
+  fullName: { type: 'full_name', size: { width: 150, height: 30 } },
+};
 
 /**
  * Client-side fail-fast validation of each recipient's identityVerification block. The server is
@@ -285,6 +308,11 @@ export class TurboSign {
         : JSON.stringify([request.ccEmails]);
     }
 
+    // Forward email suppression when explicitly set. Tested with `!== undefined` (never truthiness),
+    // exactly like the schedule overrides below: `false` (do not email) is a meaningful value and a
+    // truthiness check would drop it and silently let the backend email the recipients.
+    if (request.sendEmail !== undefined) formData.sendEmail = request.sendEmail;
+
     // Per-document reminder + expiration overrides; omitted keys inherit the org defaults.
     this.applyScheduleOverrides(formData, request);
 
@@ -310,6 +338,150 @@ export class TurboSign {
       );
       return response;
     }
+  }
+
+  /**
+   * Map an embedded recipient's ergonomic `auth` shorthand to a full {@link IdentityVerification}.
+   * `emailOtp` wins if both are set. Returns `undefined` when no auth is requested (no verification).
+   */
+  private static resolveIdentityVerification(
+    auth: EmbeddedSignatureRecipient['auth']
+  ): IdentityVerification | undefined {
+    if (auth?.emailOtp) return { mode: 'otp', channel: 'email' };
+    if (auth?.sms) return { mode: 'otp', channel: 'sms' };
+    return undefined;
+  }
+
+  /**
+   * Expand a recipient's `fields` shorthand into full {@link Field} objects — one per provided key,
+   * anchored to the given text with `placement: 'replace'` and the key's default size.
+   */
+  private static expandRecipientFields(
+    recipient: EmbeddedSignatureRecipient
+  ): Field[] {
+    const shorthand = recipient.fields;
+    if (!shorthand) return [];
+    const fields: Field[] = [];
+    for (const key of Object.keys(EMBEDDED_FIELD_SPECS) as Array<keyof typeof EMBEDDED_FIELD_SPECS>) {
+      const anchor = shorthand[key];
+      if (!anchor) continue;
+      const spec = EMBEDDED_FIELD_SPECS[key];
+      fields.push({
+        type: spec.type,
+        recipientEmail: recipient.email,
+        template: { anchor, placement: 'replace', size: spec.size },
+      });
+    }
+    return fields;
+  }
+
+  /**
+   * Create a signature request AND mint a per-recipient embedded signing URL in ONE call — the
+   * embedded-signing counterpart of DocuSeal's create-with-embed and Dropbox Sign's embedded flow.
+   * Scales to multiple signers (e.g. in-person, same-device sequential signing): you get one embed
+   * URL per recipient, returned in signing order.
+   *
+   * This is a thin WRAPPER over {@link TurboSign.sendSignature} + {@link TurboSign.createSigningUrl}
+   * — no new endpoint. It maps the ergonomic request (per-recipient `auth` + `fields` shorthand)
+   * onto those calls, then assembles a per-recipient result carrying the embed URL and the resolved
+   * identity-verification mode.
+   *
+   * Mapping:
+   * - `auth.emailOtp` → identityVerification `{ mode:'otp', channel:'email' }`;
+   *   `auth.sms.phoneNumber` → `{ mode:'otp', channel:'sms' }` and sets the recipient's `phone`.
+   * - `fields` shorthand → {@link Field}[] (`placement:'replace'` + a default size). Provide the
+   *   top-level `fields` to override the shorthand with full field control.
+   * - `signingOrder` defaults to each recipient's array index + 1.
+   * - `sendEmail` defaults to `false` (you own the UX; forwarded to the backend).
+   * - `returnUrl` is passed through to each embed URL only when provided (https, enforced by
+   *   {@link TurboSign.createSigningUrl}).
+   *
+   * @example
+   * ```typescript
+   * const { recipients } = await TurboSign.createEmbeddedSignature({
+   *   file: pdfBuffer,
+   *   documentName: 'Auto Policy',
+   *   recipients: [
+   *     { name: 'John Doe', email: 'john@example.com', auth: { emailOtp: true },
+   *       fields: { signature: '{signature1}', date: '{date1}' } },
+   *   ],
+   * });
+   * // Open recipients[0].embedUrl in an iframe / new tab.
+   * ```
+   */
+  static async createEmbeddedSignature(
+    request: CreateEmbeddedSignatureRequest
+  ): Promise<CreateEmbeddedSignatureResponse> {
+    // 1. Map the ergonomic recipients onto full Recipient objects (identity + phone + order).
+    const mappedRecipients: Recipient[] = request.recipients.map((r, index) => {
+      const identityVerification = this.resolveIdentityVerification(r.auth);
+      const phone = r.auth?.sms?.phoneNumber ?? r.phone;
+      const recipient: Recipient = {
+        name: r.name,
+        email: r.email,
+        signingOrder: r.signingOrder ?? index + 1,
+        ...(phone ? { phone } : {}),
+        ...(identityVerification ? { identityVerification } : {}),
+      };
+      return recipient;
+    });
+
+    // Full `fields` (when provided) win verbatim; otherwise expand each recipient's shorthand.
+    const fields: Field[] =
+      request.fields ?? request.recipients.flatMap((r) => this.expandRecipientFields(r));
+
+    const sendRequest: SendSignatureRequest = {
+      recipients: mappedRecipients,
+      fields,
+      // Embedded flow default: suppress recipient emails (the host owns the UX).
+      sendEmail: request.sendEmail ?? false,
+      ...(request.file ? { file: request.file } : {}),
+      ...(request.fileName ? { fileName: request.fileName } : {}),
+      ...(request.fileLink ? { fileLink: request.fileLink } : {}),
+      ...(request.templateId ? { templateId: request.templateId } : {}),
+      ...(request.deliverableId ? { deliverableId: request.deliverableId } : {}),
+      ...(request.documentName ? { documentName: request.documentName } : {}),
+      ...(request.documentDescription ? { documentDescription: request.documentDescription } : {}),
+      ...(request.senderName ? { senderName: request.senderName } : {}),
+      ...(request.senderEmail ? { senderEmail: request.senderEmail } : {}),
+      ...(request.ccEmails ? { ccEmails: request.ccEmails } : {}),
+    };
+
+    const sent = await this.sendSignature(sendRequest);
+
+    // Match the backend's recipients back to the request by email so we can carry `name` and know
+    // the resolved identity mode. The response's `recipients` is optional, so guard it.
+    const sentRecipients = sent.recipients ?? [];
+    const recipientIdByEmail = new Map(sentRecipients.map((sr) => [sr.email, sr.id]));
+
+    // 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER.
+    const ordered = request.recipients
+      .map((r, index) => ({ r, order: r.signingOrder ?? index + 1 }))
+      .sort((a, b) => a.order - b.order);
+
+    const recipients: EmbeddedSignatureRecipientResult[] = [];
+    for (const { r } of ordered) {
+      const recipientId = recipientIdByEmail.get(r.email);
+      if (!recipientId) {
+        throw new ValidationError(
+          `sendSignature did not return a recipient matching "${r.email}"; cannot mint an embed URL.`,
+          'EmbeddedRecipientNotReturned'
+        );
+      }
+      const link = await this.createSigningUrl(sent.documentId, {
+        recipientId,
+        ...(request.returnUrl ? { returnUrl: request.returnUrl } : {}),
+      });
+      recipients.push({
+        recipientId,
+        name: r.name,
+        email: r.email,
+        embedUrl: link.url,
+        identityVerificationMode: link.identityVerificationMode,
+      });
+    }
+
+    return { documentId: sent.documentId, recipients };
   }
 
   // ============================================
