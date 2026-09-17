@@ -361,12 +361,23 @@ export interface CreateEmbeddedSignatureRequest {
   returnUrl?: string;
 }
 
-/** One resolved signer in a {@link CreateEmbeddedSignatureResponse}, with its embed URL. */
+/** One resolved signer in a {@link CreateEmbeddedSignatureResponse}. */
 export interface EmbeddedSignatureRecipientResult {
   recipientId: string;
   name: string;
   email: string;
-  embedUrl: string;
+  /**
+   * The embeddable signing URL — present only when it is this recipient's turn (`status: 'ready'`).
+   * `null` for a recipient who cannot sign yet (`'pending'`) or has already signed (`'completed'`);
+   * mint it later (once earlier signers finish) with {@link TurboSign.createSigningUrl}.
+   */
+  embedUrl: string | null;
+  /**
+   * `'ready'` — it is this recipient's turn; `embedUrl` is set, frame it now.
+   * `'pending'` — an earlier signer in the order hasn't signed yet; `embedUrl` is `null`.
+   * `'completed'` — this recipient has already signed.
+   */
+  status: 'ready' | 'pending' | 'completed';
   identityVerificationMode: 'otp' | 'external_idv' | 'override' | null;
 }
 

@@ -396,6 +396,15 @@ export class TurboSign {
    * - `returnUrl` is passed through to each embed URL only when provided (https, enforced by
    *   {@link TurboSign.createSigningUrl}).
    *
+   * Turn-aware: with a real (sequential) signing order the backend will only mint a URL for the
+   * signer whose turn it is. Rather than throw the whole call away, each result carries a `status`:
+   * - `'ready'` — it's their turn; `embedUrl` is set, frame it now.
+   * - `'pending'` — an earlier signer hasn't finished; `embedUrl` is `null`. Re-mint with
+   *   {@link TurboSign.createSigningUrl} once earlier signers complete (e.g. an in-person kiosk that
+   *   hands the device to the next signer). See `examples/embedded-web-app-sequential`.
+   * - `'completed'` — they've already signed; `embedUrl` is `null`.
+   * A genuine error (anything other than not-in-turn / already-signed) still throws.
+   *
    * @example
    * ```typescript
    * const { recipients } = await TurboSign.createEmbeddedSignature({
@@ -468,17 +477,38 @@ export class TurboSign {
           'EmbeddedRecipientNotReturned'
         );
       }
-      const link = await this.createSigningUrl(sent.documentId, {
-        recipientId,
-        ...(request.returnUrl ? { returnUrl: request.returnUrl } : {}),
-      });
-      recipients.push({
-        recipientId,
-        name: r.name,
-        email: r.email,
-        embedUrl: link.url,
-        identityVerificationMode: link.identityVerificationMode,
-      });
+      // Turn-aware: for a real signing order the backend refuses to mint a URL for a signer whose
+      // turn hasn't come (`RecipientNotInTurn`) or who already signed (`RecipientAlreadySigned`).
+      // Those are expected states, not failures — degrade to a null URL + status so the caller can
+      // mint the URL later (when earlier signers finish) instead of the whole call throwing away.
+      // Any OTHER error is a genuine failure and propagates.
+      try {
+        const link = await this.createSigningUrl(sent.documentId, {
+          recipientId,
+          ...(request.returnUrl ? { returnUrl: request.returnUrl } : {}),
+        });
+        recipients.push({
+          recipientId,
+          name: r.name,
+          email: r.email,
+          embedUrl: link.url,
+          status: 'ready',
+          identityVerificationMode: link.identityVerificationMode,
+        });
+      } catch (err) {
+        const code = (err as { code?: string })?.code;
+        if (code !== 'RecipientNotInTurn' && code !== 'NotSignersTurn' && code !== 'RecipientAlreadySigned') {
+          throw err;
+        }
+        recipients.push({
+          recipientId,
+          name: r.name,
+          email: r.email,
+          embedUrl: null,
+          status: code === 'RecipientAlreadySigned' ? 'completed' : 'pending',
+          identityVerificationMode: this.resolveIdentityVerification(r.auth)?.mode ?? null,
+        });
+      }
     }
 
     return { documentId: sent.documentId, recipients };
