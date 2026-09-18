@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type KioskSigner, mintNextWithRetry, startKiosk } from "@/lib/turbosign";
 
+// In production, pin this to your known TurboSign origin. Left null here, the listener instead pins to
+// the origin of the URL it just framed (derived below), so a forged `turbosign:completed` from any
+// other frame/extension/ad on the page is ignored.
 const TURBOSIGN_ORIGIN: string | null = null;
 
 const BLANK = [
@@ -23,16 +26,23 @@ export function Kiosk() {
   const [busy, setBusy] = useState(false);
   const [allDone, setAllDone] = useState(false);
   const currentRef = useRef<KioskSigner | null>(null);
+  // The origin of the currently-framed signing URL — the only origin we accept a completion from.
+  const expectedOriginRef = useRef<string | null>(null);
 
   // Frame a signer: a `ready` signer already has a URL; a `pending` one is minted on demand.
-  async function frame(signer: KioskSigner) {
+  async function frame(signer: KioskSigner, docId: string) {
     currentRef.current = signer;
     let url = signer.embedUrl;
     if (!url) {
       setStatus(`Preparing ${signer.name}'s turn…`);
       // Retry: the backend advances the signing turn a beat after the previous signer's
       // `turbosign:completed` event, so the first mint can momentarily be "not their turn".
-      url = await mintNextWithRetry({ documentId, recipientId: signer.recipientId });
+      url = await mintNextWithRetry({ documentId: docId, recipientId: signer.recipientId });
+    }
+    try {
+      expectedOriginRef.current = new URL(url).origin;
+    } catch {
+      /* keep the prior expected origin */
     }
     setEmbedUrl(url);
     setQueue((q) => q.map((s) => (s.recipientId === signer.recipientId ? { ...s, status: "ready" } : s)));
@@ -41,7 +51,8 @@ export function Kiosk() {
 
   useEffect(() => {
     const handler = async (event: MessageEvent) => {
-      if (TURBOSIGN_ORIGIN && event.origin !== TURBOSIGN_ORIGIN) return;
+      const expected = TURBOSIGN_ORIGIN ?? expectedOriginRef.current;
+      if (!expected || event.origin !== expected) return;
       if (!event.data || (event.data as { type?: string }).type !== "turbosign:completed") return;
 
       const done = currentRef.current;
@@ -54,7 +65,7 @@ export function Kiosk() {
         return;
       }
       try {
-        await frame(next);
+        await frame(next, documentId);
       } catch (err) {
         setStatus(`Could not load the next signer: ${err instanceof Error ? err.message : String(err)}`);
       }
@@ -74,7 +85,9 @@ export function Kiosk() {
       const res = await startKiosk(signers);
       setDocumentId(res.documentId);
       setQueue(res.recipients);
-      await frame(res.recipients[0]);
+      // Pass documentId explicitly — the `documentId` state set just above hasn't committed for this
+      // render yet, so `frame` must not read it from state on the first call.
+      await frame(res.recipients[0], res.documentId);
     } catch (err) {
       setStatus(`Could not start signing: ${err instanceof Error ? err.message : String(err)}`);
     } finally {

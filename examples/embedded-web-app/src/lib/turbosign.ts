@@ -4,6 +4,17 @@
 // use in production, and the one the embed widget is designed for: your server mints the URL, the
 // frontend just frames it.
 
+/** An Error carrying the backend's machine-readable error `code` (e.g. "RecipientNotInTurn"). */
+class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly code?: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(path, {
     method: "POST",
@@ -11,8 +22,8 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const msg = await res.json().catch(() => ({}));
-    throw new Error((msg as { error?: string }).error || `Request failed (HTTP ${res.status})`);
+    const err = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+    throw new ApiError(err.error || `Request failed (HTTP ${res.status})`, err.code);
   }
   return res.json() as Promise<T>;
 }
@@ -53,13 +64,24 @@ export async function mintNext(input: { documentId: string; recipientId: string 
   return url;
 }
 
-const NOT_IN_TURN = /not (your|their|in) turn/i;
+// The backend's turn-race codes (from signingEligibility). Matching the machine-readable code is
+// robust to copy changes / localization; the message regex is only a fallback for older backends
+// that don't echo a code.
+const NOT_IN_TURN_CODES = new Set(["RecipientNotInTurn", "NotSignersTurn"]);
+const NOT_IN_TURN_MSG = /not (your|their|in) turn/i;
+
+function isTurnRace(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const code = (err as ApiError).code;
+  if (code) return NOT_IN_TURN_CODES.has(code);
+  return NOT_IN_TURN_MSG.test(err.message);
+}
 
 /**
  * Mint the next signer's URL, tolerating the brief window right after the previous signer completes.
  * The signing page fires `turbosign:completed` as soon as it shows its success screen, but the
  * backend advances the signing turn a beat later (once the signature is committed). So a mint fired
- * on the completion event can momentarily get "not your turn" — retry a few times before giving up.
+ * on the completion event can momentarily get "not their turn" — retry a few times before giving up.
  * Any other error (a real failure) is rethrown immediately.
  */
 export async function mintNextWithRetry(
@@ -72,7 +94,7 @@ export async function mintNextWithRetry(
       return await mintNext(input);
     } catch (err) {
       lastErr = err;
-      if (!(err instanceof Error) || !NOT_IN_TURN.test(err.message)) throw err;
+      if (!isTurnRace(err)) throw err;
       if (attempt < retries) await new Promise((r) => setTimeout(r, delayMs));
     }
   }

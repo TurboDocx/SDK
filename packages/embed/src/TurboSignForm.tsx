@@ -8,7 +8,7 @@
  * from the package root, so the framework-agnostic web component build stays free of any `react` import.
  */
 import { useEffect, useRef } from 'react';
-import type { CSSProperties, ReactElement } from 'react';
+import type { CSSProperties } from 'react';
 
 import {
   handleTurboSignMessage,
@@ -67,7 +67,7 @@ export function TurboSignForm({
   height,
   className,
   style,
-}: TurboSignFormProps): ReactElement {
+}: TurboSignFormProps) {
   // Keep the latest callbacks in a ref so the effect does not need to re-subscribe on every render.
   const handlersRef = useRef({ onCompleted, onDeclined, onError });
   handlersRef.current = { onCompleted, onDeclined, onError };

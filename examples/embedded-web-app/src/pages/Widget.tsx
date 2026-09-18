@@ -8,9 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { startSingleSigner } from "@/lib/turbosign";
 
-// The exact origin the signing page is served from, for postMessage origin pinning. Leave null in a
-// local demo; set your TurboSign origin (e.g. "https://app.turbodocx.com") in production.
-const TURBOSIGN_ORIGIN: string | null = null;
+// The origin the signing page is served from, for postMessage origin pinning. In production you can
+// hard-code your known TurboSign origin (e.g. "https://app.turbodocx.com"); here we derive it from the
+// embed URL so the widget still pins rather than accepting completions from any origin.
+function originOf(url: string): string | null {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
 
 export function Widget() {
   const [name, setName] = useState("");
@@ -67,7 +74,7 @@ export function Widget() {
         {embedUrl && !done && (
           <TurboSignForm
             embedUrl={embedUrl}
-            origin={TURBOSIGN_ORIGIN}
+            origin={originOf(embedUrl)}
             onCompleted={() => {
               setDone(true);
               setEmbedUrl(null);

@@ -11,6 +11,13 @@ import { TurboSign } from "@turbodocx/sdk";
 // A PDF with signature/date anchors ({signature1}, {date1}, {signature2}). Ships with the SDK.
 const PDF_PATH = fileURLToPath(new URL("../../ExampleAssets/sample-contract.pdf", import.meta.url));
 
+// The sample document never changes for the life of the process — read it once, not per request.
+let pdfPromise: Promise<Buffer> | null = null;
+function loadSamplePdf(): Promise<Buffer> {
+  if (!pdfPromise) pdfPromise = readFile(PDF_PATH);
+  return pdfPromise;
+}
+
 export interface SingleResult {
   url: string;
   mode: "otp" | "external_idv" | "override" | null;
@@ -18,7 +25,7 @@ export interface SingleResult {
 
 /** Path 1 — single signer with email OTP. Returns the minted embed URL. */
 export async function single({ name, email }: { name: string; email: string }): Promise<SingleResult> {
-  const pdf = await readFile(PDF_PATH);
+  const pdf = await loadSamplePdf();
   const { recipients } = await TurboSign.createEmbeddedSignature({
     file: pdf,
     fileName: "sample-contract.pdf",
@@ -42,7 +49,7 @@ export interface KioskSigner {
 export async function kioskStart(
   signers: Array<{ name: string; email: string }>,
 ): Promise<{ documentId: string; recipients: KioskSigner[] }> {
-  const pdf = await readFile(PDF_PATH);
+  const pdf = await loadSamplePdf();
   const { documentId, recipients } = await TurboSign.createEmbeddedSignature({
     file: pdf,
     fileName: "sample-contract.pdf",

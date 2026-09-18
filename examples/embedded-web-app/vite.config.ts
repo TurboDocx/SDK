@@ -18,8 +18,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      // Proxy to server.ts, which listens on PORT (default 4000). Same var so overriding one moves
+      // both. (Vite ignores PORT for its own dev port — that's fixed at 5173 above.)
       "/api": {
-        target: `http://localhost:${process.env.SERVER_PORT || 4000}`,
+        target: `http://localhost:${process.env.PORT || 4000}`,
         changeOrigin: true,
       },
     },
