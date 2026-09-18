@@ -69,10 +69,10 @@ describe("frontend api client (turbosign.ts)", () => {
     );
   });
 
-  it("mintNextWithRetry retries on 'not your turn' then succeeds once the turn advances", async () => {
-    // Arrange: the backend turn lags — first mint says not-in-turn, the second succeeds.
+  it("mintNextWithRetry retries on the RecipientNotInTurn code then succeeds once the turn advances", async () => {
+    // Arrange: the backend turn lags — first mint returns the turn-race code, the second succeeds.
     const responses = [
-      { ok: false, status: 409, json: async () => ({ error: "It is not your turn to sign this document yet." }) },
+      { ok: false, status: 409, json: async () => ({ error: "It is not their turn yet.", code: "RecipientNotInTurn" }) },
       { ok: true, status: 200, json: async () => ({ url: "https://app/embed/doc-9?token=2" }) },
     ];
     let call = 0;
@@ -84,6 +84,19 @@ describe("frontend api client (turbosign.ts)", () => {
     // Assert: it retried and returned the URL from the second call.
     expect(url).toBe("https://app/embed/doc-9?token=2");
     expect((globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
+  });
+
+  it("mintNextWithRetry falls back to the message when the backend echoes no code", async () => {
+    // Arrange: an older backend that returns only the human message (no code).
+    const responses = [
+      { ok: false, status: 409, json: async () => ({ error: "It is not your turn to sign this document yet." }) },
+      { ok: true, status: 200, json: async () => ({ url: "https://app/embed/doc-9?token=2" }) },
+    ];
+    let call = 0;
+    (globalThis.fetch as unknown) = vi.fn(async () => responses[call++]);
+
+    const url = await mintNextWithRetry({ documentId: "doc-9", recipientId: "r2" }, { delayMs: 1 });
+    expect(url).toBe("https://app/embed/doc-9?token=2");
   });
 
   it("mintNextWithRetry rethrows a non-turn error immediately without retrying", async () => {

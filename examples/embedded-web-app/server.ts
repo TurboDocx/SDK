@@ -32,9 +32,19 @@ TurboSign.configure({
   ...(process.env.TURBODOCX_API_URL ? { baseUrl: process.env.TURBODOCX_API_URL } : {}),
 });
 
+const MAX_BODY_BYTES = 64 * 1024; // these endpoints take a few small strings — cap the buffer.
+
 async function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   const chunks: Buffer[] = [];
-  for await (const c of req) chunks.push(c as Buffer);
+  let size = 0;
+  for await (const c of req) {
+    size += (c as Buffer).length;
+    if (size > MAX_BODY_BYTES) {
+      req.destroy();
+      throw new Error("Request body too large");
+    }
+    chunks.push(c as Buffer);
+  }
   try {
     return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
   } catch {
@@ -80,7 +90,10 @@ const server = createServer(async (req, res) => {
 
     return send(res, 404, { error: "Unknown endpoint." });
   } catch (err) {
-    return send(res, 500, { error: err instanceof Error ? err.message : String(err) });
+    // Pass the SDK error's machine-readable `code` through (e.g. "RecipientNotInTurn") so the client
+    // can branch on it (the kiosk retries the turn-race) instead of matching the human message.
+    const code = (err as { code?: string })?.code;
+    return send(res, 500, { error: err instanceof Error ? err.message : String(err), ...(code ? { code } : {}) });
   }
 });
 

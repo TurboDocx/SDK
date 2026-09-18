@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { startSingleSigner } from "@/lib/turbosign";
 
-// In production, pin this to your known TurboSign origin so only the real signing page can report
-// completion. null = accept any origin (fine for a local demo).
+// In production, pin this to your known TurboSign origin. Left null here, the listener instead pins to
+// the origin of the URL it framed, so a forged `turbosign:completed` from another frame/extension/ad
+// on the page can't flip the UI to "signed".
 const TURBOSIGN_ORIGIN: string | null = null;
 
 type Phase = "form" | "signing" | "done";
@@ -20,10 +21,13 @@ export function SingleSigner() {
   const [embedUrl, setEmbedUrl] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  // The origin of the framed signing URL — the only origin we accept a completion from.
+  const expectedOriginRef = useRef<string | null>(null);
 
   useEffect(() => {
     const handler = (event: MessageEvent) => {
-      if (TURBOSIGN_ORIGIN && event.origin !== TURBOSIGN_ORIGIN) return;
+      const expected = TURBOSIGN_ORIGIN ?? expectedOriginRef.current;
+      if (!expected || event.origin !== expected) return;
       if (event.data && (event.data as { type?: string }).type === "turbosign:completed") {
         setPhase("done");
         setStatus("");
@@ -40,6 +44,11 @@ export function SingleSigner() {
     setStatus("Preparing your document and emailing your verification code…");
     try {
       const { url, mode } = await startSingleSigner({ name: name.trim(), email: email.trim() });
+      try {
+        expectedOriginRef.current = new URL(url).origin;
+      } catch {
+        /* leave unset — the listener then accepts nothing until an origin is known */
+      }
       setEmbedUrl(url);
       setPhase("signing");
       setStatus(
