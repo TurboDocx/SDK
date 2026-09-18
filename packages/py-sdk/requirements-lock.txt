@@ -13,7 +13,7 @@
 # NOT the install path. CI still runs `pip install -e ".[dev]"` against the declared
 # ranges, so an upstream breaking change still surfaces. This file exists to be scanned.
 #
-# KNOWN, EXPECTED ALERT: pytest==8.4.2 carries GHSA-6w46-j5rx-g56g (tmpdir handling).
+# KNOWN, EXPECTED ALERT: pytest==9.0.3 carries GHSA-6w46-j5rx-g56g (tmpdir handling).
 # It is unfixable while we support Python 3.9 -- the patched pytest 9.0.3 requires >=3.10.
 # It is a dev/test dependency, never shipped to consumers. Closing it means dropping
 # Python 3.9 (bump requires-python and the CI matrix); until that call is made, treat this
@@ -37,7 +37,7 @@ idna==3.18
 iniconfig==2.1.0
 packaging==26.2
 pluggy==1.6.0
-pytest==8.4.2
+pytest==9.0.3
 pytest-asyncio==1.2.0
 pytest-httpx==0.35.0
 tomli==2.4.1
