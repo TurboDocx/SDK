@@ -460,13 +460,31 @@ module TurboDocxSdk
         @client ||= HttpClient.new
       end
 
-      # Read a value from a request/recipient hash by symbol key, falling back to the string key.
-      # The SDK accepts both key styles throughout, so callers can use either.
+      # Read a value from a request/recipient hash, tolerating symbol vs string AND camelCase vs
+      # snake_case keys, so idiomatic Ruby snake_case (email_otp, phone_number) resolves the same as
+      # the wire's camelCase (emailOtp, phoneNumber). Without the case fold, an idiomatic
+      # `auth: { email_otp: true }` would silently be treated as "no identity verification".
       def req_val(hash, key)
         return nil if hash.nil?
 
         value = hash[key]
-        value.nil? ? hash[key.to_s] : value
+        return value unless value.nil?
+        str = key.to_s
+        value = hash[str]
+        return value unless value.nil?
+
+        snake = str.gsub(/([a-z0-9])([A-Z])/, '\1_\2').downcase
+        camel = str.gsub(/_([a-z0-9])/) { ::Regexp.last_match(1).upcase }
+        [snake, camel].each do |variant|
+          next if variant == str
+
+          v = hash[variant.to_sym]
+          return v unless v.nil?
+
+          v = hash[variant]
+          return v unless v.nil?
+        end
+        nil
       end
 
       # Two-level +req_val+: the outer key then the inner key, tolerating symbol or string at both.
