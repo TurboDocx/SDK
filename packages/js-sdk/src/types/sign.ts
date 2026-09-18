@@ -294,6 +294,100 @@ export interface DocumentRecipientsResponse {
 }
 
 // ============================================
+// EMBEDDED SIGNATURE (one-call create + embed URL)
+// ============================================
+
+/**
+ * Per-recipient identity check for embedded signing, in ergonomic shorthand. Expands to the
+ * recipient's {@link IdentityVerification}. Omit both keys for no identity verification.
+ */
+export interface EmbeddedRecipientAuth {
+  /** Require an email OTP before signing. Maps to identityVerification { mode:'otp', channel:'email' }. */
+  emailOtp?: boolean;
+  /** Require an SMS OTP to this number. Maps to identityVerification { mode:'otp', channel:'sms' } + phone. */
+  sms?: { phoneNumber: string };
+}
+
+/**
+ * Shorthand field placement by text anchor; expands to full {@link Field} objects
+ * (placement:'replace' + a default size). Each value is the anchor text to replace.
+ */
+export interface EmbeddedRecipientFields {
+  signature?: string; // anchor text, e.g. '{signature1}'
+  date?: string;
+  initials?: string;
+  fullName?: string;
+}
+
+/** One signer in a {@link CreateEmbeddedSignatureRequest}. */
+export interface EmbeddedSignatureRecipient {
+  name: string;
+  email: string;
+  phone?: string;
+  /** Defaults to the recipient's index + 1 (sequential). */
+  signingOrder?: number;
+  auth?: EmbeddedRecipientAuth;
+  fields?: EmbeddedRecipientFields;
+}
+
+/**
+ * Request for {@link TurboSign.createEmbeddedSignature} — create a signature request and mint a
+ * per-recipient embed URL in one call.
+ */
+export interface CreateEmbeddedSignatureRequest {
+  file?: string | File | Buffer;
+  fileName?: string;
+  fileLink?: string;
+  templateId?: string;
+  deliverableId?: string;
+  documentName?: string;
+  documentDescription?: string;
+  senderName?: string;
+  senderEmail?: string;
+  ccEmails?: string | string[];
+  recipients: EmbeddedSignatureRecipient[];
+  /** Optional full field control; overrides the per-recipient `fields` shorthand when provided. */
+  fields?: Field[];
+  /**
+   * Embedded default: do not email the recipients (you own the UX). Forwarded to the backend; email
+   * suppression requires backend support — until then the backend may still send. Defaults to
+   * `false` for this flow. See the follow-up.
+   */
+  sendEmail?: boolean;
+  /**
+   * Optional completion fallback. Must be an https URL — enforced client-side by
+   * {@link TurboSign.createSigningUrl} when the signing URL is minted. Passed to each embed URL.
+   */
+  returnUrl?: string;
+}
+
+/** One resolved signer in a {@link CreateEmbeddedSignatureResponse}. */
+export interface EmbeddedSignatureRecipientResult {
+  recipientId: string;
+  name: string;
+  email: string;
+  /**
+   * The embeddable signing URL — present only when it is this recipient's turn (`status: 'ready'`).
+   * `null` for a recipient who cannot sign yet (`'pending'`) or has already signed (`'completed'`);
+   * mint it later (once earlier signers finish) with {@link TurboSign.createSigningUrl}.
+   */
+  embedUrl: string | null;
+  /**
+   * `'ready'` — it is this recipient's turn; `embedUrl` is set, frame it now.
+   * `'pending'` — an earlier signer in the order hasn't signed yet; `embedUrl` is `null`.
+   * `'completed'` — this recipient has already signed.
+   */
+  status: 'ready' | 'pending' | 'completed';
+  identityVerificationMode: 'otp' | 'external_idv' | 'override' | null;
+}
+
+/** Response from {@link TurboSign.createEmbeddedSignature}: the document + a per-recipient embed URL. */
+export interface CreateEmbeddedSignatureResponse {
+  documentId: string;
+  recipients: EmbeddedSignatureRecipientResult[];
+}
+
+// ============================================
 // SINGLE-STEP OPERATION TYPES
 // ============================================
 
@@ -395,6 +489,21 @@ export interface Field {
 }
 
 /**
+ * How an embedded recipient's identity is verified before they can sign.
+ *
+ * A discriminated union on `mode` — the compiler narrows the required fields for you:
+ * - `otp`: TurboSign emails or texts a one-time passcode (SMS requires `phone` on the recipient).
+ * - `external_idv`: your own identity provider (e.g. CAPA) verifies the signer; you pass the
+ *   assertion to {@link TurboSign.createSigningUrl} when you request the signing URL.
+ * - `override`: skip identity verification entirely. For development/testing; your org admin must
+ *   enable it, and every such signature is marked "not identity-verified" on the certificate.
+ */
+export type IdentityVerification =
+  | { mode: 'otp'; channel?: 'email' | 'sms' }
+  | { mode: 'external_idv'; provider: string; maxAgeMinutes?: number }
+  | { mode: 'override'; overrideIdentityVerification: true; reason: string };
+
+/**
  * Recipient configuration for single-step operations
  */
 export interface Recipient {
@@ -404,6 +513,81 @@ export interface Recipient {
   email: string;
   /** Signing order (1-indexed) */
   signingOrder: number;
+  /** E.164 phone number (e.g. +13055551234). Required when identity verification uses SMS OTP. */
+  phone?: string;
+  /**
+   * Your own identifier for this signer (e.g. an Airtable record id), unique within the document.
+   * Lets you request a signing URL by your key instead of storing TurboDocx's recipient id.
+   */
+  externalId?: string;
+  /** Identity verification for embedded signing. Omit for the default email-invite flow. */
+  identityVerification?: IdentityVerification;
+}
+
+/** An identity assertion from your own provider, passed when requesting an external_idv signing URL. */
+export interface IdentityAssertion {
+  /** Must match the recipient's configured provider. */
+  provider: string;
+  /** Your provider's unique id for this verification (used to detect replay). */
+  verificationId: string;
+  /** When your provider verified the signer (ISO 8601). Rejected if in the future or too old. */
+  verifiedAt: string;
+  /** The email your provider verified — must match the recipient's email. */
+  subjectEmail: string;
+}
+
+/** Request a single-use embedded signing URL for one recipient. Provide exactly one selector. */
+export interface CreateSigningUrlRequest {
+  /** Select the recipient by TurboDocx recipient id... */
+  recipientId?: string;
+  /** ...or by the externalId you set when creating the recipient. Provide exactly one. */
+  externalId?: string;
+  /** Required only when the recipient's mode is external_idv. */
+  identityAssertion?: IdentityAssertion;
+  /** Where TurboSign returns the signer after completion (https only). */
+  returnUrl?: string;
+}
+
+/** The single-use embedded signing URL and its metadata. */
+export interface CreateSigningUrlResponse {
+  /** The URL to open (new tab / redirect) or embed for the signer. */
+  url: string;
+  /**
+   * When the URL stops working (ISO 8601). Null for `otp`/no-verification recipients, whose link
+   * follows the document's own signing window rather than a short single-use expiry.
+   */
+  expiresAt: string | null;
+  recipientId: string;
+  externalId?: string;
+  identityVerificationMode: 'otp' | 'external_idv' | 'override' | null;
+  /** Passcode steps the signer must clear on the page. Non-empty only for `otp`. */
+  pendingChecks: Array<'email_otp' | 'sms_otp'>;
+}
+
+/** The org-level identity-verification default channel for new recipients (interactive path only). */
+export type EmbeddedSigningDefaultChannel = 'none' | 'email' | 'sms';
+
+/**
+ * The org's embedded-signing configuration, read via {@link TurboSign.getEmbeddedSigningSettings}.
+ *
+ * These are the set-once, org-wide GATES plus the default channel. The per-recipient identity mode
+ * is chosen when you create each recipient (see {@link IdentityVerification}), not here.
+ */
+export interface EmbeddedSigningSettings {
+  /** Embedded signing (and OTP identity verification) is turned on for the org. */
+  enabled: boolean;
+  /** You may assert a signer's identity with your own provider (external_idv). */
+  allowExternalIdv: boolean;
+  /** A sender may issue a link that skips identity verification (override; development/testing). */
+  allowIdentityOverride: boolean;
+  /**
+   * Default OTP channel applied to recipients that do not specify one, on the interactive (UI)
+   * create path only. SDK/API sends must set identity per recipient, so this does not affect them.
+   * `none` means no default (recipients are unverified unless they opt in).
+   */
+  defaultChannel: EmbeddedSigningDefaultChannel;
+  /** Origins allowed to embed the signing page in an iframe (empty = no restriction configured). */
+  allowedFrameAncestors: string[];
 }
 
 /**
@@ -494,6 +678,14 @@ export interface SendSignatureRequest {
   senderEmail?: string;
   /** CC emails (comma-separated or array) */
   ccEmails?: string | string[];
+  /**
+   * Whether the backend should email the recipients. Omit to keep the backend default (emails
+   * sent). Set `false` to suppress recipient emails — used by the embedded flow, where the host
+   * owns the signing UX. Email suppression requires backend support; until then the backend may
+   * still send. Presence is tested with `!== undefined`, so `false` is forwarded rather than
+   * dropped.
+   */
+  sendEmail?: boolean;
   /**
    * Per-document reminder + expiration overrides. Omit to inherit the organization's defaults.
    * @see SignatureScheduleOptions
