@@ -1,74 +1,81 @@
-# Embedded signing — a host web-app with email + email OTP ("Northwind Mutual")
+# Embedded signing — Vite + React + shadcn (three paths)
 
-This example is the **integrator's side** of embedded signing: a small customer web-app that collects
-the signer's **name and email**, verifies them with an **email one-time passcode**, and embeds the
-TurboSign signing page in its own `<iframe>` instead of emailing a signing link. It ties together the
-whole embedded ceremony:
+A single host web-app that embeds TurboSign three ways, so you can compare the approaches side by side:
 
-> This is the **raw** approach (hand-rolled iframe + message listener), shown so you can see what the
-> widget does under the hood. For most apps, use the [`embedded-web-app-widget`](../embedded-web-app-widget)
-> example with the `<turbosign-form>` / `<TurboSignForm>` widget from
-> [`@turbodocx/embed`](../../packages/embed) instead.
+- **Single signer** — the host hand-rolls the `<iframe>` and its own origin-checked
+  `window.addEventListener("message", …)` completion listener.
+- **Sequential kiosk** — one document, two signers **in order** on the same device. The next signer's
+  URL is minted **just-in-time** when it's their turn (turn-aware), with a short retry to ride out the
+  moment right after the previous signer completes.
+- **Widget** — the same flow, but the page drops in `<TurboSignForm>` from
+  [`@turbodocx/embed`](../../packages/embed), which owns the iframe, origin pinning, and completion
+  event for you.
 
-- **`server.ts`** — a framework-free Node server that holds your TurboDocx API key. Per request it
-  creates a signing document for the entered email with `identityVerification: { mode: 'otp', channel:
-  'email' }`, then mints an embeddable signing URL with the SDK (`TurboSign.sendSignature` +
-  `TurboSign.createSigningUrl`). The API key stays server-side.
-- **`public/index.html`** — the host page. A name + email form; on submit it calls its own backend,
-  frames the returned URL, and advances on the `turbosign:completed` postMessage.
+## The key stays on the server
 
-## What the signer sees
-1. Enters name + email on the host page.
-2. Inside the iframe, TurboSign emails a **6-digit code** to that email; the signer verifies it (the
-   email-OTP identity step).
-3. Signs the document.
-4. The **completed signed copy is emailed to that same address** (plus any CC configured on the
-   document, plus a completion notification to the sender). The host page updates on its own via the
-   `turbosign:completed` message.
-
-## Prerequisite: allow-list this app's origin (the important one)
-Embedded signing is **default-deny**. The browser refuses to render the iframe unless the signer's org
-lists this app's origin in its embedded-signing allowed origins. For this demo:
+This is the pattern real integrations use in production:
 
 ```
-http://localhost:4000
+React SPA  ──/api/*──▶  server.ts (holds the API key)  ──▶  TurboDocx
 ```
 
-Add it in **TurboDocx → E-Signature settings → Identity & embedding → Allowed origins**. Production
-origins must be `https://`; `http://localhost` / `127.0.0.1` is accepted only as a clearly-flagged
-dev-only override. Without an allow-listed origin you get a blank/refused frame — that is the
-clickjacking protection (`frame-ancestors`) working, not a bug.
+The browser **never** imports the SDK or sees the API key. `server.ts` is a tiny backend-for-frontend
+that holds the key and uses `@turbodocx/sdk` to create documents and mint embeddable signing URLs; the
+SPA calls `/api/single`, `/api/kiosk/start`, `/api/kiosk/next` and just frames the URLs it gets back
+(or hands them to the widget). In dev, Vite proxies `/api` to `server.ts`.
 
 ## Run
 
-Configuration is read from a `.env` file (loaded by `dotenv/config`). Copy the template, fill it in,
-then run from this example's directory:
+Two processes. Configure the server's `.env` first (copy the template, fill in your creds):
 
 ```bash
 cd examples/embedded-web-app
-cp .env.example .env      # then edit .env and fill in your values
-npx tsx server.ts
+cp .env.example .env      # set TURBODOCX_API_KEY + TURBODOCX_ORG_ID (see the file)
+npm install
+
+# terminal 1 — the key-holding backend (default :4000)
+npm run server
+
+# terminal 2 — the SPA (Vite, :5173, proxies /api → :4000)
+npm run dev
 ```
 
-`.env.example` documents every variable. At minimum set `TURBODOCX_API_KEY`, `TURBODOCX_ORG_ID`, and
-`TURBODOCX_SENDER_EMAIL`; set `TURBODOCX_API_URL` to point at a non-default backend (e.g.
-`http://localhost:3000` for local dev). Your real `.env` is gitignored — never commit it.
+Then open <http://localhost:5173> and pick a path.
 
-> Run from this directory. `dotenv` reads `.env` from the current working directory, so running from
-> the repo root would not pick it up.
+`.env` documents every variable. At minimum set `TURBODOCX_API_KEY`, `TURBODOCX_ORG_ID`, and
+`TURBODOCX_SENDER_EMAIL`. `TURBODOCX_API_URL` defaults to TurboDocx production; set it (e.g.
+`http://localhost:3000`) only when testing against a dev backend. Your real `.env` is gitignored.
 
-Then open <http://localhost:4000>, enter your name + a real email you can receive at, and click **Start
-signing**.
+## Prerequisite: allow-list this app's origin
+
+Embedded signing is **default-deny**. The browser refuses to render the iframe unless the signer's org
+lists this app's origin in its embedded-signing allowed origins. For this demo add:
+
+```
+http://localhost:5173
+```
+
+in **TurboDocx → E-Signature settings → Identity & embedding → Allowed origins**. Production origins
+must be `https://`; `http://localhost` is accepted only as a clearly-flagged dev-only override. Without
+an allow-listed origin you get a blank/refused frame — that's the clickjacking protection
+(`frame-ancestors`) working, not a bug.
+
+## Tests
+
+```bash
+npm test
+```
+
+`handlers.test.ts` covers the server handlers (SDK mocked): single/kiosk mapping, the turn-aware
+`ready`/`pending` split, and the null-URL guard. `src/lib/turbosign.test.ts` covers the frontend API
+client (fetch mocked): the three endpoints, error propagation, and the kiosk mint retry.
 
 ## What to notice
-- **The API key never reaches the browser.** The page calls its own `/api/start`; only the server
-  talks to TurboDocx.
-- **Email OTP is the identity step.** `identityVerification: { mode: 'otp', channel: 'email' }` on the
-  recipient makes the signing page challenge a code emailed to the signer before they reach the
-  document. Drop that field for a plain embedded signer, or use `{ mode: 'external_idv', provider }` if
-  your own IdP already verified them (that returns a single-use `?sut=` URL).
-- **`link.url` is an `/e-signature/embed/...` URL** — the embeddable variant. (The email-link variant
-  is `/e-signature/sign/...`, which is hard-denied from framing.)
-- **Completion is push, not poll.** The host advances on `turbosign:completed`. In production, pin the
-  listener to your known TurboSign origin (`TURBOSIGN_ORIGIN` in the page), and/or confirm via the
-  `completed` webhook.
+
+- **The API key never reaches the browser** — only `server.ts` talks to TurboDocx.
+- **Email OTP is the identity step** — the signing page challenges a 6-digit code before the document.
+- **Completion is push** — the single-signer path listens for the `turbosign:completed` postMessage;
+  the widget surfaces it as an `onCompleted` callback. In production, pin the listener to your known
+  TurboSign origin and/or confirm via the `completed` webhook.
+- **The kiosk mints just-in-time** — a later signer's URL is created only when it's their turn; the
+  backend enforces the order.

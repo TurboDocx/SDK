@@ -1,116 +1,89 @@
 /**
- * Example host web-app: "Northwind Mutual" embeds TurboSign signing inside its own page, with the
- * signer's EMAIL collected in the host UI and EMAIL OTP as the identity check.
+ * Backend-for-frontend for the embedded-signing demo. This is the SECURE pattern real integrators use:
  *
- * The integrator's side of embedded signing, end to end:
- *   1. The host page collects the signer's name + email (public/index.html).
- *   2. This server (no framework) holds the TurboDocx API key and, per request, creates a signing
- *      document for that email with `identityVerification: { mode: 'otp', channel: 'email' }`, then
- *      mints an embeddable signing URL with the SDK. The API key stays SERVER-SIDE.
- *   3. The host frames the URL. Inside the iframe TurboSign emails a 6-digit code to the signer, they
- *      verify it, then sign. On completion the signing page posts `turbosign:completed` to the parent.
- *   4. The COMPLETED SIGNED COPY is emailed to that same recipient email (plus any CC configured on the
- *      document, plus a completion notification to the sender).
+ *     React SPA  ──/api/*──▶  THIS server (holds the API key)  ──▶  TurboDocx
  *
- * IMPORTANT — the org must allow-list THIS app's origin (default-deny frame-ancestors). For this demo
- * add `http://localhost:4000` to the org's embedded-signing allowed origins (dev-only http override;
- * production embedders must be https). Without it the browser refuses to render the iframe.
+ * The browser never sees the API key and never calls TurboDocx directly. This server holds the key,
+ * uses @turbodocx/sdk (via handlers.ts) to create documents and mint embeddable signing URLs, and
+ * returns just those URLs to the SPA, which frames them (or hands them to <TurboSignForm>).
  *
- * Run (from this example's directory, with @turbodocx/sdk installed):
- *   cd examples/embedded-web-app
- *   cp .env.example .env   # then fill in your credentials
- *   npx tsx server.ts
- * then open http://localhost:4000
+ *   POST /api/single       { name, email }                   -> { url, mode }
+ *   POST /api/kiosk/start  { signers: [{ name, email }, …] }  -> { documentId, recipients: [...] }
+ *   POST /api/kiosk/next   { documentId, recipientId }        -> { url }
  *
- * Config is loaded from `.env` via `dotenv/config` (imported first, below). Running from this
- * directory matters: dotenv reads `.env` from the current working directory.
+ * Run (dev): `npm run server` here, and `npm run dev` in another terminal — Vite proxies /api to this.
+ * Config comes from `.env` (see .env.example). The API key stays server-side.
  */
-import 'dotenv/config';
+import "dotenv/config";
 
-import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
-import { TurboSign } from '@turbodocx/sdk';
+import { TurboSign } from "@turbodocx/sdk";
 
-const HERE = dirname(fileURLToPath(import.meta.url));
+import { kioskNext, kioskStart, single } from "./handlers";
+
 const PORT = Number(process.env.PORT || 4000);
-const ORIGIN = `http://localhost:${PORT}`;
-// A PDF with signature/date anchors ({signature1}, {date1}). Ships with the SDK (repo ExampleAssets).
-const PDF_PATH = fileURLToPath(new URL('../../ExampleAssets/sample-contract.pdf', import.meta.url));
 
 TurboSign.configure({
-  apiKey: process.env.TURBODOCX_API_KEY || 'your-api-key-here',
-  orgId: process.env.TURBODOCX_ORG_ID || 'your-org-id-here',
-  senderEmail: process.env.TURBODOCX_SENDER_EMAIL || 'support@yourcompany.com',
-  senderName: process.env.TURBODOCX_SENDER_NAME || 'Northwind Mutual',
-  // Point at your API if not the default (e.g. a local backend during development).
+  apiKey: process.env.TURBODOCX_API_KEY || "your-api-key-here",
+  orgId: process.env.TURBODOCX_ORG_ID || "your-org-id-here",
+  senderEmail: process.env.TURBODOCX_SENDER_EMAIL || "support@yourcompany.com",
+  senderName: process.env.TURBODOCX_SENDER_NAME || "Embedded Signing Demo",
   ...(process.env.TURBODOCX_API_URL ? { baseUrl: process.env.TURBODOCX_API_URL } : {}),
 });
 
-async function readBody(req: import('node:http').IncomingMessage): Promise<Record<string, unknown>> {
+async function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   const chunks: Buffer[] = [];
   for await (const c of req) chunks.push(c as Buffer);
   try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+    return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
   } catch {
     return {};
   }
 }
 
-/** Create a document for this signer (email OTP) and mint the embeddable signing URL. */
-async function startSigning(name: string, email: string): Promise<{ url: string; mode: string | null }> {
-  const pdf = await readFile(PDF_PATH);
-
-  // ONE call: create + send the document for a single recipient who must clear an EMAIL OTP before
-  // signing, and mint the embeddable signing URL for them. `createEmbeddedSignature` maps the `auth`
-  // + `fields` shorthand onto sendSignature + createSigningUrl and returns a per-recipient embed URL.
-  const { recipients } = await TurboSign.createEmbeddedSignature({
-    file: pdf,
-    documentName: `Northwind Auto Policy - ${name}`,
-    recipients: [{ name, email, auth: { emailOtp: true }, fields: { signature: '{signature1}', date: '{date1}' } }],
-    // returnUrl must be an https URL. Include it only when this host is served over https (production);
-    // running locally over http, rely on the turbosign:completed postMessage for completion instead.
-    ...(ORIGIN.startsWith('https://') ? { returnUrl: `${ORIGIN}/signed` } : {}),
-  });
-  // A single, first-in-order signer is always `ready` with a URL; narrow the now-nullable type here.
-  const r = recipients[0];
-  if (!r.embedUrl) throw new Error(`Cannot start signing: recipient is ${r.status}.`);
-  return { url: r.embedUrl, mode: r.identityVerificationMode };
+function send(res: ServerResponse, status: number, body: unknown) {
+  res.writeHead(status, { "content-type": "application/json" });
+  res.end(JSON.stringify(body));
 }
 
 const server = createServer(async (req, res) => {
   try {
-    const url = new URL(req.url || '/', ORIGIN);
+    const url = new URL(req.url || "/", `http://localhost:${PORT}`);
+    if (req.method !== "POST" || !url.pathname.startsWith("/api/")) {
+      return send(res, 404, { error: "Not found. POST /api/single, /api/kiosk/start, or /api/kiosk/next." });
+    }
+    const body = await readBody(req);
 
-    if (url.pathname === '/api/start' && req.method === 'POST') {
-      const body = await readBody(req);
-      const name = String(body.name || '').trim();
-      const email = String(body.email || '').trim();
-      if (!name || !email) {
-        res.writeHead(400, { 'content-type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Name and email are required.' }));
-        return;
-      }
-      const result = await startSigning(name, email);
-      res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify(result));
-      return;
+    if (url.pathname === "/api/single") {
+      const name = String(body.name || "").trim();
+      const email = String(body.email || "").trim();
+      if (!name || !email) return send(res, 400, { error: "name and email are required." });
+      return send(res, 200, await single({ name, email }));
     }
 
-    const html = await readFile(join(HERE, 'public', 'index.html'), 'utf8');
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    res.end(html);
+    if (url.pathname === "/api/kiosk/start") {
+      const raw = Array.isArray(body.signers) ? (body.signers as Array<{ name: string; email: string }>) : [];
+      const signers = raw.map((s) => ({ name: String(s.name || "").trim(), email: String(s.email || "").trim() }));
+      if (signers.length < 2 || signers.some((s) => !s.name || !s.email)) {
+        return send(res, 400, { error: "Provide at least two signers, each with a name and email." });
+      }
+      return send(res, 200, await kioskStart(signers));
+    }
+
+    if (url.pathname === "/api/kiosk/next") {
+      const documentId = String(body.documentId || "").trim();
+      const recipientId = String(body.recipientId || "").trim();
+      if (!documentId || !recipientId) return send(res, 400, { error: "documentId and recipientId are required." });
+      return send(res, 200, await kioskNext({ documentId, recipientId }));
+    }
+
+    return send(res, 404, { error: "Unknown endpoint." });
   } catch (err) {
-    res.writeHead(500, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+    return send(res, 500, { error: err instanceof Error ? err.message : String(err) });
   }
 });
 
 server.listen(PORT, () => {
-  console.log(`\nNorthwind Mutual (embedded-signing demo) running at ${ORIGIN}`);
-  console.log(
-    `\n>> Allow-list this origin in the signer's org first, or the iframe will be blocked:\n     ${ORIGIN}\n   (TurboDocx E-Signature settings -> Identity & embedding -> Allowed origins.)\n`,
-  );
+  console.log(`\nEmbedded-signing demo API on http://localhost:${PORT} (holds the API key; call it from the SPA via /api/*)`);
 });
