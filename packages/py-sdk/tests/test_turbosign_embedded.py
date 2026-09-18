@@ -160,6 +160,31 @@ class TestCreateSigningUrl:
             assert mock_client.post.call_args[1]["data"] == {"recipientId": "rec-1"}
 
     @pytest.mark.asyncio
+    async def test_flat_body_response_is_returned_as_is(self):
+        """If the API ever replies WITHOUT the `{results: ...}` envelope (a flat body), the
+        method degrades gracefully and returns the body itself instead of raising KeyError
+        (matches the PHP/Go/Java fallback)."""
+        flat_body = {
+            "url": "https://app/sign/doc-flat?t=X",
+            "expiresAt": None,
+            "recipientId": "rec-flat",
+            "identityVerificationMode": "otp",
+            "pendingChecks": ["email_otp"],
+        }
+        with patch.object(TurboSign, "_get_client") as mock_get_client:
+            mock_client = MagicMock()
+            # No `results` key -- the flat shape.
+            mock_client.post = AsyncMock(return_value=flat_body)
+            mock_get_client.return_value = mock_client
+            TurboSign.configure(api_key="k", org_id="o", sender_email="s@example.com")
+
+            result = await TurboSign.create_signing_url("doc-flat", external_id="cust_1")
+
+            # Returned verbatim, not a KeyError.
+            assert result == flat_body
+            assert result["url"] == "https://app/sign/doc-flat?t=X"
+
+    @pytest.mark.asyncio
     async def test_rejects_non_https_return_url(self):
         """Should raise ValidationError (code InvalidReturnUrl) for a non-https return_url."""
         with patch.object(TurboSign, "_get_client") as mock_get_client:
@@ -465,6 +490,70 @@ class TestCreateEmbeddedSignature:
 
             assert exc.value.code == "EmbeddedRecipientNotReturned"
             mock_client.post.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_sms_otp_without_phone_raises_before_any_http_call(self):
+        """An SMS OTP recipient with no resolved phone must fail fast with
+        ValidationError(code PhoneRequiredForSmsOtp) BEFORE any send/mint HTTP call
+        (mirrors the JS validateRecipientsIdentity + Go/PHP guards)."""
+        with patch.object(TurboSign, "_get_client") as mock_get_client:
+            mock_client = MagicMock()
+            # These must never be reached -- the guard fires before the send.
+            mock_client.upload_file = AsyncMock()
+            mock_client.post = AsyncMock()
+            mock_get_client.return_value = mock_client
+            TurboSign.configure(api_key="k", org_id="o", sender_email="s@example.com")
+
+            with pytest.raises(ValidationError) as exc:
+                await TurboSign.create_embedded_signature(
+                    file=b"%PDF-1.4 fake",
+                    recipients=[
+                        # SMS OTP requested but no phone anywhere (empty sms block).
+                        {"name": "NoPhone", "email": "nophone@example.com",
+                         "auth": {"sms": {}}},
+                    ],
+                )
+
+            assert exc.value.code == "PhoneRequiredForSmsOtp"
+            # Fail-fast: nothing was sent to the backend.
+            mock_client.upload_file.assert_not_called()
+            mock_client.post.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_empty_sms_block_with_top_level_phone_resolves_and_does_not_raise(self):
+        """An empty `sms` block requests SMS OTP (presence, not truthiness, matching JS/Go).
+        With a top-level `phone` supplied, it resolves to {otp,sms} + that phone and must NOT
+        fail-fast -- proving the resolve predicate change is correct, not incidental."""
+        with patch.object(TurboSign, "_get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.upload_file = AsyncMock(
+                return_value=_send_envelope(
+                    "doc-sms", [{"id": "rec-1", "name": "P", "email": "p@example.com"}]
+                )
+            )
+            mock_client.post = AsyncMock(
+                return_value=_signing_url_envelope("https://app/sign/doc-sms", "rec-1", "otp")
+            )
+            mock_get_client.return_value = mock_client
+            TurboSign.configure(api_key="k", org_id="o", sender_email="s@example.com")
+
+            result = await TurboSign.create_embedded_signature(
+                file=b"%PDF-1.4 fake",
+                recipients=[
+                    {
+                        "name": "P",
+                        "email": "p@example.com",
+                        # Empty sms block -> SMS OTP requested; phone comes from the top level.
+                        "auth": {"sms": {}},
+                        "phone": "+13055551234",
+                    }
+                ],
+            )
+
+            assert result["recipients"][0]["status"] == "ready"
+            sent = json.loads(mock_client.upload_file.call_args[1]["additional_data"]["recipients"])
+            assert sent[0]["identityVerification"] == {"mode": "otp", "channel": "sms"}
+            assert sent[0]["phone"] == "+13055551234"
 
     @pytest.mark.asyncio
     async def test_full_fields_override_the_shorthand(self):

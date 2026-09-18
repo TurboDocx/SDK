@@ -510,6 +510,51 @@ class TurboSignEmbeddedTest {
         assertEquals("EmbeddedRecipientNotReturned", ex.getCode());
     }
 
+    @Test
+    @DisplayName("createSigningUrl treats an empty returnUrl as absent — no error and omitted from the request, while a valid https returnUrl is sent")
+    void createSigningUrlEmptyReturnUrlIsAbsent() throws Exception {
+        // Empty returnUrl: must not throw InvalidReturnUrl and must not appear on the wire.
+        enqueueJson(signingUrlEnvelope("rec-1", "https://app/sign/doc-1?token=AT", null));
+        CreateSigningUrlResponse res = client.turboSign().createSigningUrl(
+                "doc-1",
+                new CreateSigningUrlRequest.Builder().recipientId("rec-1").returnUrl("").build());
+        assertEquals("https://app/sign/doc-1?token=AT", res.getUrl());
+        JsonObject emptyBody = takeBody();
+        assertFalse(emptyBody.has("returnUrl"), "empty returnUrl must be omitted from the request");
+
+        // Paired positive case: a real https returnUrl must reach the wire unchanged. Without this
+        // assertion an inverted strip-condition (stripping non-empty instead of empty) would pass.
+        enqueueJson(signingUrlEnvelope("rec-1", "https://app/sign/doc-1?token=AT", null));
+        client.turboSign().createSigningUrl(
+                "doc-1",
+                new CreateSigningUrlRequest.Builder()
+                        .recipientId("rec-1")
+                        .returnUrl("https://app.example.com/done")
+                        .build());
+        JsonObject withUrlBody = takeBody();
+        assertEquals("https://app.example.com/done", withUrlBody.get("returnUrl").getAsString());
+    }
+
+    @Test
+    @DisplayName("createEmbeddedSignature fails fast with PhoneRequiredForSmsOtp for an SMS-OTP recipient with no phone, before any HTTP call")
+    void createEmbeddedSignatureSmsWithoutPhoneFailsFast() {
+        // SMS auth with a null phone number → identityVerification otp/sms but no resolvable phone.
+        // Nothing is enqueued: the guard must throw before sendSignature touches the network.
+        TurboDocxException.ValidationException ex = assertThrows(
+                TurboDocxException.ValidationException.class,
+                () -> client.turboSign().createEmbeddedSignature(
+                        new CreateEmbeddedSignatureRequest.Builder()
+                                .templateId("tmpl-1")
+                                .recipients(Collections.singletonList(
+                                        new EmbeddedSignatureRecipient.Builder()
+                                                .name("Alice").email("alice@example.com")
+                                                .auth(EmbeddedRecipientAuth.sms(null)).build()))
+                                .build()));
+        assertEquals("PhoneRequiredForSmsOtp", ex.getCode());
+        // Fail-fast: the guard runs before the send, so no request was made.
+        assertEquals(0, server.getRequestCount());
+    }
+
     private JsonObject findByType(JsonArray fields, String type) {
         for (int i = 0; i < fields.size(); i++) {
             JsonObject field = fields.get(i).getAsJsonObject();
