@@ -251,6 +251,23 @@ RSpec.describe TurboDocxSdk::TurboSign do
       expect(captured[:send_body]["sendEmail"]).to eq(false)
     end
 
+    it "accepts idiomatic snake_case auth (email_otp) the same as camelCase emailOtp" do
+      # Regression (found by live e2e): req_val read only camelCase, so an idiomatic Ruby
+      # auth: { email_otp: true } silently resolved to NO identity verification (OTP dropped).
+      captured = stub_posts(
+        send_response: send_response("doc-2b", [{ "id" => "rec-1", "name" => "Alice", "email" => "alice@example.com" }]),
+        signing_url_for: ->(_body) { signing_results("rec-1", "https://app/sign/doc-2b?token=A", "otp") }
+      )
+
+      described_class.create_embedded_signature(
+        templateId: "tmpl-1",
+        recipients: [{ name: "Alice", email: "alice@example.com", auth: { email_otp: true } }]
+      )
+
+      recipients = JSON.parse(captured[:send_body]["recipients"])
+      expect(recipients[0]["identityVerification"]).to eq({ "mode" => "otp", "channel" => "email" })
+    end
+
     it "maps auth.sms to identityVerification { mode:otp, channel:sms } and sets the recipient phone" do
       captured = stub_posts(
         send_response: send_response("doc-3", [{ "id" => "rec-1", "name" => "Alice", "email" => "alice@example.com" }]),
