@@ -9,13 +9,13 @@ import { Widget } from "@/pages/Widget";
 type Path = "single" | "kiosk" | "widget";
 
 const PATHS: Array<{ id: Path; label: string; blurb: string; icon: typeof PenLine }> = [
+  { id: "widget", label: "Widget", blurb: "Drop in the <TurboSignForm> component — the fastest way to embed signing", icon: Layers },
   { id: "single", label: "Single signer", blurb: "One recipient, email OTP, hand-rolled iframe", icon: PenLine },
   { id: "kiosk", label: "Sequential kiosk", blurb: "Two signers in order on one device (turn-aware)", icon: Users },
-  { id: "widget", label: "Widget", blurb: "Same flow via the <TurboSignForm> drop-in", icon: Layers },
 ];
 
 export default function App() {
-  const [path, setPath] = useState<Path>("single");
+  const [path, setPath] = useState<Path>("widget");
 
   return (
     <div className="min-h-svh bg-muted/30">
