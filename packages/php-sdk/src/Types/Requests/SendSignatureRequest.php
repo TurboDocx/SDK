@@ -34,6 +34,10 @@ final class SendSignatureRequest
      * @param array{value:int,unit:string}|null $expirationWarning How far before expiry warnings
      *     start. A zero value means no warnings at all.
      * @param array{value:int,unit:string}|null $expirationWarningInterval Gap between warnings
+     * @param bool|null $sendEmail Whether the backend should email the recipients. Omit to keep the
+     *     backend default (emails sent). `false` suppresses recipient emails — used by the embedded
+     *     flow, where the host owns the signing UX. Presence is tested with `!== null`, so `false`
+     *     is forwarded rather than dropped.
      */
     public function __construct(
         public array $recipients,
@@ -56,5 +60,6 @@ final class SendSignatureRequest
         public ?array $expireAfter = null,
         public ?array $expirationWarning = null,
         public ?array $expirationWarningInterval = null,
+        public ?bool $sendEmail = null,
     ) {}
 }

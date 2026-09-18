@@ -112,8 +112,8 @@ const { recipients } = await TurboSign.createEmbeddedSignature({
 const embedUrl = recipients[0].embedUrl;
 ```
 
-See the runnable [`examples/embedded-web-app-widget`](../../examples/embedded-web-app-widget) (widget)
-and [`examples/embedded-web-app`](../../examples/embedded-web-app) (raw iframe).
+See the runnable [`examples/embedded-web-app`](../../examples/embedded-web-app) — the **Widget** path uses
+`<TurboSignForm>`, alongside the raw-iframe and sequential-kiosk paths.
 
 ## License
 
