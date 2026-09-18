@@ -283,7 +283,21 @@ public final class TurboSign {
                     "RecipientSelectorInvalid");
         }
 
+        // An empty returnUrl means "absent": don't validate it as a URL and don't send it (matching
+        // the Go SDK's `omitempty`). Gson serializes a non-null "" verbatim, so strip it by rebuilding
+        // the payload without it. The https check then only runs for a genuinely provided returnUrl.
+        CreateSigningUrlRequest payload = request;
         String returnUrl = request.getReturnUrl();
+        if (returnUrl != null && returnUrl.isEmpty()) {
+            // Rebuild copying every field — CreateSigningUrlRequest has exactly four today; a fifth
+            // added later must be copied here too or it would be silently dropped on this path.
+            payload = new CreateSigningUrlRequest.Builder()
+                    .recipientId(request.getRecipientId())
+                    .externalId(request.getExternalId())
+                    .identityAssertion(request.getIdentityAssertion())
+                    .build();
+            returnUrl = null;
+        }
         if (returnUrl != null && !returnUrl.toLowerCase().startsWith("https://")) {
             throw new TurboDocxException.ValidationException("returnUrl must be an https URL.", "InvalidReturnUrl");
         }
@@ -294,7 +308,7 @@ public final class TurboSign {
         Type type = new TypeToken<ResultsObjectEnvelope<CreateSigningUrlResponse>>() {}.getType();
         ResultsObjectEnvelope<CreateSigningUrlResponse> envelope = httpClient.post(
                 "/turbosign/documents/" + documentId + "/signing-url",
-                request,
+                payload,
                 type
         );
         return envelope.getResults();
@@ -353,6 +367,20 @@ public final class TurboSign {
             String phone = resolvePhone(r);
             int order = r.getSigningOrder() != null ? r.getSigningOrder() : index + 1;
             mappedRecipients.add(new Recipient(r.getName(), r.getEmail(), order, phone, null, identityVerification));
+        }
+
+        // Client-side fail-fast BEFORE the send: an SMS OTP recipient with no resolved phone (mirrors
+        // the JS validateRecipientsIdentity call; Go/PHP replicate it). The auth shorthand can only
+        // ever produce email/sms OTP, so only this one check is live here; the server remains the
+        // source of truth. No trim() — js (!phone), Go (== "") and PHP (=== '') all treat "" as empty.
+        for (Recipient r : mappedRecipients) {
+            IdentityVerification iv = r.getIdentityVerification();
+            if (iv != null && "otp".equals(iv.getMode()) && "sms".equals(iv.getChannel())
+                    && (r.getPhone() == null || r.getPhone().isEmpty())) {
+                throw new TurboDocxException.ValidationException(
+                        "Recipient \"" + r.getEmail() + "\" uses SMS OTP but has no phone (E.164).",
+                        "PhoneRequiredForSmsOtp");
+            }
         }
 
         // Full fields (when provided) win verbatim — even an explicitly empty list; otherwise expand

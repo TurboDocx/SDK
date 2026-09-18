@@ -285,6 +285,34 @@ func TestTurboSignClient_CreateEmbeddedSignature(t *testing.T) {
 		assert.Equal(t, "false", sentBody["sendEmail"])
 	})
 
+	// Cross-language consistency: with no top-level Fields and no recipient shorthand, the
+	// send-signature `fields` value must marshal to "[]" (an iterable empty array) — NOT "null".
+	// js/python/php/java/ruby all emit "[]"; a nil Go slice would marshal to "null", which a
+	// backend that JSON-parses and iterates the fields string cannot iterate.
+	t.Run("sends empty fields as [] not null when no fields provided", func(t *testing.T) {
+		var sentBody map[string]interface{}
+		server := newEmbeddedWrapperServer(t, embeddedServerConfig{
+			sentRecipients: []map[string]string{{"id": "rec-1", "email": "a@example.com", "name": "A"}},
+			captureSend:    func(body map[string]interface{}) { sentBody = body },
+			signingResponder: func(recipientID string) (int, map[string]interface{}) {
+				return http.StatusOK, okSigningResults("https://sign.example.com/embed/1")
+			},
+		})
+		defer server.Close()
+
+		client := newEmbeddedTestClient(t, server.URL)
+		_, err := client.TurboSign.CreateEmbeddedSignature(context.Background(), &CreateEmbeddedSignatureRequest{
+			File: []byte("pdf"),
+			// No top-level Fields, and the recipient carries no Fields shorthand.
+			Recipients: []EmbeddedSignatureRecipient{
+				{Name: "A", Email: "a@example.com"},
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, sentBody)
+		assert.Equal(t, "[]", sentBody["fields"], "empty fields must serialize to [] not null")
+	})
+
 	// Turn-aware degradation: the two not-in-turn aliases both map to "pending" with empty URL.
 	for _, code := range []string{"RecipientNotInTurn", "NotSignersTurn"} {
 		code := code
@@ -380,6 +408,30 @@ func TestTurboSignClient_CreateEmbeddedSignature(t *testing.T) {
 		ve, ok := err.(*ValidationError)
 		require.True(t, ok, "expected *ValidationError")
 		assert.Equal(t, "PhoneRequiredForSmsOtp", ve.Code)
+	})
+
+	// Cross-language consistency: an empty SMS shorthand (sms:{}) with a top-level Phone must fall
+	// back to that phone (matching js `?? r.phone` and php/java/py/ruby), NOT overwrite it with the
+	// empty SMS number and wrongly fire PhoneRequiredForSmsOtp.
+	t.Run("SMS shorthand falls back to the recipient's top-level phone", func(t *testing.T) {
+		server := newEmbeddedWrapperServer(t, embeddedServerConfig{
+			sentRecipients: []map[string]string{{"id": "rec-1", "email": "a@example.com", "name": "A"}},
+			signingResponder: func(recipientID string) (int, map[string]interface{}) {
+				return http.StatusOK, okSigningResults("https://sign.example.com/embed/1")
+			},
+		})
+		defer server.Close()
+
+		client := newEmbeddedTestClient(t, server.URL)
+		res, err := client.TurboSign.CreateEmbeddedSignature(context.Background(), &CreateEmbeddedSignatureRequest{
+			File: []byte("%PDF-1.4 fake"),
+			Recipients: []EmbeddedSignatureRecipient{
+				{Name: "A", Email: "a@example.com", Phone: "+15551234567", Auth: &EmbeddedRecipientAuth{SMS: &EmbeddedRecipientSMS{PhoneNumber: ""}}},
+			},
+		})
+		require.NoError(t, err)
+		require.Len(t, res.Recipients, 1)
+		assert.Equal(t, "ready", res.Recipients[0].Status)
 	})
 
 	// Results are assembled in signing order regardless of request order.

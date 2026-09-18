@@ -143,7 +143,10 @@ module TurboDocxSdk
             code: "RecipientSelectorInvalid"
           )
         end
-        if return_url && !return_url.match?(%r{\Ahttps://}i)
+        # An empty-string return_url is treated as ABSENT (not sent, no error), matching js
+        # (`if (request.returnUrl && ...)` -- "" is falsy there), Go and Python. Guard so the https
+        # check only runs when return_url is a non-empty string.
+        if return_url && !return_url.empty? && !return_url.match?(%r{\Ahttps://}i)
           raise ValidationError.new("returnUrl must be an https URL.", code: "InvalidReturnUrl")
         end
 
@@ -152,12 +155,14 @@ module TurboDocxSdk
         body["recipientId"] = recipient_id unless recipient_id.nil? || recipient_id == ""
         body["externalId"] = external_id unless external_id.nil? || external_id == ""
         body["identityAssertion"] = identity_assertion unless identity_assertion.nil?
-        body["returnUrl"] = return_url unless return_url.nil?
+        body["returnUrl"] = return_url unless return_url.nil? || return_url == ""
 
         # The client already stripped the outer { data }; peel the inner { results } envelope here
         # (same convention as the quote/deliverable modules).
         response = client.post("/turbosign/documents/#{document_id}/signing-url", body)
-        response["results"]
+        # `|| response` keeps it correct if the API ever returns a flat body (no `results`
+        # envelope), so it degrades gracefully rather than returning nil. PHP/Go/Java guard this too.
+        response["results"] || response
       end
 
       # Read the org's embedded-signing settings: the set-once, org-wide gates (embedded signing
@@ -231,6 +236,25 @@ module TurboDocxSdk
           recipient["phone"] = phone unless phone.nil?
           recipient["identityVerification"] = identity_verification unless identity_verification.nil?
           recipient
+        end
+
+        # Client-side fail-fast: an SMS OTP recipient with no resolved phone. Mirrors the JS
+        # validateRecipientsIdentity call (and Go/PHP), catching the common mistake with an
+        # actionable message BEFORE the send rather than as a raw HTTP 400. The other identity
+        # modes are unreachable from this shorthand (auth only ever produces email/sms OTP), so
+        # only this check is live; the server remains the source of truth.
+        mapped_recipients.each do |recipient|
+          iv = recipient["identityVerification"]
+          next if iv.nil?
+          next unless iv["mode"] == "otp" && iv["channel"] == "sms"
+
+          phone = recipient["phone"]
+          next unless phone.nil? || phone == ""
+
+          raise ValidationError.new(
+            "Recipient \"#{recipient["email"]}\" uses SMS OTP but has no phone (E.164).",
+            code: "PhoneRequiredForSmsOtp"
+          )
         end
 
         # Full `fields` (when provided) win verbatim; otherwise expand each recipient's shorthand.

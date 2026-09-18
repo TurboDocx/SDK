@@ -70,7 +70,8 @@ final class CreateSigningUrlRequest
         if ($this->identityAssertion !== null) {
             $data['identityAssertion'] = $this->identityAssertion->toArray();
         }
-        if ($this->returnUrl !== null) {
+        // Treat an empty-string returnUrl as ABSENT (omit it from the body), matching js-sdk/Go/Python.
+        if ($this->returnUrl !== null && $this->returnUrl !== '') {
             $data['returnUrl'] = $this->returnUrl;
         }
         return $data;

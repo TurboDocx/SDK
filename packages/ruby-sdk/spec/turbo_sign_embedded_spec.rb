@@ -116,6 +116,31 @@ RSpec.describe TurboDocxSdk::TurboSign do
       end.to raise_error(an_instance_of(TurboDocxSdk::ValidationError).and(having_attributes(code: "InvalidReturnUrl")))
       expect(mock_client).not_to have_received(:post)
     end
+
+    it "treats an empty-string returnUrl as absent -- no error and the key is omitted from the body" do
+      # An empty return_url must not trip the https check (js/Go/Python treat "" as absent) and must
+      # not be forwarded, so the backend applies its own default rather than seeing an empty string.
+      allow(mock_client).to receive(:post).and_return({ "results" => ok_results })
+
+      result = described_class.create_signing_url("doc-1", recipient_id: "rec-1", return_url: "")
+
+      expect(result).to eq(ok_results)
+      expect(mock_client).to have_received(:post).with(
+        "/turbosign/documents/doc-1/signing-url",
+        { "recipientId" => "rec-1" }
+      )
+    end
+
+    it "returns a flat body unchanged when the response has no results envelope" do
+      # If the API ever replies with a flat body (no { results }), `response["results"] || response`
+      # degrades gracefully to the flat body instead of returning nil (empty iframe).
+      allow(mock_client).to receive(:post).and_return(ok_results)
+
+      result = described_class.create_signing_url("doc-1", recipient_id: "rec-1")
+
+      expect(result).to eq(ok_results)
+      expect(result["url"]).to eq(ok_results["url"])
+    end
   end
 
   # ============================================
@@ -410,6 +435,25 @@ RSpec.describe TurboDocxSdk::TurboSign do
           recipients: [{ name: "Ghost", email: "ghost@example.com" }]
         )
       end.to raise_error(an_instance_of(TurboDocxSdk::ValidationError).and(having_attributes(code: "EmbeddedRecipientNotReturned")))
+    end
+
+    it "raises PhoneRequiredForSmsOtp BEFORE any HTTP call when an SMS-OTP recipient has no phone" do
+      # `auth: { sms: {} }` resolves to identityVerification { mode:otp, channel:sms } but supplies no
+      # phone, so the client-side fail-fast must reject it up front (mirroring js/Go/PHP) instead of
+      # letting the send go through as a raw 400.
+      allow(mock_client).to receive(:post)
+      allow(mock_client).to receive(:upload_file)
+
+      expect do
+        described_class.create_embedded_signature(
+          templateId: "tmpl-1",
+          recipients: [{ name: "Alice", email: "alice@example.com", auth: { sms: {} } }]
+        )
+      end.to raise_error(an_instance_of(TurboDocxSdk::ValidationError).and(having_attributes(code: "PhoneRequiredForSmsOtp")))
+
+      # Nothing was sent -- the guard fires before send_signature touches the client.
+      expect(mock_client).not_to have_received(:post)
+      expect(mock_client).not_to have_received(:upload_file)
     end
 
     it "accepts a fully string-keyed request (recipient, auth, and fields shorthand)" do

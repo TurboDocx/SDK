@@ -79,6 +79,34 @@ final class CreateSigningUrlTest extends TestCase
         }
     }
 
+    public function testTreatsEmptyStringReturnUrlAsAbsent(): void
+    {
+        // Arrange: a valid selector plus an EMPTY-string returnUrl. It must be treated as absent —
+        // no InvalidReturnUrl throw (an empty string is not an http URL) — and must be OMITTED from
+        // the request body, matching js-sdk (`if (request.returnUrl && ...)`), Go, and Python.
+        $this->injectTurboSignClient([
+            new Response(200, [], (string) json_encode([
+                'data' => ['results' => [
+                    'url' => 'https://sign.turbodocx.com/embed/abc',
+                    'recipientId' => 'r1',
+                    'pendingChecks' => [],
+                ]],
+            ])),
+        ], captureHistory: true);
+
+        // Act: this must NOT throw despite the empty returnUrl.
+        $result = TurboSign::createSigningUrl('doc-1', new CreateSigningUrlRequest(
+            recipientId: 'r1',
+            returnUrl: ''
+        ));
+
+        // Assert: request succeeded and the empty returnUrl was not sent to the server.
+        $this->assertSame('r1', $result->recipientId);
+        $body = $this->capturedJsonBody();
+        $this->assertArrayNotHasKey('returnUrl', $body);
+        $this->assertSame('r1', $body['recipientId']);
+    }
+
     // ---- Success path: double-envelope unwrap ----------------------------------------------
 
     public function testUnwrapsDoubleEnvelopedResults(): void

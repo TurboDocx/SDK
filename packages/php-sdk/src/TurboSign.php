@@ -397,7 +397,14 @@ final class TurboSign
                 'RecipientSelectorInvalid'
             );
         }
-        if ($request->returnUrl !== null && stripos($request->returnUrl, 'https://') !== 0) {
+        // An empty-string returnUrl is treated as ABSENT (not sent, no validation error), matching
+        // js-sdk (`if (request.returnUrl && ...)`), Go, and Python. The https check only runs when
+        // returnUrl is a non-empty string; toArray() likewise omits an empty returnUrl from the body.
+        if (
+            $request->returnUrl !== null
+            && $request->returnUrl !== ''
+            && stripos($request->returnUrl, 'https://') !== 0
+        ) {
             throw new ValidationException('returnUrl must be an https URL.', 'InvalidReturnUrl');
         }
 

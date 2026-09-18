@@ -376,8 +376,12 @@ func (c *TurboSignClient) CreateEmbeddedSignature(ctx context.Context, req *Crea
 	mappedRecipients := make([]Recipient, 0, len(req.Recipients))
 	for i, r := range req.Recipients {
 		identity := resolveIdentityVerification(r.Auth)
+		// Fall back to the recipient's own phone when the SMS block carries no number (e.g. Auth.SMS
+		// present but PhoneNumber empty, the `sms:{}` shorthand), matching js `auth?.sms?.phoneNumber
+		// ?? r.phone` and php/java/py/ruby. Overwriting with an empty SMS number would wrongly trip
+		// the PhoneRequiredForSmsOtp fail-fast below for a recipient that has a valid top-level phone.
 		phone := r.Phone
-		if r.Auth != nil && r.Auth.SMS != nil {
+		if r.Auth != nil && r.Auth.SMS != nil && r.Auth.SMS.PhoneNumber != "" {
 			phone = r.Auth.SMS.PhoneNumber
 		}
 		order := r.SigningOrder
@@ -413,6 +417,12 @@ func (c *TurboSignClient) CreateEmbeddedSignature(ctx context.Context, req *Crea
 		for _, r := range req.Recipients {
 			fields = append(fields, expandRecipientFields(r)...)
 		}
+	}
+	// Never hand SendSignature a nil slice: json.Marshal(nil) is "null", but js/python/php/java/ruby
+	// all emit "[]" for an absent/empty fields. A backend that JSON-parses and iterates the fields
+	// string must get an iterable "[]", not a non-iterable "null". Normalize to an empty slice.
+	if fields == nil {
+		fields = []Field{}
 	}
 
 	// Embedded flow default: suppress recipient emails (the host owns the UX).

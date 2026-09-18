@@ -52,7 +52,12 @@ def _resolve_identity_verification(auth: Optional[Dict[str, Any]]) -> Optional[D
         return None
     if auth.get("email_otp") or auth.get("emailOtp"):
         return {"mode": "otp", "channel": "email"}
-    if auth.get("sms"):
+    # Presence, not truthiness: an ``sms`` block requests SMS OTP even when it is empty (the phone
+    # may be supplied at the top level, or omitted so the fail-fast below can catch it). This
+    # matches JS (``auth?.sms``, where ``{}`` is truthy) and Go (``auth.SMS != nil``); a bare
+    # truthiness check would silently drop an SMS-OTP request whose ``sms`` dict is ``{}``.
+    # ``{"sms": None}`` still resolves to nothing, matching Go's nil pointer.
+    if auth.get("sms") is not None:
         return {"mode": "otp", "channel": "sms"}
     return None
 
@@ -832,7 +837,10 @@ class TurboSign:
             f"/turbosign/documents/{document_id}/signing-url",
             data=body,
         )
-        return response["results"]
+        # `.get("results", response)` keeps this correct if the API ever returns a flat body
+        # (no `results` envelope): degrade gracefully to the body itself rather than KeyError.
+        # Matches the PHP/Go/Java fallback.
+        return response.get("results", response)
 
     @classmethod
     async def get_embedded_signing_settings(cls) -> Dict[str, Any]:
@@ -969,6 +977,24 @@ class TurboSign:
             if identity_verification:
                 recipient["identityVerification"] = identity_verification
             mapped_recipients.append(recipient)
+
+        # Client-side fail-fast (mirrors JS `validateRecipientsIdentity` + Go/PHP): an SMS OTP
+        # recipient with no resolved phone. A {mode:'otp', channel:'sms'} identity needs a phone,
+        # and without this guard the bad request only surfaces as a raw HTTP 400 from the send.
+        # The other identity modes are unreachable from this `auth` shorthand (it only ever yields
+        # email/sms OTP), so only this check is live; the server remains the source of truth.
+        for recipient in mapped_recipients:
+            iv = recipient.get("identityVerification")
+            if (
+                iv
+                and iv.get("mode") == "otp"
+                and iv.get("channel") == "sms"
+                and not recipient.get("phone")
+            ):
+                raise ValidationError(
+                    f'Recipient "{recipient["email"]}" uses SMS OTP but has no phone (E.164).',
+                    code="PhoneRequiredForSmsOtp",
+                )
 
         # Full `fields` (when provided) win verbatim; otherwise expand each shorthand.
         expanded_fields: List[Dict[str, Any]] = fields if fields is not None else [
