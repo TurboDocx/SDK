@@ -6,12 +6,27 @@ namespace TurboDocx;
 
 use GuzzleHttp\Client as GuzzleClient;
 use TurboDocx\Config\HttpClientConfig;
+use TurboDocx\Exceptions\TurboDocxException;
+use TurboDocx\Exceptions\ValidationException;
+use TurboDocx\Types\Field;
+use TurboDocx\Types\FieldPlacement;
+use TurboDocx\Types\IdentityVerification;
+use TurboDocx\Types\Recipient;
+use TurboDocx\Types\SignatureFieldType;
+use TurboDocx\Types\TemplateConfig;
+use TurboDocx\Types\Requests\CreateEmbeddedSignatureRequest;
 use TurboDocx\Types\Requests\CreateSignatureReviewLinkRequest;
+use TurboDocx\Types\Requests\CreateSigningUrlRequest;
+use TurboDocx\Types\Requests\EmbeddedSignatureRecipient;
 use TurboDocx\Types\Requests\SendSignatureRequest;
 use TurboDocx\Types\Responses\AuditTrailResponse;
+use TurboDocx\Types\Responses\CreateEmbeddedSignatureResponse;
 use TurboDocx\Types\Responses\CreateSignatureReviewLinkResponse;
+use TurboDocx\Types\Responses\CreateSigningUrlResponse;
 use TurboDocx\Types\Responses\DocumentRecipientsResponse;
 use TurboDocx\Types\Responses\DocumentStatusResponse;
+use TurboDocx\Types\Responses\EmbeddedSignatureRecipientResult;
+use TurboDocx\Types\Responses\EmbeddedSigningSettings;
 use TurboDocx\Types\Responses\ResendEmailResponse;
 use TurboDocx\Types\Responses\SendSignatureResponse;
 use TurboDocx\Types\Responses\VoidDocumentResponse;
@@ -204,6 +219,13 @@ final class TurboSign
             $formData['ccEmails'] = json_encode($request->ccEmails);
         }
 
+        // Forward email suppression when explicitly set. Tested with `!== null` (never truthiness),
+        // exactly like the schedule overrides: `false` (do not email) is a meaningful value and a
+        // truthiness check would drop it and silently let the backend email the recipients.
+        if ($request->sendEmail !== null) {
+            $formData['sendEmail'] = $request->sendEmail;
+        }
+
         // Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
         self::applyScheduleOverrides($formData, $request);
 
@@ -334,6 +356,340 @@ final class TurboSign
             ['reason' => $reason]
         );
         return VoidDocumentResponse::fromArray($response);
+    }
+
+    /**
+     * Mint a single-use embedded signing URL for one recipient — request it the moment the signer
+     * is ready (never store it). The counterpart of DocuSign's createRecipientView. Open the
+     * returned `url` in a new tab or redirect to it.
+     *
+     * @param string $documentId The document the recipient belongs to
+     * @param CreateSigningUrlRequest|array<string, mixed> $request Exactly one of `recipientId` /
+     *     `externalId`; `identityAssertion` only for external_idv recipients; optional https `returnUrl`
+     * @return CreateSigningUrlResponse
+     * @throws ValidationException If not exactly one selector is provided, or returnUrl is not https
+     *
+     * @example
+     * ```php
+     * $link = TurboSign::createSigningUrl($documentId, new CreateSigningUrlRequest(
+     *     externalId: 'baers_customer_123'
+     * ));
+     * echo $link->url;
+     * ```
+     */
+    public static function createSigningUrl(
+        string $documentId,
+        CreateSigningUrlRequest|array $request
+    ): CreateSigningUrlResponse {
+        if (is_array($request)) {
+            $request = CreateSigningUrlRequest::fromArray($request);
+        }
+
+        // Fail fast with actionable messages; the server still enforces everything. Validation runs
+        // BEFORE the client is touched so these checks stay HTTP-free.
+        $selectors = array_filter(
+            [$request->recipientId, $request->externalId],
+            static fn(?string $v): bool => $v !== null && $v !== ''
+        );
+        if (count($selectors) !== 1) {
+            throw new ValidationException(
+                'Provide exactly one of recipientId or externalId to createSigningUrl.',
+                'RecipientSelectorInvalid'
+            );
+        }
+        if ($request->returnUrl !== null && stripos($request->returnUrl, 'https://') !== 0) {
+            throw new ValidationException('returnUrl must be an https URL.', 'InvalidReturnUrl');
+        }
+
+        $client = self::getClient();
+        // The endpoint replies { data: { results } }. The HTTP client strips the outer `data`, so
+        // unwrap the `results` envelope here. `?? $response` keeps it correct if the API ever
+        // returns a flat body, and avoids passing null into fromArray() under strict_types.
+        $response = $client->post("/turbosign/documents/{$documentId}/signing-url", $request->toArray());
+        $results = is_array($response) ? ($response['results'] ?? $response) : [];
+
+        return CreateSigningUrlResponse::fromArray($results);
+    }
+
+    /**
+     * Read the org's embedded-signing settings: the set-once, org-wide gates (embedded signing
+     * enabled, external identity verification allowed, override allowed), the default OTP channel,
+     * and the allowed iframe embedding origins. Read-only.
+     *
+     * @return EmbeddedSigningSettings
+     *
+     * @example
+     * ```php
+     * $settings = TurboSign::getEmbeddedSigningSettings();
+     * if (!$settings->enabled) {
+     *     throw new RuntimeException('Embedded signing is not enabled for this org.');
+     * }
+     * ```
+     */
+    public static function getEmbeddedSigningSettings(): EmbeddedSigningSettings
+    {
+        $client = self::getClient();
+        // { data: { results } } envelope, same as createSigningUrl above.
+        $response = $client->get('/turbosign/embedded-signing-settings');
+        $results = is_array($response) ? ($response['results'] ?? $response) : [];
+
+        return EmbeddedSigningSettings::fromArray($results);
+    }
+
+    /**
+     * Create a signature request AND mint a per-recipient embedded signing URL in ONE call.
+     *
+     * This is a thin WRAPPER over {@see TurboSign::sendSignature()} + {@see TurboSign::createSigningUrl()}
+     * — no new endpoint. It maps the ergonomic request (per-recipient `auth` + `fields` shorthand)
+     * onto those calls, then assembles a per-recipient result carrying the embed URL and the
+     * resolved identity-verification mode.
+     *
+     * Turn-aware: with a real (sequential) signing order the backend only mints a URL for the signer
+     * whose turn it is. Rather than throw the whole call away, each result carries a `status`:
+     * - 'ready' — it's their turn; `embedUrl` is set.
+     * - 'pending' — an earlier signer hasn't finished; `embedUrl` is null. Re-mint later with
+     *   {@see TurboSign::createSigningUrl()}.
+     * - 'completed' — they've already signed; `embedUrl` is null.
+     * A genuine error (anything other than not-in-turn / already-signed) still throws.
+     *
+     * @param CreateEmbeddedSignatureRequest $request
+     * @return CreateEmbeddedSignatureResponse
+     * @throws ValidationException|TurboDocxException
+     */
+    public static function createEmbeddedSignature(
+        CreateEmbeddedSignatureRequest $request
+    ): CreateEmbeddedSignatureResponse {
+        // 1. Map the ergonomic recipients onto full Recipient objects (identity + phone + order).
+        $mappedRecipients = [];
+        foreach ($request->recipients as $index => $r) {
+            $identityVerification = self::resolveIdentityVerification($r);
+            $phone = $r->auth?->smsPhoneNumber ?? $r->phone;
+            $mappedRecipients[] = new Recipient(
+                name: $r->name,
+                email: $r->email,
+                signingOrder: $r->signingOrder ?? $index + 1,
+                phone: $phone,
+                identityVerification: $identityVerification,
+            );
+        }
+
+        // Fail fast on identity-config mistakes (mirrors the JS validateRecipientsIdentity call).
+        self::validateRecipientsIdentity($mappedRecipients);
+
+        // Full `fields` (when provided) win verbatim; otherwise expand each recipient's shorthand.
+        $fields = $request->fields;
+        if ($fields === null) {
+            $fields = [];
+            foreach ($request->recipients as $r) {
+                foreach (self::expandRecipientFields($r) as $field) {
+                    $fields[] = $field;
+                }
+            }
+        }
+
+        // Embedded flow default: suppress recipient emails (the host owns the UX).
+        $sent = self::sendSignature(new SendSignatureRequest(
+            recipients: $mappedRecipients,
+            fields: $fields,
+            file: $request->file,
+            fileName: $request->fileName,
+            fileLink: $request->fileLink,
+            deliverableId: $request->deliverableId,
+            templateId: $request->templateId,
+            documentName: $request->documentName,
+            documentDescription: $request->documentDescription,
+            senderName: $request->senderName,
+            senderEmail: $request->senderEmail,
+            ccEmails: $request->ccEmails,
+            sendEmail: $request->sendEmail ?? false,
+        ));
+
+        // Match the backend's recipients back to the request by email so we can carry `name` and
+        // know the resolved identity mode. The response's `recipients` is optional, so guard it.
+        $recipientIdByEmail = [];
+        foreach ($sent->recipients ?? [] as $sr) {
+            if (is_array($sr) && isset($sr['email'], $sr['id'])) {
+                $recipientIdByEmail[(string) $sr['email']] = (string) $sr['id'];
+            }
+        }
+
+        // 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER.
+        $ordered = [];
+        foreach ($request->recipients as $index => $r) {
+            $ordered[] = ['r' => $r, 'order' => $r->signingOrder ?? $index + 1];
+        }
+        usort($ordered, static fn(array $a, array $b): int => $a['order'] <=> $b['order']);
+
+        $results = [];
+        foreach ($ordered as $entry) {
+            /** @var EmbeddedSignatureRecipient $r */
+            $r = $entry['r'];
+            $recipientId = $recipientIdByEmail[$r->email] ?? null;
+            if ($recipientId === null) {
+                throw new ValidationException(
+                    "sendSignature did not return a recipient matching \"{$r->email}\"; cannot mint an embed URL.",
+                    'EmbeddedRecipientNotReturned'
+                );
+            }
+
+            // Turn-aware: the backend refuses to mint a URL for a signer whose turn hasn't come
+            // (RecipientNotInTurn / NotSignersTurn) or who already signed (RecipientAlreadySigned).
+            // Those are expected states, not failures — degrade to a null URL + status. Any OTHER
+            // error propagates. Catch the BASE exception: the backend may map these codes to 400,
+            // 403 or 409, so branch on the errorCode, not the HTTP class.
+            try {
+                $link = self::createSigningUrl($sent->documentId, new CreateSigningUrlRequest(
+                    recipientId: $recipientId,
+                    returnUrl: $request->returnUrl,
+                ));
+                $results[] = new EmbeddedSignatureRecipientResult(
+                    recipientId: $recipientId,
+                    name: $r->name,
+                    email: $r->email,
+                    embedUrl: $link->url,
+                    status: EmbeddedSignatureRecipientResult::STATUS_READY,
+                    identityVerificationMode: $link->identityVerificationMode,
+                );
+            } catch (TurboDocxException $e) {
+                $code = $e->errorCode;
+                if ($code !== 'RecipientNotInTurn' && $code !== 'NotSignersTurn' && $code !== 'RecipientAlreadySigned') {
+                    throw $e;
+                }
+                $results[] = new EmbeddedSignatureRecipientResult(
+                    recipientId: $recipientId,
+                    name: $r->name,
+                    email: $r->email,
+                    embedUrl: null,
+                    status: $code === 'RecipientAlreadySigned'
+                        ? EmbeddedSignatureRecipientResult::STATUS_COMPLETED
+                        : EmbeddedSignatureRecipientResult::STATUS_PENDING,
+                    identityVerificationMode: self::resolveIdentityVerification($r)?->mode,
+                );
+            }
+        }
+
+        return new CreateEmbeddedSignatureResponse($sent->documentId, $results);
+    }
+
+    /**
+     * Shorthand field key => the concrete field type and default size it emits.
+     *
+     * Note `initials` maps to the `initial` field type — that is the literal in SignatureFieldType.
+     *
+     * @return array<string, array{type: SignatureFieldType, width: int, height: int}>
+     */
+    private static function embeddedFieldSpecs(): array
+    {
+        return [
+            'signature' => ['type' => SignatureFieldType::SIGNATURE, 'width' => 100, 'height' => 30],
+            'date' => ['type' => SignatureFieldType::DATE, 'width' => 75, 'height' => 30],
+            'initials' => ['type' => SignatureFieldType::INITIAL, 'width' => 50, 'height' => 30],
+            'fullName' => ['type' => SignatureFieldType::FULL_NAME, 'width' => 150, 'height' => 30],
+        ];
+    }
+
+    /**
+     * Map an embedded recipient's ergonomic `auth` shorthand to a full IdentityVerification.
+     * `emailOtp` wins if both are set. Returns null when no auth is requested (no verification).
+     */
+    private static function resolveIdentityVerification(
+        EmbeddedSignatureRecipient $recipient
+    ): ?IdentityVerification {
+        $auth = $recipient->auth;
+        if ($auth === null) {
+            return null;
+        }
+        if ($auth->emailOtp) {
+            return IdentityVerification::otp('email');
+        }
+        if ($auth->smsPhoneNumber !== null) {
+            return IdentityVerification::otp('sms');
+        }
+        return null;
+    }
+
+    /**
+     * Expand a recipient's `fields` shorthand into full Field objects — one per provided key,
+     * anchored to the given text with placement 'replace' and the key's default size.
+     *
+     * @return array<Field>
+     */
+    private static function expandRecipientFields(EmbeddedSignatureRecipient $recipient): array
+    {
+        $shorthand = $recipient->fields;
+        if ($shorthand === null) {
+            return [];
+        }
+
+        $anchors = [
+            'signature' => $shorthand->signature,
+            'date' => $shorthand->date,
+            'initials' => $shorthand->initials,
+            'fullName' => $shorthand->fullName,
+        ];
+
+        $fields = [];
+        foreach (self::embeddedFieldSpecs() as $key => $spec) {
+            $anchor = $anchors[$key] ?? null;
+            if ($anchor === null || $anchor === '') {
+                continue;
+            }
+            $fields[] = new Field(
+                type: $spec['type'],
+                recipientEmail: $recipient->email,
+                template: new TemplateConfig(
+                    anchor: $anchor,
+                    placement: FieldPlacement::REPLACE,
+                    size: ['width' => $spec['width'], 'height' => $spec['height']],
+                ),
+            );
+        }
+        return $fields;
+    }
+
+    /**
+     * Client-side fail-fast validation of each recipient's identityVerification. The server is the
+     * source of truth; this catches the common mistakes early with actionable messages.
+     *
+     * @param array<Recipient> $recipients
+     * @throws ValidationException
+     */
+    private static function validateRecipientsIdentity(array $recipients): void
+    {
+        foreach ($recipients as $r) {
+            $iv = $r->identityVerification;
+            if ($iv === null) {
+                continue;
+            }
+            if ($iv->mode === IdentityVerification::MODE_OTP) {
+                if ($iv->channel === 'sms' && ($r->phone === null || $r->phone === '')) {
+                    throw new ValidationException(
+                        "Recipient \"{$r->email}\" uses SMS OTP but has no phone (E.164).",
+                        'PhoneRequiredForSmsOtp'
+                    );
+                }
+            } elseif ($iv->mode === IdentityVerification::MODE_EXTERNAL_IDV) {
+                if ($iv->provider === null || trim($iv->provider) === '') {
+                    throw new ValidationException(
+                        "Recipient \"{$r->email}\" uses external_idv but has no provider.",
+                        'IdvProviderRequired'
+                    );
+                }
+            } elseif ($iv->mode === IdentityVerification::MODE_OVERRIDE) {
+                if ($iv->overrideIdentityVerification !== true) {
+                    throw new ValidationException(
+                        "Recipient \"{$r->email}\" override requires overrideIdentityVerification: true (boolean).",
+                        'OverrideNotAcknowledged'
+                    );
+                }
+                if ($iv->reason === null || trim($iv->reason) === '') {
+                    throw new ValidationException(
+                        "Recipient \"{$r->email}\" override requires a non-empty reason.",
+                        'OverrideNotAcknowledged'
+                    );
+                }
+            }
+        }
     }
 
     /**

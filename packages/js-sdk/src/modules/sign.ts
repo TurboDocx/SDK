@@ -401,7 +401,7 @@ export class TurboSign {
    * - `'ready'` — it's their turn; `embedUrl` is set, frame it now.
    * - `'pending'` — an earlier signer hasn't finished; `embedUrl` is `null`. Re-mint with
    *   {@link TurboSign.createSigningUrl} once earlier signers complete (e.g. an in-person kiosk that
-   *   hands the device to the next signer). See `examples/embedded-web-app-sequential`.
+   *   hands the device to the next signer). See the Sequential-kiosk path in `examples/embedded-web-app`.
    * - `'completed'` — they've already signed; `embedUrl` is `null`.
    * A genuine error (anything other than not-in-turn / already-signed) still throws.
    *

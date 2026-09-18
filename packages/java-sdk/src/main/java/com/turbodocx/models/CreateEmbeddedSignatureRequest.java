@@ -3,46 +3,46 @@ package com.turbodocx.models;
 import java.util.List;
 
 /**
- * Request for preparing a document for signing
+ * Request for {@code TurboSign.createEmbeddedSignature} — create a signature request and mint a
+ * per-recipient embed URL in one call.
  */
-public class SendSignatureRequest {
+public class CreateEmbeddedSignatureRequest {
     private final byte[] file;
     private final String fileName;
     private final String fileLink;
-    private final String deliverableId;
     private final String templateId;
-    private final List<Recipient> recipients;
-    private final List<Field> fields;
+    private final String deliverableId;
     private final String documentName;
     private final String documentDescription;
     private final String senderName;
     private final String senderEmail;
     private final List<String> ccEmails;
-    /** Per-document reminder + expiration overrides; null inherits the org defaults. */
-    private final SignatureSchedule schedule;
+    private final List<EmbeddedSignatureRecipient> recipients;
+    /** Optional full field control; overrides the per-recipient {@code fields} shorthand when non-null. */
+    private final List<Field> fields;
     /**
-     * Whether the backend should email the recipients. Null keeps the backend default (emails
-     * sent). {@code false} suppresses recipient emails — used by the embedded flow, where the host
-     * owns the signing UX. Boxed so presence can be tested with {@code != null}; {@code false} is
-     * forwarded rather than dropped.
+     * Embedded default: do not email the recipients (you own the UX). Null defaults to
+     * {@code false} for this flow.
      */
     private final Boolean sendEmail;
+    /** Optional completion fallback. Must be an https URL. Passed to each embed URL. */
+    private final String returnUrl;
 
-    private SendSignatureRequest(Builder builder) {
-        this.schedule = builder.schedule;
-        this.sendEmail = builder.sendEmail;
+    private CreateEmbeddedSignatureRequest(Builder builder) {
         this.file = builder.file;
         this.fileName = builder.fileName;
         this.fileLink = builder.fileLink;
-        this.deliverableId = builder.deliverableId;
         this.templateId = builder.templateId;
-        this.recipients = builder.recipients;
-        this.fields = builder.fields;
+        this.deliverableId = builder.deliverableId;
         this.documentName = builder.documentName;
         this.documentDescription = builder.documentDescription;
         this.senderName = builder.senderName;
         this.senderEmail = builder.senderEmail;
         this.ccEmails = builder.ccEmails;
+        this.recipients = builder.recipients;
+        this.fields = builder.fields;
+        this.sendEmail = builder.sendEmail;
+        this.returnUrl = builder.returnUrl;
     }
 
     public byte[] getFile() {
@@ -57,20 +57,12 @@ public class SendSignatureRequest {
         return fileLink;
     }
 
-    public String getDeliverableId() {
-        return deliverableId;
-    }
-
     public String getTemplateId() {
         return templateId;
     }
 
-    public List<Recipient> getRecipients() {
-        return recipients;
-    }
-
-    public List<Field> getFields() {
-        return fields;
+    public String getDeliverableId() {
+        return deliverableId;
     }
 
     public String getDocumentName() {
@@ -93,12 +85,20 @@ public class SendSignatureRequest {
         return ccEmails;
     }
 
-    public SignatureSchedule getSchedule() {
-        return schedule;
+    public List<EmbeddedSignatureRecipient> getRecipients() {
+        return recipients;
+    }
+
+    public List<Field> getFields() {
+        return fields;
     }
 
     public Boolean getSendEmail() {
         return sendEmail;
+    }
+
+    public String getReturnUrl() {
+        return returnUrl;
     }
 
     public boolean hasFile() {
@@ -109,17 +109,17 @@ public class SendSignatureRequest {
         private byte[] file;
         private String fileName;
         private String fileLink;
-        private String deliverableId;
         private String templateId;
-        private List<Recipient> recipients;
-        private List<Field> fields;
+        private String deliverableId;
         private String documentName;
         private String documentDescription;
         private String senderName;
         private String senderEmail;
         private List<String> ccEmails;
-        private SignatureSchedule schedule;
+        private List<EmbeddedSignatureRecipient> recipients;
+        private List<Field> fields;
         private Boolean sendEmail;
+        private String returnUrl;
 
         public Builder file(byte[] file) {
             this.file = file;
@@ -136,23 +136,13 @@ public class SendSignatureRequest {
             return this;
         }
 
-        public Builder deliverableId(String deliverableId) {
-            this.deliverableId = deliverableId;
-            return this;
-        }
-
         public Builder templateId(String templateId) {
             this.templateId = templateId;
             return this;
         }
 
-        public Builder recipients(List<Recipient> recipients) {
-            this.recipients = recipients;
-            return this;
-        }
-
-        public Builder fields(List<Field> fields) {
-            this.fields = fields;
+        public Builder deliverableId(String deliverableId) {
+            this.deliverableId = deliverableId;
             return this;
         }
 
@@ -181,23 +171,31 @@ public class SendSignatureRequest {
             return this;
         }
 
-        /** Per-document reminder + expiration overrides. Omit to inherit the org defaults. */
-        public Builder schedule(SignatureSchedule schedule) {
-            this.schedule = schedule;
+        public Builder recipients(List<EmbeddedSignatureRecipient> recipients) {
+            this.recipients = recipients;
             return this;
         }
 
-        /**
-         * Whether the backend should email the recipients. Omit to keep the backend default
-         * (emails sent). Set {@code false} to suppress recipient emails (embedded flow).
-         */
+        /** Optional full field control; overrides the per-recipient shorthand when supplied. */
+        public Builder fields(List<Field> fields) {
+            this.fields = fields;
+            return this;
+        }
+
+        /** Suppress recipient emails (embedded flow default). Omit to default to {@code false}. */
         public Builder sendEmail(Boolean sendEmail) {
             this.sendEmail = sendEmail;
             return this;
         }
 
-        public SendSignatureRequest build() {
-            return new SendSignatureRequest(this);
+        /** Completion fallback URL, forwarded to each embed URL (https only). */
+        public Builder returnUrl(String returnUrl) {
+            this.returnUrl = returnUrl;
+            return this;
+        }
+
+        public CreateEmbeddedSignatureRequest build() {
+            return new CreateEmbeddedSignatureRequest(this);
         }
     }
 }
