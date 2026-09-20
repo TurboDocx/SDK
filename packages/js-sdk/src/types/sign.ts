@@ -485,6 +485,43 @@ export interface IdentityAssertion {
   verifiedAt: string;
   /** The email your provider verified — must match the recipient's email. */
   subjectEmail: string;
+  /**
+   * How your provider verified the signer. Optional context recorded on the certificate/audit trail.
+   * - `id_document`: government ID document check.
+   * - `id_document_liveness`: ID document plus a liveness/selfie match.
+   * - `kba`: knowledge-based authentication (out-of-wallet questions).
+   * - `database`: verified against an authoritative data source.
+   * - `sso`: a trusted single sign-on / federated identity.
+   * - `other`: anything else; describe it in `methodDetail`.
+   */
+  method?: 'id_document' | 'id_document_liveness' | 'kba' | 'database' | 'sso' | 'other';
+  /**
+   * Free-text description of the verification method. Required when `method` is `'other'`, so the
+   * audit trail records what actually happened rather than an opaque "other".
+   */
+  methodDetail?: string;
+  /**
+   * The assurance level your provider attests to, as a free-text label. Examples:
+   * `'ial2_aal2'` (NIST 800-63), `'eidas_substantial'`, `'eidas_high'` (eIDAS).
+   */
+  assuranceLevel?: string;
+  /** The signer's legal name as verified by your provider, if it returned one. */
+  verifiedName?: string;
+  /**
+   * An https URL pointing at the vendor's verification record (the durable evidence of this check),
+   * for auditors who need to trace the assertion back to its source.
+   */
+  evidenceUrl?: string;
+  /**
+   * Explicitly bypass the requirement that the asserted `subjectEmail` equals the recipient's email.
+   *
+   * Defaults to `false`. Setting this to `true` means YOU take responsibility for confirming the
+   * verified identity belongs to this signer even though the emails differ (for example, the signer
+   * was verified under a personal email but signs at a work address). The override is recorded in the
+   * JSON audit trail, so it is an auditable, deliberate decision — never a silent one. Leave it unset
+   * (or `false`) whenever the emails are expected to match.
+   */
+  overrideEmailMatching?: boolean;
 }
 
 /** Request a single-use embedded signing URL for one recipient. Provide exactly one selector. */
