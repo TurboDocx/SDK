@@ -12,7 +12,7 @@ info:
     API key (prefixed `TDXP-`) and carry no org header.
 
 
-    Scope: this describes the API surface the TurboDocx SDKs call, not the entire backend API. Request/response
+    Scope: this mirrors the endpoints the TurboDocx SDKs use. Request/response
     bodies and list-endpoint query parameters (pagination and filters) are intentionally generic here
     - the SDK is the source of the concrete shapes; this spec pins the endpoints, path params, content
     types and auth. See per-type definitions in `@turbodocx/sdk`.'

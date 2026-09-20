@@ -113,7 +113,7 @@ Two skills are included:
 
 ## API Reference (OpenAPI)
 
-An OpenAPI 3.0.3 description of the TurboDocx HTTP API surface used by these SDKs lives at [`openapi.yaml`](./openapi.yaml) in the repo root, generated from the SDK. Load it into Swagger UI, Redoc, Postman, or `openapi-generator` to explore endpoints or generate a client in any language. It covers the SDK-called endpoints (not the entire backend API); request/response bodies and list query parameters are kept generic.
+An OpenAPI 3.0.3 description of the TurboDocx HTTP API lives at [`openapi.yaml`](./openapi.yaml) in the repo root, generated from and mirroring the endpoints these SDKs use. Load it into Swagger UI, Redoc, Postman, or `openapi-generator` to explore endpoints or generate a client in any language. Request/response bodies and list query parameters are kept generic.
 
 Every request sends `Authorization: Bearer <API key>` plus the `x-rapiddocx-org-id` header (TurboPartner endpoints use a partner Bearer key with no org header).
 
