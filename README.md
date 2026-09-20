@@ -111,6 +111,12 @@ Two skills are included:
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/csharp/csharp-original.svg" width="20"/> **C# / .NET** | 🚧 In Progress |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/powershell/powershell-original.svg" width="20"/> **PowerShell** | 🚧 In Progress |
 
+## API Reference (OpenAPI)
+
+An OpenAPI 3.0.3 description of the TurboDocx HTTP API surface used by these SDKs lives at [`openapi.yaml`](./openapi.yaml) in the repo root, generated from the SDK. Load it into Swagger UI, Redoc, Postman, or `openapi-generator` to explore endpoints or generate a client in any language. It covers the SDK-called endpoints (not the entire backend API); request/response bodies and list query parameters are kept generic.
+
+Every request sends `Authorization: Bearer <API key>` plus the `x-rapiddocx-org-id` header (TurboPartner endpoints use a partner Bearer key with no org header).
+
 ## 🌐 Explore the TurboDocx Ecosystem
 
 | Package | Links | Description |

@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
   title: TurboDocx API
-  version: 0.7.0
+  version: 0.8.0
   description: 'OpenAPI description of the TurboDocx HTTP API, generated from the `@turbodocx/sdk` TypeScript
-    SDK (v0.7.0, `main`). Covers Deliverable (document generation), TurboSign (e-signatures), TurboQuote
+    SDK (v0.8.0, `main`). Covers Deliverable (document generation), TurboSign (e-signatures), TurboQuote
     (quotes/CPQ), TurboPartner (partner org management) and TurboWebhooks (signature webhook management).
 
 
@@ -12,9 +12,10 @@ info:
     API key (prefixed `TDXP-`) and carry no org header.
 
 
-    Request and response bodies are intentionally generic here (the SDK is the source of the concrete
-    shapes); this spec pins the endpoints, path params, content types and auth. See per-type definitions
-    in `@turbodocx/sdk`.'
+    Scope: this describes the API surface the TurboDocx SDKs call, not the entire backend API. Request/response
+    bodies and list-endpoint query parameters (pagination and filters) are intentionally generic here
+    - the SDK is the source of the concrete shapes; this spec pins the endpoints, path params, content
+    types and auth. See per-type definitions in `@turbodocx/sdk`.'
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
@@ -399,6 +400,38 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/GenericRequest'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /turbosign/documents/{documentId}/download:
+    get:
+      tags:
+      - TurboSign
+      operationId: getTurbosignDocumentsByDocumentIdDownload
+      summary: GET /turbosign/documents/{documentId}/download
+      parameters:
+      - name: documentId
+        in: path
+        required: true
+        description: TurboSign document identifier.
+        schema:
+          type: string
       responses:
         '200':
           description: Success.
@@ -911,7 +944,7 @@ paths:
         schema:
           type: string
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -1136,7 +1169,11 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GenericRequest'
+              type: array
+              items:
+                $ref: '#/components/schemas/GenericRequest'
+              description: Array of item objects. The SDK also accepts a single object and wraps it in
+                an array.
       responses:
         '200':
           description: Success.
@@ -1174,7 +1211,11 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GenericRequest'
+              type: array
+              items:
+                $ref: '#/components/schemas/GenericRequest'
+              description: Array of item objects. The SDK also accepts a single object and wraps it in
+                an array.
       responses:
         '200':
           description: Success.
@@ -3991,6 +4032,12 @@ paths:
         description: Webhook name. TurboSign's signature webhook is named `signature`.
         schema:
           type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericRequest'
       responses:
         '200':
           description: Success.
