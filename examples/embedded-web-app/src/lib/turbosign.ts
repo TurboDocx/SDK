@@ -40,6 +40,52 @@ export function startSingleSigner(input: { name: string; email: string }): Promi
   return postJson<SingleSignerResult>("/api/single", input);
 }
 
+/** The verification method the (simulated) vendor used. */
+export type SimulatedIdvMethod = "id_document" | "id_document_liveness" | "kba" | "database" | "sso" | "other";
+
+/** Path 3, external IdV: server asserts the signer's identity via its own provider, no OTP gate. */
+/** The fabricated assertion the demo sent in place of a real identity verification vendor's response. */
+export interface SimulatedAssertion {
+  provider: string;
+  verificationId: string;
+  verifiedAt: string;
+  subjectEmail: string;
+  /** How the (simulated) vendor verified the signer. */
+  method?: SimulatedIdvMethod;
+  /** Free text describing the method; set when method is "other". */
+  methodDetail?: string;
+  /** Assurance level label, e.g. "ial2_aal2" | "eidas_substantial" | "eidas_high". */
+  assuranceLevel?: string;
+  /** The verified legal name the (simulated) vendor returned. */
+  verifiedName?: string;
+  /** An https link to the (simulated) vendor's verification record. */
+  evidenceUrl?: string;
+  /** True when the asserted subjectEmail differs from the signer's email and the check was bypassed. */
+  overrideEmailMatching?: boolean;
+}
+
+export interface ExternalIdvResult extends SingleSignerResult {
+  simulatedAssertion: SimulatedAssertion;
+}
+
+/** What the Identity Verification Simulator dialog collected when the operator "ran" the check. */
+export interface SimulatedVerificationInput {
+  verifiedName?: string;
+  subjectEmail?: string;
+  method?: SimulatedIdvMethod;
+  methodDetail?: string;
+  assuranceLevel?: string;
+  overrideEmailMatching?: boolean;
+}
+
+export function startExternalIdv(input: {
+  name: string;
+  email: string;
+  verification?: SimulatedVerificationInput;
+}): Promise<ExternalIdvResult> {
+  return postJson<ExternalIdvResult>("/api/external-idv", input);
+}
+
 export interface KioskSigner {
   recipientId: string;
   name: string;

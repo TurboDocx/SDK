@@ -1,16 +1,18 @@
 import { useState } from "react";
-import { Layers, PenLine, Users } from "lucide-react";
+import { Fingerprint, Layers, PenLine, Users } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { ExternalIdv } from "@/pages/ExternalIdv";
 import { Kiosk } from "@/pages/Kiosk";
 import { SingleSigner } from "@/pages/SingleSigner";
 import { Widget } from "@/pages/Widget";
 
-type Path = "single" | "kiosk" | "widget";
+type Path = "single" | "externalidv" | "kiosk" | "widget";
 
 const PATHS: Array<{ id: Path; label: string; blurb: string; icon: typeof PenLine }> = [
   { id: "widget", label: "Widget", blurb: "Drop in the <TurboSignForm> component — the fastest way to embed signing", icon: Layers },
   { id: "single", label: "Single signer", blurb: "One recipient, email OTP, hand-rolled iframe", icon: PenLine },
+  { id: "externalidv", label: "External IdV", blurb: "Verify the signer via an identity verification vendor (simulated), no passcode", icon: Fingerprint },
   { id: "kiosk", label: "Sequential kiosk", blurb: "Two signers in order on one device (turn-aware)", icon: Users },
 ];
 
@@ -24,7 +26,7 @@ export default function App() {
           <div className="size-7 rounded-lg bg-primary" aria-hidden />
           <div>
             <p className="text-sm font-semibold leading-tight tracking-tight">TurboDocx · Embedded Signing</p>
-            <p className="text-xs text-muted-foreground">Three ways to embed TurboSign, one app</p>
+            <p className="text-xs text-muted-foreground">Four ways to embed TurboSign, one app</p>
           </div>
         </div>
         <nav className="mx-auto flex max-w-4xl gap-2 px-4 pb-3">
@@ -55,6 +57,7 @@ export default function App() {
 
       <main className="mx-auto max-w-4xl px-4 py-8">
         {path === "single" && <SingleSigner />}
+        {path === "externalidv" && <ExternalIdv />}
         {path === "kiosk" && <Kiosk />}
         {path === "widget" && <Widget />}
 

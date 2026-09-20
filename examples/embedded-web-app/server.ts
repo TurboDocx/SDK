@@ -7,9 +7,10 @@
  * uses @turbodocx/sdk (via handlers.ts) to create documents and mint embeddable signing URLs, and
  * returns just those URLs to the SPA, which frames them (or hands them to <TurboSignForm>).
  *
- *   POST /api/single       { name, email }                   -> { url, mode }
- *   POST /api/kiosk/start  { signers: [{ name, email }, …] }  -> { documentId, recipients: [...] }
- *   POST /api/kiosk/next   { documentId, recipientId }        -> { url }
+ *   POST /api/single        { name, email }                   -> { url, mode }
+ *   POST /api/external-idv  { name, email, verification? }     -> { url, mode, simulatedAssertion }
+ *   POST /api/kiosk/start   { signers: [{ name, email }, …] }  -> { documentId, recipients: [...] }
+ *   POST /api/kiosk/next    { documentId, recipientId }        -> { url }
  *
  * Run (dev): `npm run server` here, and `npm run dev` in another terminal — Vite proxies /api to this.
  * Config comes from `.env` (see .env.example). The API key stays server-side.
@@ -20,7 +21,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 
 import { TurboSign } from "@turbodocx/sdk";
 
-import { kioskNext, kioskStart, single } from "./handlers";
+import { externalIdv, kioskNext, kioskStart, single, type SimulatedVerificationInput } from "./handlers";
 
 const PORT = Number(process.env.PORT || 4000);
 
@@ -61,7 +62,7 @@ const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url || "/", `http://localhost:${PORT}`);
     if (req.method !== "POST" || !url.pathname.startsWith("/api/")) {
-      return send(res, 404, { error: "Not found. POST /api/single, /api/kiosk/start, or /api/kiosk/next." });
+      return send(res, 404, { error: "Not found. POST /api/single, /api/external-idv, /api/kiosk/start, or /api/kiosk/next." });
     }
     const body = await readBody(req);
 
@@ -70,6 +71,23 @@ const server = createServer(async (req, res) => {
       const email = String(body.email || "").trim();
       if (!name || !email) return send(res, 400, { error: "name and email are required." });
       return send(res, 200, await single({ name, email }));
+    }
+
+    if (url.pathname === "/api/external-idv") {
+      const name = String(body.name || "").trim();
+      const email = String(body.email || "").trim();
+      if (!name || !email) return send(res, 400, { error: "name and email are required." });
+      // The Identity Verification Simulator dialog collects the "verified" fields; forward them as-is.
+      const v = (body.verification && typeof body.verification === "object" ? body.verification : {}) as Record<string, unknown>;
+      const verification = {
+        verifiedName: typeof v.verifiedName === "string" ? v.verifiedName.trim() : undefined,
+        subjectEmail: typeof v.subjectEmail === "string" ? v.subjectEmail.trim() : undefined,
+        method: typeof v.method === "string" ? (v.method as SimulatedVerificationInput["method"]) : undefined,
+        methodDetail: typeof v.methodDetail === "string" ? v.methodDetail.trim() : undefined,
+        assuranceLevel: typeof v.assuranceLevel === "string" ? v.assuranceLevel.trim() : undefined,
+        overrideEmailMatching: v.overrideEmailMatching === true,
+      };
+      return send(res, 200, await externalIdv({ name, email, verification }));
     }
 
     if (url.pathname === "/api/kiosk/start") {
