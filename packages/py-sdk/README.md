@@ -1120,7 +1120,7 @@ scopes: List[str] = [SCOPE_ORG_READ, SCOPE_AUDIT_READ]
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.9+
 - httpx (async HTTP client)
 
 ---

@@ -5,9 +5,15 @@
 # so py-sdk had zero vulnerability detection. Every other ecosystem here has a lockfile;
 # this is Python's.
 #
-# RESOLVED FOR PYTHON 3.10 -- the version CI runs and the floor pyproject declares.
-# Do NOT regenerate on a newer interpreter: a newer Python can resolve a tree that does not
-# install on the floor, which would make this file describe an environment we never build.
+# RESOLVED FOR PYTHON 3.10, which is NOT the floor. pyproject still declares >=3.9 and CI
+# tests both. 3.10 is used here because it is the oldest Python that can install the patched
+# releases of two packages in this tree: anyio (4.13+ dropped 3.9; the fixes for
+# GHSA-82r6-8w77-94w6 and GHSA-5p39-cfhj-2xmp are in 4.14.2) and pytest (9.x dropped 3.9;
+# GHSA-6w46-j5rx-g56g is fixed in 9.0.3). A 3.9 install resolves anyio 4.12.1 and
+# pytest 8.4.2 instead, and no release of ours can change that: anyio comes in unpinned
+# through httpx, and upstream publishes no patched build for 3.9. Resolving for 3.9 would
+# only make this file report advisories that every 3.10+ install already avoids.
+# Do NOT regenerate on a newer interpreter than 3.10 without a reason.
 #
 # NOT the install path. CI still runs `pip install -e ".[dev]"` against the declared
 # ranges, so an upstream breaking change still surfaces. This file exists to be scanned.

@@ -113,7 +113,7 @@ Each SDK organizes types by module:
 ### Test Workflows (`.github/workflows/ci.yml`)
 Runs on push to `main`/`develop` and all PRs. Per-SDK jobs with language-specific setup:
 - JS: Node 22, `npm ci && npm run build && npm test`
-- Python: 3.10, `pip install -e ".[dev]" && pytest -v`
+- Python: 3.9, `pip install -e ".[dev]" && pytest -v`
 - Go: 1.21, `go mod tidy && go test -v ./...`
 - PHP: 8.1, `composer install && composer test && composer phpstan`
 - Java: JDK 11 (Temurin), `mvn test -B`
