@@ -376,7 +376,7 @@ language-specific form.
 | SDK | Minimum Version |
 |:----|:----------------|
 | JavaScript/TypeScript | Node.js 16+ |
-| Python | Python 3.9+ |
+| Python | Python 3.10+ |
 | PHP | PHP 8.1+ |
 | Go | Go 1.21+ |
 | Java | Java 11+ |
