@@ -5,40 +5,39 @@
 # so py-sdk had zero vulnerability detection. Every other ecosystem here has a lockfile;
 # this is Python's.
 #
-# RESOLVED FOR PYTHON 3.9 -- the version CI runs and the floor pyproject declares.
-# Do NOT regenerate on a newer interpreter: 3.10+ resolves a different tree (pytest 9.x,
-# anyio 4.14) that cannot install on 3.9, which would make this file describe an
-# environment we never actually build.
+# RESOLVED FOR PYTHON 3.10, which is NOT the floor. pyproject still declares >=3.9 and CI
+# tests both. 3.10 is used here because it is the oldest Python that can install the patched
+# releases of two packages in this tree: anyio (4.13+ dropped 3.9; the fixes for
+# GHSA-82r6-8w77-94w6 and GHSA-5p39-cfhj-2xmp are in 4.14.2) and pytest (9.x dropped 3.9;
+# GHSA-6w46-j5rx-g56g is fixed in 9.0.3). A 3.9 install resolves anyio 4.12.1 and
+# pytest 8.4.2 instead, and no release of ours can change that: anyio comes in unpinned
+# through httpx, and upstream publishes no patched build for 3.9. Resolving for 3.9 would
+# only make this file report advisories that every 3.10+ install already avoids.
+# Do NOT regenerate on a newer interpreter than 3.10 without a reason.
 #
 # NOT the install path. CI still runs `pip install -e ".[dev]"` against the declared
 # ranges, so an upstream breaking change still surfaces. This file exists to be scanned.
 #
-# KNOWN, EXPECTED ALERT: pytest==8.4.2 carries GHSA-6w46-j5rx-g56g (tmpdir handling).
-# It is unfixable while we support Python 3.9 -- the patched pytest 9.0.3 requires >=3.10.
-# It is a dev/test dependency, never shipped to consumers. Closing it means dropping
-# Python 3.9 (bump requires-python and the CI matrix); until that call is made, treat this
-# alert as accepted rather than actionable.
-#
 # UNVERIFIED: whether Dependabot will also *update* this file is untested -- it maintains
 # lockfiles it resolves from a manifest it installs with, and nothing installs from this
 # one. If security-update PRs never appear, regenerate by hand:
-#   pip install --dry-run --ignore-installed --python-version 3.9 --only-binary=:all: \
+#   pip install --dry-run --ignore-installed --python-version 3.10 --only-binary=:all: \
 #       --report r.json "httpx>=0.28.1" "typing_extensions>=4.0.0" "pytest>=7.0.0" \
 #       "pytest-asyncio>=0.21.0" "pytest-httpx>=0.21.0"
-Pygments==2.20.0
-anyio==4.12.1
+anyio==4.15.1
 backports.asyncio.runner==1.2.0
 certifi==2026.7.22
 exceptiongroup==1.3.1
 h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1
-idna==3.18
-iniconfig==2.1.0
-packaging==26.2
+idna==3.20
+iniconfig==2.3.0
+packaging==26.3
 pluggy==1.6.0
-pytest==8.4.2
-pytest-asyncio==1.2.0
-pytest-httpx==0.35.0
+Pygments==2.21.0
+pytest-asyncio==1.4.0
+pytest-httpx==0.36.2
+pytest==9.1.1
 tomli==2.4.1
 typing_extensions==4.16.0
