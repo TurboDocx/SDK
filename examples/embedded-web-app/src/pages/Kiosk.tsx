@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { otpTurnMessage } from "@/lib/statusCopy";
 import { type KioskSigner, mintNextWithRetry, startKiosk } from "@/lib/turbosign";
 
 // In production, pin this to your known TurboSign origin. Left null here, the listener instead pins to
@@ -46,7 +47,7 @@ export function Kiosk() {
     }
     setEmbedUrl(url);
     setQueue((q) => q.map((s) => (s.recipientId === signer.recipientId ? { ...s, status: "ready" } : s)));
-    setStatus(`${signer.name}: check your email for a 6-digit code, verify it, then sign.`);
+    setStatus(otpTurnMessage(signer.name));
   }
 
   useEffect(() => {

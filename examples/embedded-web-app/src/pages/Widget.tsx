@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PREPARING_MESSAGE, otpTurnMessage } from "@/lib/statusCopy";
 import { startSingleSigner } from "@/lib/turbosign";
 
 // The origin the signing page is served from, for postMessage origin pinning. In production you can
@@ -31,11 +32,11 @@ export function Widget() {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
     setBusy(true);
-    setStatus("Preparing your document and emailing your verification code…");
+    setStatus(PREPARING_MESSAGE);
     try {
       const { url } = await startSingleSigner({ name: name.trim(), email: email.trim() });
       setEmbedUrl(url);
-      setStatus(`We emailed a 6-digit code to ${email.trim()}. Verify it in the widget below, then sign.`);
+      setStatus(otpTurnMessage());
     } catch (err) {
       setStatus(`Could not start signing: ${err instanceof Error ? err.message : String(err)}`);
     } finally {

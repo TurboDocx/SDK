@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PREPARING_MESSAGE, otpTurnMessage } from "@/lib/statusCopy";
 import { startSingleSigner } from "@/lib/turbosign";
 
 // In production, pin this to your known TurboSign origin. Left null here, the listener instead pins to
@@ -41,7 +42,7 @@ export function SingleSigner() {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
     setBusy(true);
-    setStatus("Preparing your document and emailing your verification code…");
+    setStatus(PREPARING_MESSAGE);
     try {
       const { url, mode } = await startSingleSigner({ name: name.trim(), email: email.trim() });
       try {
@@ -53,7 +54,7 @@ export function SingleSigner() {
       setPhase("signing");
       setStatus(
         mode === "otp"
-          ? `We emailed a 6-digit code to ${email.trim()}. Enter it below to verify, then sign.`
+          ? otpTurnMessage()
           : "Sign the document below.",
       );
     } catch (err) {
