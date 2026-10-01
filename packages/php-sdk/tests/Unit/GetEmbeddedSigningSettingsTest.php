@@ -34,6 +34,7 @@ final class GetEmbeddedSigningSettingsTest extends TestCase
                     'allowExternalIdv' => true,
                     'allowIdentityOverride' => false,
                     'defaultChannel' => 'email',
+                    'allowChannelOverride' => false,
                     'allowedFrameAncestors' => ['https://app.example.com'],
                 ]],
             ])),
@@ -47,6 +48,7 @@ final class GetEmbeddedSigningSettingsTest extends TestCase
         $this->assertTrue($settings->allowExternalIdv);
         $this->assertFalse($settings->allowIdentityOverride);
         $this->assertSame('email', $settings->defaultChannel);
+        $this->assertFalse($settings->allowChannelOverride);
         $this->assertSame(['https://app.example.com'], $settings->allowedFrameAncestors);
     }
 
@@ -61,6 +63,7 @@ final class GetEmbeddedSigningSettingsTest extends TestCase
                     'allowExternalIdv' => 0,
                     'allowIdentityOverride' => 1,
                     'defaultChannel' => 'none',
+                    'allowChannelOverride' => 1,
                     'allowedFrameAncestors' => [],
                 ]],
             ])),
@@ -74,6 +77,7 @@ final class GetEmbeddedSigningSettingsTest extends TestCase
         $this->assertFalse($settings->allowExternalIdv);
         $this->assertTrue($settings->allowIdentityOverride);
         $this->assertSame('none', $settings->defaultChannel);
+        $this->assertTrue($settings->allowChannelOverride);
         $this->assertSame([], $settings->allowedFrameAncestors);
     }
 
@@ -92,6 +96,8 @@ final class GetEmbeddedSigningSettingsTest extends TestCase
         $this->assertFalse($settings->allowExternalIdv);
         $this->assertFalse($settings->allowIdentityOverride);
         $this->assertNull($settings->defaultChannel);
+        // Unknown, not "locked": an API that doesn't report it leaves it null.
+        $this->assertNull($settings->allowChannelOverride);
         $this->assertSame([], $settings->allowedFrameAncestors);
     }
 }

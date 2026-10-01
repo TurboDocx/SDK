@@ -53,14 +53,25 @@ describe('<turbosign-form> web component', () => {
     window.dispatchEvent(
       new MessageEvent('message', {
         origin: EXPECTED_ORIGIN,
-        data: { type: TURBOSIGN_COMPLETED, documentId: 'doc_777', status: 'completed' },
+        data: {
+          type: TURBOSIGN_COMPLETED,
+          documentId: 'doc_777',
+          status: 'completed',
+          event: 'signing_complete',
+          scope: 'recipient',
+        },
       }),
     );
 
     // Assert: the DOM CustomEvent fired with the parsed detail.
     expect(onCompleted).toHaveBeenCalledTimes(1);
     const evt = onCompleted.mock.calls[0][0] as CustomEvent;
-    expect(evt.detail).toEqual({ documentId: 'doc_777', status: 'completed' });
+    expect(evt.detail).toEqual({
+      documentId: 'doc_777',
+      status: 'completed',
+      event: 'signing_complete',
+      scope: 'recipient',
+    });
   });
 
   it('does NOT emit for a message from a wrong origin (origin pinning)', () => {

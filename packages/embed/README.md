@@ -17,8 +17,9 @@ Ships three things:
 
 ## Why origin pinning matters
 
-The signing page posts its completion message to the parent with `targetOrigin: '*'` (it does not know
-your origin). Your app must therefore verify `event.origin` before trusting the message. Every entry
+The signing page posts its completion message to the parent, targeting your origin when it can resolve
+it and falling back to `targetOrigin: '*'` when it cannot. Your app must therefore verify `event.origin`
+before trusting the message. Every entry
 point in this package takes an `origin` / `expectedOrigin` and ignores messages from anywhere else.
 
 If you omit the origin (leave it `null`, `undefined`, or an empty string) the check is skipped and
@@ -40,7 +41,7 @@ npm install react
 <script type="module" src="/path/to/@turbodocx/embed/dist/index.js"></script>
 
 <turbosign-form
-  embed-url="https://app.turbodocx.com/sign/RECIPIENT_EMBED_URL"
+  embed-url="https://app.turbodocx.com/e-signature/embed/DOCUMENT_ID?token=..."
   origin="https://app.turbodocx.com"
   height="720"
 ></turbosign-form>
@@ -81,6 +82,21 @@ function SignStep({ embedUrl }: { embedUrl: string }) {
 Props: `embedUrl` (required), `origin?`, `onCompleted` (required), `onDeclined?`, `onError?`,
 `height?`, `className?`, `style?`. The window listener is wired in a `useEffect` with cleanup on
 unmount (React 18+ compatible).
+
+## What a completion tells you
+
+`onCompleted` (and the web component's `turbosign:completed` event `detail`) receives:
+
+| Field | Value |
+|---|---|
+| `documentId` | The signing document's id, when the page included it. |
+| `status` | `"completed"`. |
+| `event` | `"signing_complete"` when the signer just finished, or `"already_signed"` when they reopened a link they had already completed. Use it to skip one-time "thanks for signing" side effects. |
+| `scope` | `"recipient"`: THIS signer's step finished. On a multi-signer document others may still be pending, so read the document's status server-side (or watch the `completed` webhook) for the whole document. |
+
+Use `embedUrl` exactly as the SDK returns it (`createSigningUrl` / `createEmbeddedSignature`); it is an
+`/e-signature/embed/...` URL. The browser only renders it on origins your org admin has allow-listed
+under "Allowed embedding domains" (empty list = framing denied everywhere).
 
 ## Pure handler (advanced)
 

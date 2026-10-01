@@ -29,7 +29,11 @@ public class Recipient {
     @SerializedName("externalId")
     private final String externalId;
 
-    /** Identity verification for embedded signing. Omit for the default email-invite flow. */
+    /**
+     * Identity verification for embedded signing. Omit it to take the org's default channel
+     * ({@link EmbeddedSigningSettings#getDefaultChannel()}): no verification when that is
+     * {@code "none"}, otherwise a passcode on the default channel.
+     */
     @SerializedName("identityVerification")
     private final IdentityVerification identityVerification;
 

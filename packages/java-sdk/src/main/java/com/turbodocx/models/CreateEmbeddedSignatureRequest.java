@@ -21,8 +21,9 @@ public class CreateEmbeddedSignatureRequest {
     /** Optional full field control; overrides the per-recipient {@code fields} shorthand when non-null. */
     private final List<Field> fields;
     /**
-     * Embedded default: do not email the recipients (you own the UX). Null defaults to
-     * {@code false} for this flow.
+     * Null defaults to {@code false} for this flow: your app shows the signing page, so the
+     * signing-link emails (and the initial CC notice) are suppressed. Passcode and completed-copy
+     * emails are still sent.
      */
     private final Boolean sendEmail;
     /** Optional completion fallback. Must be an https URL. Passed to each embed URL. */

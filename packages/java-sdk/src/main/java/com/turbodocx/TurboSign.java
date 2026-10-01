@@ -340,6 +340,12 @@ public final class TurboSign {
      * then assembles a per-recipient result carrying the embed URL and the resolved identity mode,
      * IN SIGNING ORDER.
      *
+     * <p>An email-OTP {@code auth} maps to an email passcode and an SMS {@code auth} to an SMS
+     * passcode (and sets the recipient's phone). No {@code auth} means the org's default channel
+     * applies ({@link #getEmbeddedSigningSettings()} {@code defaultChannel}); when its
+     * {@code allowChannelOverride} is false, a different channel is rejected with
+     * {@code OtpOverrideNotAllowed}. {@code sendEmail} defaults to {@code false}.
+     *
      * <p>Turn-aware: with a real (sequential) signing order the backend only mints a URL for the
      * signer whose turn it is. Rather than throw the whole call away, each result carries a status:
      * <ul>

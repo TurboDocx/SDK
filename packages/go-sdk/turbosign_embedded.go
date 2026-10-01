@@ -48,6 +48,26 @@ type IdentityAssertion struct {
 	VerifiedAt string `json:"verifiedAt"`
 	// SubjectEmail is the email your provider verified — must match the recipient's email.
 	SubjectEmail string `json:"subjectEmail"`
+
+	// The fields below are optional context recorded on the certificate / audit trail. Leave them
+	// empty to omit them.
+
+	// Method is how your provider verified the signer: "id_document", "id_document_liveness",
+	// "kba", "database", "sso" or "other" (describe "other" in MethodDetail).
+	Method string `json:"method,omitempty"`
+	// MethodDetail is a free-text description of the method. Required when Method is "other".
+	MethodDetail string `json:"methodDetail,omitempty"`
+	// AssuranceLevel is the level your provider attests to, e.g. "ial2_aal2" (NIST 800-63),
+	// "eidas_substantial" or "eidas_high".
+	AssuranceLevel string `json:"assuranceLevel,omitempty"`
+	// VerifiedName is the signer's legal name as verified by your provider.
+	VerifiedName string `json:"verifiedName,omitempty"`
+	// EvidenceURL is an https link to your provider's verification record.
+	EvidenceURL string `json:"evidenceUrl,omitempty"`
+	// OverrideEmailMatching skips the check that SubjectEmail equals the recipient's email. Set it
+	// only when you have confirmed the verified identity is this signer although the emails differ;
+	// the override is recorded on the audit trail.
+	OverrideEmailMatching bool `json:"overrideEmailMatching,omitempty"`
 }
 
 // CreateSigningURLRequest requests a single-use embedded signing URL for one recipient. Provide
@@ -67,8 +87,9 @@ type CreateSigningURLRequest struct {
 type CreateSigningURLResponse struct {
 	// URL is the URL to open (new tab / redirect) or embed for the signer.
 	URL string `json:"url"`
-	// ExpiresAt is when the URL stops working (ISO 8601). Nil for otp/no-verification recipients,
-	// whose link follows the document's own signing window rather than a short single-use expiry.
+	// ExpiresAt is when the URL stops working (ISO 8601). Single-use links (external_idv /
+	// override) expire minutes after issue. For otp/no-verification recipients the URL is the
+	// reusable signing link, so this is the document's own expiry, or nil when it doesn't expire.
 	ExpiresAt   *string `json:"expiresAt"`
 	RecipientID string  `json:"recipientId"`
 	ExternalID  string  `json:"externalId,omitempty"`
@@ -80,8 +101,8 @@ type CreateSigningURLResponse struct {
 	PendingChecks []string `json:"pendingChecks"`
 }
 
-// EmbeddedSigningDefaultChannel is the org-level identity-verification default channel for new
-// recipients (interactive path only): "none", "email" or "sms".
+// EmbeddedSigningDefaultChannel is the org-level default OTP channel for recipients that don't set
+// one: "none", "email" or "sms".
 type EmbeddedSigningDefaultChannel = string
 
 // EmbeddedSigningSettings is the org's embedded-signing configuration, read via
@@ -97,12 +118,17 @@ type EmbeddedSigningSettings struct {
 	// AllowIdentityOverride reports that a sender may issue a link that skips identity
 	// verification (development/testing).
 	AllowIdentityOverride bool `json:"allowIdentityOverride"`
-	// DefaultChannel is the default OTP channel applied to recipients that do not specify one, on
-	// the interactive (UI) create path only. SDK/API sends must set identity per recipient, so
-	// this does not affect them. "none" means no default.
+	// DefaultChannel is the org's default OTP channel. While embedded signing is enabled it applies
+	// to every recipient that doesn't set one, SDK/API sends included. "none" means verify only when
+	// a request asks for it. See AllowChannelOverride for whether you may pick a different one.
 	DefaultChannel EmbeddedSigningDefaultChannel `json:"defaultChannel,omitempty"`
-	// AllowedFrameAncestors are the origins allowed to embed the signing page in an iframe
-	// (empty = no restriction configured).
+	// AllowChannelOverride reports whether a request may give a recipient a channel other than
+	// DefaultChannel. false means the org locked the method: an explicit different channel is
+	// rejected with OtpOverrideNotAllowed, so omit it to take the default. Always true for a "none"
+	// default or when embedded signing is off. Nil when the API did not report it.
+	AllowChannelOverride *bool `json:"allowChannelOverride,omitempty"`
+	// AllowedFrameAncestors are the origins allowed to embed the signing page in an iframe.
+	// Empty means framing is denied everywhere.
 	AllowedFrameAncestors []string `json:"allowedFrameAncestors"`
 }
 
@@ -166,7 +192,9 @@ type CreateEmbeddedSignatureRequest struct {
 	Recipients []EmbeddedSignatureRecipient
 	// Fields optionally overrides the per-recipient Fields shorthand with full field control.
 	Fields []Field
-	// SendEmail defaults to false for this flow (the host owns the UX). Set a pointer to override.
+	// SendEmail defaults to false for this flow: your app shows the signing page, so the
+	// signing-link emails (and the initial CC notice) are suppressed. Passcode and completed-copy
+	// emails are still sent. Set a pointer to override.
 	SendEmail *bool
 	// ReturnURL is an optional completion fallback (https). Passed to each embed URL when set.
 	ReturnURL string
@@ -184,7 +212,11 @@ type EmbeddedSignatureRecipientResult struct {
 	// Status is "ready" (their turn; EmbedURL set), "pending" (an earlier signer hasn't signed
 	// yet) or "completed" (already signed).
 	Status string
-	// IdentityVerificationMode is "otp", "external_idv", "override", or "" when unverified.
+	// IdentityVerificationMode is "otp", "external_idv", "override", or "" when unverified. For a
+	// "ready" signer it is the mode the backend resolved for the signing URL. For "pending" /
+	// "completed" no URL was minted, so it is the mode you requested via Auth: "" when you set
+	// none, even if the org's default channel applies. CreateSigningURL reports the effective
+	// mode once you mint the URL.
 	IdentityVerificationMode string
 }
 
@@ -357,6 +389,8 @@ func (c *TurboSignClient) GetEmbeddedSigningSettings(ctx context.Context) (*Embe
 // Mapping:
 //   - Auth.EmailOTP → IdentityVerification{Mode:"otp", Channel:"email"};
 //     Auth.SMS.PhoneNumber → {Mode:"otp", Channel:"sms"} and sets the recipient's Phone.
+//     No Auth → the org's default channel applies (GetEmbeddedSigningSettings DefaultChannel);
+//     when AllowChannelOverride is false, a different channel is rejected with OtpOverrideNotAllowed.
 //   - Fields shorthand → []Field (Placement "replace" + a default size). Provide the top-level
 //     Fields to override the shorthand with full field control.
 //   - SigningOrder defaults to each recipient's index + 1.

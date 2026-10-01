@@ -97,6 +97,57 @@ describe('handleTurboSignMessage', () => {
     });
   });
 
+  // The signing page reports WHAT completed: `event` tells a fresh signature from a reopened link the
+  // signer had already completed, and `scope: "recipient"` says it is this signer's step (not the
+  // whole document). Both must reach the host, or a kiosk can't tell "just signed" from "already done".
+  describe('completion detail from the signing page', () => {
+    it('passes event and scope through to onCompleted', () => {
+      const onCompleted = jest.fn();
+      handleTurboSignMessage(
+        {
+          origin: EXPECTED_ORIGIN,
+          data: {
+            type: TURBOSIGN_COMPLETED,
+            documentId: 'doc_9',
+            status: 'completed',
+            event: 'signing_complete',
+            scope: 'recipient',
+          },
+        },
+        { expectedOrigin: EXPECTED_ORIGIN, onCompleted },
+      );
+      expect(onCompleted).toHaveBeenCalledWith({
+        documentId: 'doc_9',
+        status: 'completed',
+        event: 'signing_complete',
+        scope: 'recipient',
+      });
+    });
+
+    it('reports a reopened, already-signed link as event "already_signed"', () => {
+      const onCompleted = jest.fn();
+      handleTurboSignMessage(
+        {
+          origin: EXPECTED_ORIGIN,
+          data: { type: TURBOSIGN_COMPLETED, status: 'completed', event: 'already_signed', scope: 'recipient' },
+        },
+        { expectedOrigin: EXPECTED_ORIGIN, onCompleted },
+      );
+      expect(onCompleted.mock.calls[0][0].event).toBe('already_signed');
+    });
+
+    it('drops non-string event / scope values rather than forwarding them', () => {
+      const onCompleted = jest.fn();
+      handleTurboSignMessage(
+        { origin: EXPECTED_ORIGIN, data: { type: TURBOSIGN_COMPLETED, event: 42, scope: { x: 1 } } },
+        { expectedOrigin: EXPECTED_ORIGIN, onCompleted },
+      );
+      const result = onCompleted.mock.calls[0][0];
+      expect(result.event).toBeUndefined();
+      expect(result.scope).toBeUndefined();
+    });
+  });
+
   describe('ignores unrelated / malformed messages silently', () => {
     it('ignores a message with an unrelated type', () => {
       const onCompleted = jest.fn();

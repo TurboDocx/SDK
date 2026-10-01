@@ -12,8 +12,10 @@ public class CreateSigningUrlResponse {
     private String url;
 
     /**
-     * When the URL stops working (ISO 8601). Null for {@code otp}/no-verification recipients, whose
-     * link follows the document's own signing window rather than a short single-use expiry.
+     * When the URL stops working (ISO 8601). Single-use links ({@code external_idv} /
+     * {@code override}) expire minutes after issue. For {@code otp}/no-verification recipients the
+     * URL is the reusable signing link, so this is the document's own expiry, or null when the
+     * document doesn't expire.
      */
     @SerializedName("expiresAt")
     private String expiresAt;

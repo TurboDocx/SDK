@@ -1,9 +1,13 @@
-# Embedded signing — Vite + React + shadcn (three paths)
+# Embedded signing — Vite + React + shadcn (four paths)
 
-A single host web-app that embeds TurboSign three ways, so you can compare the approaches side by side:
+A single host web-app that embeds TurboSign four ways, so you can compare the approaches side by side:
 
 - **Single signer** — the host hand-rolls the `<iframe>` and its own origin-checked
   `window.addEventListener("message", …)` completion listener.
+- **External IdV** — your own identity provider verifies the signer (simulated here by an "Identity
+  Verification Simulator" dialog), and the server passes that verification as an `identityAssertion`
+  when it mints the URL, so the signer skips the passcode. Requires the org to allow external identity
+  verification.
 - **Sequential kiosk** — one document, two signers **in order** on the same device. The next signer's
   URL is minted **just-in-time** when it's their turn (turn-aware), with a short retry to ride out the
   moment right after the previous signer completes.
@@ -21,7 +25,8 @@ React SPA  ──/api/*──▶  server.ts (holds the API key)  ──▶  Turb
 
 The browser **never** imports the SDK or sees the API key. `server.ts` is a tiny backend-for-frontend
 that holds the key and uses `@turbodocx/sdk` to create documents and mint embeddable signing URLs; the
-SPA calls `/api/single`, `/api/kiosk/start`, `/api/kiosk/next` and just frames the URLs it gets back
+SPA calls `/api/single`, `/api/external-idv`, `/api/kiosk/start`, `/api/kiosk/next` and just frames the
+URLs it gets back
 (or hands them to the widget). In dev, Vite proxies `/api` to `server.ts`.
 
 ## Run
@@ -55,7 +60,7 @@ lists this app's origin in its embedded-signing allowed origins. For this demo a
 http://localhost:5173
 ```
 
-in **TurboDocx → E-Signature settings → Identity & embedding → Allowed origins**. Production origins
+in **TurboDocx → E-Signature settings → Identity & embedding → Allowed embedding domains**. Production origins
 must be `https://`; `http://localhost` is accepted only as a clearly-flagged dev-only override. Without
 an allow-listed origin you get a blank/refused frame — that's the clickjacking protection
 (`frame-ancestors`) working, not a bug.
@@ -66,14 +71,22 @@ an allow-listed origin you get a blank/refused frame — that's the clickjacking
 npm test
 ```
 
-`handlers.test.ts` covers the server handlers (SDK mocked): single/kiosk mapping, the turn-aware
+`handlers.test.ts` covers the server handlers (SDK mocked): single/external-IdV/kiosk mapping, the turn-aware
 `ready`/`pending` split, and the null-URL guard. `src/lib/turbosign.test.ts` covers the frontend API
-client (fetch mocked): the three endpoints, error propagation, and the kiosk mint retry.
+client (fetch mocked): its endpoints, error propagation, and the kiosk mint retry.
 
 ## What to notice
 
 - **The API key never reaches the browser** — only `server.ts` talks to TurboDocx.
-- **Email OTP is the identity step** — the signing page challenges a 6-digit code before the document.
+- **Email OTP is the identity step** (single signer, kiosk, widget) — the signer clicks "Send Code" in
+  the signing panel, then enters the 6-digit code before the document opens. The External IdV path
+  replaces the passcode with your provider's verification.
+- **No signing-link emails** — signers are not emailed a link (`sendEmail: false`, the
+  `createEmbeddedSignature` default); the passcode and completed-copy emails still go out.
+- **Your org's verification policy still applies** — if the org verifies every request (a default
+  channel other than `none`), a recipient that doesn't ask for verification gets the org default, and
+  asking for a different channel when the org locked the method (`allowChannelOverride: false` in
+  `getEmbeddedSigningSettings()`) fails with `OtpOverrideNotAllowed`.
 - **Completion is push** — the single-signer path listens for the `turbosign:completed` postMessage;
   the widget surfaces it as an `onCompleted` callback. In production, pin the listener to your known
   TurboSign origin and/or confirm via the `completed` webhook.

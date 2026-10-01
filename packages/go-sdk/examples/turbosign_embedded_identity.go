@@ -6,7 +6,8 @@
 // Embedded signing takes a signer from your own app straight to a TurboSign signing page,
 // without sending signing-link emails. At its core it is two steps: your backend asks TurboSign
 // for a signing URL for the recipient, then opens it (a new tab, a redirect, or an iframe). That
-// is all embedded signing needs. A plain embedded recipient signs with no extra verification step.
+// is all embedded signing needs. A plain embedded recipient signs with no extra verification step,
+// unless your org requires verification on every request (see step 0).
 //
 // Identity verification is an OPTIONAL layer on top. Add IdentityVerification to a recipient
 // ONLY when you want an extra check before they sign, in one of these modes:
@@ -14,8 +15,10 @@
 //   - external_idv your own identity provider verified them; you assert it when requesting the URL
 //   - override     opt out of verification (development/testing; recorded as not-verified on the certificate)
 //
-// Without IdentityVerification, CreateSigningURL still works: IdentityVerificationMode comes
-// back "" and PendingChecks is empty, and the signing page opens straight to the document.
+// Without IdentityVerification the recipient takes your org's default: when that is "none",
+// CreateSigningURL returns IdentityVerificationMode "" and empty PendingChecks, and the signing page
+// opens straight to the document. When your org verifies every request (default "email"/"sms"), the
+// recipient gets that passcode step instead.
 //
 // Use this when: you embed signing in your own product and control the signer's session yourself.
 
@@ -64,9 +67,22 @@ func main() {
 		return
 	}
 	fmt.Printf(
-		"Embedded signing enabled. external_idv allowed: %t, override allowed: %t.\n\n",
+		"Embedded signing enabled. external_idv allowed: %t, override allowed: %t.\n",
 		settings.AllowExternalIDV, settings.AllowIdentityOverride,
 	)
+	// DefaultChannel is what a recipient WITHOUT IdentityVerification gets: "none" = no check,
+	// "email" or "sms" = your org verifies every request. When AllowChannelOverride is false the org
+	// locked that method: asking for a different channel below is rejected with
+	// OtpOverrideNotAllowed, so leave it out to take the default.
+	fmt.Printf("Default verification for recipients that set none: %s.\n", settings.DefaultChannel)
+	if settings.AllowChannelOverride != nil {
+		fmt.Printf("May a request choose a different method: %t.\n", *settings.AllowChannelOverride)
+	}
+	fmt.Println()
+
+	// Embedded: your app shows the signing page, so don't email the signer a signing link.
+	// Passcode and completed-copy emails are still sent.
+	sendEmail := false
 
 	// 1) Prepare the document with an EMBEDDED recipient. This is the baseline: no
 	//    IdentityVerification, so the signer opens their signing URL and signs directly, with no
@@ -77,6 +93,7 @@ func main() {
 		File:         pdfFile,
 		FileName:     "sample-contract.pdf",
 		DocumentName: "Service Agreement",
+		SendEmail:    &sendEmail,
 		Recipients: []turbodocx.Recipient{
 			{
 				Name:         "Jane Doe",
@@ -132,6 +149,11 @@ func main() {
 		//   VerificationID: "capa_verif_8f2a91",
 		//   VerifiedAt:     time.Now().UTC().Format(time.RFC3339),
 		//   SubjectEmail:   "jane@example.com",
+		//   // Optional context recorded on the audit trail:
+		//   Method:         "id_document_liveness", // or id_document | kba | database | sso | other (+ MethodDetail)
+		//   AssuranceLevel: "ial2_aal2",
+		//   VerifiedName:   "Jane Doe",
+		//   EvidenceURL:    "https://capa.example.com/verifications/capa_verif_8f2a91",
 		// },
 		ReturnURL: "https://app.yourcompany.com/signed", // where the signer returns after signing (https)
 	})
@@ -142,7 +164,8 @@ func main() {
 
 	fmt.Println("Open this URL for the signer (new tab, redirect, or iframe):")
 	fmt.Printf("  %s\n", link.URL)
-	// With no IdentityVerification, IdentityVerificationMode is "" and PendingChecks is [].
+	// With no IdentityVerification and a "none" org default, IdentityVerificationMode is "" and
+	// PendingChecks is [].
 	mode := link.IdentityVerificationMode
 	if mode == "" {
 		mode = "(none)"
@@ -151,9 +174,9 @@ func main() {
 	// For "otp", PendingChecks lists the passcode step the signer clears on the page
 	// (e.g. ["email_otp"]); with no verification, or for external_idv/override, it is [].
 	fmt.Printf("  pendingChecks: %v\n", link.PendingChecks)
-	// ExpiresAt is a *string: nil for otp/no-verification recipients, whose link follows the
-	// document's own signing window rather than a short single-use expiry.
-	expiresAt := "(no separate expiry; follows the document window)"
+	// ExpiresAt is a *string. For otp/no-verification recipients it is the document's own expiry,
+	// or nil when the document doesn't expire.
+	expiresAt := "(none; the document does not expire)"
 	if link.ExpiresAt != nil {
 		expiresAt = *link.ExpiresAt
 	}

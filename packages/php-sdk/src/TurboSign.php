@@ -451,6 +451,12 @@ final class TurboSign
      * onto those calls, then assembles a per-recipient result carrying the embed URL and the
      * resolved identity-verification mode.
      *
+     * `auth->emailOtp` maps to an email passcode, `auth->smsPhoneNumber` to an SMS passcode (and sets the
+     * recipient's phone). No `auth` means the org's default channel applies
+     * ({@see TurboSign::getEmbeddedSigningSettings()} `defaultChannel`); when its
+     * `allowChannelOverride` is false, a different channel is rejected with `OtpOverrideNotAllowed`.
+     * `sendEmail` defaults to `false`.
+     *
      * Turn-aware: with a real (sequential) signing order the backend only mints a URL for the signer
      * whose turn it is. Rather than throw the whole call away, each result carries a `status`:
      * - 'ready' — it's their turn; `embedUrl` is set.

@@ -37,12 +37,8 @@ final class CreateSigningUrlRequest
     {
         $assertion = $data['identityAssertion'] ?? null;
         if (is_array($assertion)) {
-            $assertion = new IdentityAssertion(
-                provider: (string) ($assertion['provider'] ?? ''),
-                verificationId: (string) ($assertion['verificationId'] ?? ''),
-                verifiedAt: (string) ($assertion['verifiedAt'] ?? ''),
-                subjectEmail: (string) ($assertion['subjectEmail'] ?? ''),
-            );
+            /** @var array<string, mixed> $assertion */
+            $assertion = IdentityAssertion::fromArray($assertion);
         }
 
         return new self(

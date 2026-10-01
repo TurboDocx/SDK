@@ -4,16 +4,19 @@ Example: Embedded Signing (with optional Identity Verification)
 Embedded signing takes a signer from your own app straight to a TurboSign signing page,
 without sending signing-link emails. At its core it is two steps: your backend asks TurboSign
 for a signing URL for the recipient, then opens it (a new tab, a redirect, or an iframe). That
-is all embedded signing needs. A plain embedded recipient signs with no extra verification step.
+is all embedded signing needs. A plain embedded recipient signs with no extra verification step,
+unless your org requires verification on every request (see step 0).
 
-Identity verification is an OPTIONAL layer on top. Add ``identity_verification`` to a recipient
+Identity verification is an OPTIONAL layer on top. Add ``identityVerification`` to a recipient
 ONLY when you want an extra check before they sign, in one of these modes:
   - otp          TurboSign runs a one-time-passcode challenge (email or SMS)
   - external_idv your own identity provider verified them; you assert it when requesting the URL
   - override     opt out of verification (development/testing; recorded as not-verified on the certificate)
 
-Without ``identity_verification``, ``create_signing_url`` still works: ``identityVerificationMode``
-comes back None and ``pendingChecks`` is empty, and the signing page opens straight to the document.
+Without ``identityVerification`` the recipient takes your org's default: when that is ``none``,
+``create_signing_url`` returns ``identityVerificationMode`` None and empty ``pendingChecks``, and the
+signing page opens straight to the document. When your org verifies every request (default
+``email``/``sms``), the recipient gets that passcode step instead.
 
 Use this when: you embed signing in your own product and control the signer's session yourself.
 """
@@ -48,17 +51,26 @@ async def embedded_identity_example():
         )
     print(
         f"Embedded signing enabled. external_idv allowed: {settings['allowExternalIdv']}, "
-        f"override allowed: {settings['allowIdentityOverride']}.\n"
+        f"override allowed: {settings['allowIdentityOverride']}."
     )
+    # `defaultChannel` is what a recipient WITHOUT identityVerification gets: 'none' = no check,
+    # 'email' or 'sms' = your org verifies every request. When `allowChannelOverride` is False the org
+    # locked that method: asking for a different channel below is rejected with OtpOverrideNotAllowed,
+    # so leave it out to take the default.
+    print(f"Default verification for recipients that set none: {settings['defaultChannel']}.")
+    print(f"May a request choose a different method: {settings.get('allowChannelOverride')}.\n")
 
     # 1) Prepare the document with an EMBEDDED recipient. This is the baseline: no
-    #    `identity_verification`, so the signer opens their signing URL and signs directly, with no
+    #    `identityVerification`, so the signer opens their signing URL and signs directly, with no
     #    extra verification step. The signer's real email is always the signer of record.
     #    `externalId` is your own key for the signer (an Airtable row, a CRM id) so you can request
     #    the signing URL later without storing TurboDocx's recipient id.
     sent = await TurboSign.send_signature(
         file=pdf_file,
         document_name="Service Agreement",
+        # Embedded: your app shows the signing page, so don't email the signer a signing link.
+        # Passcode and completed-copy emails are still sent.
+        send_email=False,
         recipients=[
             {
                 "name": "Jane Doe",
@@ -107,18 +119,24 @@ async def embedded_identity_example():
         #     "verificationId": "capa_verif_8f2a91",
         #     "verifiedAt": "2026-01-01T00:00:00Z",
         #     "subjectEmail": "jane@example.com",
+        #     # Optional context recorded on the audit trail:
+        #     "method": "id_document_liveness",  # or id_document | kba | database | sso | other (+ methodDetail)
+        #     "assuranceLevel": "ial2_aal2",
+        #     "verifiedName": "Jane Doe",
+        #     "evidenceUrl": "https://capa.example.com/verifications/capa_verif_8f2a91",
         # },
         return_url="https://app.yourcompany.com/signed",  # where the signer returns after signing (https)
     )
 
     print("Open this URL for the signer (new tab, redirect, or iframe):")
     print(f"  {link['url']}")
-    # With no identity_verification, `identityVerificationMode` is None and `pendingChecks` is [].
+    # With no identityVerification and a 'none' org default, `identityVerificationMode` is None and
+    # `pendingChecks` is [].
     print(f"  mode: {link.get('identityVerificationMode') or '(none)'}")
     # For `otp`, pendingChecks lists the passcode step the signer clears on the page
     # (e.g. ['email_otp']); with no verification, or for external_idv/override, it is [].
     print(f"  pendingChecks: {json.dumps(link['pendingChecks'])}")
-    print(f"  expiresAt: {link.get('expiresAt') or '(no separate expiry; follows the document window)'}")
+    print(f"  expiresAt: {link.get('expiresAt') or '(none; the document does not expire)'}")
 
     # 3) The signing page does the rest. What `url` is depends on the recipient's mode:
     #    - no verification or otp: the reusable signing link (a `?token=` URL). For otp the page asks

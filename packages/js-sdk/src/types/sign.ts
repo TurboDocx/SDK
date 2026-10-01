@@ -349,9 +349,8 @@ export interface CreateEmbeddedSignatureRequest {
   /** Optional full field control; overrides the per-recipient `fields` shorthand when provided. */
   fields?: Field[];
   /**
-   * Embedded default: do not email the recipients (you own the UX). Forwarded to the backend; email
-   * suppression requires backend support — until then the backend may still send. Defaults to
-   * `false` for this flow. See the follow-up.
+   * Defaults to `false` for this flow: your app shows the signing page, so the signing-link emails
+   * (and the initial CC notice) are suppressed. Passcode and completed-copy emails are still sent.
    */
   sendEmail?: boolean;
   /**
@@ -378,6 +377,12 @@ export interface EmbeddedSignatureRecipientResult {
    * `'completed'` — this recipient has already signed.
    */
   status: 'ready' | 'pending' | 'completed';
+  /**
+   * For a `'ready'` signer, the mode the backend resolved for the signing URL. For `'pending'` /
+   * `'completed'` no URL was minted, so this is the mode you requested via `auth`: `null` when you set
+   * none, even if the org's default channel applies. {@link TurboSign.createSigningUrl} reports the
+   * effective mode once you mint the URL.
+   */
   identityVerificationMode: 'otp' | 'external_idv' | 'override' | null;
 }
 
@@ -520,7 +525,11 @@ export interface Recipient {
    * Lets you request a signing URL by your key instead of storing TurboDocx's recipient id.
    */
   externalId?: string;
-  /** Identity verification for embedded signing. Omit for the default email-invite flow. */
+  /**
+   * Identity verification for embedded signing. Omit it to take the org's default
+   * ({@link EmbeddedSigningSettings.defaultChannel}): no verification when that is `none`, otherwise
+   * a passcode on the default channel.
+   */
   identityVerification?: IdentityVerification;
 }
 
@@ -590,8 +599,9 @@ export interface CreateSigningUrlResponse {
   /** The URL to open (new tab / redirect) or embed for the signer. */
   url: string;
   /**
-   * When the URL stops working (ISO 8601). Null for `otp`/no-verification recipients, whose link
-   * follows the document's own signing window rather than a short single-use expiry.
+   * When the URL stops working (ISO 8601). Single-use links (`external_idv` / `override`) expire
+   * minutes after issue. For `otp` / no-verification recipients the URL is the reusable signing link,
+   * so this is the document's own expiry, or `null` when the document doesn't expire.
    */
   expiresAt: string | null;
   recipientId: string;
@@ -601,7 +611,7 @@ export interface CreateSigningUrlResponse {
   pendingChecks: Array<'email_otp' | 'sms_otp'>;
 }
 
-/** The org-level identity-verification default channel for new recipients (interactive path only). */
+/** The org-level default OTP channel for recipients that don't set one. */
 export type EmbeddedSigningDefaultChannel = 'none' | 'email' | 'sms';
 
 /**
@@ -618,12 +628,18 @@ export interface EmbeddedSigningSettings {
   /** A sender may issue a link that skips identity verification (override; development/testing). */
   allowIdentityOverride: boolean;
   /**
-   * Default OTP channel applied to recipients that do not specify one, on the interactive (UI)
-   * create path only. SDK/API sends must set identity per recipient, so this does not affect them.
-   * `none` means no default (recipients are unverified unless they opt in).
+   * The org's default OTP channel. While embedded signing is enabled it applies to every recipient
+   * that doesn't set one, SDK/API sends included. `none` means verify only when a request asks for it.
+   * See {@link EmbeddedSigningSettings.allowChannelOverride} for whether you may pick a different one.
    */
   defaultChannel: EmbeddedSigningDefaultChannel;
-  /** Origins allowed to embed the signing page in an iframe (empty = no restriction configured). */
+  /**
+   * Whether a request may give a recipient a channel other than `defaultChannel`. `false` means the
+   * org locked the method: an explicit different channel is rejected with `OtpOverrideNotAllowed`, so
+   * omit it to take the default. Always `true` for a `none` default or when embedded signing is off.
+   */
+  allowChannelOverride: boolean;
+  /** Origins allowed to embed the signing page in an iframe. Empty means framing is denied everywhere. */
   allowedFrameAncestors: string[];
 }
 
@@ -716,10 +732,10 @@ export interface SendSignatureRequest {
   /** CC emails (comma-separated or array) */
   ccEmails?: string | string[];
   /**
-   * Whether the backend should email the recipients. Omit to keep the backend default (emails
-   * sent). Set `false` to suppress recipient emails — used by the embedded flow, where the host
-   * owns the signing UX. Email suppression requires backend support; until then the backend may
-   * still send. Presence is tested with `!== undefined`, so `false` is forwarded rather than
+   * Whether the backend emails the recipients their signing link (and the initial CC notice). Omit
+   * to keep the default (emails sent). Set `false` for embedded signing, where your app shows the
+   * signing page: the document still goes out for signing, and passcode and completed-copy emails
+   * are still sent. Presence is tested with `!== undefined`, so `false` is forwarded rather than
    * dropped.
    */
   sendEmail?: boolean;

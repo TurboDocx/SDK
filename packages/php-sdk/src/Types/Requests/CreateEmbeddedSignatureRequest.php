@@ -27,8 +27,9 @@ final class CreateEmbeddedSignatureRequest
      * @param array<string>|null $ccEmails CC emails
      * @param array<Field>|null $fields Optional full field control; overrides the per-recipient
      *     `fields` shorthand when provided.
-     * @param bool|null $sendEmail Embedded default: do not email the recipients (you own the UX).
-     *     Defaults to `false` for this flow. Forwarded to the backend.
+     * @param bool|null $sendEmail Defaults to `false` for this flow: your app shows the signing page,
+     *     so the signing-link emails (and the initial CC notice) are suppressed. Passcode and
+     *     completed-copy emails are still sent.
      * @param string|null $returnUrl Optional completion fallback (https). Passed to each embed URL.
      */
     public function __construct(

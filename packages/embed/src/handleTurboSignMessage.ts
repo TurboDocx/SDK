@@ -2,8 +2,8 @@
  * The load-bearing logic of the TurboSign embedded-signing widget: a single, pure, side-effect-free
  * function that decides what a `postMessage` from an embedded TurboSign signing page means.
  *
- * The embedded signing page posts to its parent window with `targetOrigin: '*'` (it does not know the
- * host's origin). The host is therefore responsible for ORIGIN PINNING: ignoring any message whose
+ * The embedded signing page posts to its parent window, targeting the embedder's origin when it can
+ * resolve it and `'*'` otherwise. The host is therefore responsible for ORIGIN PINNING: ignoring any message whose
  * `event.origin` is not the expected TurboSign origin. This function centralizes that check plus the
  * dispatch on `event.data.type`, so the web component and the React component share one tested code
  * path instead of each hand-rolling `window.addEventListener('message', ...)`.
@@ -17,6 +17,10 @@ export interface TurboSignMessageData {
   documentId?: unknown;
   /** Document status, e.g. `"completed"`. */
   status?: unknown;
+  /** What happened: `"signing_complete"` or `"already_signed"` (a reopened, already-completed link). */
+  event?: unknown;
+  /** What completed: `"recipient"` (this signer's step; others may still be pending). */
+  scope?: unknown;
 }
 
 /** The minimal slice of a `MessageEvent` this handler reads. Keeps it trivially unit-testable. */
@@ -33,6 +37,16 @@ export interface TurboSignCompletedResult {
   documentId?: string;
   /** The reported status (currently always `"completed"`). */
   status?: string;
+  /**
+   * `"signing_complete"` when the signer just finished, or `"already_signed"` when they reopened a
+   * link they had already completed (so you can skip "thanks for signing" side effects).
+   */
+  event?: string;
+  /**
+   * What completed. Always `"recipient"` today: THIS signer's step. On a multi-signer document others
+   * may still be pending, so read the document's own status server-side when you need it.
+   */
+  scope?: string;
 }
 
 /** Callbacks + configuration for {@link handleTurboSignMessage}. */
@@ -114,10 +128,12 @@ export function handleTurboSignMessage(
 
   const documentId = asOptionalString((data as TurboSignMessageData).documentId);
   const status = asOptionalString((data as TurboSignMessageData).status);
+  const completionEvent = asOptionalString((data as TurboSignMessageData).event);
+  const scope = asOptionalString((data as TurboSignMessageData).scope);
 
   switch (type) {
     case TURBOSIGN_COMPLETED:
-      onCompleted?.({ documentId, status });
+      onCompleted?.({ documentId, status, event: completionEvent, scope });
       return;
     case TURBOSIGN_DECLINED:
       onDeclined?.({ documentId, status });

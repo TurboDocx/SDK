@@ -180,6 +180,42 @@ class TurboSignEmbeddedTest {
         assertEquals("CAPA", sent.get("provider").getAsString());
         assertEquals("ver-123", sent.get("verificationId").getAsString());
         assertEquals("john@example.com", sent.get("subjectEmail").getAsString());
+        // Unset optional context stays off the wire.
+        assertEquals(4, sent.size());
+    }
+
+    @Test
+    @DisplayName("createSigningUrl sends the optional assertion enrichment when set")
+    void createSigningUrlPassesAssertionEnrichment() throws Exception {
+        enqueueJson(signingUrlEnvelope("rec-1", "https://app/sign/doc-1?sut=S", "external_idv"));
+
+        IdentityAssertion assertion = new IdentityAssertion.Builder()
+                .provider("CAPA")
+                .verificationId("ver-124")
+                .verifiedAt("2026-01-01T00:00:00.000Z")
+                .subjectEmail("jane@example.com")
+                .method("other")
+                .methodDetail("Video call with a notary")
+                .assuranceLevel("ial2_aal2")
+                .verifiedName("Jane Doe")
+                .evidenceUrl("https://capa.example.com/v/ver-124")
+                .overrideEmailMatching(true)
+                .build();
+
+        client.turboSign().createSigningUrl(
+                "doc-1",
+                new CreateSigningUrlRequest.Builder()
+                        .recipientId("rec-1")
+                        .identityAssertion(assertion)
+                        .build());
+
+        JsonObject sent = takeBody().getAsJsonObject("identityAssertion");
+        assertEquals("other", sent.get("method").getAsString());
+        assertEquals("Video call with a notary", sent.get("methodDetail").getAsString());
+        assertEquals("ial2_aal2", sent.get("assuranceLevel").getAsString());
+        assertEquals("Jane Doe", sent.get("verifiedName").getAsString());
+        assertEquals("https://capa.example.com/v/ver-124", sent.get("evidenceUrl").getAsString());
+        assertTrue(sent.get("overrideEmailMatching").getAsBoolean());
     }
 
     @Test
@@ -240,7 +276,8 @@ class TurboSignEmbeddedTest {
     @DisplayName("getEmbeddedSigningSettings unwraps the { data: { results } } server envelope")
     void getEmbeddedSigningSettings() throws Exception {
         String results = "{\"enabled\":true,\"allowExternalIdv\":false,\"allowIdentityOverride\":false,"
-                + "\"defaultChannel\":\"email\",\"allowedFrameAncestors\":[\"https://app.example.com\"]}";
+                + "\"defaultChannel\":\"email\",\"allowChannelOverride\":false,"
+                + "\"allowedFrameAncestors\":[\"https://app.example.com\"]}";
         enqueueJson("{\"data\":{\"results\":" + results + "}}");
 
         EmbeddedSigningSettings settings = client.turboSign().getEmbeddedSigningSettings();
@@ -249,6 +286,7 @@ class TurboSignEmbeddedTest {
         assertFalse(settings.isAllowExternalIdv());
         assertFalse(settings.isAllowIdentityOverride());
         assertEquals("email", settings.getDefaultChannel());
+        assertEquals(Boolean.FALSE, settings.getAllowChannelOverride());
         assertEquals(Collections.singletonList("https://app.example.com"), settings.getAllowedFrameAncestors());
 
         RecordedRequest recorded = server.takeRequest();

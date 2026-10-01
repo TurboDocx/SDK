@@ -9,7 +9,7 @@
  * @example
  * ```html
  * <script type="module" src="/embed/index.js"></script>
- * <turbosign-form embed-url="https://app.turbodocx.com/sign/..." origin="https://app.turbodocx.com"></turbosign-form>
+ * <turbosign-form embed-url="https://app.turbodocx.com/e-signature/embed/..." origin="https://app.turbodocx.com"></turbosign-form>
  * <script>
  *   document.querySelector('turbosign-form')
  *     .addEventListener('turbosign:completed', (e) => console.log('signed', e.detail.documentId));

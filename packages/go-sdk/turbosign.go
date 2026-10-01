@@ -35,8 +35,9 @@ type Recipient struct {
 	// within the document. Lets you request a signing URL by your key instead of storing
 	// TurboDocx's recipient id.
 	ExternalID string `json:"externalId,omitempty"`
-	// IdentityVerification configures identity verification for embedded signing. Leave nil for
-	// the default email-invite flow.
+	// IdentityVerification configures identity verification for embedded signing. Leave nil to
+	// take the org's default (EmbeddedSigningSettings.DefaultChannel): no verification when that is
+	// "none", otherwise a passcode on the default channel.
 	//
 	// This is a POINTER on purpose: a non-pointer struct with `omitempty` would still serialize
 	// as `{"mode":""}` on every existing send, changing the wire format for callers that never
@@ -247,9 +248,10 @@ type SendSignatureRequest struct {
 	SenderEmail         string
 	CCEmails            []string
 
-	// SendEmail controls whether the backend emails the recipients. Leave nil to keep the
-	// backend default (emails are sent). Set to false to suppress recipient emails — used by the
-	// embedded-signing flow, where the host owns the signing UX.
+	// SendEmail controls whether the backend emails the recipients their signing link (and the
+	// initial CC notice). Leave nil to keep the default (emails are sent). Set to false for
+	// embedded signing, where your app shows the signing page: the document still goes out for
+	// signing, and passcode and completed-copy emails are still sent.
 	//
 	// A POINTER on purpose: false ("do not email") is a meaningful value, and a truthiness/zero
 	// check would drop it and silently let the backend email the recipients. Nil is not

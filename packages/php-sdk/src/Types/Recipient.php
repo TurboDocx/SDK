@@ -20,7 +20,8 @@ final class Recipient
      * @param string|null $externalId Your own identifier for this signer (unique within the
      *     document). Lets you request a signing URL by your key instead of storing TurboDocx's id.
      * @param IdentityVerification|null $identityVerification Identity verification for embedded
-     *     signing. Omit for the default email-invite flow.
+     *     signing. Omit it to take the org's default channel (EmbeddedSigningSettings::$defaultChannel):
+     *     no verification when that is 'none', otherwise a passcode on the default channel.
      * @throws ValidationException If email is invalid or signingOrder < 1
      */
     public function __construct(

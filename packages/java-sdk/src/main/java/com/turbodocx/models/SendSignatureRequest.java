@@ -21,10 +21,11 @@ public class SendSignatureRequest {
     /** Per-document reminder + expiration overrides; null inherits the org defaults. */
     private final SignatureSchedule schedule;
     /**
-     * Whether the backend should email the recipients. Null keeps the backend default (emails
-     * sent). {@code false} suppresses recipient emails — used by the embedded flow, where the host
-     * owns the signing UX. Boxed so presence can be tested with {@code != null}; {@code false} is
-     * forwarded rather than dropped.
+     * Whether the backend emails the recipients their signing link (and the initial CC notice).
+     * Null keeps the default (emails sent). Set {@code false} for embedded signing, where your app
+     * shows the signing page: the document still goes out for signing, and passcode and
+     * completed-copy emails are still sent. Boxed so presence can be tested with {@code != null};
+     * {@code false} is forwarded rather than dropped.
      */
     private final Boolean sendEmail;
 

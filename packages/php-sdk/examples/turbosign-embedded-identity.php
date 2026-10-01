@@ -6,7 +6,8 @@
  * Embedded signing takes a signer from your own app straight to a TurboSign signing page,
  * without sending signing-link emails. At its core it is two steps: your backend asks TurboSign
  * for a signing URL for the recipient, then opens it (a new tab, a redirect, or an iframe). That
- * is all embedded signing needs. A plain embedded recipient signs with no extra verification step.
+ * is all embedded signing needs. A plain embedded recipient signs with no extra verification step,
+ * unless your org requires verification on every request (see step 0).
  *
  * Identity verification is an OPTIONAL layer on top. Add `identityVerification` to a recipient
  * ONLY when you want an extra check before they sign, in one of these modes:
@@ -14,8 +15,10 @@
  *   - external_idv your own identity provider verified them; you assert it when requesting the URL
  *   - override     opt out of verification (development/testing; recorded as not-verified on the certificate)
  *
- * Without `identityVerification`, `createSigningUrl` still works: `identityVerificationMode` comes
- * back null and `pendingChecks` is empty, and the signing page opens straight to the document.
+ * Without `identityVerification` the recipient takes your org's default: when that is `none`,
+ * `createSigningUrl` returns `identityVerificationMode` null and empty `pendingChecks`, and the signing
+ * page opens straight to the document. When your org verifies every request (default `email`/`sms`),
+ * the recipient gets that passcode step instead.
  *
  * Use this when: you embed signing in your own product and control the signer's session yourself.
  */
@@ -58,7 +61,18 @@ function embeddedIdentityExample(): void
         }
         $allowExternalIdv = $settings->allowExternalIdv ? 'true' : 'false';
         $allowIdentityOverride = $settings->allowIdentityOverride ? 'true' : 'false';
-        echo "Embedded signing enabled. external_idv allowed: {$allowExternalIdv}, override allowed: {$allowIdentityOverride}.\n\n";
+        echo "Embedded signing enabled. external_idv allowed: {$allowExternalIdv}, override allowed: {$allowIdentityOverride}.\n";
+        // `defaultChannel` is what a recipient WITHOUT identityVerification gets: 'none' = no check,
+        // 'email' or 'sms' = your org verifies every request. When `allowChannelOverride` is false the
+        // org locked that method: asking for a different channel below is rejected with
+        // OtpOverrideNotAllowed, so leave it out to take the default.
+        $defaultChannel = $settings->defaultChannel ?? 'none';
+        echo "Default verification for recipients that set none: {$defaultChannel}.\n";
+        if ($settings->allowChannelOverride !== null) {
+            $mayChoose = $settings->allowChannelOverride ? 'true' : 'false';
+            echo "May a request choose a different method: {$mayChoose}.\n";
+        }
+        echo "\n";
 
         // 1) Prepare the document with an EMBEDDED recipient. This is the baseline: no
         //    `identityVerification`, so the signer opens their signing URL and signs directly, with no
@@ -102,7 +116,10 @@ function embeddedIdentityExample(): void
                     ),
                 ],
                 file: $pdfFile,
-                documentName: 'Service Agreement'
+                documentName: 'Service Agreement',
+                // Embedded: your app shows the signing page, so don't email the signer a signing link.
+                // Passcode and completed-copy emails are still sent.
+                sendEmail: false
             )
         );
 
@@ -123,17 +140,23 @@ function embeddedIdentityExample(): void
                 //     verificationId: 'capa_verif_8f2a91',
                 //     verifiedAt: date('c'),
                 //     subjectEmail: 'jane@example.com',
+                //     // Optional context recorded on the audit trail:
+                //     method: 'id_document_liveness', // or id_document | kba | database | sso | other (+ methodDetail)
+                //     assuranceLevel: 'ial2_aal2',
+                //     verifiedName: 'Jane Doe',
+                //     evidenceUrl: 'https://capa.example.com/verifications/capa_verif_8f2a91',
                 // ),
                 returnUrl: 'https://app.yourcompany.com/signed' // where the signer returns after signing (https)
             )
         );
 
-        // With no identityVerification, `identityVerificationMode` is null and `pendingChecks` is [].
+        // With no identityVerification and a `none` org default, `identityVerificationMode` is null and
+        // `pendingChecks` is [].
         $mode = $link->identityVerificationMode ?? '(none)';
         // For `otp`, pendingChecks lists the passcode step the signer clears on the page
         // (e.g. ['email_otp']); with no verification, or for external_idv/override, it is [].
         $pendingChecks = json_encode($link->pendingChecks);
-        $expiresAt = $link->expiresAt ?? '(no separate expiry; follows the document window)';
+        $expiresAt = $link->expiresAt ?? '(none; the document does not expire)';
 
         echo "Open this URL for the signer (new tab, redirect, or iframe):\n";
         echo "  {$link->url}\n";

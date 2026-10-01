@@ -212,4 +212,68 @@ final class CreateSigningUrlTest extends TestCase
             'subjectEmail' => 'john@example.com',
         ], $assertion->toArray());
     }
+
+    // ---- Optional assertion enrichment (recorded on the audit trail) -----------------------
+
+    public function testIdentityAssertionToArrayIncludesEnrichmentWhenSet(): void
+    {
+        $assertion = new IdentityAssertion(
+            provider: 'CAPA',
+            verificationId: 'v-1',
+            verifiedAt: '2026-01-01T00:00:00.000Z',
+            subjectEmail: 'jane@example.com',
+            method: 'other',
+            methodDetail: 'Video call with a notary',
+            assuranceLevel: 'ial2_aal2',
+            verifiedName: 'Jane Doe',
+            evidenceUrl: 'https://capa.example.com/v/v-1',
+            overrideEmailMatching: true,
+        );
+
+        $this->assertSame([
+            'provider' => 'CAPA',
+            'verificationId' => 'v-1',
+            'verifiedAt' => '2026-01-01T00:00:00.000Z',
+            'subjectEmail' => 'jane@example.com',
+            'method' => 'other',
+            'methodDetail' => 'Video call with a notary',
+            'assuranceLevel' => 'ial2_aal2',
+            'verifiedName' => 'Jane Doe',
+            'evidenceUrl' => 'https://capa.example.com/v/v-1',
+            'overrideEmailMatching' => true,
+        ], $assertion->toArray());
+    }
+
+    public function testArrayRequestKeepsAssertionEnrichment(): void
+    {
+        // The array form rebuilds the DTO; it must not drop the optional keys on the way.
+        $this->injectTurboSignClient([
+            new Response(200, [], (string) json_encode([
+                'data' => ['results' => ['url' => 'u', 'recipientId' => 'r1', 'pendingChecks' => []]],
+            ])),
+        ], captureHistory: true);
+
+        TurboSign::createSigningUrl('doc-1', [
+            'recipientId' => 'r1',
+            'identityAssertion' => [
+                'provider' => 'CAPA',
+                'verificationId' => 'v-1',
+                'verifiedAt' => '2026-01-01T00:00:00.000Z',
+                'subjectEmail' => 'jane@example.com',
+                'method' => 'id_document_liveness',
+                'assuranceLevel' => 'ial2_aal2',
+                'verifiedName' => 'Jane Doe',
+                'evidenceUrl' => 'https://capa.example.com/v/v-1',
+                'overrideEmailMatching' => true,
+            ],
+        ]);
+
+        $sent = $this->capturedJsonBody()['identityAssertion'];
+        $this->assertSame('id_document_liveness', $sent['method']);
+        $this->assertSame('ial2_aal2', $sent['assuranceLevel']);
+        $this->assertSame('Jane Doe', $sent['verifiedName']);
+        $this->assertSame('https://capa.example.com/v/v-1', $sent['evidenceUrl']);
+        $this->assertTrue($sent['overrideEmailMatching']);
+        $this->assertArrayNotHasKey('methodDetail', $sent);
+    }
 }

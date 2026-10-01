@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "Embedded TurboSign signing in a Vite + React + shadcn app: three paths (single signer, sequential kiosk, drop-in widget) over a key-safe backend-for-frontend.",
+  "description": "Embedded TurboSign signing in a Vite + React + shadcn app: four paths (single signer, external IdV, sequential kiosk, drop-in widget) over a key-safe backend-for-frontend.",
   "scripts": {
     "dev": "vite",
     "server": "tsx server.ts",

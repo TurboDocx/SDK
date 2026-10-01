@@ -24,14 +24,25 @@ public class EmbeddedSigningSettings {
     private boolean allowIdentityOverride;
 
     /**
-     * Default OTP channel applied to recipients that do not specify one, on the interactive (UI)
-     * create path only ({@code "none"}, {@code "email"}, {@code "sms"}). May be null if the backend
-     * omits it.
+     * The org's default OTP channel ({@code "none"}, {@code "email"}, {@code "sms"}). While embedded
+     * signing is enabled it applies to every recipient that doesn't set one, SDK/API sends included.
+     * {@code "none"} means verify only when a request asks for it. See
+     * {@link #getAllowChannelOverride()} for whether you may pick a different one. May be null if the
+     * backend omits it.
      */
     @SerializedName("defaultChannel")
     private String defaultChannel;
 
-    /** Origins allowed to embed the signing page in an iframe (empty = no restriction configured). */
+    /**
+     * Whether a request may give a recipient a channel other than {@code defaultChannel}.
+     * {@code false} means the org locked the method: an explicit different channel is rejected with
+     * {@code OtpOverrideNotAllowed}, so omit it to take the default. Always {@code true} for a
+     * {@code "none"} default or when embedded signing is off. Null when the API did not report it.
+     */
+    @SerializedName("allowChannelOverride")
+    private Boolean allowChannelOverride;
+
+    /** Origins allowed to embed the signing page in an iframe. Empty means framing is denied everywhere. */
     @SerializedName("allowedFrameAncestors")
     private List<String> allowedFrameAncestors;
 
@@ -49,6 +60,10 @@ public class EmbeddedSigningSettings {
 
     public String getDefaultChannel() {
         return defaultChannel;
+    }
+
+    public Boolean getAllowChannelOverride() {
+        return allowChannelOverride;
     }
 
     public List<String> getAllowedFrameAncestors() {

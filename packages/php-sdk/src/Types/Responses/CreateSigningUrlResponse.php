@@ -12,8 +12,10 @@ final class CreateSigningUrlResponse
 {
     /**
      * @param string $url The URL to open (new tab / redirect) or embed for the signer
-     * @param string|null $expiresAt When the URL stops working (ISO 8601). Null for
-     *     `otp`/no-verification recipients, whose link follows the document's signing window.
+     * @param string|null $expiresAt When the URL stops working (ISO 8601). Single-use links
+     *     (external_idv / override) expire minutes after issue. For `otp`/no-verification recipients
+     *     the URL is the reusable signing link, so this is the document's own expiry, or null when
+     *     the document doesn't expire.
      * @param string $recipientId TurboDocx recipient id
      * @param string|null $externalId The externalId you set when creating the recipient, if any
      * @param string|null $identityVerificationMode 'otp' | 'external_idv' | 'override' | null

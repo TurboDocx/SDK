@@ -390,6 +390,12 @@ class TurboSign:
         Args:
             recipients: List of recipients who will sign
                 Each recipient should have: name, email, signingOrder
+                Embedded signing (optional, camelCase keys): ``phone`` (E.164; required for
+                SMS), ``externalId`` (your own key, unique in the document) and
+                ``identityVerification`` -- {"mode": "otp", "channel": "email"|"sms"},
+                {"mode": "external_idv", "provider": ..., "maxAgeMinutes": 5..10080} or
+                {"mode": "override", "overrideIdentityVerification": True, "reason": ...}.
+                Omit ``identityVerification`` to take the org's default channel.
             fields: Signature fields configuration
                 Each field should have: type, recipientEmail, and positioning info
                 Optional per-field "metadata" drives conditional (IF/THEN) logic:
@@ -409,9 +415,11 @@ class TurboSign:
             sender_name: Sender name
             sender_email: Sender email
             cc_emails: List of CC email addresses
-            send_email: Whether the backend should email recipients. Omit (None) to keep the
-                default behaviour. Set False to suppress recipient emails -- used by the
-                embedded-signing flow, where the host owns the signing UX. Tested with
+            send_email: Whether the backend emails recipients their signing link (and the
+                initial CC notice). Omit (None) to keep the default (emails sent). Set False
+                for embedded signing, where your app shows the signing page: the document
+                still goes out for signing, and passcode and completed-copy emails are
+                still sent. Tested with
                 ``is not None`` so an explicit False is honoured (a truthiness check would
                 silently drop it and let the backend email everyone).
 
@@ -798,14 +806,21 @@ class TurboSign:
             identity_assertion: An assertion from your own identity provider, required only
                 when the recipient's mode is ``external_idv``. A dict with camelCase keys:
                 ``provider``, ``verificationId``, ``verifiedAt`` (ISO 8601), ``subjectEmail``.
+                Optional context recorded on the audit trail: ``method`` ('id_document' |
+                'id_document_liveness' | 'kba' | 'database' | 'sso' | 'other'),
+                ``methodDetail`` (required when method is 'other'), ``assuranceLevel``
+                (e.g. 'ial2_aal2'), ``verifiedName``, ``evidenceUrl`` (https) and
+                ``overrideEmailMatching`` (True skips the subjectEmail-equals-recipient
+                check; recorded on the audit trail).
             return_url: Where TurboSign returns the signer after completion. Must be https.
 
         Returns:
             Dict with the signing URL and its metadata (camelCase, straight from the API):
                 - url: The URL to open / redirect to / embed for the signer.
-                - expiresAt: When the URL stops working (ISO 8601), or None for
-                  otp/no-verification recipients (whose link follows the document's own
-                  signing window instead of a short single-use expiry).
+                - expiresAt: When the URL stops working (ISO 8601). Single-use links
+                  (external_idv / override) expire minutes after issue. For
+                  otp/no-verification recipients the URL is the reusable signing link, so
+                  this is the document's own expiry, or None when it doesn't expire.
                 - recipientId: The resolved recipient id.
                 - externalId: The recipient's externalId (when set).
                 - identityVerificationMode: 'otp' | 'external_idv' | 'override' | None.
@@ -880,10 +895,17 @@ class TurboSign:
                 - allowExternalIdv: You may assert a signer's identity with your own provider.
                 - allowIdentityOverride: A sender may issue a link that skips identity
                   verification (override; development/testing).
-                - defaultChannel: 'none' | 'email' | 'sms' -- default OTP channel on the
-                  interactive (UI) create path only; does not affect SDK/API sends.
+                - defaultChannel: 'none' | 'email' | 'sms' -- the org's default OTP
+                  channel. While embedded signing is enabled it applies to every recipient
+                  that doesn't set one, SDK/API sends included. 'none' means verify only
+                  when a request asks for it.
+                - allowChannelOverride: Whether a request may give a recipient a channel
+                  other than defaultChannel. False means the org locked the method: an
+                  explicit different channel is rejected with ``OtpOverrideNotAllowed``, so
+                  omit it to take the default. Always True for a 'none' default or when
+                  embedded signing is off.
                 - allowedFrameAncestors: Origins allowed to embed the signing page in an
-                  iframe (empty list = no restriction configured).
+                  iframe. An empty list means framing is denied everywhere.
 
         Example:
             >>> settings = await TurboSign.get_embedded_signing_settings()
@@ -926,7 +948,10 @@ class TurboSign:
         Mapping:
             - ``auth.email_otp`` -> identityVerification {mode:'otp', channel:'email'};
               ``auth.sms.phone_number`` -> {mode:'otp', channel:'sms'} and sets the
-              recipient's ``phone`` (accepts camelCase ``phoneNumber`` too).
+              recipient's ``phone`` (accepts camelCase ``phoneNumber`` too). No ``auth`` ->
+              the org's default channel applies (``defaultChannel`` from
+              :meth:`get_embedded_signing_settings`); when its ``allowChannelOverride`` is
+              False, a different channel is rejected with ``OtpOverrideNotAllowed``.
             - ``fields`` shorthand -> full field dicts (placement:'replace' + default size).
               Provide the top-level ``fields`` to override the shorthand with full control.
             - ``signing_order`` defaults to each recipient's index + 1.
@@ -959,8 +984,9 @@ class TurboSign:
             cc_emails: List of CC email addresses.
             fields: Optional full field control; overrides the per-recipient ``fields``
                 shorthand when provided.
-            send_email: Whether the backend emails recipients. Defaults to False for this
-                embedded flow (the host owns the UX).
+            send_email: Defaults to False for this flow: your app shows the signing page, so
+                the signing-link emails (and the initial CC notice) are suppressed. Passcode
+                and completed-copy emails are still sent.
             return_url: Optional https completion fallback, passed to each embed URL.
 
         Returns:
@@ -968,7 +994,11 @@ class TurboSign:
                 - documentId: The created document's id.
                 - recipients: One entry per signer IN SIGNING ORDER, each with recipientId,
                   name, email, embedUrl (str or None), status
-                  ('ready'|'pending'|'completed'), and identityVerificationMode.
+                  ('ready'|'pending'|'completed'), and identityVerificationMode. For a
+                  'ready' signer that is the mode the backend resolved for the URL; for
+                  'pending'/'completed' no URL was minted, so it is the mode you requested via
+                  ``auth`` (None when you set none, even if the org's default channel
+                  applies). :meth:`create_signing_url` reports the effective mode.
 
         Example:
             >>> result = await TurboSign.create_embedded_signature(

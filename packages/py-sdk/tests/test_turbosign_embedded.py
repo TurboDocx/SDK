@@ -113,6 +113,35 @@ class TestCreateSigningUrl:
             }
 
     @pytest.mark.asyncio
+    async def test_forwards_optional_assertion_enrichment_verbatim(self):
+        """The optional audit-trail context on an assertion (method, methodDetail,
+        assuranceLevel, verifiedName, evidenceUrl, overrideEmailMatching) reaches the API
+        unchanged, in camelCase. Parity with the typed Go/Java/PHP assertions."""
+        with patch.object(TurboSign, "_get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.post = AsyncMock(
+                return_value=_signing_url_envelope("https://app/sign/doc-3", "rec-3", "external_idv")
+            )
+            mock_get_client.return_value = mock_client
+            TurboSign.configure(api_key="k", org_id="o", sender_email="s@example.com")
+
+            assertion = {
+                "provider": "CAPA",
+                "verificationId": "v-1",
+                "verifiedAt": "2026-01-01T00:00:00Z",
+                "subjectEmail": "jane@example.com",
+                "method": "other",
+                "methodDetail": "Video call with a notary",
+                "assuranceLevel": "ial2_aal2",
+                "verifiedName": "Jane Doe",
+                "evidenceUrl": "https://capa.example.com/v/v-1",
+                "overrideEmailMatching": True,
+            }
+            await TurboSign.create_signing_url("doc-3", recipient_id="rec-3", identity_assertion=assertion)
+
+            assert mock_client.post.call_args[1]["data"]["identityAssertion"] == assertion
+
+    @pytest.mark.asyncio
     async def test_rejects_zero_selectors_before_any_http_call(self):
         """Should raise ValidationError (code RecipientSelectorInvalid) and not hit the API."""
         with patch.object(TurboSign, "_get_client") as mock_get_client:
@@ -217,6 +246,7 @@ class TestGetEmbeddedSigningSettings:
             "allowExternalIdv": False,
             "allowIdentityOverride": True,
             "defaultChannel": "email",
+            "allowChannelOverride": False,
             "allowedFrameAncestors": ["https://app.example.com"],
         }
         with patch.object(TurboSign, "_get_client") as mock_get_client:

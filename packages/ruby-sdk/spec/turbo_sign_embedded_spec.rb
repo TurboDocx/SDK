@@ -72,6 +72,29 @@ RSpec.describe TurboDocxSdk::TurboSign do
       )
     end
 
+    it "forwards the optional assertion enrichment verbatim (camelCase)" do
+      allow(mock_client).to receive(:post).and_return({ "results" => ok_results })
+      identity_assertion = {
+        "provider" => "CAPA",
+        "verificationId" => "capa_2",
+        "verifiedAt" => "2026-09-16T11:59:00Z",
+        "subjectEmail" => "jane@acme.com",
+        "method" => "other",
+        "methodDetail" => "Video call with a notary",
+        "assuranceLevel" => "ial2_aal2",
+        "verifiedName" => "Jane Doe",
+        "evidenceUrl" => "https://capa.example.com/v/capa_2",
+        "overrideEmailMatching" => true
+      }
+
+      described_class.create_signing_url("doc-1", recipient_id: "rec-1", identity_assertion: identity_assertion)
+
+      expect(mock_client).to have_received(:post).with(
+        "/turbosign/documents/doc-1/signing-url",
+        { "recipientId" => "rec-1", "identityAssertion" => identity_assertion }
+      )
+    end
+
     it "includes an https returnUrl in the request body" do
       allow(mock_client).to receive(:post).and_return({ "results" => ok_results })
 
@@ -153,6 +176,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
         "allowExternalIdv" => true,
         "allowIdentityOverride" => false,
         "defaultChannel" => "email",
+        "allowChannelOverride" => false,
         "allowedFrameAncestors" => ["https://app.example.com"]
       }
       allow(mock_client).to receive(:get).and_return({ "results" => settings })

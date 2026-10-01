@@ -37,12 +37,13 @@ describe("TurboSign embedded identity — real wire contract (smartUnwrap)", () 
   });
 
   it("getEmbeddedSigningSettings unwraps the { data: { results } } server envelope", async () => {
-    const results = { enabled: true, allowExternalIdv: false, allowIdentityOverride: false, defaultChannel: "email", allowedFrameAncestors: ["https://app.baers.com"] };
+    const results = { enabled: true, allowExternalIdv: false, allowIdentityOverride: false, defaultChannel: "email", allowChannelOverride: false, allowedFrameAncestors: ["https://app.baers.com"] };
     mockFetchOnce({ data: { results } });
 
     const res = await TurboSign.getEmbeddedSigningSettings();
 
     expect(res.enabled).toBe(true);
+    expect(res.allowChannelOverride).toBe(false);
     expect(res.allowedFrameAncestors).toEqual(["https://app.baers.com"]);
     expect((res as unknown as { results?: unknown }).results).toBeUndefined();
   });

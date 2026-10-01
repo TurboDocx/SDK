@@ -83,7 +83,16 @@ module TurboDocxSdk
 
       # Send signature request (upload document AND send emails immediately).
       #
-      # @param request [Hash] same as create_signature_review_link
+      # Embedded signing: pass +sendEmail: false+ so the recipients are not emailed their signing
+      # link (and the initial CC notice); the document still goes out for signing, and passcode and
+      # completed-copy emails are still sent. Recipient hashes may carry (camelCase keys) +phone+
+      # (E.164; required for SMS), +externalId+ (your own key, unique in the document) and
+      # +identityVerification+ -- { mode: "otp", channel: "email"|"sms" },
+      # { mode: "external_idv", provider:, maxAgeMinutes: 5..10080 } or
+      # { mode: "override", overrideIdentityVerification: true, reason: }. Omit
+      # +identityVerification+ to take the org's default channel.
+      #
+      # @param request [Hash] same as create_signature_review_link, plus optional :sendEmail
       # @return [Hash] document info with confirmation
       # @raise [ValidationError] on invalid request data
       # @raise [AuthenticationError] on invalid credentials
@@ -125,10 +134,17 @@ module TurboDocxSdk
       # @param recipient_id [String, nil] select the recipient by TurboDocx recipient id
       # @param external_id [String, nil] ...or by the externalId set when the recipient was created
       # @param identity_assertion [Hash, nil] assertion from your own provider, for external_idv only
-      #   (keys: provider, verificationId, verifiedAt, subjectEmail)
+      #   (keys: provider, verificationId, verifiedAt, subjectEmail; optional audit-trail context:
+      #   method ("id_document" | "id_document_liveness" | "kba" | "database" | "sso" | "other"),
+      #   methodDetail (required when method is "other"), assuranceLevel (e.g. "ial2_aal2"),
+      #   verifiedName, evidenceUrl (https), overrideEmailMatching (true skips the
+      #   subjectEmail-equals-recipient check; recorded on the audit trail)). Keys are camelCase.
       # @param return_url [String, nil] where TurboSign returns the signer after completion (https only)
       # @return [Hash] with "url", "expiresAt", "recipientId", "externalId",
-      #   "identityVerificationMode" and "pendingChecks"
+      #   "identityVerificationMode" and "pendingChecks". "expiresAt": single-use links
+      #   (external_idv / override) expire minutes after issue; for otp/no-verification recipients
+      #   the URL is the reusable signing link, so it is the document's own expiry, or nil when the
+      #   document doesn't expire.
       # @raise [ValidationError] if not exactly one selector is given, or return_url is not https
       # @raise [NotFoundError] if the document or recipient does not exist
       # @raise [AuthenticationError] on invalid credentials
@@ -173,7 +189,13 @@ module TurboDocxSdk
       # Same { data: { results } } envelope as +create_signing_url+.
       #
       # @return [Hash] with "enabled", "allowExternalIdv", "allowIdentityOverride",
-      #   "defaultChannel" and "allowedFrameAncestors"
+      #   "defaultChannel", "allowChannelOverride" and "allowedFrameAncestors". "defaultChannel"
+      #   ("none" | "email" | "sms") is the org's default OTP channel: while embedded signing is
+      #   enabled it applies to every recipient that doesn't set one, SDK/API sends included; "none"
+      #   means verify only when a request asks for it. "allowChannelOverride" false means the org
+      #   locked the method: an explicit different channel is rejected with OtpOverrideNotAllowed, so
+      #   omit it to take the default (always true for a "none" default or when embedded signing is
+      #   off). An empty "allowedFrameAncestors" means framing is denied everywhere.
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
       def get_embedded_signing_settings
@@ -194,10 +216,14 @@ module TurboDocxSdk
       # Mapping:
       # - +auth[:emailOtp]+ => identityVerification { mode:"otp", channel:"email" };
       #   +auth[:sms][:phoneNumber]+ => { mode:"otp", channel:"sms" } and sets the recipient's phone.
+      #   No +auth+ => the org's default channel applies ("defaultChannel" from
+      #   +get_embedded_signing_settings+); when "allowChannelOverride" is false, a different
+      #   channel is rejected with OtpOverrideNotAllowed.
       # - +fields+ shorthand => full field objects (placement:"replace" + a default size). Provide the
       #   top-level +fields+ to override the shorthand with full field control.
       # - +signingOrder+ defaults to each recipient's array index + 1.
-      # - +sendEmail+ defaults to false (you own the UX; forwarded to the backend).
+      # - +sendEmail+ defaults to false: your app shows the signing page, so the signing-link emails
+      #   (and the initial CC notice) are suppressed. Passcode and completed-copy emails still go out.
       # - +returnUrl+ is passed through to each embed URL only when provided (https, enforced by
       #   +create_signing_url+).
       #
@@ -214,7 +240,11 @@ module TurboDocxSdk
       #   :documentName, :documentDescription, :senderName, :senderEmail, :ccEmails, :fields (full
       #   field override), :sendEmail, :returnUrl
       # @return [Hash] with "documentId" and "recipients" (each "recipientId", "name", "email",
-      #   "embedUrl", "status", "identityVerificationMode")
+      #   "embedUrl", "status", "identityVerificationMode"). For a "ready" signer
+      #   "identityVerificationMode" is the mode the backend resolved for the URL; for "pending" /
+      #   "completed" no URL was minted, so it is the mode you requested via :auth (nil when you set
+      #   none, even if the org's default channel applies). +create_signing_url+ reports the
+      #   effective mode.
       # @raise [ValidationError] if send_signature returns no recipient matching a requested email
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure

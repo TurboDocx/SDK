@@ -122,6 +122,59 @@ func TestTurboSignClient_CreateSigningURL(t *testing.T) {
 		assert.Equal(t, "RecipientSelectorInvalid", ve.Code)
 	})
 
+	// The backend accepts optional enrichment on an external_idv assertion (recorded on the audit
+	// trail). It must reach the wire when set and be absent when unset, so a minimal assertion stays
+	// byte-identical to before.
+	t.Run("sends optional assertion enrichment only when set", func(t *testing.T) {
+		var bodies []map[string]interface{}
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var body map[string]interface{}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			bodies = append(bodies, body)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"data": map[string]interface{}{"results": map[string]interface{}{"url": "u", "recipientId": "rec-1"}},
+			})
+		}))
+		defer server.Close()
+		client := newEmbeddedTestClient(t, server.URL)
+
+		base := IdentityAssertion{
+			Provider:       "CAPA",
+			VerificationID: "v-1",
+			VerifiedAt:     "2026-01-01T00:00:00Z",
+			SubjectEmail:   "jane@example.com",
+		}
+		enriched := base
+		enriched.Method = "other"
+		enriched.MethodDetail = "Video call with a notary"
+		enriched.AssuranceLevel = "ial2_aal2"
+		enriched.VerifiedName = "Jane Doe"
+		enriched.EvidenceURL = "https://capa.example.com/v/v-1"
+		enriched.OverrideEmailMatching = true
+
+		for _, a := range []IdentityAssertion{enriched, base} {
+			a := a
+			_, err := client.TurboSign.CreateSigningURL(context.Background(), "doc-1", &CreateSigningURLRequest{
+				RecipientID:       "rec-1",
+				IdentityAssertion: &a,
+			})
+			require.NoError(t, err)
+		}
+
+		require.Len(t, bodies, 2)
+		sent := bodies[0]["identityAssertion"].(map[string]interface{})
+		assert.Equal(t, "other", sent["method"])
+		assert.Equal(t, "Video call with a notary", sent["methodDetail"])
+		assert.Equal(t, "ial2_aal2", sent["assuranceLevel"])
+		assert.Equal(t, "Jane Doe", sent["verifiedName"])
+		assert.Equal(t, "https://capa.example.com/v/v-1", sent["evidenceUrl"])
+		assert.Equal(t, true, sent["overrideEmailMatching"])
+
+		minimal := bodies[1]["identityAssertion"].(map[string]interface{})
+		assert.Len(t, minimal, 4, "an unenriched assertion sends only the four required keys")
+	})
+
 	// A non-https returnUrl is rejected client-side.
 	t.Run("rejects non-https returnUrl", func(t *testing.T) {
 		client := newEmbeddedTestClient(t, "https://unused.example.com")
@@ -155,6 +208,7 @@ func TestTurboSignClient_GetEmbeddedSigningSettings(t *testing.T) {
 						"allowExternalIdv":      true,
 						"allowIdentityOverride": false,
 						"defaultChannel":        "email",
+						"allowChannelOverride":  false,
 						"allowedFrameAncestors": []string{"https://app.example.com"},
 					},
 				},
@@ -169,7 +223,26 @@ func TestTurboSignClient_GetEmbeddedSigningSettings(t *testing.T) {
 		assert.True(t, settings.AllowExternalIDV)
 		assert.False(t, settings.AllowIdentityOverride)
 		assert.Equal(t, "email", settings.DefaultChannel)
+		// The method is locked: a different explicit channel would be rejected.
+		require.NotNil(t, settings.AllowChannelOverride)
+		assert.False(t, *settings.AllowChannelOverride)
 		assert.Equal(t, []string{"https://app.example.com"}, settings.AllowedFrameAncestors)
+	})
+
+	// An API that doesn't report the field leaves it nil (unknown), never a misleading "locked".
+	t.Run("allowChannelOverride absent decodes to nil", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"data": map[string]interface{}{"results": map[string]interface{}{"enabled": true}},
+			})
+		}))
+		defer server.Close()
+
+		client := newEmbeddedTestClient(t, server.URL)
+		settings, err := client.TurboSign.GetEmbeddedSigningSettings(context.Background())
+		require.NoError(t, err)
+		assert.Nil(t, settings.AllowChannelOverride)
 	})
 }
 

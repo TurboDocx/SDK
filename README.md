@@ -348,8 +348,9 @@ await TurboSign.resend(documentId, ['recipient-uuid']);
 
 Embed the signing page in your own app instead of emailing a link: mint a signing URL server-side with
 `createSigningUrl`, frame it, and (optionally) verify the signer with email/SMS OTP or your own IdP. See
-the full runnable example — a host web-app that collects the signer's email, does email OTP, and
-completes via postMessage — in [`examples/embedded-web-app`](./examples/embedded-web-app).
+the full runnable example — a host web-app that collects the signer's email, does email OTP (or a
+simulated external identity verification), and completes via postMessage — in
+[`examples/embedded-web-app`](./examples/embedded-web-app).
 
 ### Field Types
 
