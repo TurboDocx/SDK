@@ -29,6 +29,28 @@ jobs:
       - name: Run tests
         run: npm test
 
+  test-embed:
+    name: Test Embed Widget
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/embed
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
   test-py:
     name: Test Python SDK
     runs-on: ubuntu-latest

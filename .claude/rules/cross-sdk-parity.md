@@ -16,6 +16,21 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 | resend | `resend()` | `resend_email()` | `ResendEmail()` | `resend()` | `resendEmail()` | `resend_email()` |
 | getAuditTrail | `getAuditTrail()` | `get_audit_trail()` | `GetAuditTrail()` | `getAuditTrail()` | `getAuditTrail()` | `get_audit_trail()` |
 | sendReminder | `sendReminder()` | `send_reminder()` | `SendReminder()` | `sendReminder()` | `sendReminder()` | `send_reminder()` |
+| createSigningUrl | `createSigningUrl()` | `create_signing_url()` | `CreateSigningURL()` | `createSigningUrl()` | `createSigningUrl()` | `create_signing_url()` |
+| getEmbeddedSigningSettings | `getEmbeddedSigningSettings()` | `get_embedded_signing_settings()` | `GetEmbeddedSigningSettings()` | `getEmbeddedSigningSettings()` | `getEmbeddedSigningSettings()` | `get_embedded_signing_settings()` |
+| createEmbeddedSignature | `createEmbeddedSignature()` | `create_embedded_signature()` | `CreateEmbeddedSignature()` | `createEmbeddedSignature()` | `createEmbeddedSignature()` | `create_embedded_signature()` |
+
+**Embedded signing notes:** `createSigningUrl` posts `{ recipientId | externalId (exactly one),
+returnUrl? (https), identityAssertion? }` and unwraps `{ data: { results } }`. The API rejects unknown
+keys (no `senderName` here). An identity assertion has four required keys plus six optional ones
+(`method`, `methodDetail` — required when method is `other` — `assuranceLevel`, `verifiedName`,
+`evidenceUrl`, `overrideEmailMatching`); typed SDKs omit unset optional keys from the wire.
+`getEmbeddedSigningSettings` returns `enabled`, `allowExternalIdv`, `allowIdentityOverride`,
+`defaultChannel`, `allowChannelOverride` and `allowedFrameAncestors` (empty = framing denied
+everywhere); typed SDKs keep `allowChannelOverride` nullable so an API that doesn't report it reads
+as unknown, not locked. `createEmbeddedSignature` defaults `sendEmail` to false, never sends an
+explicit `otpChannel` (an omitted channel takes the org default), and treats `RecipientNotInTurn` /
+`NotSignersTurn` / `RecipientAlreadySigned` as `pending` / `completed` results, not errors.
 
 **sendReminder note:** a standalone nudge, deliberately decoupled from the automatic reminder
 schedule — it ignores the configured cadence, works when reminders are disabled or the per-signer

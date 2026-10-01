@@ -9,6 +9,11 @@ Provides single-step signature operations:
 - void_document
 - resend_email
 - get_audit_trail
+
+Plus the embedded-signing surface (host your own signing UX in an iframe / redirect):
+- create_signing_url
+- get_embedded_signing_settings
+- create_embedded_signature
 """
 
 import json
@@ -16,8 +21,72 @@ from typing import Any, Dict, List, Optional, Union
 
 import httpx
 
-from ..http import HttpClient, NetworkError
+from ..http import HttpClient, NetworkError, TurboDocxError, ValidationError
 from ..utils.client_context import ClientContext
+
+# Shorthand field key -> the concrete signature field type it emits plus its default size.
+# Note ``initials`` maps to the ``initial`` field type -- that is the literal in the field-type
+# union (there is no ``initials``).
+_EMBEDDED_FIELD_SPECS: Dict[str, Dict[str, Any]] = {
+    "signature": {"type": "signature", "size": {"width": 100, "height": 30}},
+    "date": {"type": "date", "size": {"width": 75, "height": 30}},
+    "initials": {"type": "initial", "size": {"width": 50, "height": 30}},
+    "fullName": {"type": "full_name", "size": {"width": 150, "height": 30}},
+}
+
+# Error codes the backend uses when a signing URL cannot be minted for turn-order reasons.
+# These are expected states in a sequential flow, not failures -- the embedded wrapper degrades
+# them to a per-recipient status instead of throwing the whole call away.
+_NOT_IN_TURN_CODES = frozenset({"RecipientNotInTurn", "NotSignersTurn"})
+_ALREADY_SIGNED_CODE = "RecipientAlreadySigned"
+
+
+def _resolve_identity_verification(auth: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Map an embedded recipient's ergonomic ``auth`` shorthand to a full identityVerification.
+
+    ``email_otp`` wins when both keys are set. Returns ``None`` when no auth is requested
+    (no identity verification). Accepts both snake_case (``email_otp``) and the JS-style
+    camelCase (``emailOtp``) key so either spelling works.
+    """
+    if not auth:
+        return None
+    if auth.get("email_otp") or auth.get("emailOtp"):
+        return {"mode": "otp", "channel": "email"}
+    # Presence, not truthiness: an ``sms`` block requests SMS OTP even when it is empty (the phone
+    # may be supplied at the top level, or omitted so the fail-fast below can catch it). This
+    # matches JS (``auth?.sms``, where ``{}`` is truthy) and Go (``auth.SMS != nil``); a bare
+    # truthiness check would silently drop an SMS-OTP request whose ``sms`` dict is ``{}``.
+    # ``{"sms": None}`` still resolves to nothing, matching Go's nil pointer.
+    if auth.get("sms") is not None:
+        return {"mode": "otp", "channel": "sms"}
+    return None
+
+
+def _expand_recipient_fields(recipient: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Expand a recipient's ``fields`` shorthand into full field dicts.
+
+    One field per provided key, anchored to the given text with ``placement: 'replace'`` and
+    the key's default size. Returns an empty list when the recipient has no ``fields``
+    shorthand.
+    """
+    shorthand = recipient.get("fields")
+    if not shorthand:
+        return []
+    fields: List[Dict[str, Any]] = []
+    for key, spec in _EMBEDDED_FIELD_SPECS.items():
+        # Accept the JS-style camelCase key and its snake_case alias (``fullName`` /
+        # ``full_name``), matching the snake_case ergonomics elsewhere in this flow.
+        anchor = shorthand.get(key)
+        if anchor is None and key == "fullName":
+            anchor = shorthand.get("full_name")
+        if not anchor:
+            continue
+        fields.append({
+            "type": spec["type"],
+            "recipientEmail": recipient["email"],
+            "template": {"anchor": anchor, "placement": "replace", "size": spec["size"]},
+        })
+    return fields
 
 
 class TurboSign:
@@ -302,6 +371,7 @@ class TurboSign:
         sender_name: Optional[str] = None,
         sender_email: Optional[str] = None,
         cc_emails: Optional[List[str]] = None,
+        send_email: Optional[bool] = None,
         reminders_enabled: Optional[bool] = None,
         reminder_delay: Optional[Dict[str, Any]] = None,
         reminder_interval: Optional[Dict[str, Any]] = None,
@@ -320,6 +390,12 @@ class TurboSign:
         Args:
             recipients: List of recipients who will sign
                 Each recipient should have: name, email, signingOrder
+                Embedded signing (optional, camelCase keys): ``phone`` (E.164; required for
+                SMS), ``externalId`` (your own key, unique in the document) and
+                ``identityVerification`` -- {"mode": "otp", "channel": "email"|"sms"},
+                {"mode": "external_idv", "provider": ..., "maxAgeMinutes": 5..10080} or
+                {"mode": "override", "overrideIdentityVerification": True, "reason": ...}.
+                Omit ``identityVerification`` to take the org's default channel.
             fields: Signature fields configuration
                 Each field should have: type, recipientEmail, and positioning info
                 Optional per-field "metadata" drives conditional (IF/THEN) logic:
@@ -339,6 +415,13 @@ class TurboSign:
             sender_name: Sender name
             sender_email: Sender email
             cc_emails: List of CC email addresses
+            send_email: Whether the backend emails recipients their signing link (and the
+                initial CC notice). Omit (None) to keep the default (emails sent). Set False
+                for embedded signing, where your app shows the signing page: the document
+                still goes out for signing, and passcode and completed-copy emails are
+                still sent. Tested with
+                ``is not None`` so an explicit False is honoured (a truthiness check would
+                silently drop it and let the backend email everyone).
 
         Returns:
             Response with success, documentId, status, recipients, and message
@@ -376,6 +459,11 @@ class TurboSign:
 
             if cc_emails:
                 form_data["ccEmails"] = json.dumps(cc_emails)
+            # Forward email suppression only when explicitly set. Presence is tested with
+            # ``is not None`` (never truthiness): False (do not email) is the meaningful value
+            # the embedded flow relies on, and a truthiness check would drop it.
+            if send_email is not None:
+                form_data["sendEmail"] = send_email
             TurboSign._apply_schedule_overrides(
                 form_data,
                 reminders_enabled=reminders_enabled,
@@ -415,6 +503,10 @@ class TurboSign:
 
             if cc_emails:
                 json_body["ccEmails"] = json.dumps(cc_emails)
+            # Forward email suppression only when explicitly set (``is not None``, never
+            # truthiness) -- the embedded flow's False must survive.
+            if send_email is not None:
+                json_body["sendEmail"] = send_email
             TurboSign._apply_schedule_overrides(
                 json_body,
                 reminders_enabled=reminders_enabled,
@@ -684,3 +776,357 @@ class TurboSign:
         """
         client = cls._get_client()
         return await client.get(f"/turbosign/documents/{document_id}/audit-trail")
+
+    # ============================================
+    # EMBEDDED SIGNING
+    # ============================================
+
+    @classmethod
+    async def create_signing_url(
+        cls,
+        document_id: str,
+        *,
+        recipient_id: Optional[str] = None,
+        external_id: Optional[str] = None,
+        identity_assertion: Optional[Dict[str, Any]] = None,
+        return_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Mint a single-use embedded signing URL for one recipient.
+
+        Request it the moment the signer is ready (never store it). Open the returned ``url``
+        in a new tab, redirect to it, or embed it in an iframe. This is the counterpart of
+        DocuSign's createRecipientView / BoldSign's GetEmbeddedSignLink.
+
+        Args:
+            document_id: The document the recipient belongs to.
+            recipient_id: Select the recipient by their TurboDocx recipient id.
+            external_id: ...or by the externalId you set when creating the recipient.
+                Provide EXACTLY ONE of recipient_id / external_id.
+            identity_assertion: An assertion from your own identity provider, required only
+                when the recipient's mode is ``external_idv``. A dict with camelCase keys:
+                ``provider``, ``verificationId``, ``verifiedAt`` (ISO 8601), ``subjectEmail``.
+                Optional context recorded on the audit trail: ``method`` ('id_document' |
+                'id_document_liveness' | 'kba' | 'database' | 'sso' | 'other'),
+                ``methodDetail`` (required when method is 'other'), ``assuranceLevel``
+                (e.g. 'ial2_aal2'), ``verifiedName``, ``evidenceUrl`` (https) and
+                ``overrideEmailMatching`` (True skips the subjectEmail-equals-recipient
+                check; recorded on the audit trail).
+            return_url: Where TurboSign returns the signer after completion. Must be https.
+
+        Returns:
+            Dict with the signing URL and its metadata (camelCase, straight from the API):
+                - url: The URL to open / redirect to / embed for the signer.
+                - expiresAt: When the URL stops working (ISO 8601). Single-use links
+                  (external_idv / override) expire minutes after issue. For
+                  otp/no-verification recipients the URL is the reusable signing link, so
+                  this is the document's own expiry, or None when it doesn't expire.
+                - recipientId: The resolved recipient id.
+                - externalId: The recipient's externalId (when set).
+                - identityVerificationMode: 'otp' | 'external_idv' | 'override' | None.
+                - pendingChecks: Passcode steps the signer must clear
+                  (e.g. ['email_otp']). Non-empty only for 'otp'.
+
+        Raises:
+            ValidationError: If not exactly one selector is given, or return_url is not https.
+
+        Example:
+            >>> link = await TurboSign.create_signing_url("doc-123", external_id="cust_42")
+            >>> print(link["url"], link["pendingChecks"])
+            >>> # external_idv recipient -- pass the assertion from your own provider:
+            >>> link = await TurboSign.create_signing_url(
+            ...     "doc-123",
+            ...     recipient_id="rec-1",
+            ...     identity_assertion={
+            ...         "provider": "CAPA",
+            ...         "verificationId": "v-1",
+            ...         "verifiedAt": "2026-01-01T00:00:00Z",
+            ...         "subjectEmail": "john@example.com",
+            ...     },
+            ... )
+        """
+        # Fail fast with actionable messages; the server still enforces everything. An empty
+        # string counts as absent, matching the JS SDK.
+        selectors = [v for v in (recipient_id, external_id) if v is not None and v != ""]
+        if len(selectors) != 1:
+            raise ValidationError(
+                "Provide exactly one of recipient_id or external_id to create_signing_url.",
+                code="RecipientSelectorInvalid",
+            )
+        if return_url and not return_url.lower().startswith("https://"):
+            raise ValidationError("return_url must be an https URL.", code="InvalidReturnUrl")
+
+        body: Dict[str, Any] = {}
+        if recipient_id:
+            body["recipientId"] = recipient_id
+        if external_id:
+            body["externalId"] = external_id
+        if identity_assertion is not None:
+            body["identityAssertion"] = identity_assertion
+        if return_url:
+            body["returnUrl"] = return_url
+
+        client = cls._get_client()
+        # The endpoint replies { data: { results } }. The HTTP client strips the outer `data`,
+        # so unwrap the `results` envelope here (same convention as the quote/deliverable
+        # modules). Returning the un-unwrapped dict would hand callers the wrong level.
+        response = await client.post(
+            f"/turbosign/documents/{document_id}/signing-url",
+            data=body,
+        )
+        # `.get("results", response)` keeps this correct if the API ever returns a flat body
+        # (no `results` envelope): degrade gracefully to the body itself rather than KeyError.
+        # Matches the PHP/Go/Java fallback.
+        return response.get("results", response)
+
+    @classmethod
+    async def get_embedded_signing_settings(cls) -> Dict[str, Any]:
+        """
+        Read the org's embedded-signing settings (read-only).
+
+        These are the set-once, org-wide gates plus the default OTP channel and the allowed
+        iframe embedding origins. Use it to see what is permitted before you request signing
+        URLs. The per-recipient identity mode is chosen when you create each recipient, not
+        here.
+
+        Returns:
+            Dict with the org gates (camelCase, straight from the API):
+                - enabled: Embedded signing (and OTP identity verification) is on for the org.
+                - allowExternalIdv: You may assert a signer's identity with your own provider.
+                - allowIdentityOverride: A sender may issue a link that skips identity
+                  verification (override; development/testing).
+                - defaultChannel: 'none' | 'email' | 'sms' -- the org's default OTP
+                  channel. While embedded signing is enabled it applies to every recipient
+                  that doesn't set one, SDK/API sends included. 'none' means verify only
+                  when a request asks for it.
+                - allowChannelOverride: Whether a request may give a recipient a channel
+                  other than defaultChannel. False means the org locked the method: an
+                  explicit different channel is rejected with ``OtpOverrideNotAllowed``, so
+                  omit it to take the default. Always True for a 'none' default or when
+                  embedded signing is off.
+                - allowedFrameAncestors: Origins allowed to embed the signing page in an
+                  iframe. An empty list means framing is denied everywhere.
+
+        Example:
+            >>> settings = await TurboSign.get_embedded_signing_settings()
+            >>> if not settings["enabled"]:
+            ...     raise RuntimeError("Embedded signing is not enabled for this org.")
+        """
+        client = cls._get_client()
+        # { data: { results } } envelope, same as create_signing_url above.
+        response = await client.get("/turbosign/embedded-signing-settings")
+        return response["results"]
+
+    @classmethod
+    async def create_embedded_signature(
+        cls,
+        recipients: List[Dict[str, Any]],
+        *,
+        file: Optional[bytes] = None,
+        file_name: Optional[str] = None,
+        file_link: Optional[str] = None,
+        template_id: Optional[str] = None,
+        deliverable_id: Optional[str] = None,
+        document_name: Optional[str] = None,
+        document_description: Optional[str] = None,
+        sender_name: Optional[str] = None,
+        sender_email: Optional[str] = None,
+        cc_emails: Optional[List[str]] = None,
+        fields: Optional[List[Dict[str, Any]]] = None,
+        send_email: Optional[bool] = None,
+        return_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Create a signature request AND mint a per-recipient embedded signing URL in ONE call.
+
+        The embedded-signing counterpart of DocuSeal's create-with-embed and Dropbox Sign's
+        embedded flow. This is a thin WRAPPER over :meth:`send_signature` +
+        :meth:`create_signing_url` -- no new endpoint. It maps the ergonomic request
+        (per-recipient ``auth`` + ``fields`` shorthand) onto those calls, then assembles a
+        per-recipient result carrying the embed URL and the resolved identity mode.
+
+        Mapping:
+            - ``auth.email_otp`` -> identityVerification {mode:'otp', channel:'email'};
+              ``auth.sms.phone_number`` -> {mode:'otp', channel:'sms'} and sets the
+              recipient's ``phone`` (accepts camelCase ``phoneNumber`` too). No ``auth`` ->
+              the org's default channel applies (``defaultChannel`` from
+              :meth:`get_embedded_signing_settings`); when its ``allowChannelOverride`` is
+              False, a different channel is rejected with ``OtpOverrideNotAllowed``.
+            - ``fields`` shorthand -> full field dicts (placement:'replace' + default size).
+              Provide the top-level ``fields`` to override the shorthand with full control.
+            - ``signing_order`` defaults to each recipient's index + 1.
+            - ``send_email`` defaults to False (you own the UX; forwarded to the backend).
+            - ``return_url`` is passed through to each embed URL only when provided (https).
+
+        Turn-aware: with a real (sequential) signing order the backend only mints a URL for
+        the signer whose turn it is. Rather than throw the whole call away, each result
+        carries a ``status``:
+            - 'ready'     -- it's their turn; ``embedUrl`` is set, frame it now.
+            - 'pending'   -- an earlier signer hasn't finished; ``embedUrl`` is None.
+              Re-mint with :meth:`create_signing_url` once earlier signers complete.
+            - 'completed' -- they've already signed; ``embedUrl`` is None.
+        A genuine error (anything other than not-in-turn / already-signed) still propagates.
+
+        Args:
+            recipients: List of signer dicts. Each: ``name``, ``email``, optional ``phone``,
+                optional ``signing_order`` (or ``signingOrder``), optional ``auth``
+                ({"email_otp": True} or {"sms": {"phone_number": "+1..."}}), optional
+                ``fields`` shorthand ({"signature": "{signature1}", "date": "{date1}", ...}).
+            file: PDF file content as bytes.
+            file_name: Original filename.
+            file_link: URL to the document file.
+            template_id: TurboDocx template id.
+            deliverable_id: TurboDocx deliverable id.
+            document_name: Document name.
+            document_description: Document description.
+            sender_name: Sender name.
+            sender_email: Sender email.
+            cc_emails: List of CC email addresses.
+            fields: Optional full field control; overrides the per-recipient ``fields``
+                shorthand when provided.
+            send_email: Defaults to False for this flow: your app shows the signing page, so
+                the signing-link emails (and the initial CC notice) are suppressed. Passcode
+                and completed-copy emails are still sent.
+            return_url: Optional https completion fallback, passed to each embed URL.
+
+        Returns:
+            Dict with:
+                - documentId: The created document's id.
+                - recipients: One entry per signer IN SIGNING ORDER, each with recipientId,
+                  name, email, embedUrl (str or None), status
+                  ('ready'|'pending'|'completed'), and identityVerificationMode. For a
+                  'ready' signer that is the mode the backend resolved for the URL; for
+                  'pending'/'completed' no URL was minted, so it is the mode you requested via
+                  ``auth`` (None when you set none, even if the org's default channel
+                  applies). :meth:`create_signing_url` reports the effective mode.
+
+        Example:
+            >>> result = await TurboSign.create_embedded_signature(
+            ...     file=pdf_bytes,
+            ...     document_name="Auto Policy",
+            ...     recipients=[
+            ...         {"name": "John Doe", "email": "john@example.com",
+            ...          "auth": {"email_otp": True},
+            ...          "fields": {"signature": "{signature1}", "date": "{date1}"}},
+            ...     ],
+            ... )
+            >>> # Open result["recipients"][0]["embedUrl"] in an iframe / new tab.
+        """
+        # 1. Map the ergonomic recipients onto full recipient dicts (identity + phone + order).
+        mapped_recipients: List[Dict[str, Any]] = []
+        for index, r in enumerate(recipients):
+            auth = r.get("auth")
+            identity_verification = _resolve_identity_verification(auth)
+            sms = (auth or {}).get("sms") or {}
+            phone = sms.get("phone_number") or sms.get("phoneNumber") or r.get("phone")
+            recipient: Dict[str, Any] = {
+                "name": r["name"],
+                "email": r["email"],
+                "signingOrder": r.get("signing_order", r.get("signingOrder", index + 1)),
+            }
+            if phone:
+                recipient["phone"] = phone
+            if identity_verification:
+                recipient["identityVerification"] = identity_verification
+            mapped_recipients.append(recipient)
+
+        # Client-side fail-fast (mirrors JS `validateRecipientsIdentity` + Go/PHP): an SMS OTP
+        # recipient with no resolved phone. A {mode:'otp', channel:'sms'} identity needs a phone,
+        # and without this guard the bad request only surfaces as a raw HTTP 400 from the send.
+        # The other identity modes are unreachable from this `auth` shorthand (it only ever yields
+        # email/sms OTP), so only this check is live; the server remains the source of truth.
+        for recipient in mapped_recipients:
+            iv = recipient.get("identityVerification")
+            if (
+                iv
+                and iv.get("mode") == "otp"
+                and iv.get("channel") == "sms"
+                and not recipient.get("phone")
+            ):
+                raise ValidationError(
+                    f'Recipient "{recipient["email"]}" uses SMS OTP but has no phone (E.164).',
+                    code="PhoneRequiredForSmsOtp",
+                )
+
+        # Full `fields` (when provided) win verbatim; otherwise expand each shorthand.
+        expanded_fields: List[Dict[str, Any]] = fields if fields is not None else [
+            field for r in recipients for field in _expand_recipient_fields(r)
+        ]
+
+        sent = await cls.send_signature(
+            mapped_recipients,
+            expanded_fields,
+            file=file,
+            file_name=file_name,
+            file_link=file_link,
+            template_id=template_id,
+            deliverable_id=deliverable_id,
+            document_name=document_name,
+            document_description=document_description,
+            sender_name=sender_name,
+            sender_email=sender_email,
+            cc_emails=cc_emails,
+            # Embedded flow default: suppress recipient emails (the host owns the UX).
+            send_email=send_email if send_email is not None else False,
+        )
+
+        # Match the backend's recipients back to the request by email so we can carry `name`
+        # and know the resolved identity mode. The response's `recipients` is optional.
+        sent_recipients = sent.get("recipients") or []
+        recipient_id_by_email = {
+            sr["email"]: sr["id"] for sr in sent_recipients if sr.get("email") and sr.get("id")
+        }
+        document_id = sent["documentId"]
+
+        # 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER.
+        ordered = sorted(
+            (
+                (r, r.get("signing_order", r.get("signingOrder", index + 1)))
+                for index, r in enumerate(recipients)
+            ),
+            key=lambda pair: pair[1],
+        )
+
+        results: List[Dict[str, Any]] = []
+        for r, _order in ordered:
+            recipient_id = recipient_id_by_email.get(r["email"])
+            if not recipient_id:
+                raise ValidationError(
+                    f'send_signature did not return a recipient matching "{r["email"]}"; '
+                    "cannot mint an embed URL.",
+                    code="EmbeddedRecipientNotReturned",
+                )
+            # Turn-aware: the backend refuses to mint a URL for a signer whose turn hasn't come
+            # (`RecipientNotInTurn`/`NotSignersTurn`) or who already signed
+            # (`RecipientAlreadySigned`). Those are expected states, not failures -- degrade to
+            # a null URL + status so the caller can mint the URL later. Any OTHER error
+            # propagates. We branch on the error CODE, never the message text.
+            try:
+                link = await cls.create_signing_url(
+                    document_id,
+                    recipient_id=recipient_id,
+                    return_url=return_url,
+                )
+                results.append({
+                    "recipientId": recipient_id,
+                    "name": r["name"],
+                    "email": r["email"],
+                    "embedUrl": link["url"],
+                    "status": "ready",
+                    "identityVerificationMode": link.get("identityVerificationMode"),
+                })
+            except TurboDocxError as err:
+                code = err.code
+                if code not in _NOT_IN_TURN_CODES and code != _ALREADY_SIGNED_CODE:
+                    raise
+                iv = _resolve_identity_verification(r.get("auth"))
+                results.append({
+                    "recipientId": recipient_id,
+                    "name": r["name"],
+                    "email": r["email"],
+                    "embedUrl": None,
+                    "status": "completed" if code == _ALREADY_SIGNED_CODE else "pending",
+                    "identityVerificationMode": iv["mode"] if iv else None,
+                })
+
+        return {"documentId": document_id, "recipients": results}

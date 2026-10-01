@@ -28,6 +28,21 @@ type Recipient struct {
 	Name         string `json:"name"`
 	Email        string `json:"email"`
 	SigningOrder int    `json:"signingOrder"`
+	// Phone is an E.164 phone number (e.g. +13055551234). Required when identity
+	// verification uses SMS OTP. Optional otherwise.
+	Phone string `json:"phone,omitempty"`
+	// ExternalID is your own identifier for this signer (e.g. an Airtable record id), unique
+	// within the document. Lets you request a signing URL by your key instead of storing
+	// TurboDocx's recipient id.
+	ExternalID string `json:"externalId,omitempty"`
+	// IdentityVerification configures identity verification for embedded signing. Leave nil to
+	// take the org's default (EmbeddedSigningSettings.DefaultChannel): no verification when that is
+	// "none", otherwise a passcode on the default channel.
+	//
+	// This is a POINTER on purpose: a non-pointer struct with `omitempty` would still serialize
+	// as `{"mode":""}` on every existing send, changing the wire format for callers that never
+	// use embedded signing. Nil omits the key entirely.
+	IdentityVerification *IdentityVerification `json:"identityVerification,omitempty"`
 }
 
 // TemplateAnchor represents template anchor configuration for dynamic field positioning
@@ -232,6 +247,16 @@ type SendSignatureRequest struct {
 	SenderName          string
 	SenderEmail         string
 	CCEmails            []string
+
+	// SendEmail controls whether the backend emails the recipients their signing link (and the
+	// initial CC notice). Leave nil to keep the default (emails are sent). Set to false for
+	// embedded signing, where your app shows the signing page: the document still goes out for
+	// signing, and passcode and completed-copy emails are still sent.
+	//
+	// A POINTER on purpose: false ("do not email") is a meaningful value, and a truthiness/zero
+	// check would drop it and silently let the backend email the recipients. Nil is not
+	// forwarded, so existing callers send a byte-identical request.
+	SendEmail *bool
 
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
 	SignatureSchedule
@@ -552,6 +577,13 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 			return nil, fmt.Errorf("marshal ccEmails: %w", err)
 		}
 		formData["ccEmails"] = string(ccEmailsJSON)
+	}
+
+	// Forward email suppression only when explicitly set. Nil keeps the backend default (send);
+	// false is a meaningful "do not email" and must survive, so it is formatted like the schedule
+	// scalars rather than dropped by a truthiness check.
+	if req.SendEmail != nil {
+		formData["sendEmail"] = strconv.FormatBool(*req.SendEmail)
 	}
 
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
