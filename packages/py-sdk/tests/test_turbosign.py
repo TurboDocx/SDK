@@ -266,6 +266,40 @@ class TestCreateSignatureReviewLink:
             }
 
 
+    @pytest.mark.asyncio
+    async def test_optional_field_sends_required_false(self):
+        """Should send required:false for an optional field and omit required when unset"""
+        mock_response = {
+            "success": True,
+            "documentId": "doc-optional",
+            "status": "review_ready",
+            "message": "Document prepared for review"
+        }
+
+        fields = [
+            {"type": "signature", "recipientEmail": "john@example.com", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "required": True},
+            {"type": "text", "recipientEmail": "john@example.com", "page": 1, "x": 100, "y": 600, "width": 200, "height": 30, "required": False},
+            {"type": "date", "recipientEmail": "john@example.com", "page": 1, "x": 100, "y": 650, "width": 120, "height": 30},
+        ]
+
+        with patch.object(TurboSign, '_get_client') as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_get_client.return_value = mock_client
+
+            TurboSign.configure(api_key="test-key", org_id="test-org", sender_email="test@example.com")
+            await TurboSign.create_signature_review_link(
+                file_link="https://example.com/doc.pdf",
+                recipients=self.mock_recipients(),
+                fields=fields
+            )
+
+            data = mock_client.post.call_args[1]["data"]
+            sent_fields = json.loads(data["fields"])
+            assert sent_fields[0]["required"] is True
+            assert sent_fields[1]["required"] is False
+            assert "required" not in sent_fields[2]
+
 class TestSendSignature:
     """Test send_signature operation"""
 

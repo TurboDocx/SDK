@@ -920,7 +920,7 @@ The `checkbox` type doubles as the **controlling** field for conditional logic (
   width: 200,           // Field width (pixels)
   height: 50,           // Field height (pixels)
   recipientOrder: 1,    // Which recipient this field belongs to
-  required: true        // Optional: default true for signature/initials
+  required: true        // Optional: default true. Set false to let the signer skip it (not allowed on signature/initial)
 }
 ```
 

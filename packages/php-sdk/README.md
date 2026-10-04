@@ -736,7 +736,7 @@ new Field(
     width: 400,
     height: 100,
     isMultiline: true,        // Allow multiple lines
-    required: true,           // Field is required
+    required: true,           // Default true; false makes it optional (not allowed on signature/initial)
     backgroundColor: '#f0f0f0' // Background color
 )
 

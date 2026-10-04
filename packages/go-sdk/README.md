@@ -1077,7 +1077,7 @@ type Field struct {
     DefaultValue    string          `json:"defaultValue,omitempty"`    // Pre-filled value (text, identity, and date fields)
     IsMultiline     bool            `json:"isMultiline,omitempty"`     // Allow multiple lines (text fields)
     IsReadonly      bool            `json:"isReadonly,omitempty"`      // Read-only field
-    Required        bool            `json:"required,omitempty"`        // Field is required
+    Required        *bool           `json:"required,omitempty"`        // nil = required (default); BoolPtr(false) = optional for the signer (not allowed on signature/initial)
     BackgroundColor string          `json:"backgroundColor,omitempty"` // Background color (hex)
     Template        *TemplateAnchor `json:"template,omitempty"`        // Template anchor for dynamic positioning
     Metadata        *FieldMetadata  `json:"metadata,omitempty"`        // Conditional (IF/THEN) logic — see "Conditional Fields"

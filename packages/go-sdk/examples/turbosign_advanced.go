@@ -102,7 +102,7 @@ func main() {
 				Type:           "checkbox",
 				RecipientEmail: "john@example.com",
 				DefaultValue:   "true",
-				Required:       true,
+				Required:       turbodocx.BoolPtr(true),
 				Template: &turbodocx.TemplateAnchor{
 					Anchor:    "{terms_checkbox}",
 					Placement: "replace",

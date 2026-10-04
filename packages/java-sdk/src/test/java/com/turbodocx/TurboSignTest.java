@@ -1,6 +1,8 @@
 package com.turbodocx;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonParser;
 import com.turbodocx.models.*;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -733,5 +735,44 @@ class TurboSignTest {
         assertEquals("request_changes", conditional.getControllingFieldKey());
         assertEquals("is_checked", conditional.getOperator());
         assertEquals("show", conditional.getAction());
+    }
+
+    @Test
+    @DisplayName("should send required:false for an optional field and omit required when unset")
+    void sendSignatureSerializesOptionalFieldRequired() throws Exception {
+        server.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody(gson.toJson(Map.of(
+                        "success", true,
+                        "documentId", "doc-optional",
+                        "status", "UNDER_REVIEW",
+                        "message", "Document sent for signing"
+                ))));
+
+        SendSignatureRequest request = new SendSignatureRequest.Builder()
+                .fileLink("https://example.com/doc.pdf")
+                .recipients(Collections.singletonList(
+                        new Recipient("John Doe", "john@example.com", 1)))
+                .fields(Arrays.asList(
+                        new Field.Builder().type("signature").recipientEmail("john@example.com")
+                                .page(1).x(100).y(500).width(200).height(50).required(true).build(),
+                        new Field.Builder().type("text").recipientEmail("john@example.com")
+                                .page(1).x(100).y(600).width(200).height(30).required(false).build(),
+                        new Field.Builder().type("date").recipientEmail("john@example.com")
+                                .page(1).x(100).y(650).width(120).height(30).build()))
+                .build();
+
+        client.turboSign().sendSignature(request);
+
+        RecordedRequest recorded = server.takeRequest();
+        Map<?, ?> body = gson.fromJson(recorded.getBody().readUtf8(), Map.class);
+        // Parse as a JsonArray: deserializing to Field[] cannot tell an absent key from null.
+        JsonArray sentFields = JsonParser.parseString((String) body.get("fields")).getAsJsonArray();
+
+        assertTrue(sentFields.get(0).getAsJsonObject().get("required").getAsBoolean());
+        assertTrue(sentFields.get(1).getAsJsonObject().has("required"));
+        assertFalse(sentFields.get(1).getAsJsonObject().get("required").getAsBoolean());
+        assertFalse(sentFields.get(2).getAsJsonObject().has("required"));
     }
 }

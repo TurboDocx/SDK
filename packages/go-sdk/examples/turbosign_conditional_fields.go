@@ -73,7 +73,7 @@ func main() {
 				Metadata: &turbodocx.FieldMetadata{Conditional: &turbodocx.FieldConditional{ControllingFieldKey: "consent", Operator: "is_not_checked", Action: "show"}}},
 
 			// A normal required signature with no rule -- always visible, always required.
-			{Type: "signature", RecipientEmail: "john@example.com", Page: 1, X: 120, Y: 620, Width: 200, Height: 50, Required: true},
+			{Type: "signature", RecipientEmail: "john@example.com", Page: 1, X: 120, Y: 620, Width: 200, Height: 50, Required: turbodocx.BoolPtr(true)},
 		},
 	})
 	if err != nil {

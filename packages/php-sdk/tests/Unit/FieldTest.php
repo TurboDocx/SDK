@@ -150,6 +150,27 @@ final class FieldTest extends TestCase
         $this->assertArrayNotHasKey('metadata', $array);
     }
 
+    public function testToArraySendsRequiredFalseForOptionalField(): void
+    {
+        // An optional field must send required:false; the API treats an omitted key as required.
+        $field = new Field(
+            type: SignatureFieldType::TEXT,
+            recipientEmail: 'john@example.com',
+            page: 1,
+            x: 100,
+            y: 600,
+            width: 200,
+            height: 30,
+            required: false
+        );
+
+        $array = $field->toArray();
+
+        $this->assertArrayHasKey('required', $array);
+        $this->assertFalse($array['required']);
+        $this->assertStringContainsString('"required":false', (string) json_encode($array));
+    }
+
     public function testToArrayWithControllingCheckboxFieldKey(): void
     {
         // A controlling checkbox carries a stable fieldKey that dependents reference.

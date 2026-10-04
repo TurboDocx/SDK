@@ -45,6 +45,10 @@ module TurboDocxSdk
       # @param request [Hash] :file or :fileLink or :deliverableId or :templateId,
       #   :recipients (Array), :fields (Array), :documentName, :documentDescription,
       #   :senderEmail, :senderName, :ccEmails
+      #   Each field hash may set "required" (Boolean): whether the signer must complete the
+      #   field. Default true (omit the key). Set false to make the field optional for the
+      #   signer. Signature and initial fields are always required: the API rejects
+      #   "required" => false on them with a 400.
       # @return [Hash] document info with review URL
       # @raise [ValidationError] on invalid request data
       # @raise [AuthenticationError] on invalid credentials

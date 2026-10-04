@@ -215,6 +215,30 @@ RSpec.describe TurboDocxSdk::TurboSign do
       )
     end
 
+    it "sends required:false for an optional field and omits required when unset" do
+      captured_data = nil
+      allow(mock_client).to receive(:post) do |_path, data|
+        captured_data = data
+        { "success" => true, "documentId" => "doc-optional", "status" => "review_ready", "message" => "Document prepared for review" }
+      end
+
+      described_class.create_signature_review_link(
+        "fileLink" => "https://example.com/doc.pdf",
+        "recipients" => [{ "name" => "John Doe", "email" => "john@example.com", "signingOrder" => 1 }],
+        "fields" => [
+          { "type" => "signature", "recipientEmail" => "john@example.com", "page" => 1, "x" => 100, "y" => 500, "width" => 200, "height" => 50, "required" => true },
+          { "type" => "text", "recipientEmail" => "john@example.com", "page" => 1, "x" => 100, "y" => 600, "width" => 200, "height" => 30, "required" => false },
+          { "type" => "date", "recipientEmail" => "john@example.com", "page" => 1, "x" => 100, "y" => 650, "width" => 120, "height" => 30 }
+        ]
+      )
+
+      sent_fields = JSON.parse(captured_data["fields"])
+      expect(sent_fields[0]["required"]).to be(true)
+      expect(sent_fields[1]).to have_key("required")
+      expect(sent_fields[1]["required"]).to be(false)
+      expect(sent_fields[2]).not_to have_key("required")
+    end
+
     it "prepares document for review with deliverable ID" do
       mock_response = {
         "success" => true,

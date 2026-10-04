@@ -38,6 +38,7 @@ public class Field {
     @SerializedName("isReadonly")
     private final Boolean isReadonly;
 
+    /** Whether the signer must complete the field. Null (default) omits the key, so the API treats it as required. */
     @SerializedName("required")
     private final Boolean required;
 
@@ -303,6 +304,12 @@ public class Field {
             return this;
         }
 
+        /**
+         * Whether the signer must complete the field. Default true: leave unset (null) and the key is
+         * omitted, which the API treats as required. Pass {@code false} to make the field optional for
+         * the signer. Signature and initial fields are always required: the API rejects {@code false}
+         * on them with a 400.
+         */
         public Builder required(Boolean required) {
             this.required = required;
             return this;
