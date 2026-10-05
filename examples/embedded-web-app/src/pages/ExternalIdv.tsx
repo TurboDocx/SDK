@@ -1,23 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, FlaskConical, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CheckCircle2, FlaskConical } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { IdentityCheck, type IdentityCheckResult } from "@/components/IdentityCheck";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  startExternalIdv,
-  type SimulatedAssertion,
-  type SimulatedIdvMethod,
-} from "@/lib/turbosign";
+import { startExternalIdv, type SimulatedAssertion } from "@/lib/turbosign";
 
 // In production, pin this to your known TurboSign origin. Left null here, the listener instead pins to
 // the origin of the URL it framed, so a forged `turbosign:completed` from another frame/extension/ad
@@ -25,28 +14,6 @@ import {
 const TURBOSIGN_ORIGIN: string | null = null;
 
 type Phase = "form" | "signing" | "done";
-
-// The verification methods the (simulated) vendor can report, with friendly labels for the dropdown.
-const METHODS: Array<{ value: SimulatedIdvMethod; label: string }> = [
-  { value: "id_document", label: "ID document" },
-  { value: "id_document_liveness", label: "ID document + liveness selfie" },
-  { value: "kba", label: "Knowledge-based (KBA)" },
-  { value: "database", label: "Authoritative database lookup" },
-  { value: "sso", label: "Single sign-on (SSO)" },
-  { value: "other", label: "Other (describe)" },
-];
-
-// A short menu of assurance levels; "" is the "not specified" default so the field stays optional.
-const ASSURANCE_LEVELS: Array<{ value: string; label: string }> = [
-  { value: "", label: "Not specified" },
-  { value: "ial2_aal2", label: "IAL2 / AAL2" },
-  { value: "eidas_substantial", label: "eIDAS Substantial" },
-  { value: "eidas_high", label: "eIDAS High" },
-];
-
-// Native <select> styled to match the shadcn Input, so the dialog reads as one component set.
-const selectClassName =
-  "flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm";
 
 // A prominent, always-visible banner so it is never ambiguous that this path fakes the identity check.
 function SimulationBanner() {
@@ -74,13 +41,8 @@ export function ExternalIdv() {
   const [assertion, setAssertion] = useState<SimulatedAssertion | null>(null);
   const [status, setStatus] = useState("");
 
-  // The Identity Verification Simulator dialog and the fields it collects.
+  // The simulated identity check and whether its result is being sent to the server.
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [verifiedName, setVerifiedName] = useState("");
-  const [subjectEmail, setSubjectEmail] = useState("");
-  const [method, setMethod] = useState<SimulatedIdvMethod>("id_document");
-  const [methodDetail, setMethodDetail] = useState("");
-  const [assuranceLevel, setAssuranceLevel] = useState("");
   const [verifying, setVerifying] = useState(false);
 
   // The origin of the framed signing URL — the only origin we accept a completion from.
@@ -99,36 +61,23 @@ export function ExternalIdv() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  // The asserted email differs from the signer's, so we will record an explicit override.
-  const emailMismatch = useMemo(() => {
-    const asserted = subjectEmail.trim().toLowerCase();
-    return asserted.length > 0 && asserted !== email.trim().toLowerCase();
-  }, [subjectEmail, email]);
-
-  // "Other" requires a free-text description before the operator can run the check.
-  const canRun = method !== "other" || methodDetail.trim().length > 0;
-
   // Step 1: open the simulator once we have a signer, prefilling its fields from the tab.
   function openSimulator(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
-    setVerifiedName(name.trim());
-    setSubjectEmail(email.trim());
-    setMethod("id_document");
-    setMethodDetail("");
-    setAssuranceLevel("");
     setStatus("");
     setDialogOpen(true);
   }
 
   // Step 2: "run" the simulated verification, then pass the collected result back to the BFF.
-  async function runVerification() {
-    if (!canRun) return;
+  async function runVerification(result: IdentityCheckResult) {
+    const { verifiedName, subjectEmail, method, methodDetail, assuranceLevel } = result;
     setVerifying(true);
-    // Stand in for a real vendor's redirect/embedded verification flow.
-    await new Promise((r) => setTimeout(r, 900));
     try {
-      const overrideEmailMatching = emailMismatch;
+      // The asserted email differs from the signer's, so record an explicit override.
+      const overrideEmailMatching =
+        subjectEmail.trim().length > 0 &&
+        subjectEmail.trim().toLowerCase() !== email.trim().toLowerCase();
       const { url, simulatedAssertion } = await startExternalIdv({
         name: name.trim(),
         email: email.trim(),
@@ -267,100 +216,15 @@ export function ExternalIdv() {
         {status && <p className="text-sm text-muted-foreground">{status}</p>}
       </CardContent>
 
-      {/* The simulator stands in for a real IDV vendor's redirect/embedded verification flow. */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => !verifying && setDialogOpen(open)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShieldCheck className="size-5" />
-              Identity Verification Simulator
-            </DialogTitle>
-            <DialogDescription>
-              This is a SIMULATION. It stands in for a real identity verification vendor's redirect or
-              embedded flow. Fill in what the vendor would have verified, then run the check. Nothing
-              here contacts a real vendor.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="idv-verified-name">Verified name</Label>
-              <Input
-                id="idv-verified-name"
-                value={verifiedName}
-                onChange={(e) => setVerifiedName(e.target.value)}
-                placeholder="Alex Rivera"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="idv-subject-email">Verified email</Label>
-              <Input
-                id="idv-subject-email"
-                type="email"
-                value={subjectEmail}
-                onChange={(e) => setSubjectEmail(e.target.value)}
-                placeholder="you@example.com"
-              />
-              {emailMismatch && (
-                <p className="text-xs text-amber-700 dark:text-amber-400">
-                  This email differs from the signer; the override will be recorded on the audit trail.
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="idv-method">Verification method</Label>
-              <select
-                id="idv-method"
-                className={selectClassName}
-                value={method}
-                onChange={(e) => setMethod(e.target.value as SimulatedIdvMethod)}
-              >
-                {METHODS.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {method === "other" && (
-              <div className="space-y-2">
-                <Label htmlFor="idv-method-detail">Describe the method</Label>
-                <Input
-                  id="idv-method-detail"
-                  value={methodDetail}
-                  onChange={(e) => setMethodDetail(e.target.value)}
-                  placeholder="e.g. notary video session"
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="idv-assurance">Assurance level</Label>
-              <select
-                id="idv-assurance"
-                className={selectClassName}
-                value={assuranceLevel}
-                onChange={(e) => setAssuranceLevel(e.target.value)}
-              >
-                {ASSURANCE_LEVELS.map((a) => (
-                  <option key={a.value} value={a.value}>
-                    {a.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" onClick={runVerification} disabled={verifying || !canRun}>
-              {verifying ? "Verifying…" : "Run simulated verification"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* The identity check stands in for a verification vendor's hosted flow (simulated). */}
+      <IdentityCheck
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        signerName={name.trim()}
+        signerEmail={email.trim()}
+        busy={verifying}
+        onComplete={runVerification}
+      />
     </Card>
   );
 }
