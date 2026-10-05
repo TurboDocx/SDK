@@ -346,6 +346,54 @@ func TestTurboSignClient_SendSignatureConditionalMetadata(t *testing.T) {
 	assert.Equal(t, ConditionalActionShow, sentFields[1].Metadata.Conditional.Action)
 }
 
+func TestTurboSignClient_SendSignatureOptionalFieldRequired(t *testing.T) {
+	// Required is a *bool so an explicit false reaches the API (optional field) while nil
+	// omits the key (the API default: required).
+	var capturedFields string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]string
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		capturedFields = body["fields"]
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":    true,
+			"documentId": "doc-optional",
+			"status":     "UNDER_REVIEW",
+			"message":    "Document sent for signing",
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClientWithConfig(ClientConfig{
+		APIKey:      "test-api-key",
+		OrgID:       "test-org-id",
+		BaseURL:     server.URL,
+		SenderEmail: "test@example.com",
+	})
+
+	_, err := client.TurboSign.SendSignature(context.Background(), &SendSignatureRequest{
+		FileLink: "https://example.com/doc.pdf",
+		Recipients: []Recipient{
+			{Name: "John Doe", Email: "john@example.com", SigningOrder: 1},
+		},
+		Fields: []Field{
+			{Type: "signature", RecipientEmail: "john@example.com", Page: 1, X: 100, Y: 500, Width: 200, Height: 50, Required: BoolPtr(true)},
+			{Type: "text", RecipientEmail: "john@example.com", Page: 1, X: 100, Y: 600, Width: 200, Height: 30, Required: BoolPtr(false)},
+			{Type: "date", RecipientEmail: "john@example.com", Page: 1, X: 100, Y: 650, Width: 120, Height: 30},
+		},
+	})
+	require.NoError(t, err)
+
+	// Decode into maps: a typed decode cannot tell an absent key from nil.
+	var sentFields []map[string]interface{}
+	require.NoError(t, json.Unmarshal([]byte(capturedFields), &sentFields))
+	require.Len(t, sentFields, 3)
+	assert.Equal(t, true, sentFields[0]["required"])
+	assert.Equal(t, false, sentFields[1]["required"])
+	assert.NotContains(t, sentFields[2], "required")
+}
+
 func TestTurboSignClient_GetStatus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/turbosign/documents/doc-123/status", r.URL.Path)

@@ -736,7 +736,7 @@ new Field(
     width: 400,
     height: 100,
     isMultiline: true,        // Allow multiple lines
-    required: true,           // Field is required
+    required: true,           // Default true; false makes it optional (not allowed on signature/initial)
     backgroundColor: '#f0f0f0' // Background color
 )
 
@@ -1714,6 +1714,9 @@ The API also returns more specific codes, passed through unchanged:
 |:-----|:-------|:--------|
 | `SenderEmailRequired` | 400 | No sender email resolvable. TurboSign: set `senderEmail` on the request. TurboQuote: configure one on the org quote template (Quote Settings). |
 | `SenderNameRequired` | 400 | No sender name resolvable — the API key has no usable name. |
+| `OptionalNotSupported` | 400 | A `signature` or `initial` field was sent with `required: false`. The signer must always complete those two types. |
+| `InvalidFieldRequired` | 400 | A field's `required` is not a boolean. Send `true`, `false`, or leave it out (leaving it out means required). |
+| `NoEditableFieldsForRecipient` | 400 | A recipient has no field they must fill in: all of their fields are read-only or optional. Give each recipient at least one required, editable field. |
 | `QuoteHasNoLineItems` | 400 | The quote has no line items. Add at least one before sending. |
 | `QuoteExpired` | 400 | The quote is past its `validUntil` date. |
 | `QuoteValidUntilRequired` | 400 | The quote has no `validUntil` date set. |

@@ -174,6 +174,10 @@ class TurboSign:
                       "controllingFieldKey": "request_changes",  # must equal the checkbox's fieldKey
                       "operator": "is_checked" | "is_not_checked",
                       "action": "show" | "unlock"}}}  # show = hidden until met; unlock = read-only until met
+                Optional per-field "required" (bool): whether the signer must complete the
+                field. Default True (omit the key). Set False to make the field optional for
+                the signer. Signature and initial fields are always required: the API rejects
+                "required": False on them with a 400.
                 Field dicts are passed through verbatim, so keys stay camelCase.
             file: PDF file content as bytes
             file_name: Original filename
@@ -328,6 +332,10 @@ class TurboSign:
                       "controllingFieldKey": "request_changes",  # must equal the checkbox's fieldKey
                       "operator": "is_checked" | "is_not_checked",
                       "action": "show" | "unlock"}}}  # show = hidden until met; unlock = read-only until met
+                Optional per-field "required" (bool): whether the signer must complete the
+                field. Default True (omit the key). Set False to make the field optional for
+                the signer. Signature and initial fields are always required: the API rejects
+                "required": False on them with a 400.
                 Field dicts are passed through verbatim, so keys stay camelCase.
             file: PDF file content as bytes
             file_name: Original filename

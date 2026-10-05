@@ -471,6 +471,43 @@ describe("TurboSign Module", () => {
         action: "show",
       });
     });
+
+    it("should send required:false for an optional field and omit required when unset", async () => {
+      const mockResponse = {
+        success: true,
+        documentId: "doc-optional",
+        status: "UNDER_REVIEW",
+        recipients: [
+          { id: "r-1", name: "John Doe", email: "john@example.com", metadata: {} },
+        ],
+        message: "Document sent for signing",
+      };
+
+      const fields: Field[] = [
+        { type: "signature", recipientEmail: "john@example.com", page: 1, x: 100, y: 500, width: 200, height: 50, required: true },
+        { type: "text", recipientEmail: "john@example.com", page: 1, x: 100, y: 600, width: 200, height: 30, required: false },
+        { type: "date", recipientEmail: "john@example.com", page: 1, x: 100, y: 650, width: 120, height: 30 },
+      ];
+
+      MockedHttpClient.prototype.post = jest
+        .fn()
+        .mockResolvedValue(mockResponse);
+      TurboSign.configure({ apiKey: "test-key" });
+
+      await TurboSign.sendSignature({
+        fileLink: "https://example.com/doc.pdf",
+        recipients: mockRecipients,
+        fields,
+      });
+
+      const [, formData] = (MockedHttpClient.prototype.post as jest.Mock).mock
+        .calls[0];
+      const sentFields = JSON.parse(formData.fields);
+
+      expect(sentFields[0].required).toBe(true);
+      expect(sentFields[1].required).toBe(false);
+      expect(sentFields[2]).not.toHaveProperty("required");
+    });
   });
 
   describe("getStatus", () => {

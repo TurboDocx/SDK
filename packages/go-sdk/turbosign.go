@@ -65,7 +65,7 @@ type Field struct {
 	DefaultValue    string          `json:"defaultValue,omitempty"`
 	IsMultiline     bool            `json:"isMultiline,omitempty"`
 	IsReadonly      bool            `json:"isReadonly,omitempty"`
-	Required        bool            `json:"required,omitempty"`
+	Required        *bool           `json:"required,omitempty"` // nil (default) = required; BoolPtr(false) = optional for the signer (rejected on signature/initial fields)
 	BackgroundColor string          `json:"backgroundColor,omitempty"`
 	Template        *TemplateAnchor `json:"template,omitempty"`
 	// Metadata carries optional conditional (IF/THEN) logic — a FieldKey on a controlling

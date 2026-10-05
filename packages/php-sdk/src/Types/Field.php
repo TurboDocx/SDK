@@ -21,7 +21,9 @@ final class Field
      * @param string|null $defaultValue Default value for the field (for checkbox: "true" or "false")
      * @param bool $isMultiline Whether this is a multiline text field
      * @param bool $isReadonly Whether this field is read-only (pre-filled, non-editable)
-     * @param bool $required Whether this field is required
+     * @param bool|null $required Whether the signer must complete the field. Default true (null omits the key and the API treats
+     *                            the field as required). Pass false to make it optional for the signer. Signature and initial
+     *                            fields are always required: the API rejects false on them with a 400.
      * @param string|null $backgroundColor Background color (hex, rgb, or named colors)
      * @param FieldMetadata|null $metadata Conditional (IF/THEN) logic — a fieldKey on a controlling checkbox, or a conditional rule on a dependent field
      */
@@ -37,7 +39,7 @@ final class Field
         public ?string $defaultValue = null,
         public bool $isMultiline = false,
         public bool $isReadonly = false,
-        public bool $required = false,
+        public ?bool $required = null,
         public ?string $backgroundColor = null,
         public ?FieldMetadata $metadata = null,
     ) {}
@@ -86,8 +88,8 @@ final class Field
         if ($this->isReadonly) {
             $data['isReadonly'] = true;
         }
-        if ($this->required) {
-            $data['required'] = true;
+        if ($this->required !== null) {
+            $data['required'] = $this->required;
         }
         if ($this->backgroundColor !== null) {
             $data['backgroundColor'] = $this->backgroundColor;

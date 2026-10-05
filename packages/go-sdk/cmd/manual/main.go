@@ -114,7 +114,7 @@ func testSendSignature(ctx context.Context, pdfBytes []byte) (string, error) {
 				Type:           "text",
 				DefaultValue:   "Sample Text",
 				IsMultiline:    true,
-				Required:       true,
+				Required:       turbodocx.BoolPtr(true),
 				Template: &turbodocx.TemplateAnchor{
 					Anchor:        "{placeholder}",
 					Placement:     "replace",

@@ -35,6 +35,13 @@ eight per-document reminder/expiration fields. Two rules every SDK follows:
    types specifically so "unset" stays distinguishable from a deliberate zero value; a truthiness
    check would drop them and silently fall back to the org default.
 
+**Field `required`:** a field is required unless it says otherwise. Every SDK keeps three states
+apart: unset (the key is left out, so the field is required), `true`, and `false` (optional for the
+signer). Go uses `*bool`, PHP `?bool` and Java a boxed `Boolean` for this; JS, Python and Ruby pass
+the field through as written. Never send the key on a truthiness check, which drops `false` and
+silently makes an optional field required. The API rejects `required: false` on `signature` and
+`initial` fields (`OptionalNotSupported`); the SDKs leave that check to the API.
+
 **Configure note:** Go and Java do NOT expose a named `configure()` — Go configures via per-module
 constructors (`NewTurboSignClient`, `NewQuoteClient`, `NewWebhooksClient`, …) and Java via
 constructors/builders (`new TurboSign(httpClient)`, `TurboQuoteClient.builder()…build()`). That is

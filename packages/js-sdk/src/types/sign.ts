@@ -366,7 +366,11 @@ export interface Field {
   isMultiline?: boolean;
   /** Whether this field is read-only (pre-filled, non-editable) */
   isReadonly?: boolean;
-  /** Whether this field is required */
+  /**
+   * Whether the signer must complete the field. Default true (omit to keep it required).
+   * Set false to make the field optional for the signer. Signature and initial fields are
+   * always required: the API rejects `required: false` on them with a 400.
+   */
   required?: boolean;
   /** Background color (hex, rgb, or named colors) */
   backgroundColor?: string;

@@ -150,6 +150,25 @@ final class FieldTest extends TestCase
         $this->assertArrayNotHasKey('metadata', $array);
     }
 
+    public function testFieldsPayloadSendsRequiredFalseForOptionalField(): void
+    {
+        // An optional field must send required:false; the API treats an omitted key as required.
+        $fields = [
+            new Field(type: SignatureFieldType::SIGNATURE, recipientEmail: 'john@example.com', page: 1, x: 100, y: 500, width: 200, height: 50, required: true),
+            new Field(type: SignatureFieldType::TEXT, recipientEmail: 'john@example.com', page: 1, x: 100, y: 600, width: 200, height: 30, required: false),
+            new Field(type: SignatureFieldType::DATE, recipientEmail: 'john@example.com', page: 1, x: 100, y: 650, width: 120, height: 30),
+        ];
+
+        // Encoded exactly as TurboSign builds the "fields" request part.
+        $fieldsJson = (string) json_encode(array_map(fn($f) => $f->toArray(), $fields));
+        $sentFields = json_decode($fieldsJson, true);
+
+        $this->assertTrue($sentFields[0]['required']);
+        $this->assertArrayHasKey('required', $sentFields[1]);
+        $this->assertFalse($sentFields[1]['required']);
+        $this->assertArrayNotHasKey('required', $sentFields[2]);
+    }
+
     public function testToArrayWithControllingCheckboxFieldKey(): void
     {
         // A controlling checkbox carries a stable fieldKey that dependents reference.
