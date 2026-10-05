@@ -182,7 +182,7 @@ export function IdentityCheck({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !busy && !capturing && onOpenChange(o)}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md [&>button:last-child]:text-white/80 [&>button:last-child]:hover:text-white">
         <div className="px-6 pt-5 pb-4 text-white" style={{ background: ink }}>
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="flex items-center gap-2 text-base font-semibold">
