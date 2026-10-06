@@ -241,6 +241,8 @@ reminder cadence — it works even when reminders are disabled or the cap is spe
 consume that cap, and only emails signers at the CURRENT signing order. Omit the recipient ids
 to remind everyone eligible; do **not** pass an empty array, which the API rejects.
 
+Recipients verified with `external_idv` or `override` sign only through a single-use `create_signing_url` link and are never emailed: they come back as `skipped_requires_single_use_url`. Naming only such recipients raises `TurboDocxSdk::ConflictError` (409) with code `RecipientRequiresSingleUseUrl`.
+
 ```ruby
 result = TurboDocxSdk::TurboSign.send_reminder("doc-uuid")
 
@@ -352,6 +354,8 @@ TurboDocxSdk::TurboSign.void_document("doc-uuid", "Contract terms changed")
 #### `resend_email(document_id, recipient_ids)`
 
 Resend signature emails to specific recipients.
+
+Recipients verified with `external_idv` or `override` are skipped (they sign only through a single-use `create_signing_url` link), and naming only such recipients raises `TurboDocxSdk::ConflictError` (409) with code `RecipientRequiresSingleUseUrl`.
 
 ```ruby
 TurboDocxSdk::TurboSign.resend_email("doc-uuid", ["recipient-uuid-1"])

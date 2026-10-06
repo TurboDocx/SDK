@@ -90,7 +90,12 @@ module TurboDocxSdk
       # +identityVerification+ -- { mode: "otp", channel: "email"|"sms" },
       # { mode: "external_idv", provider:, maxAgeMinutes: 5..10080 } or
       # { mode: "override", overrideIdentityVerification: true, reason: }. Omit
-      # +identityVerification+ to take the org's default channel.
+      # +identityVerification+ to take the org's default channel. { mode: "otp" } without a channel
+      # takes the org's default channel, or email when that default is "none"; on an org with
+      # embedded signing off it raises AuthorizationError (403), code EmbeddedSigningNotEnabled.
+      # external_idv and override recipients sign only through a single-use +create_signing_url+
+      # link and are never sent signing, reminder or resend emails. A blank or whitespace-only
+      # +externalId+ counts as absent (stored as null).
       #
       # @param request [Hash] same as create_signature_review_link, plus optional :sendEmail
       # @return [Hash] document info with confirmation
@@ -352,10 +357,17 @@ module TurboDocxSdk
 
       # Resend signature request emails to specific recipients.
       #
+      # Recipients whose identity mode is external_idv or override sign only through a single-use
+      # +create_signing_url+ link, so they are never emailed. They are skipped, and recipientCount
+      # counts only the recipients actually emailed.
+      #
       # @param document_id [String]
       # @param recipient_ids [Array<String>]
       # @return [Hash] resend confirmation
       # @raise [NotFoundError] if the document does not exist
+      # @raise [ConflictError] 409 with code RecipientRequiresSingleUseUrl when every named
+      #   recipient signs only through a single-use URL, so no email can be sent. Mint one with
+      #   +create_signing_url+ instead.
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
       def resend_email(document_id, recipient_ids)
@@ -373,6 +385,10 @@ module TurboDocxSdk
       # one who has already signed) is reported back as skipped rather than silently dropped, so
       # the caller can tell that nobody was emailed.
       #
+      # Recipients whose identity mode is external_idv or override sign only through a single-use
+      # +create_signing_url+ link, so they are never emailed. They come back as
+      # "skipped_requires_single_use_url".
+      #
       # @param document_id [String]
       # @param recipient_ids [Array<String>, nil] optional subset to remind. Omit to remind every
       #   eligible signer. When supplied the request is all-or-nothing: if any id is not a
@@ -380,6 +396,9 @@ module TurboDocxSdk
       # @return [Hash] :results, one entry per recipient considered, each with recipientId and
       #   status (e.g. "sent", "skipped_wrong_order")
       # @raise [NotFoundError] if the document does not exist
+      # @raise [ConflictError] 409 with code RecipientRequiresSingleUseUrl when every named
+      #   recipient signs only through a single-use URL, so no reminder can be sent. Mint one with
+      #   +create_signing_url+ instead.
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
       def send_reminder(document_id, recipient_ids = nil)
