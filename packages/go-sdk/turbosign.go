@@ -33,7 +33,8 @@ type Recipient struct {
 	Phone string `json:"phone,omitempty"`
 	// ExternalID is your own identifier for this signer (e.g. an Airtable record id), unique
 	// within the document. Lets you request a signing URL by your key instead of storing
-	// TurboDocx's recipient id.
+	// TurboDocx's recipient id. A whitespace-only value counts as absent (stored as null, so it
+	// never collides with another blank and cannot be used to look the recipient up).
 	ExternalID string `json:"externalId,omitempty"`
 	// IdentityVerification configures identity verification for embedded signing. Leave nil to
 	// take the org's default (EmbeddedSigningSettings.DefaultChannel): no verification when that is
@@ -291,7 +292,9 @@ type DocumentStatusResponse struct {
 // ReminderResult is the outcome for one recipient of a reminder request.
 type ReminderResult struct {
 	RecipientID string `json:"recipientId"`
-	// Status is e.g. "sent", "skipped_wrong_order", "skipped_completed".
+	// Status is e.g. "sent", "skipped_wrong_order", "skipped_completed", or
+	// "skipped_requires_single_use_url" for an external_idv or override recipient, who signs only
+	// through a single-use CreateSigningURL link and is never emailed.
 	Status string `json:"status"`
 	// ReminderCount is the count after the send; only meaningful when Status is "sent".
 	ReminderCount int `json:"reminderCount,omitempty"`
@@ -691,7 +694,13 @@ func (c *TurboSignClient) VoidDocument(ctx context.Context, documentID string, r
 	return &response, nil
 }
 
-// ResendEmail resends signature request email to recipients
+// ResendEmail resends signature request email to recipients.
+//
+// Recipients whose identity mode is external_idv or override sign only through a single-use
+// CreateSigningURL link, so they are never emailed. They are skipped, and RecipientCount counts
+// only the recipients actually emailed. When every named recipient is such a recipient, nothing
+// can be sent and the call returns a *ConflictError (409) with Code "RecipientRequiresSingleUseUrl";
+// mint a link with CreateSigningURL instead.
 func (c *TurboSignClient) ResendEmail(ctx context.Context, documentID string, recipientIDs []string) (*ResendEmailResponse, error) {
 	var response ResendEmailResponse
 
@@ -764,6 +773,11 @@ func applyScheduleOverrides(formData map[string]string, schedule SignatureSchedu
 // Pass nil (or an empty slice) for recipientIDs to remind every eligible signer. When ids are
 // supplied the request is all-or-nothing: if any is not a current-order pending signer the API
 // rejects the whole call and sends nothing.
+//
+// Recipients whose identity mode is external_idv or override sign only through a single-use
+// CreateSigningURL link, so they are never emailed and come back as
+// "skipped_requires_single_use_url". Naming only such recipients returns a *ConflictError (409)
+// with Code "RecipientRequiresSingleUseUrl"; mint a link with CreateSigningURL instead.
 func (c *TurboSignClient) SendReminder(ctx context.Context, documentID string, recipientIDs []string) (*SendReminderResponse, error) {
 	var response SendReminderResponse
 

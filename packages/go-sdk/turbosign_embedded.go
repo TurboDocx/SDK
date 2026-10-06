@@ -16,15 +16,22 @@ import (
 // alongside each other and are populated per mode:
 //
 //   - Mode "otp": TurboSign emails or texts a one-time passcode. Channel is "email" or "sms"
-//     (SMS requires the recipient's Phone in E.164).
+//     (SMS requires the recipient's Phone in E.164). An empty Channel takes the org's default
+//     channel, or "email" when that default is "none", so Mode "otp" always verifies. On an org
+//     with embedded signing off it returns a *AuthorizationError (403) with Code
+//     "EmbeddedSigningNotEnabled".
 //   - Mode "external_idv": your own identity provider verifies the signer. Set Provider (and
 //     optionally MaxAgeMinutes); pass the assertion to CreateSigningURL via IdentityAssertion.
 //   - Mode "override": skip identity verification entirely (development/testing; your org admin
 //     must enable it). Set OverrideIdentityVerification=true and a non-empty Reason.
+//
+// external_idv and override recipients sign only through a single-use CreateSigningURL link.
+// TurboSign never sends them signing, reminder or resend emails.
 type IdentityVerification struct {
 	// Mode is "otp", "external_idv" or "override".
 	Mode string `json:"mode"`
-	// Channel is "email" or "sms" — only for Mode "otp".
+	// Channel is "email" or "sms", only for Mode "otp". Empty takes the org's default channel, or
+	// "email" when that default is "none".
 	Channel string `json:"channel,omitempty"`
 	// Provider is the identity provider name — only for Mode "external_idv".
 	Provider string `json:"provider,omitempty"`
