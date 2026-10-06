@@ -757,11 +757,18 @@ final class TurboSign
      * who has already signed) is reported back as skipped rather than silently dropped, so the
      * caller can tell that nobody was emailed.
      *
+     * Recipients whose identity mode is external_idv or override sign only through a single-use
+     * {@see TurboSign::createSigningUrl()} link, so they are never emailed. They come back as
+     * `skipped_requires_single_use_url`.
+     *
      * @param string $documentId ID of the document
      * @param array<string>|null $recipientIds Optional subset to remind. Omit to remind every
      *     eligible signer. When supplied the request is all-or-nothing: if any id is not a
      *     current-order pending signer the API rejects the whole call and sends nothing.
      * @return array<string, mixed> Results, one entry per recipient considered
+     * @throws \TurboDocx\Exceptions\ConflictException 409 with code `RecipientRequiresSingleUseUrl` when
+     *     every named recipient signs only through a single-use URL, so no reminder can be sent.
+     *     Mint one with {@see TurboSign::createSigningUrl()} instead.
      */
     public static function sendReminder(string $documentId, ?array $recipientIds = null): array
     {
@@ -781,9 +788,16 @@ final class TurboSign
     /**
      * Resend signature request email to recipients
      *
+     * Recipients whose identity mode is external_idv or override sign only through a single-use
+     * {@see TurboSign::createSigningUrl()} link, so they are never emailed. They are skipped, and
+     * the recipient count covers only the recipients actually emailed.
+     *
      * @param string $documentId ID of the document
      * @param array<string> $recipientIds Array of recipient IDs to resend emails to (empty array = all recipients)
      * @return ResendEmailResponse
+     * @throws \TurboDocx\Exceptions\ConflictException 409 with code `RecipientRequiresSingleUseUrl` when
+     *     every named recipient signs only through a single-use URL, so no email can be sent.
+     *     Mint one with {@see TurboSign::createSigningUrl()} instead.
      *
      * @example
      * ```php

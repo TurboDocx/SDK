@@ -19,9 +19,13 @@ final class Recipient
      *     verification uses SMS OTP.
      * @param string|null $externalId Your own identifier for this signer (unique within the
      *     document). Lets you request a signing URL by your key instead of storing TurboDocx's id.
+     *     A blank or whitespace-only value counts as absent (stored as null, so it never collides
+     *     with another blank and cannot be used to look the recipient up).
      * @param IdentityVerification|null $identityVerification Identity verification for embedded
      *     signing. Omit it to take the org's default channel (EmbeddedSigningSettings::$defaultChannel):
      *     no verification when that is 'none', otherwise a passcode on the default channel.
+     *     external_idv and override recipients sign only through a single-use createSigningUrl()
+     *     link and are never sent signing, reminder or resend emails.
      * @throws ValidationException If email is invalid or signingOrder < 1
      */
     public function __construct(

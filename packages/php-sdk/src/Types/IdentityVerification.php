@@ -46,6 +46,10 @@ final class IdentityVerification
      * Require a one-time passcode before signing.
      *
      * @param string $channel 'email' (default) or 'sms'. SMS requires the recipient to carry a phone.
+     *     This SDK always sends the channel. (The API itself treats an `otp` request without a
+     *     channel as the org's default channel, or email when that default is 'none'.) On an org
+     *     with embedded signing off the request fails with AuthorizationException (403), code
+     *     `EmbeddedSigningNotEnabled`.
      */
     public static function otp(string $channel = 'email'): self
     {
