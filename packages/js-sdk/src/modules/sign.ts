@@ -556,7 +556,7 @@ export class TurboSign {
    * ```typescript
    * // OTP or override recipient:
    * const { url, pendingChecks } = await TurboSign.createSigningUrl(documentId, {
-   *   externalId: 'baers_customer_123',
+   *   externalId: 'customer_123',
    * });
    *
    * // external_idv recipient — pass the assertion from your own identity provider:

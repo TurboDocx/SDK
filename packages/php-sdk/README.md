@@ -425,11 +425,8 @@ Resend signature request emails to specific recipients (or all).
 Recipients verified with `external_idv` or `override` are skipped (they sign only through a single-use `createSigningUrl()` link), and naming only such recipients throws `ConflictException` (409) with code `RecipientRequiresSingleUseUrl`.
 
 ```php
-// Resend to specific recipients
+// Resend to specific recipients (at least one ID is required; an empty array is rejected)
 $result = TurboSign::resend('doc-uuid-here', ['recipient-id-1', 'recipient-id-2']);
-
-// Resend to all recipients
-$result = TurboSign::resend('doc-uuid-here', []);
 
 echo "Message: {$result->message}\n";
 ```

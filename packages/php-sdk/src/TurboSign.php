@@ -372,7 +372,7 @@ final class TurboSign
      * @example
      * ```php
      * $link = TurboSign::createSigningUrl($documentId, new CreateSigningUrlRequest(
-     *     externalId: 'baers_customer_123'
+     *     externalId: 'customer_123'
      * ));
      * echo $link->url;
      * ```
@@ -793,7 +793,7 @@ final class TurboSign
      * the recipient count covers only the recipients actually emailed.
      *
      * @param string $documentId ID of the document
-     * @param array<string> $recipientIds Array of recipient IDs to resend emails to (empty array = all recipients)
+     * @param array<string> $recipientIds Array of recipient IDs to resend emails to (at least one; an empty array is rejected with a 400)
      * @return ResendEmailResponse
      * @throws \TurboDocx\Exceptions\ConflictException 409 with code `RecipientRequiresSingleUseUrl` when
      *     every named recipient signs only through a single-use URL, so no email can be sent.
@@ -801,11 +801,8 @@ final class TurboSign
      *
      * @example
      * ```php
-     * // Resend to specific recipients
+     * // Resend to specific recipients (at least one ID is required)
      * TurboSign::resend($documentId, [$recipientId1, $recipientId2]);
-     *
-     * // Resend to all recipients
-     * TurboSign::resend($documentId, []);
      * ```
      */
     public static function resend(
