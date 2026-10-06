@@ -8,7 +8,7 @@ The TurboSign embedded-signing widget. It frames a per-recipient `embedUrl` (fro
 Ships three things:
 
 1. **`handleTurboSignMessage`** - a pure, framework-agnostic function that decides what a
-   `postMessage` from the signing page means (origin pinning + dispatch). This is the load-bearing
+   `postMessage` from the signing page means (origin pinning, optional source pinning + dispatch). This is the load-bearing
    logic; the two components below are thin shells over it.
 2. **`<turbosign-form>`** - a custom element (web component). No build step needed to use it: load the
    built ES module with a `<script type="module">` and drop the tag in your HTML.
@@ -19,13 +19,27 @@ Ships three things:
 
 The signing page posts its completion message to the parent, targeting your origin when it can resolve
 it and falling back to `targetOrigin: '*'` when it cannot. Your app must therefore verify `event.origin`
-before trusting the message. Every entry
-point in this package takes an `origin` / `expectedOrigin` and ignores messages from anywhere else.
+before trusting the message. Every entry point in this package takes an `origin` / `expectedOrigin` and
+ignores messages from anywhere else.
 
-If you omit the origin (leave it `null`, `undefined`, or an empty string) the check is skipped and
-messages from ANY origin are accepted. That is a development convenience and it FAILS OPEN: another
-frame on your page could forge a `turbosign:completed`. In production, always pin it to your known
-TurboSign origin (for example `https://app.turbodocx.com`).
+**It fails closed.** If you omit the origin (leave it `null`, `undefined`, or an empty string), EVERY
+message is ignored, so `turbosign:completed` never fires. The components log a one-time
+`console.warn` when that happens. Pin it to your known TurboSign origin (for example
+`https://app.turbodocx.com`).
+
+The components also check that each message comes from their own iframe
+(`event.source === iframe.contentWindow`), so another window on the same origin cannot forge a
+completion either. If you use the pure handler with your own iframe, pass that iframe's
+`contentWindow` as `expectedSource` to get the same check.
+
+**Local development only:** to accept messages from any origin, opt out explicitly with
+`allowAnyOrigin` (React prop and handler option) or the `allow-any-origin` attribute. This FAILS OPEN:
+any other frame on your page could forge a `turbosign:completed`. Never ship it to production. When an
+origin is also set, the origin wins and the opt-out is ignored.
+
+> **Changed in 0.2.0:** earlier versions accepted messages from any origin when no origin was set.
+> 0.2.0 ignores them instead, checks the message source, and adds the `title` prop / attribute. If you
+> relied on the old behavior during development, add `allowAnyOrigin` / `allow-any-origin`.
 
 ## Install
 
@@ -54,8 +68,11 @@ npm install react
 </script>
 ```
 
-Attributes: `embed-url` (required), `origin` (recommended), `height` (optional, a CSS length or a bare
-number of pixels; defaults to `720px`). The element renders a full-width iframe with
+Attributes: `embed-url` (required), `origin` (required for messages to be delivered; see above),
+`height` (optional, a CSS length or a bare number of pixels; defaults to `720px`), `title` (optional,
+the iframe's accessible name; defaults to `TurboSign signing`; as a global attribute it also gives the
+host element a native tooltip), and `allow-any-origin` (dev-only boolean attribute, enabled by its
+presence). The element renders a full-width iframe with
 `allow="clipboard-write"`, re-emits `turbosign:completed` (and the reserved `turbosign:declined` /
 `turbosign:error`) as bubbling `CustomEvent`s, and removes its window listener when disconnected.
 
@@ -79,8 +96,9 @@ function SignStep({ embedUrl }: { embedUrl: string }) {
 }
 ```
 
-Props: `embedUrl` (required), `origin?`, `onCompleted` (required), `onDeclined?`, `onError?`,
-`height?`, `className?`, `style?`. The window listener is wired in a `useEffect` with cleanup on
+Props: `embedUrl` (required), `origin?` (required for messages to be delivered; see above),
+`onCompleted` (required), `onDeclined?`, `onError?`, `height?`, `title?` (the iframe's accessible name;
+defaults to `"TurboSign signing"`), `allowAnyOrigin?` (dev only), `className?`, `style?`. The window listener is wired in a `useEffect` with cleanup on
 unmount (React 18+ compatible).
 
 ## What a completion tells you
@@ -105,9 +123,12 @@ Use it directly if you want to keep your own iframe and listener:
 ```ts
 import { handleTurboSignMessage } from '@turbodocx/embed';
 
+const iframe = document.querySelector('iframe#signing') as HTMLIFrameElement;
+
 window.addEventListener('message', (event) => {
   handleTurboSignMessage(event, {
     expectedOrigin: 'https://app.turbodocx.com',
+    expectedSource: iframe.contentWindow,
     onCompleted: ({ documentId }) => console.log('Signed', documentId),
   });
 });
@@ -128,8 +149,8 @@ const { recipients } = await TurboSign.createEmbeddedSignature({
 const embedUrl = recipients[0].embedUrl;
 ```
 
-See the runnable [`examples/embedded-web-app`](../../examples/embedded-web-app) — the **Widget** path uses
-`<TurboSignForm>`, alongside the raw-iframe and sequential-kiosk paths.
+See the runnable [`examples/embedded-web-app`](https://github.com/TurboDocx/SDK/tree/main/examples/embedded-web-app).
+Its **Widget** path uses `<TurboSignForm>`, alongside the raw-iframe and sequential-kiosk paths.
 
 ## License
 

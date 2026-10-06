@@ -2,7 +2,7 @@
  * `<turbosign-form>` is a framework-agnostic custom element that embeds a TurboSign signing page.
  *
  * It renders the iframe, attaches the `window` `message` listener (delegating to the shared, tested
- * {@link handleTurboSignMessage} for origin pinning + dispatch), re-emits the result as bubbling DOM
+ * {@link handleTurboSignMessage} for origin pinning, source pinning + dispatch), re-emits the result as bubbling DOM
  * `CustomEvent`s, and tears the listener down on disconnect. No build step is needed to USE it: import
  * the built ES module with a `<script type="module">` and drop the tag in your HTML.
  *
@@ -23,12 +23,16 @@ import {
   TURBOSIGN_ERROR,
   type TurboSignCompletedResult,
 } from './handleTurboSignMessage.js';
+import { MISSING_ORIGIN_WARNING } from './missingOriginWarning.js';
 
 /** The tag name the element registers under by default. */
 export const TURBOSIGN_FORM_TAG = 'turbosign-form';
 
 /** Default iframe height when the `height` attribute is not set. */
 const DEFAULT_HEIGHT = '720px';
+
+/** Default iframe accessible name when the `title` attribute is not set. */
+const DEFAULT_TITLE = 'TurboSign signing';
 
 /** Normalize a height attribute value (`"720"` or `"720px"` or `"80vh"`) to a CSS length. */
 function toCssLength(value: string | null): string {
@@ -45,18 +49,34 @@ function toCssLength(value: string | null): string {
 export class TurboSignFormElement extends HTMLElement {
   /** Attributes that trigger {@link attributeChangedCallback} when changed. */
   static get observedAttributes(): string[] {
-    return ['embed-url', 'origin', 'height'];
+    return ['embed-url', 'origin', 'height', 'title'];
   }
 
   /** The rendered iframe, created once on connect. */
   private iframe: HTMLIFrameElement | null = null;
 
+  /** Whether the missing-origin warning was already logged by this element. */
+  private warnedMissingOrigin = false;
+
   /** The bound `message` listener, retained so it can be removed on disconnect. */
   private readonly onMessage = (event: MessageEvent): void => {
+    const expectedOrigin = this.getAttribute('origin');
+    const allowAnyOrigin = this.hasAttribute('allow-any-origin');
+    if (!expectedOrigin && !allowAnyOrigin && !this.warnedMissingOrigin) {
+      this.warnedMissingOrigin = true;
+      console.warn(MISSING_ORIGIN_WARNING);
+    }
+    // Only this element's own iframe may speak. Without a live contentWindow nothing is accepted.
+    const frameWindow = this.iframe?.contentWindow;
+    if (!frameWindow) {
+      return;
+    }
     handleTurboSignMessage(
-      { origin: event.origin, data: event.data },
+      { origin: event.origin, source: event.source, data: event.data },
       {
-        expectedOrigin: this.getAttribute('origin'),
+        expectedOrigin,
+        allowAnyOrigin,
+        expectedSource: frameWindow,
         onCompleted: (result) => this.emit(TURBOSIGN_COMPLETED, result),
         onDeclined: (result) => this.emit(TURBOSIGN_DECLINED, result),
         onError: (result) => this.emit(TURBOSIGN_ERROR, result),
@@ -68,7 +88,6 @@ export class TurboSignFormElement extends HTMLElement {
   connectedCallback(): void {
     if (!this.iframe) {
       const iframe = document.createElement('iframe');
-      iframe.title = 'TurboSign signing';
       iframe.setAttribute('allow', 'clipboard-write');
       iframe.style.width = '100%';
       iframe.style.border = '0';
@@ -85,14 +104,14 @@ export class TurboSignFormElement extends HTMLElement {
     window.removeEventListener('message', this.onMessage);
   }
 
-  /** Reflect attribute changes (src / height) onto the iframe. Origin changes need no DOM update. */
+  /** Reflect attribute changes (src / height / title) onto the iframe. Origin changes need no DOM update. */
   attributeChangedCallback(): void {
     if (this.iframe) {
       this.syncIframe();
     }
   }
 
-  /** Push the current `embed-url` / `height` attributes onto the iframe element. */
+  /** Push the current `embed-url` / `height` / `title` attributes onto the iframe element. */
   private syncIframe(): void {
     if (!this.iframe) {
       return;
@@ -102,6 +121,7 @@ export class TurboSignFormElement extends HTMLElement {
       this.iframe.setAttribute('src', src);
     }
     this.iframe.style.height = toCssLength(this.getAttribute('height'));
+    this.iframe.title = this.getAttribute('title') || DEFAULT_TITLE;
   }
 
   /** Dispatch a bubbling, composed CustomEvent carrying the parsed result. */

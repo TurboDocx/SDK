@@ -1,6 +1,6 @@
 {
   "name": "@turbodocx/embed",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "TurboSign embedded-signing widget - a framework-agnostic web component and a React component that frame an embed URL, pin the origin, and surface the turbosign:completed event",
   "type": "module",
   "main": "dist/index.js",
@@ -30,7 +30,6 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo 'add eslint here'",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

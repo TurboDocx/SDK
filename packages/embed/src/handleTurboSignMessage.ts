@@ -3,10 +3,13 @@
  * function that decides what a `postMessage` from an embedded TurboSign signing page means.
  *
  * The embedded signing page posts to its parent window, targeting the embedder's origin when it can
- * resolve it and `'*'` otherwise. The host is therefore responsible for ORIGIN PINNING: ignoring any message whose
- * `event.origin` is not the expected TurboSign origin. This function centralizes that check plus the
- * dispatch on `event.data.type`, so the web component and the React component share one tested code
- * path instead of each hand-rolling `window.addEventListener('message', ...)`.
+ * resolve it and `'*'` otherwise. The host is therefore responsible for ORIGIN PINNING: ignoring any
+ * message whose `event.origin` is not the expected TurboSign origin. It FAILS CLOSED: with no origin
+ * configured every message is ignored unless the caller explicitly opts out with `allowAnyOrigin`.
+ * Callers that own the iframe can also pass `expectedSource` (the iframe's `contentWindow`) so a
+ * different window on the same origin cannot forge a message. This function centralizes those checks
+ * plus the dispatch on `event.data.type`, so the web component and the React component share one
+ * tested code path instead of each hand-rolling `window.addEventListener('message', ...)`.
  */
 
 /** The shape a TurboSign signing page posts to the parent window. */
@@ -27,6 +30,8 @@ export interface TurboSignMessageData {
 export interface TurboSignMessageEvent {
   /** The origin of the window that sent the message. */
   origin: string;
+  /** The window that sent the message (`MessageEvent.source`). Only read when `expectedSource` is set. */
+  source?: unknown;
   /** The message payload. */
   data: unknown;
 }
@@ -54,16 +59,27 @@ export interface TurboSignMessageHandlers {
   /**
    * The exact origin the embedded signing page is served from, e.g. `"https://app.turbodocx.com"`.
    *
-   * ORIGIN PINNING: when this is a non-empty string, any message whose `event.origin` does not match
-   * it exactly is ignored. When it is `null`, `undefined`, or `""`, the origin check is skipped and
-   * messages from ANY origin are accepted.
+   * ORIGIN PINNING: any message whose `event.origin` does not match it exactly is ignored.
    *
-   * Skipping the check FAILS OPEN: a malicious framed page (or any other frame on the host) could then
-   * post a forged `turbosign:completed` and trigger your completion flow. Leave it unset only for local
-   * development; in production always pin it to your known TurboSign origin. Note that
-   * `<turbosign-form origin="">` (an empty attribute) also fails open by this rule.
+   * FAILS CLOSED: when it is `null`, `undefined`, or `""`, EVERY message is ignored, unless
+   * {@link TurboSignMessageHandlers.allowAnyOrigin} is `true`. Always pin it to your known TurboSign
+   * origin.
    */
   expectedOrigin?: string | null;
+  /**
+   * DEVELOPMENT ONLY. When `true` and no `expectedOrigin` is set, messages from ANY origin are
+   * accepted. That fails open: any other frame on the page could post a forged `turbosign:completed`
+   * and trigger your completion flow. Never enable it in production. Ignored when `expectedOrigin` is
+   * set (a pinned origin always wins). Defaults to `false`.
+   */
+  allowAnyOrigin?: boolean;
+  /**
+   * The window the message must come from, normally the signing iframe's `contentWindow`. When
+   * provided (including `null`), any message whose `event.source` is not this exact object is ignored,
+   * so another window on the same origin cannot forge a message. Leave it `undefined` to skip the
+   * check (for example when you do not own the iframe).
+   */
+  expectedSource?: unknown;
   /** Called when the signer finishes and the page posts `turbosign:completed`. */
   onCompleted?: (result: TurboSignCompletedResult) => void;
   /**
@@ -97,22 +113,34 @@ function asOptionalString(value: unknown): string | undefined {
 
 /**
  * Interpret one `postMessage` event from an embedded TurboSign signing page and invoke the matching
- * callback. Pure and synchronous: it reads `event.origin` / `event.data` and calls at most one handler.
+ * callback. Pure and synchronous: it reads `event.origin` / `event.source` / `event.data` and calls at
+ * most one handler.
  *
- * Unrelated messages (wrong origin, non-object data, unknown `type`) are ignored silently, so this is
- * safe to call for EVERY window message without pre-filtering.
+ * Unrelated messages (wrong or unconfigured origin, wrong source, non-object data, unknown `type`) are
+ * ignored silently, so this is safe to call for EVERY window message without pre-filtering.
  *
- * @param event    The `MessageEvent` (or a `{ origin, data }` slice of it).
- * @param handlers Origin pin plus the `onCompleted` / `onDeclined` / `onError` callbacks.
+ * @param event    The `MessageEvent` (or a `{ origin, source, data }` slice of it).
+ * @param handlers Origin pin, optional source pin, plus the `onCompleted` / `onDeclined` / `onError`
+ *                 callbacks.
  */
 export function handleTurboSignMessage(
   event: TurboSignMessageEvent,
   handlers: TurboSignMessageHandlers,
 ): void {
-  const { expectedOrigin, onCompleted, onDeclined, onError } = handlers;
+  const { expectedOrigin, allowAnyOrigin, expectedSource, onCompleted, onDeclined, onError } = handlers;
 
-  // ORIGIN PINNING: when an origin is configured (non-empty), drop anything not from it.
-  if (expectedOrigin && event.origin !== expectedOrigin) {
+  // ORIGIN PINNING, failing closed: a configured origin must match exactly; with none configured,
+  // drop everything unless the caller explicitly opted out for local development.
+  if (expectedOrigin) {
+    if (event.origin !== expectedOrigin) {
+      return;
+    }
+  } else if (allowAnyOrigin !== true) {
+    return;
+  }
+
+  // SOURCE PINNING: when the caller knows which window may speak (its own iframe), drop the rest.
+  if (expectedSource !== undefined && event.source !== expectedSource) {
     return;
   }
 

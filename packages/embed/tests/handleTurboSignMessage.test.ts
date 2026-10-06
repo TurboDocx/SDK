@@ -37,30 +37,84 @@ describe('handleTurboSignMessage', () => {
       expect(onCompleted).toHaveBeenCalledTimes(1);
     });
 
-    it('accepts any origin when expectedOrigin is undefined (dev convenience)', () => {
+    // FAIL CLOSED: with no origin configured, every message is rejected unless the caller opts out.
+    it.each([
+      ['undefined', undefined],
+      ['null', null],
+      ['an empty string', ''],
+    ])('rejects every message when expectedOrigin is %s (fails closed)', (_label, expectedOrigin) => {
       const onCompleted = jest.fn();
       handleTurboSignMessage(
         { origin: 'https://anything.example.com', data: { type: TURBOSIGN_COMPLETED, documentId: 'doc_2' } },
-        { onCompleted },
+        { expectedOrigin, onCompleted },
+      );
+      expect(onCompleted).not.toHaveBeenCalled();
+    });
+
+    it('accepts any origin when allowAnyOrigin is true and no origin is pinned (dev-only opt-out)', () => {
+      const onCompleted = jest.fn();
+      handleTurboSignMessage(
+        { origin: 'https://anything.example.com', data: { type: TURBOSIGN_COMPLETED, documentId: 'doc_2' } },
+        { allowAnyOrigin: true, onCompleted },
       );
       expect(onCompleted).toHaveBeenCalledWith({ documentId: 'doc_2', status: undefined });
     });
 
-    it('accepts any origin when expectedOrigin is null', () => {
+    it('a pinned origin wins over allowAnyOrigin: a mismatch is still rejected', () => {
       const onCompleted = jest.fn();
       handleTurboSignMessage(
-        { origin: 'https://anything.example.com', data: { type: TURBOSIGN_COMPLETED } },
-        { expectedOrigin: null, onCompleted },
+        { origin: 'https://evil.example.com', data: { type: TURBOSIGN_COMPLETED } },
+        { expectedOrigin: EXPECTED_ORIGIN, allowAnyOrigin: true, onCompleted },
+      );
+      expect(onCompleted).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('source check (expectedSource)', () => {
+    const frameWindow = { name: 'signing-frame' };
+    const otherWindow = { name: 'other-window' };
+
+    it('fires when event.source is the expected source', () => {
+      const onCompleted = jest.fn();
+      handleTurboSignMessage(
+        { origin: EXPECTED_ORIGIN, source: frameWindow, data: { type: TURBOSIGN_COMPLETED } },
+        { expectedOrigin: EXPECTED_ORIGIN, expectedSource: frameWindow, onCompleted },
       );
       expect(onCompleted).toHaveBeenCalledTimes(1);
     });
 
-    it('FAILS OPEN on an empty-string expectedOrigin (documented risk): accepts any origin', () => {
-      // An empty `origin=""` attribute on <turbosign-form> is treated as "not configured".
+    it('ignores a same-origin message from a different source', () => {
       const onCompleted = jest.fn();
       handleTurboSignMessage(
-        { origin: 'https://anything.example.com', data: { type: TURBOSIGN_COMPLETED } },
-        { expectedOrigin: '', onCompleted },
+        { origin: EXPECTED_ORIGIN, source: otherWindow, data: { type: TURBOSIGN_COMPLETED } },
+        { expectedOrigin: EXPECTED_ORIGIN, expectedSource: frameWindow, onCompleted },
+      );
+      expect(onCompleted).not.toHaveBeenCalled();
+    });
+
+    it('ignores a message with no source when a source is expected', () => {
+      const onCompleted = jest.fn();
+      handleTurboSignMessage(
+        { origin: EXPECTED_ORIGIN, data: { type: TURBOSIGN_COMPLETED } },
+        { expectedOrigin: EXPECTED_ORIGIN, expectedSource: frameWindow, onCompleted },
+      );
+      expect(onCompleted).not.toHaveBeenCalled();
+    });
+
+    it('still checks the source under allowAnyOrigin', () => {
+      const onCompleted = jest.fn();
+      handleTurboSignMessage(
+        { origin: 'https://anything.example.com', source: otherWindow, data: { type: TURBOSIGN_COMPLETED } },
+        { allowAnyOrigin: true, expectedSource: frameWindow, onCompleted },
+      );
+      expect(onCompleted).not.toHaveBeenCalled();
+    });
+
+    it('skips the source check when expectedSource is not provided', () => {
+      const onCompleted = jest.fn();
+      handleTurboSignMessage(
+        { origin: EXPECTED_ORIGIN, source: otherWindow, data: { type: TURBOSIGN_COMPLETED } },
+        { expectedOrigin: EXPECTED_ORIGIN, onCompleted },
       );
       expect(onCompleted).toHaveBeenCalledTimes(1);
     });
