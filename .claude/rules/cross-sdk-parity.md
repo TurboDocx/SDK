@@ -38,7 +38,10 @@ cap is spent, and does not consume that cap. Only CURRENT-signing-order signers 
 later-order or already-signed recipient comes back as a `skipped_*` result rather than being
 dropped. `recipientIds` is optional (omit to remind everyone eligible); when supplied the API is
 all-or-nothing. Every SDK omits the key entirely for an empty list — the API requires at least one
-id when the key is present, so sending `[]` would guarantee a 400.
+id when the key is present, so sending `[]` would guarantee a 400. `external_idv` and `override`
+recipients sign only through a single-use `createSigningUrl` link and are never emailed: remind
+reports them as `skipped_requires_single_use_url`, resend skips them, and naming only such
+recipients in either call is a 409 (conflict class) with code `RecipientRequiresSingleUseUrl`.
 
 **Schedule overrides:** both send paths (`createSignatureReviewLink`, `sendSignature`) accept the
 eight per-document reminder/expiration fields. Two rules every SDK follows:
