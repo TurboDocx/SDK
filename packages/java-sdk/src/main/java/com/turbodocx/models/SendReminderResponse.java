@@ -21,7 +21,11 @@ public class SendReminderResponse {
             return recipientId;
         }
 
-        /** e.g. "sent", "skipped_wrong_order", "skipped_completed". */
+        /**
+         * e.g. "sent", "skipped_wrong_order", "skipped_completed", or
+         * "skipped_requires_single_use_url" for an external_idv or override recipient, who signs
+         * only through a single-use createSigningUrl link and is never emailed.
+         */
         public String getStatus() {
             return status;
         }

@@ -280,6 +280,8 @@ for (RecipientResponse r : result.getRecipients()) {
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the cap is spent, does not consume that cap, and only emails signers at the current signing order. Use the single-arg overload to remind everyone eligible; do not pass an empty list, which the API rejects.
 
+Recipients verified with `external_idv` or `override` sign only through a single-use `createSigningUrl()` link and are never emailed: they come back as `skipped_requires_single_use_url`. Naming only such recipients throws `TurboDocxException.ConflictException` (409) with code `RecipientRequiresSingleUseUrl`.
+
 ```java
 SendReminderResponse reminder = client.turboSign().sendReminder("doc-uuid-here");
 
@@ -393,6 +395,8 @@ client.turboSign().voidDocument("doc-uuid-here", "Contract terms changed");
 #### `resendEmail()`
 
 Resend signature request emails.
+
+Recipients verified with `external_idv` or `override` are skipped (they sign only through a single-use `createSigningUrl()` link), and naming only such recipients throws `TurboDocxException.ConflictException` (409) with code `RecipientRequiresSingleUseUrl`.
 
 ```java
 client.turboSign().resendEmail("doc-uuid-here", Arrays.asList("recipient-uuid-1"));

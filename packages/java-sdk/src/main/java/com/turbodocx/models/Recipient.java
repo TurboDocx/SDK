@@ -25,6 +25,8 @@ public class Recipient {
     /**
      * Your own identifier for this signer (e.g. an Airtable record id), unique within the document.
      * Lets you request a signing URL by your key instead of storing TurboDocx's recipient id.
+     * A blank or whitespace-only value counts as absent (stored as null, so it never collides with
+     * another blank and cannot be used to look the recipient up).
      */
     @SerializedName("externalId")
     private final String externalId;

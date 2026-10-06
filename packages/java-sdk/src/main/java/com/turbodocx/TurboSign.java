@@ -192,7 +192,15 @@ public final class TurboSign {
     }
 
     /**
-     * Resend signature request email to recipients
+     * Resend signature request email to recipients.
+     *
+     * <p>Recipients whose identity mode is {@code external_idv} or {@code override} sign only
+     * through a single-use {@link #createSigningUrl} link, so they are never emailed. They are
+     * skipped, and {@code recipientCount} counts only the recipients actually emailed.
+     *
+     * @throws TurboDocxException.ConflictException 409 with code
+     *     {@code RecipientRequiresSingleUseUrl} when every named recipient signs only through a
+     *     single-use URL, so no email can be sent. Mint one with {@link #createSigningUrl} instead.
      */
     public ResendEmailResponse resendEmail(String documentId, List<String> recipientIds) throws IOException {
         Map<String, List<String>> body = new HashMap<>();
@@ -703,11 +711,19 @@ public final class TurboSign {
      * <p>Only signers at the CURRENT signing order are emailed. A recipient at a later order (or
      * one who has already signed) is reported back as skipped rather than silently dropped.
      *
+     * <p>Recipients whose identity mode is {@code external_idv} or {@code override} sign only
+     * through a single-use {@link #createSigningUrl} link, so they are never emailed. They come
+     * back as {@code skipped_requires_single_use_url}.
+     *
      * @param documentId   ID of the document
      * @param recipientIds optional subset to remind; pass null to remind every eligible signer.
      *                     When supplied the request is all-or-nothing: if any id is not a
      *                     current-order pending signer the API rejects the whole call.
      * @return one result per recipient considered
+     * @throws TurboDocxException.ConflictException 409 with code
+     *     {@code RecipientRequiresSingleUseUrl} when every named recipient signs only through a
+     *     single-use URL, so no reminder can be sent. Mint one with {@link #createSigningUrl}
+     *     instead.
      * @throws IOException on transport failure
      */
     public SendReminderResponse sendReminder(String documentId, List<String> recipientIds) throws IOException {

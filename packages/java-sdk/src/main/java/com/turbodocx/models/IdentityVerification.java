@@ -10,7 +10,10 @@ import com.google.gson.annotations.SerializedName;
  * exactly the shape the backend expects:
  * <ul>
  *   <li>{@code otp} — {@code {mode:"otp", channel:"email"|"sms"}}. TurboSign emails or texts a
- *       one-time passcode (SMS requires {@code phone} on the recipient).</li>
+ *       one-time passcode (SMS requires {@code phone} on the recipient). A null channel takes the
+ *       org's default channel, or email when that default is {@code none}; on an org with embedded
+ *       signing off the request fails with a 403 {@code AuthorizationException}, code
+ *       {@code EmbeddedSigningNotEnabled}.</li>
  *   <li>{@code external_idv} — {@code {mode:"external_idv", provider, maxAgeMinutes?}}. Your own
  *       identity provider verifies the signer; pass the assertion to
  *       {@code TurboSign.createSigningUrl} when you request the signing URL.</li>
@@ -18,6 +21,10 @@ import com.google.gson.annotations.SerializedName;
  *       Skips identity verification entirely (development/testing); the signature is marked
  *       "not identity-verified".</li>
  * </ul>
+ *
+ * <p>{@code external_idv} and {@code override} recipients sign only through a single-use
+ * {@code TurboSign.createSigningUrl} link. TurboSign never sends them signing, reminder or resend
+ * emails.
  *
  * <p>Use the static factory methods rather than the constructor.
  */
@@ -50,7 +57,10 @@ public class IdentityVerification {
         this.reason = reason;
     }
 
-    /** One-time passcode over the given channel ({@code "email"} or {@code "sms"}). */
+    /**
+     * One-time passcode over the given channel ({@code "email"} or {@code "sms"}). Pass null to
+     * take the org's default channel, or email when that default is {@code none}.
+     */
     public static IdentityVerification otp(String channel) {
         return new IdentityVerification("otp", channel, null, null, null, null);
     }
