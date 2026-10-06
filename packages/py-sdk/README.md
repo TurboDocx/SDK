@@ -293,6 +293,8 @@ for recipient in result["recipients"]:
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the per-signer cap is already spent, does not consume that cap, and only emails signers at the *current* signing order. Omit `recipient_ids` to remind everyone eligible; do not pass an empty list, which the API rejects.
 
+Recipients verified with `external_idv` or `override` sign only through a single-use `create_signing_url` link and are never emailed: they come back as `skipped_requires_single_use_url`. Naming only such recipients raises `ConflictError` (409) with code `RecipientRequiresSingleUseUrl`.
+
 ```python
 result = await TurboSign.send_reminder("doc-uuid-here")
 
@@ -402,6 +404,8 @@ await TurboSign.void_document("doc-uuid-here", reason="Contract terms changed")
 #### `resend_email()`
 
 Resend signature request emails.
+
+Recipients verified with `external_idv` or `override` are skipped (they sign only through a single-use `create_signing_url` link), and naming only such recipients raises `ConflictError` (409) with code `RecipientRequiresSingleUseUrl`.
 
 ```python
 await TurboSign.resend_email("doc-uuid-here", recipient_ids=["recipient-uuid-1"])

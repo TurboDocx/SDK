@@ -396,6 +396,12 @@ class TurboSign:
                 {"mode": "external_idv", "provider": ..., "maxAgeMinutes": 5..10080} or
                 {"mode": "override", "overrideIdentityVerification": True, "reason": ...}.
                 Omit ``identityVerification`` to take the org's default channel.
+                {"mode": "otp"} without a channel takes the org's default channel, or email
+                when that default is 'none'; on an org with embedded signing off it raises
+                AuthorizationError (403) with code EmbeddedSigningNotEnabled.
+                external_idv and override recipients sign only through a single-use
+                create_signing_url link and are never sent signing, reminder or resend emails.
+                A blank or whitespace-only ``externalId`` counts as absent (stored as null).
             fields: Signature fields configuration
                 Each field should have: type, recipientEmail, and positioning info
                 Optional per-field "metadata" drives conditional (IF/THEN) logic:
@@ -692,6 +698,10 @@ class TurboSign:
         one who has already signed) is reported back as skipped rather than silently dropped, so
         the caller can tell that nobody was emailed.
 
+        Recipients whose identity mode is external_idv or override sign only through a
+        single-use create_signing_url link, so they are never emailed. They come back as
+        "skipped_requires_single_use_url".
+
         Args:
             document_id: ID of the document
             recipient_ids: Optional subset to remind. Omit to remind every eligible signer.
@@ -702,6 +712,11 @@ class TurboSign:
             Dict with:
                 - results: One entry per recipient considered, each with recipientId, status
                   (e.g. "sent", "skipped_wrong_order"), and optionally reminderCount and phase
+
+        Raises:
+            ConflictError: 409 with code RecipientRequiresSingleUseUrl when every named
+                recipient signs only through a single-use URL, so no reminder can be sent.
+                Mint one with create_signing_url instead.
 
         Example:
             >>> result = await TurboSign.send_reminder("doc-123")
@@ -733,6 +748,10 @@ class TurboSign:
         """
         Resend signature request email to recipients
 
+        Recipients whose identity mode is external_idv or override sign only through a
+        single-use create_signing_url link, so they are never emailed. They are skipped, and
+        recipientCount counts only the recipients actually emailed.
+
         Args:
             document_id: ID of the document
             recipient_ids: List of recipient IDs to resend emails to
@@ -741,6 +760,11 @@ class TurboSign:
             Dict with:
                 - success: Whether the resend was successful (bool)
                 - recipientCount: Number of recipients who received email (int)
+
+        Raises:
+            ConflictError: 409 with code RecipientRequiresSingleUseUrl when every named
+                recipient signs only through a single-use URL, so no email can be sent.
+                Mint one with create_signing_url instead.
 
         Example:
             >>> result = await TurboSign.resend_email("doc-123", ["rec-1", "rec-2"])
