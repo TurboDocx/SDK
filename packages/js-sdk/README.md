@@ -259,6 +259,10 @@ reminder cadence — it works even when reminders are disabled or the cap is spe
 consume that cap, and only emails signers at the CURRENT signing order. Omit the recipient ids
 to remind everyone eligible; do not pass an empty array, which the API rejects.
 
+Recipients verified with `external_idv` or `override` sign only through a single-use
+`createSigningUrl` link and are never emailed: they come back as `skipped_requires_single_use_url`.
+Naming only such recipients throws `ConflictError` (409) with code `RecipientRequiresSingleUseUrl`.
+
 ```typescript
 const { results } = await TurboSign.sendReminder('doc-uuid-here');
 
@@ -379,6 +383,9 @@ await TurboSign.void('doc-uuid-here', 'Contract terms changed');
 #### `resend(documentId, recipientIds)`
 
 Resend signature request emails to specific recipients.
+Recipients verified with `external_idv` or `override` are skipped (they sign only through a
+single-use `createSigningUrl` link), and naming only such recipients throws `ConflictError` (409)
+with code `RecipientRequiresSingleUseUrl`.
 
 ```typescript
 await TurboSign.resend('doc-uuid-here', ['recipient-uuid-1', 'recipient-uuid-2']);

@@ -176,7 +176,9 @@ export type ReminderStatus =
   | 'skipped_disabled'
   | 'skipped_completed'
   | 'skipped_wrong_order'
-  | 'skipped_claim_lost';
+  | 'skipped_claim_lost'
+  /** external_idv or override recipient: signs only through a single-use createSigningUrl link, never by email */
+  | 'skipped_requires_single_use_url';
 
 export interface ReminderResult {
   /** Recipient this outcome refers to */
@@ -498,13 +500,24 @@ export interface Field {
  *
  * A discriminated union on `mode` — the compiler narrows the required fields for you:
  * - `otp`: TurboSign emails or texts a one-time passcode (SMS requires `phone` on the recipient).
+ *   Without a `channel`, the org's default channel applies, and email when that default is `none`,
+ *   so `{ mode: 'otp' }` always verifies. On an org with embedded signing off it is rejected with
+ *   `EmbeddedSigningNotEnabled` (403, `AuthorizationError`).
  * - `external_idv`: your own identity provider (e.g. CAPA) verifies the signer; you pass the
  *   assertion to {@link TurboSign.createSigningUrl} when you request the signing URL.
  * - `override`: skip identity verification entirely. For development/testing; your org admin must
  *   enable it, and every such signature is marked "not identity-verified" on the certificate.
+ *
+ * `external_idv` and `override` recipients sign only through a single-use
+ * {@link TurboSign.createSigningUrl} link. TurboSign never sends them signing, reminder or resend
+ * emails.
  */
 export type IdentityVerification =
-  | { mode: 'otp'; channel?: 'email' | 'sms' }
+  | {
+      mode: 'otp';
+      /** `email` or `sms`. Omit it for the org's default channel, or email when that default is `none`. */
+      channel?: 'email' | 'sms';
+    }
   | { mode: 'external_idv'; provider: string; maxAgeMinutes?: number }
   | { mode: 'override'; overrideIdentityVerification: true; reason: string };
 
@@ -523,6 +536,8 @@ export interface Recipient {
   /**
    * Your own identifier for this signer (e.g. an Airtable record id), unique within the document.
    * Lets you request a signing URL by your key instead of storing TurboDocx's recipient id.
+   * An empty or whitespace-only value counts as absent: it is stored as null, never collides with
+   * another blank, and cannot be used to look the recipient up.
    */
   externalId?: string;
   /**

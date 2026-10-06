@@ -618,9 +618,16 @@ export class TurboSign {
   /**
    * Resend signature request email to recipients
    *
+   * Recipients whose identity mode is `external_idv` or `override` sign only through a single-use
+   * {@link TurboSign.createSigningUrl} link, so they are never emailed. They are skipped, and
+   * `recipientCount` counts only the recipients actually emailed.
+   *
    * @param documentId - ID of the document
    * @param recipientIds - Array of recipient IDs to resend emails to
    * @returns Resend confirmation with success and recipientCount
+   * @throws {ConflictError} 409 with code `RecipientRequiresSingleUseUrl` when every named
+   *   recipient signs only through a single-use URL, so no email can be sent. Mint one with
+   *   {@link TurboSign.createSigningUrl} instead.
    *
    * @example
    * ```typescript
@@ -721,12 +728,19 @@ export class TurboSign {
    * who has already signed) is reported back as skipped rather than silently dropped, so the
    * caller can tell that nobody was emailed.
    *
+   * Recipients whose identity mode is `external_idv` or `override` sign only through a single-use
+   * {@link TurboSign.createSigningUrl} link, so they are never emailed. They come back as
+   * `skipped_requires_single_use_url`.
+   *
    * @param documentId - ID of the document
    * @param recipientIds - Optional subset to remind. Omit to remind every eligible signer.
    *                       When supplied, the request is all-or-nothing: if any id is not a
    *                       current-order pending signer the API rejects the whole call and sends
    *                       nothing.
    * @returns One result per recipient considered, including why each was skipped
+   * @throws {ConflictError} 409 with code `RecipientRequiresSingleUseUrl` when every named
+   *   recipient signs only through a single-use URL, so no reminder can be sent. Mint one with
+   *   {@link TurboSign.createSigningUrl} instead.
    *
    * @example
    * ```typescript
