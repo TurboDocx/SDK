@@ -1,6 +1,6 @@
 {
   "name": "@turbodocx/embed",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "TurboSign embedded-signing widget - a framework-agnostic web component and a React component that frame an embed URL, pin the origin, and surface the turbosign:completed event",
   "type": "module",
   "main": "dist/index.js",
