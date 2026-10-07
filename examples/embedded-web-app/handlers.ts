@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { TurboSign } from "@turbodocx/sdk";
 
 // A PDF with signature/date anchors ({signature1}, {date1}, {signature2}). Ships with the SDK.
-const PDF_PATH = fileURLToPath(new URL("../../ExampleAssets/sample-contract.pdf", import.meta.url));
+const PDF_PATH = fileURLToPath(new URL("./sample-contract.pdf", import.meta.url));
 
 // The sample document never changes for the life of the process — read it once, not per request.
 let pdfPromise: Promise<Buffer> | null = null;

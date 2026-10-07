@@ -47,6 +47,8 @@ npm run dev
 
 Then open <http://localhost:5173> and pick a path.
 
+Use an API key with the **Administrator** or **Contributor** role. A **User**-role key can create the document, but minting its signing URL is rejected with HTTP 403.
+
 `.env` documents every variable. At minimum set `TURBODOCX_API_KEY`, `TURBODOCX_ORG_ID`, and
 `TURBODOCX_SENDER_EMAIL`. `TURBODOCX_API_URL` defaults to TurboDocx production; set it (e.g.
 `http://localhost:3000`) only when testing against a dev backend. Your real `.env` is gitignored.
