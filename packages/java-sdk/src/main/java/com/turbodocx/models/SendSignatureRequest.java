@@ -20,9 +20,18 @@ public class SendSignatureRequest {
     private final List<String> ccEmails;
     /** Per-document reminder + expiration overrides; null inherits the org defaults. */
     private final SignatureSchedule schedule;
+    /**
+     * Whether the backend emails the recipients their signing link (and the initial CC notice).
+     * Null keeps the default (emails sent). Set {@code false} for embedded signing, where your app
+     * shows the signing page: the document still goes out for signing, and passcode and
+     * completed-copy emails are still sent. Boxed so presence can be tested with {@code != null};
+     * {@code false} is forwarded rather than dropped.
+     */
+    private final Boolean sendEmail;
 
     private SendSignatureRequest(Builder builder) {
         this.schedule = builder.schedule;
+        this.sendEmail = builder.sendEmail;
         this.file = builder.file;
         this.fileName = builder.fileName;
         this.fileLink = builder.fileLink;
@@ -89,6 +98,10 @@ public class SendSignatureRequest {
         return schedule;
     }
 
+    public Boolean getSendEmail() {
+        return sendEmail;
+    }
+
     public boolean hasFile() {
         return file != null && file.length > 0;
     }
@@ -107,6 +120,7 @@ public class SendSignatureRequest {
         private String senderEmail;
         private List<String> ccEmails;
         private SignatureSchedule schedule;
+        private Boolean sendEmail;
 
         public Builder file(byte[] file) {
             this.file = file;
@@ -171,6 +185,15 @@ public class SendSignatureRequest {
         /** Per-document reminder + expiration overrides. Omit to inherit the org defaults. */
         public Builder schedule(SignatureSchedule schedule) {
             this.schedule = schedule;
+            return this;
+        }
+
+        /**
+         * Whether the backend should email the recipients. Omit to keep the backend default
+         * (emails sent). Set {@code false} to suppress recipient emails (embedded flow).
+         */
+        public Builder sendEmail(Boolean sendEmail) {
+            this.sendEmail = sendEmail;
             return this;
         }
 

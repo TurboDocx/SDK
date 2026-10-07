@@ -296,6 +296,8 @@ $progress = TurboSign::getRecipients($result->documentId);
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the per-signer cap is already spent, does not consume that cap, and only emails signers at the *current* signing order. Pass `null` (or omit the argument) to remind everyone eligible; do not pass an empty array, which the API rejects.
 
+Recipients verified with `external_idv` or `override` sign only through a single-use `createSigningUrl()` link and are never emailed: they come back as `skipped_requires_single_use_url`. Naming only such recipients throws `ConflictException` (409) with code `RecipientRequiresSingleUseUrl`.
+
 ```php
 // Remind everyone whose turn it is to sign.
 $result = TurboSign::sendReminder('doc-uuid-here');
@@ -420,12 +422,11 @@ echo "Voided at: {$result->voidedAt}\n";
 
 Resend signature request emails to specific recipients (or all).
 
-```php
-// Resend to specific recipients
-$result = TurboSign::resend('doc-uuid-here', ['recipient-id-1', 'recipient-id-2']);
+Recipients verified with `external_idv` or `override` are skipped (they sign only through a single-use `createSigningUrl()` link), and naming only such recipients throws `ConflictException` (409) with code `RecipientRequiresSingleUseUrl`.
 
-// Resend to all recipients
-$result = TurboSign::resend('doc-uuid-here', []);
+```php
+// Resend to specific recipients (at least one ID is required; an empty array is rejected)
+$result = TurboSign::resend('doc-uuid-here', ['recipient-id-1', 'recipient-id-2']);
 
 echo "Message: {$result->message}\n";
 ```

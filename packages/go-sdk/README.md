@@ -264,6 +264,8 @@ fmt.Printf("Message: %s\n", result.Message)
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the per-signer cap is spent, does not consume that cap, and only emails signers at the **current** signing order. Pass `nil` for `recipientIDs` to remind everyone eligible; do **not** pass an empty slice, which the API rejects.
 
+Recipients verified with `external_idv` or `override` sign only through a single-use `CreateSigningURL` link and are never emailed: they come back as `skipped_requires_single_use_url`. Naming only such recipients returns `*ConflictError` (409) with code `RecipientRequiresSingleUseUrl`.
+
 ```go
 resp, err := client.TurboSign.SendReminder(ctx, "doc-uuid-here", nil)
 if err != nil {
@@ -379,6 +381,8 @@ fmt.Printf("Document %s voided at %s\n", result.ID, result.VoidedAt)
 #### `ResendEmail`
 
 Resend signature request emails.
+
+Recipients verified with `external_idv` or `override` are skipped (they sign only through a single-use `CreateSigningURL` link), and naming only such recipients returns `*ConflictError` (409) with code `RecipientRequiresSingleUseUrl`.
 
 ```go
 result, err := client.TurboSign.ResendEmail(ctx, "doc-uuid-here", []string{"recipient-uuid-1"})

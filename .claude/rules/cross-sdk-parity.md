@@ -16,6 +16,21 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 | resend | `resend()` | `resend_email()` | `ResendEmail()` | `resend()` | `resendEmail()` | `resend_email()` |
 | getAuditTrail | `getAuditTrail()` | `get_audit_trail()` | `GetAuditTrail()` | `getAuditTrail()` | `getAuditTrail()` | `get_audit_trail()` |
 | sendReminder | `sendReminder()` | `send_reminder()` | `SendReminder()` | `sendReminder()` | `sendReminder()` | `send_reminder()` |
+| createSigningUrl | `createSigningUrl()` | `create_signing_url()` | `CreateSigningURL()` | `createSigningUrl()` | `createSigningUrl()` | `create_signing_url()` |
+| getEmbeddedSigningSettings | `getEmbeddedSigningSettings()` | `get_embedded_signing_settings()` | `GetEmbeddedSigningSettings()` | `getEmbeddedSigningSettings()` | `getEmbeddedSigningSettings()` | `get_embedded_signing_settings()` |
+| createEmbeddedSignature | `createEmbeddedSignature()` | `create_embedded_signature()` | `CreateEmbeddedSignature()` | `createEmbeddedSignature()` | `createEmbeddedSignature()` | `create_embedded_signature()` |
+
+**Embedded signing notes:** `createSigningUrl` posts `{ recipientId | externalId (exactly one),
+returnUrl? (https), identityAssertion? }` and unwraps `{ data: { results } }`. The API rejects unknown
+keys (no `senderName` here). An identity assertion has four required keys plus six optional ones
+(`method`, `methodDetail` — required when method is `other` — `assuranceLevel`, `verifiedName`,
+`evidenceUrl`, `overrideEmailMatching`); typed SDKs omit unset optional keys from the wire.
+`getEmbeddedSigningSettings` returns `enabled`, `allowExternalIdv`, `allowIdentityOverride`,
+`defaultChannel`, `allowChannelOverride` and `allowedFrameAncestors` (empty = framing denied
+everywhere); typed SDKs keep `allowChannelOverride` nullable so an API that doesn't report it reads
+as unknown, not locked. `createEmbeddedSignature` defaults `sendEmail` to false, never sends an
+explicit `otpChannel` (an omitted channel takes the org default), and treats `RecipientNotInTurn` /
+`NotSignersTurn` / `RecipientAlreadySigned` as `pending` / `completed` results, not errors.
 
 **sendReminder note:** a standalone nudge, deliberately decoupled from the automatic reminder
 schedule — it ignores the configured cadence, works when reminders are disabled or the per-signer
@@ -23,7 +38,10 @@ cap is spent, and does not consume that cap. Only CURRENT-signing-order signers 
 later-order or already-signed recipient comes back as a `skipped_*` result rather than being
 dropped. `recipientIds` is optional (omit to remind everyone eligible); when supplied the API is
 all-or-nothing. Every SDK omits the key entirely for an empty list — the API requires at least one
-id when the key is present, so sending `[]` would guarantee a 400.
+id when the key is present, so sending `[]` would guarantee a 400. `external_idv` and `override`
+recipients sign only through a single-use `createSigningUrl` link and are never emailed: remind
+reports them as `skipped_requires_single_use_url`, resend skips them, and naming only such
+recipients in either call is a 409 (conflict class) with code `RecipientRequiresSingleUseUrl`.
 
 **Schedule overrides:** both send paths (`createSignatureReviewLink`, `sendSignature`) accept the
 eight per-document reminder/expiration fields. Two rules every SDK follows:

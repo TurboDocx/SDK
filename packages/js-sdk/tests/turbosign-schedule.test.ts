@@ -13,7 +13,7 @@
 
 import { TurboSign } from '../src/modules/sign';
 import { HttpClient } from '../src/http';
-import type { Recipient, Field } from '../src/types/sign';
+import type { Recipient, Field, ReminderStatus } from '../src/types/sign';
 
 jest.mock('../src/http');
 
@@ -224,6 +224,19 @@ describe('TurboSign.sendReminder', () => {
     expect(result.results[0].reminderCount).toBe(2);
     // A later-order signer is reported, not silently dropped — the caller can tell nobody was emailed.
     expect(result.results[1].status).toBe('skipped_wrong_order');
+  });
+
+  // external_idv and override recipients sign only through a single-use createSigningUrl link, so
+  // a reminder email is never sent to them. The API reports them with their own skip status.
+  it('should type the single-use-URL skip status a reminder can report', async () => {
+    const skipped: ReminderStatus = 'skipped_requires_single_use_url';
+    postMock.mockResolvedValue({
+      results: [{ recipientId: 'r-1', status: skipped }],
+    });
+
+    const result = await TurboSign.sendReminder('doc-123');
+
+    expect(result.results[0].status).toBe('skipped_requires_single_use_url');
   });
 });
 

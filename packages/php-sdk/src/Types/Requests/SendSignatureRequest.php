@@ -34,6 +34,11 @@ final class SendSignatureRequest
      * @param array{value:int,unit:string}|null $expirationWarning How far before expiry warnings
      *     start. A zero value means no warnings at all.
      * @param array{value:int,unit:string}|null $expirationWarningInterval Gap between warnings
+     * @param bool|null $sendEmail Whether the backend emails the recipients their signing link (and
+     *     the initial CC notice). Omit to keep the default (emails sent). Set `false` for embedded
+     *     signing, where your app shows the signing page: the document still goes out for signing,
+     *     and passcode and completed-copy emails are still sent. Presence is tested with
+     *     `!== null`, so `false` is forwarded rather than dropped.
      */
     public function __construct(
         public array $recipients,
@@ -56,5 +61,6 @@ final class SendSignatureRequest
         public ?array $expireAfter = null,
         public ?array $expirationWarning = null,
         public ?array $expirationWarningInterval = null,
+        public ?bool $sendEmail = null,
     ) {}
 }

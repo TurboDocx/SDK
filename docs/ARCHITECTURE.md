@@ -16,7 +16,7 @@ Each SDK wraps a single `HttpClient` class responsible for:
 1. **Authentication**: Bearer token via `apiKey` or `accessToken`, sent in `Authorization` header. Org ID sent as `x-rapiddocx-org-id` header.
 2. **Base URL**: Configurable, defaults to `https://api.turbodocx.com`. Env var fallback: `TURBODOCX_BASE_URL`.
 3. **Response unwrapping**: Backend wraps responses in `{ "data": ... }`. The client auto-unwraps when the response has only a `data` key (smart unwrap).
-4. **Error mapping**: HTTP status codes map to typed errors (400→Validation, 401→Auth, 404→NotFound, 429→RateLimit, other→TurboDocxError).
+4. **Error mapping**: HTTP status codes map to typed errors (400→Validation, 401→Auth, 403→Authorization, 404→NotFound, 409→Conflict, 429→RateLimit, other→TurboDocxError).
 5. **File upload**: Multipart form upload with magic-byte file type detection.
 
 ### Partner Client
@@ -40,8 +40,10 @@ All SDKs follow: **explicit config > env var fallback > error**.
 ```
 TurboDocxError (base)
 ├── AuthenticationError    (401)
+├── AuthorizationError     (403)
 ├── ValidationError        (400)
 ├── NotFoundError          (404)
+├── ConflictError          (409)
 ├── RateLimitError         (429)
 └── NetworkError           (no status — fetch/connection failure)
 ```

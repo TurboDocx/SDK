@@ -569,6 +569,66 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+  /turbosign/documents/{documentId}/signing-url:
+    post:
+      tags:
+      - TurboSign
+      operationId: postTurbosignDocumentsByDocumentIdSigningUrl
+      summary: POST /turbosign/documents/{documentId}/signing-url
+      description: 'Mint an embedded signing URL for one recipient (selected by recipientId or externalId),
+        optionally with an identity assertion for external_idv recipients. Responds `{ data: { results } }`.'
+      parameters:
+      - name: documentId
+        in: path
+        required: true
+        description: TurboSign document identifier.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericRequest'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /turbosign/embedded-signing-settings:
+    get:
+      tags:
+      - TurboSign
+      operationId: getTurbosignEmbeddedSigningSettings
+      summary: GET /turbosign/embedded-signing-settings
+      description: 'Read the organization''s embedded-signing settings (read-only). Responds `{ data: { results } }`.'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
   /v1/quotes/number-config:
     get:
       tags:

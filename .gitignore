@@ -87,6 +87,8 @@ target/
 *.pdf
 *.html
 !ExampleAssets/**
+# The Vite example app's entry page is source, not a generated file.
+!examples/embedded-web-app/index.html
 convert-template.js
 generate-all-pdfs.js
 test-php-sdk/
