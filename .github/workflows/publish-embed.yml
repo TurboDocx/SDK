@@ -1,0 +1,53 @@
+name: Publish Embed SDK
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.release.tag_name, 'embed-v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build -w packages/embed
+
+      - name: Run tests
+        run: npm test -w packages/embed
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.release.tag_name, 'embed-v')
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build -w packages/embed
+
+      - name: Publish to npm
+        run: npm publish --workspace packages/embed --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
