@@ -984,6 +984,10 @@ class TurboSign:
               the org's default channel applies (``defaultChannel`` from
               :meth:`get_embedded_signing_settings`); when its ``allowChannelOverride`` is
               False, a different channel is rejected with ``OtpOverrideNotAllowed``.
+              ``auth`` supports email or SMS passcodes only. For an ``external_idv`` or
+              ``override`` recipient, call :meth:`send_signature` with ``identityVerification``
+              on the recipient, then :meth:`create_signing_url` for each signer (with
+              ``identity_assertion`` for ``external_idv``).
             - ``fields`` shorthand -> full field dicts (placement:'replace' + default size).
               Provide the top-level ``fields`` to override the shorthand with full control.
             - ``signing_order`` defaults to each recipient's index + 1.
@@ -1030,7 +1034,8 @@ class TurboSign:
                   'ready' signer that is the mode the backend resolved for the URL; for
                   'pending'/'completed' no URL was minted, so it is the mode you requested via
                   ``auth`` (None when you set none, even if the org's default channel
-                  applies). :meth:`create_signing_url` reports the effective mode.
+                  applies). :meth:`create_signing_url` reports the effective mode. From
+                  this call it is only ever 'otp' or None.
 
         Example:
             >>> result = await TurboSign.create_embedded_signature(

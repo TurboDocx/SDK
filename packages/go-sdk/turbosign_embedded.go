@@ -145,8 +145,9 @@ type EmbeddedRecipientSMS struct {
 }
 
 // EmbeddedRecipientAuth is the ergonomic per-recipient identity shorthand for embedded signing.
-// It expands to the recipient's IdentityVerification. Leave both zero for no verification.
-// EmailOTP wins if both are set.
+// It expands to the recipient's IdentityVerification. Leave both zero to take the org's default
+// channel (no verification when that default is "none"). EmailOTP wins if both are set. Email and
+// SMS passcodes only: for external_idv or override, use SendSignature + CreateSigningURL instead.
 type EmbeddedRecipientAuth struct {
 	// EmailOTP requires an email OTP before signing. Maps to
 	// IdentityVerification{Mode:"otp", Channel:"email"}.
@@ -223,7 +224,7 @@ type EmbeddedSignatureRecipientResult struct {
 	// "ready" signer it is the mode the backend resolved for the signing URL. For "pending" /
 	// "completed" no URL was minted, so it is the mode you requested via Auth: "" when you set
 	// none, even if the org's default channel applies. CreateSigningURL reports the effective
-	// mode once you mint the URL.
+	// mode once you mint the URL. From CreateEmbeddedSignature it is only ever "otp" or "".
 	IdentityVerificationMode string
 }
 
@@ -398,6 +399,9 @@ func (c *TurboSignClient) GetEmbeddedSigningSettings(ctx context.Context) (*Embe
 //     Auth.SMS.PhoneNumber → {Mode:"otp", Channel:"sms"} and sets the recipient's Phone.
 //     No Auth → the org's default channel applies (GetEmbeddedSigningSettings DefaultChannel);
 //     when AllowChannelOverride is false, a different channel is rejected with OtpOverrideNotAllowed.
+//     Auth supports email or SMS passcodes only. For an external_idv or override recipient, call
+//     SendSignature with IdentityVerification on the recipient, then CreateSigningURL for each
+//     signer (with IdentityAssertion for external_idv).
 //   - Fields shorthand → []Field (Placement "replace" + a default size). Provide the top-level
 //     Fields to override the shorthand with full field control.
 //   - SigningOrder defaults to each recipient's index + 1.
