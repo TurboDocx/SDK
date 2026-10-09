@@ -224,7 +224,7 @@ type CreateSignatureReviewLinkResponse struct {
 	Status     string            `json:"status"`
 	PreviewURL string            `json:"previewUrl,omitempty"`
 	Message    string            `json:"message"`
-	Recipients []ReviewRecipient `json:"recipients,omitempty"`
+	Recipients []ReviewRecipient `json:"recipients,omitempty"` // always present on a successful response
 }
 
 // SendSignatureRequest is the request for SendSignature
@@ -269,7 +269,7 @@ type SendSignatureResponse struct {
 	DocumentID string            `json:"documentId"`
 	Status     string            `json:"status"`
 	Message    string            `json:"message"`
-	Recipients []ReviewRecipient `json:"recipients,omitempty"`
+	Recipients []ReviewRecipient `json:"recipients,omitempty"` // always present on a successful response
 }
 
 // RecipientResponse represents a recipient in the response

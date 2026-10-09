@@ -99,6 +99,8 @@ class TestCreateSignatureReviewLink:
             assert result["documentId"] == "doc-123"
             assert result["status"] == "review_ready"
             assert result.get("previewUrl") is not None
+            assert result["recipients"][0]["id"] == "rec-1"
+            assert result["recipients"][0]["email"] == "john@example.com"
 
     @pytest.mark.asyncio
     async def test_create_signature_review_link_with_file_url(self):

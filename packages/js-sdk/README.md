@@ -245,7 +245,7 @@ const result = await TurboSign.sendSignature({
 
 // The created recipients come back on the send result (id, name, email).
 // Signing links are emailed to them — they are not returned here.
-result.recipients?.forEach(r => {
+result.recipients.forEach(r => {
   console.log(`${r.name} <${r.email}> — ${r.id}`);
 });
 
