@@ -601,7 +601,7 @@ export interface IdentityAssertion {
   overrideEmailMatching?: boolean;
 }
 
-/** Request a single-use embedded signing URL for one recipient. Provide exactly one selector. */
+/** Request an embedded signing URL for one recipient. Provide exactly one selector. */
 export interface CreateSigningUrlRequest {
   /** Select the recipient by TurboDocx recipient id... */
   recipientId?: string;
@@ -613,7 +613,10 @@ export interface CreateSigningUrlRequest {
   returnUrl?: string;
 }
 
-/** The single-use embedded signing URL and its metadata. */
+/**
+ * The embedded signing URL and its metadata: the reusable signing link for `otp` / no-verification
+ * recipients, or a single-use link for `external_idv` / `override` recipients.
+ */
 export interface CreateSigningUrlResponse {
   /** The URL to open (new tab / redirect) or embed for the signer. */
   url: string;

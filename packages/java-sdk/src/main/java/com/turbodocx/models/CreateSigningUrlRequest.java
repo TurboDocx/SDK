@@ -3,7 +3,7 @@ package com.turbodocx.models;
 import com.google.gson.annotations.SerializedName;
 
 /**
- * Request a single-use embedded signing URL for one recipient. Provide exactly one selector
+ * Request an embedded signing URL for one recipient. Provide exactly one selector
  * ({@code recipientId} or {@code externalId}).
  */
 public class CreateSigningUrlRequest {

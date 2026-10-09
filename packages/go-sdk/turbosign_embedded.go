@@ -77,7 +77,7 @@ type IdentityAssertion struct {
 	OverrideEmailMatching bool `json:"overrideEmailMatching,omitempty"`
 }
 
-// CreateSigningURLRequest requests a single-use embedded signing URL for one recipient. Provide
+// CreateSigningURLRequest requests an embedded signing URL for one recipient. Provide
 // exactly one of RecipientID or ExternalID.
 type CreateSigningURLRequest struct {
 	// RecipientID selects the recipient by TurboDocx recipient id...
@@ -90,7 +90,8 @@ type CreateSigningURLRequest struct {
 	ReturnURL string `json:"returnUrl,omitempty"`
 }
 
-// CreateSigningURLResponse is the single-use embedded signing URL and its metadata.
+// CreateSigningURLResponse is the embedded signing URL and its metadata: the reusable signing link
+// for otp / no-verification recipients, or a single-use link for external_idv / override recipients.
 type CreateSigningURLResponse struct {
 	// URL is the URL to open (new tab / redirect) or embed for the signer.
 	URL string `json:"url"`
@@ -330,8 +331,10 @@ func expandRecipientFields(recipient EmbeddedSignatureRecipient) []Field {
 	return fields
 }
 
-// CreateSigningURL mints a single-use embedded signing URL for one recipient — request it the
-// moment the signer is ready (never store it). The Go counterpart of the JS SDK's createSigningUrl.
+// CreateSigningURL mints an embedded signing URL for one recipient — request it the moment the
+// signer is ready (never store it). For otp / no-verification recipients it is the reusable signing
+// link, valid until the document expires; only external_idv / override recipients get a single-use
+// link that expires minutes after issue. The Go counterpart of the JS SDK's createSigningUrl.
 //
 // Provide exactly one of RecipientID or ExternalID (both or neither is a client-side
 // ValidationError). IdentityAssertion is only for external_idv recipients; ReturnURL, when set,

@@ -824,7 +824,11 @@ class TurboSign:
         return_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Mint a single-use embedded signing URL for one recipient.
+        Mint an embedded signing URL for one recipient.
+
+        For ``otp`` / no-verification recipients it is the reusable signing link, valid until the
+        document expires; only ``external_idv`` / ``override`` recipients get a single-use link
+        that expires minutes after issue.
 
         Request it the moment the signer is ready (never store it). Open the returned ``url``
         in a new tab, redirect to it, or embed it in an iframe. This is the counterpart of

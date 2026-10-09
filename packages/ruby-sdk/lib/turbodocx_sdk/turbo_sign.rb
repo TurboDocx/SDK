@@ -127,8 +127,10 @@ module TurboDocxSdk
         end
       end
 
-      # Mint a single-use embedded signing URL for one recipient -- request it the moment the signer
-      # is ready (never store it). The counterpart of DocuSign's createRecipientView / BoldSign's
+      # Mint an embedded signing URL for one recipient -- request it the moment the signer is ready
+      # (never store it). For otp / no-verification recipients it is the reusable signing link, valid
+      # until the document expires; only external_idv / override recipients get a single-use link
+      # that expires minutes after issue. The counterpart of DocuSign's createRecipientView / BoldSign's
       # GetEmbeddedSignLink. Open the returned +url+ in a new tab, redirect to it, or embed it.
       #
       # Provide EXACTLY ONE of +recipient_id+ / +external_id+ (an empty string counts as absent);
