@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { startExternalIdv, type SimulatedAssertion } from "@/lib/turbosign";
 
-// In production, pin this to your known TurboSign origin. Left null here, the listener instead pins to
-// the origin of the URL it framed, so a forged `turbosign:completed` from another frame/extension/ad
-// on the page can't flip the UI to "signed".
+// In production, pin this to your known TurboSign origin. Left null here, the listener pins to the
+// origin of the URL it framed. Origin pinning only rejects other sites; the listener also checks
+// `event.source` so another frame or window on the TurboSign origin can't flip the UI to "signed".
 const TURBOSIGN_ORIGIN: string | null = null;
 
 type Phase = "form" | "signing" | "done";
@@ -47,11 +47,14 @@ export function ExternalIdv() {
 
   // The origin of the framed signing URL — the only origin we accept a completion from.
   const expectedOriginRef = useRef<string | null>(null);
+  // Our signing iframe — the only window we accept a completion from.
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       const expected = TURBOSIGN_ORIGIN ?? expectedOriginRef.current;
       if (!expected || event.origin !== expected) return;
+      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) return;
       if (event.data && (event.data as { type?: string }).type === "turbosign:completed") {
         setPhase("done");
         setStatus("");
@@ -198,7 +201,7 @@ export function ExternalIdv() {
               </div>
             )}
             <div className="overflow-hidden rounded-xl border">
-              <iframe src={embedUrl} title="Sign your policy" allow="clipboard-write" className="block h-[720px] w-full" />
+              <iframe ref={iframeRef} src={embedUrl} title="Sign your policy" allow="clipboard-write" className="block h-[720px] w-full" />
             </div>
           </div>
         )}
