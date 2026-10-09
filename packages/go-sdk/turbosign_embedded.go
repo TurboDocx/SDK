@@ -493,7 +493,7 @@ func (c *TurboSignClient) CreateEmbeddedSignature(ctx context.Context, req *Crea
 	}
 
 	// Match the backend's recipients back to the request by email so we can carry Name and know
-	// the resolved identity mode. The response's recipients is optional, so guard it.
+	// the resolved identity mode. A successful send always returns them.
 	recipientIDByEmail := make(map[string]string, len(sent.Recipients))
 	for _, sr := range sent.Recipients {
 		recipientIDByEmail[sr.Email] = sr.ID

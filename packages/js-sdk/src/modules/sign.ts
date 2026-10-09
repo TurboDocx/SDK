@@ -461,9 +461,8 @@ export class TurboSign {
     const sent = await this.sendSignature(sendRequest);
 
     // Match the backend's recipients back to the request by email so we can carry `name` and know
-    // the resolved identity mode. The response's `recipients` is optional, so guard it.
-    const sentRecipients = sent.recipients ?? [];
-    const recipientIdByEmail = new Map(sentRecipients.map((sr) => [sr.email, sr.id]));
+    // the resolved identity mode.
+    const recipientIdByEmail = new Map(sent.recipients.map((sr) => [sr.email, sr.id]));
 
     // 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER.
     const ordered = request.recipients

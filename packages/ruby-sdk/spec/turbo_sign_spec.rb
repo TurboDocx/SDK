@@ -117,7 +117,8 @@ RSpec.describe TurboDocxSdk::TurboSign do
         "documentId" => "doc-123",
         "status" => "review_ready",
         "previewUrl" => "https://preview.example.com/doc-123",
-        "message" => "Document prepared for review"
+        "message" => "Document prepared for review",
+        "recipients" => [{ "id" => "rec-1", "name" => "John Doe", "email" => "john@example.com" }]
       }
       allow(mock_client).to receive(:upload_file).and_return(mock_response)
 
@@ -132,6 +133,8 @@ RSpec.describe TurboDocxSdk::TurboSign do
       expect(result["documentId"]).to eq("doc-123")
       expect(result["status"]).to eq("review_ready")
       expect(result["previewUrl"]).to eq("https://preview.example.com/doc-123")
+      expect(result["recipients"].first["id"]).to eq("rec-1")
+      expect(result["recipients"].first["email"]).to eq("john@example.com")
       expect(mock_client).to have_received(:upload_file).with(
         "/turbosign/single/prepare-for-review",
         fake_file,

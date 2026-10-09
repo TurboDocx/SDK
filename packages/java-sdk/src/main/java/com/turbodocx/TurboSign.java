@@ -450,10 +450,8 @@ public final class TurboSign {
 
         // Match the backend's recipients back to the request by email so we can carry the id.
         Map<String, String> recipientIdByEmail = new HashMap<>();
-        if (sent.getRecipients() != null) {
-            for (RecipientResponse sr : sent.getRecipients()) {
-                recipientIdByEmail.put(sr.getEmail(), sr.getId());
-            }
+        for (RecipientResponse sr : sent.getRecipients()) {
+            recipientIdByEmail.put(sr.getEmail(), sr.getId());
         }
 
         // 2 + 3. Order the request recipients by signing order (stable — keep a copy, never sort

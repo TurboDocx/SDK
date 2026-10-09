@@ -60,7 +60,7 @@ module TurboDocxSdk
       #   field. Default true (omit the key). Set false to make the field optional for the
       #   signer. Signature and initial fields are always required: the API rejects
       #   "required" => false on them with a 400.
-      # @return [Hash] document info with review URL
+      # @return [Hash] document info with review URL; "recipients" is always present
       # @raise [ValidationError] on invalid request data
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
@@ -102,7 +102,7 @@ module TurboDocxSdk
       # +externalId+ counts as absent (stored as null).
       #
       # @param request [Hash] same as create_signature_review_link, plus optional :sendEmail
-      # @return [Hash] document info with confirmation
+      # @return [Hash] document info with confirmation; "recipients" is always present
       # @raise [ValidationError] on invalid request data
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
@@ -316,7 +316,8 @@ module TurboDocxSdk
         sent = send_signature(send_request)
 
         # Match the backend's recipients back to the request by email so we can carry `name` and know
-        # the resolved identity mode. The response's `recipients` is optional, so guard it.
+        # the resolved identity mode. A successful send always returns `recipients`; the empty default
+        # only turns a malformed response into EmbeddedRecipientNotReturned.
         sent_recipients = sent["recipients"] || []
         recipient_id_by_email = {}
         sent_recipients.each { |sr| recipient_id_by_email[sr["email"]] = sr["id"] }

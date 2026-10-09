@@ -518,9 +518,9 @@ final class TurboSign
         ));
 
         // Match the backend's recipients back to the request by email so we can carry `name` and
-        // know the resolved identity mode. The response's `recipients` is optional, so guard it.
+        // know the resolved identity mode.
         $recipientIdByEmail = [];
-        foreach ($sent->recipients ?? [] as $sr) {
+        foreach ($sent->recipients as $sr) {
             if (is_array($sr) && isset($sr['email'], $sr['id'])) {
                 $recipientIdByEmail[(string) $sr['email']] = (string) $sr['id'];
             }
