@@ -13,14 +13,14 @@ final class SendSignatureResponse
      * @param bool $success
      * @param string $documentId
      * @param string $status
-     * @param array<mixed>|null $recipients
+     * @param array<mixed> $recipients Always present on a successful response
      * @param string $message
      */
     public function __construct(
         public bool $success,
         public string $documentId,
         public string $status,
-        public ?array $recipients,
+        public array $recipients,
         public string $message,
     ) {}
 
@@ -36,7 +36,7 @@ final class SendSignatureResponse
             success: $data['success'] ?? false,
             documentId: $data['documentId'] ?? '',
             status: $data['status'] ?? '',
-            recipients: $data['recipients'] ?? null,
+            recipients: $data['recipients'] ?? [],
             message: $data['message'] ?? '',
         );
     }

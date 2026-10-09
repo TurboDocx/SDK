@@ -14,7 +14,7 @@ final class CreateSignatureReviewLinkResponse
      * @param string $documentId
      * @param string $status
      * @param string|null $previewUrl
-     * @param array<mixed>|null $recipients
+     * @param array<mixed> $recipients Always present on a successful response
      * @param string $message
      */
     public function __construct(
@@ -22,7 +22,7 @@ final class CreateSignatureReviewLinkResponse
         public string $documentId,
         public string $status,
         public ?string $previewUrl,
-        public ?array $recipients,
+        public array $recipients,
         public string $message,
     ) {}
 
@@ -39,7 +39,7 @@ final class CreateSignatureReviewLinkResponse
             documentId: $data['documentId'] ?? '',
             status: $data['status'] ?? '',
             previewUrl: $data['previewUrl'] ?? null,
-            recipients: $data['recipients'] ?? null,
+            recipients: $data['recipients'] ?? [],
             message: $data['message'] ?? '',
         );
     }

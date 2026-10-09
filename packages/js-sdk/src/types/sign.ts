@@ -742,8 +742,8 @@ export interface CreateSignatureReviewLinkResponse {
   status: string;
   /** Preview URL for reviewing the document */
   previewUrl?: string;
-  /** Recipients with their metadata */
-  recipients?: ReviewRecipient[];
+  /** Recipients with their metadata. Always present on a successful response. */
+  recipients: ReviewRecipient[];
   /** Response message */
   message: string;
 }
@@ -812,8 +812,8 @@ export interface SendSignatureResponse {
   documentId: string;
   /** Document status */
   status: string;
-  /** Recipients with their metadata */
-  recipients?: ReviewRecipient[];
+  /** Recipients with their metadata. Always present on a successful response. */
+  recipients: ReviewRecipient[];
   /** Response message */
   message: string;
 }

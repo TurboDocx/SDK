@@ -132,6 +132,27 @@ describe("TurboSign Module", () => {
       expect(result.previewUrl).toBeDefined();
     });
 
+    it("should return the recipients the backend always sends (typed as present)", async () => {
+      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+        success: true,
+        documentId: "doc-123",
+        status: "review_ready",
+        previewUrl: "https://preview.example.com/doc-123",
+        recipients: [{ id: "rec-1", name: "John Doe", email: "john@example.com", metadata: {} }],
+      });
+      TurboSign.configure({ apiKey: "test-key" });
+
+      const result = await TurboSign.createSignatureReviewLink({
+        fileLink: "https://storage.example.com/contract.pdf",
+        recipients: mockRecipients,
+        fields: mockFields,
+      });
+
+      // No `!` or `?.`: under strict TS this only compiles while `recipients` is required.
+      expect(result.recipients[0].id).toBe("rec-1");
+      expect(result.recipients[0].email).toBe("john@example.com");
+    });
+
     it("should prepare document for review with file URL", async () => {
       const mockResponse = {
         success: true,
@@ -325,7 +346,8 @@ describe("TurboSign Module", () => {
       expect(result.documentId).toBe("doc-123");
       expect(result.status).toBe("UNDER_REVIEW");
       expect(result.recipients).toHaveLength(1);
-      expect(result.recipients![0].email).toBe("john@example.com");
+      // No `!` or `?.`: under strict TS this only compiles while `recipients` is required.
+      expect(result.recipients[0].email).toBe("john@example.com");
       expect(result.message).toContain("signing");
       expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith(
         "/turbosign/single/prepare-for-signing",
