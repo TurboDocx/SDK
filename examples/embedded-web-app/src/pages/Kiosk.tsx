@@ -104,8 +104,8 @@ export function Kiosk() {
         <CardTitle className="text-xl">Everyone signs, one after another</CardTitle>
         <CardDescription>
           One document, two signers, in order, on the same device. The first signs now; when they finish, the
-          kiosk mints the next signer's URL just-in-time and loads their turn automatically. A later signer's URL
-          isn't created until it's genuinely their turn.
+          kiosk mints the next signer's URL just-in-time and loads their turn automatically. TurboSign won't issue
+          a later signer's URL until it's their turn, and refuses an out-of-turn signature even with a valid link.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
