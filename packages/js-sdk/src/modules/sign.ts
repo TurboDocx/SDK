@@ -391,6 +391,9 @@ export class TurboSign {
    *   `auth.sms.phoneNumber` → `{ mode:'otp', channel:'sms' }` and sets the recipient's `phone`.
    *   No `auth` → the org's default channel applies (`getEmbeddedSigningSettings().defaultChannel`);
    *   when `allowChannelOverride` is false, a different channel is rejected with `OtpOverrideNotAllowed`.
+   *   `auth` supports email or SMS passcodes only. For an `external_idv` or `override` recipient, call
+   *   {@link TurboSign.sendSignature} with `identityVerification` on the recipient, then
+   *   {@link TurboSign.createSigningUrl} for each signer (with `identityAssertion` for `external_idv`).
    * - `fields` shorthand → {@link Field}[] (`placement:'replace'` + a default size). Provide the
    *   top-level `fields` to override the shorthand with full field control.
    * - `signingOrder` defaults to each recipient's array index + 1.

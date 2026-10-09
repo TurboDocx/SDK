@@ -455,6 +455,9 @@ final class TurboSign
      * recipient's phone). No `auth` means the org's default channel applies
      * ({@see TurboSign::getEmbeddedSigningSettings()} `defaultChannel`); when its
      * `allowChannelOverride` is false, a different channel is rejected with `OtpOverrideNotAllowed`.
+     * `auth` supports email or SMS passcodes only. For an `external_idv` or `override` recipient, call
+     * {@see TurboSign::sendSignature()} with `identityVerification` on the recipient, then
+     * {@see TurboSign::createSigningUrl()} for each signer (with `identityAssertion` for `external_idv`).
      * `sendEmail` defaults to `false`.
      *
      * Turn-aware: with a real (sequential) signing order the backend only mints a URL for the signer

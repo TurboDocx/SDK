@@ -227,7 +227,10 @@ module TurboDocxSdk
       #   +auth[:sms][:phoneNumber]+ => { mode:"otp", channel:"sms" } and sets the recipient's phone.
       #   No +auth+ => the org's default channel applies ("defaultChannel" from
       #   +get_embedded_signing_settings+); when "allowChannelOverride" is false, a different
-      #   channel is rejected with OtpOverrideNotAllowed.
+      #   channel is rejected with OtpOverrideNotAllowed. +auth+ supports email or SMS passcodes only.
+      #   For an external_idv or override recipient, call +send_signature+ with identityVerification
+      #   on the recipient, then +create_signing_url+ for each signer (with +identity_assertion+ for
+      #   external_idv).
       # - +fields+ shorthand => full field objects (placement:"replace" + a default size). Provide the
       #   top-level +fields+ to override the shorthand with full field control.
       # - +signingOrder+ defaults to each recipient's array index + 1.
@@ -253,7 +256,7 @@ module TurboDocxSdk
       #   "identityVerificationMode" is the mode the backend resolved for the URL; for "pending" /
       #   "completed" no URL was minted, so it is the mode you requested via :auth (nil when you set
       #   none, even if the org's default channel applies). +create_signing_url+ reports the
-      #   effective mode.
+      #   effective mode. From this call it is only ever "otp" or nil.
       # @raise [ValidationError] if send_signature returns no recipient matching a requested email
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure

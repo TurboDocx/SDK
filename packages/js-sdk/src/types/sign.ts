@@ -301,7 +301,9 @@ export interface DocumentRecipientsResponse {
 
 /**
  * Per-recipient identity check for embedded signing, in ergonomic shorthand. Expands to the
- * recipient's {@link IdentityVerification}. Omit both keys for no identity verification.
+ * recipient's {@link IdentityVerification}. Omit both keys to take the org's default channel (no
+ * verification when that default is `none`). Email and SMS passcodes only: for `external_idv` or
+ * `override`, use {@link TurboSign.sendSignature} + {@link TurboSign.createSigningUrl} instead.
  */
 export interface EmbeddedRecipientAuth {
   /** Require an email OTP before signing. Maps to identityVerification { mode:'otp', channel:'email' }. */
@@ -383,7 +385,8 @@ export interface EmbeddedSignatureRecipientResult {
    * For a `'ready'` signer, the mode the backend resolved for the signing URL. For `'pending'` /
    * `'completed'` no URL was minted, so this is the mode you requested via `auth`: `null` when you set
    * none, even if the org's default channel applies. {@link TurboSign.createSigningUrl} reports the
-   * effective mode once you mint the URL.
+   * effective mode once you mint the URL. From this call it is only ever `'otp'` or `null`; the wider
+   * union matches {@link CreateSigningUrlResponse}.
    */
   identityVerificationMode: 'otp' | 'external_idv' | 'override' | null;
 }

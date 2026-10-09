@@ -352,7 +352,12 @@ public final class TurboSign {
      * passcode (and sets the recipient's phone). No {@code auth} means the org's default channel
      * applies ({@link #getEmbeddedSigningSettings()} {@code defaultChannel}); when its
      * {@code allowChannelOverride} is false, a different channel is rejected with
-     * {@code OtpOverrideNotAllowed}. {@code sendEmail} defaults to {@code false}.
+     * {@code OtpOverrideNotAllowed}. {@code auth} supports email or SMS passcodes only. For an
+     * {@code external_idv} or {@code override} recipient, call
+     * {@link #sendSignature(SendSignatureRequest)} with {@code identityVerification} on the
+     * recipient, then {@link #createSigningUrl(String, CreateSigningUrlRequest)} for each signer
+     * (with {@code identityAssertion} for {@code external_idv}). {@code sendEmail} defaults to
+     * {@code false}.
      *
      * <p>Turn-aware: with a real (sequential) signing order the backend only mints a URL for the
      * signer whose turn it is. Rather than throw the whole call away, each result carries a status:
