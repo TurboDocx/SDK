@@ -1164,10 +1164,23 @@ class TurboSign:
         }
         document_id = sent["documentId"]
 
-        # 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER.
+        # 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER. With
+        # template roles the API orders signers by the template's roles (the order it returns them
+        # in), not by the order or signing_order passed here.
+        uses_roles = any(r.get("role") for r in recipients)
+        api_order_by_email = {
+            sr["email"].lower(): index
+            for index, sr in enumerate(sent_recipients)
+            if sr.get("email")
+        }
         ordered = sorted(
             (
-                (r, r.get("signing_order", r.get("signingOrder", index + 1)))
+                (
+                    r,
+                    api_order_by_email.get(r["email"].lower(), float("inf"))
+                    if uses_roles
+                    else r.get("signing_order", r.get("signingOrder", index + 1)),
+                )
                 for index, r in enumerate(recipients)
             ),
             key=lambda pair: pair[1],

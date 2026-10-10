@@ -10,7 +10,9 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.jupiter.api.*;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -168,6 +170,36 @@ class TurboSignTemplateRolesTest {
         assertEquals(expectedRecipients, parseArray(body, "recipients"));
         assertEquals(new JsonArray(), parseArray(body, "fields"));
         assertEquals("https://app/sign/doc-3?token=J", result.getRecipients().get(0).getEmbedUrl());
+    }
+
+    @Test
+    @DisplayName("createEmbeddedSignature returns recipients in the template's signing order, not the order passed")
+    void embeddedSigningOrderWithRoles() throws Exception {
+        // The template's roles sign client first; the API returns its signers in that order
+        enqueue(200, "{\"data\":{\"success\":true,\"documentId\":\"doc-4\",\"status\":\"under_review\","
+                + "\"recipients\":[{\"id\":\"rec-client\",\"name\":\"Jane Doe\",\"email\":\"jane@client.com\"},"
+                + "{\"id\":\"rec-counter\",\"name\":\"Sam Lee\",\"email\":\"sam@acme.com\"}]}}");
+        enqueue(200, "{\"data\":{\"results\":{\"url\":\"https://app/sign?token=J\",\"expiresAt\":null,"
+                + "\"recipientId\":\"rec-client\"}}}");
+        enqueue(200, "{\"data\":{\"results\":{\"url\":\"https://app/sign?token=S\",\"expiresAt\":null,"
+                + "\"recipientId\":\"rec-counter\"}}}");
+
+        CreateEmbeddedSignatureResponse result = client.turboSign().createEmbeddedSignature(
+                new CreateEmbeddedSignatureRequest.Builder()
+                        .templateId(TEMPLATE_ID)
+                        .recipients(Arrays.asList(
+                                new EmbeddedSignatureRecipient.Builder()
+                                        .role("countersigner").name("Sam Lee").email("sam@acme.com").build(),
+                                new EmbeddedSignatureRecipient.Builder()
+                                        .role("client").name("Jane Doe").email("jane@client.com").build()))
+                        .build());
+
+        assertEquals(Arrays.asList("jane@client.com", "sam@acme.com"),
+                result.getRecipients().stream().map(EmbeddedSignatureRecipientResult::getEmail)
+                        .collect(Collectors.toList()));
+        assertEquals(Arrays.asList("https://app/sign?token=J", "https://app/sign?token=S"),
+                result.getRecipients().stream().map(EmbeddedSignatureRecipientResult::getEmbedUrl)
+                        .collect(Collectors.toList()));
     }
 
     @Test

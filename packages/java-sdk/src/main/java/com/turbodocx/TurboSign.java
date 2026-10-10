@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -489,10 +490,35 @@ public final class TurboSign {
 
         // 2 + 3. Order the request recipients by signing order (stable — keep a copy, never sort
         // the caller's list), mint one embed URL each, and assemble the result IN SIGNING ORDER.
+        // With template roles the API orders signers by the template's roles (the order it
+        // returns them in), not by the order or signingOrder passed here.
+        boolean usesRoles = false;
+        for (EmbeddedSignatureRecipient r : requestRecipients) {
+            if (r.getRole() != null && !r.getRole().isEmpty()) {
+                usesRoles = true;
+                break;
+            }
+        }
+        Map<String, Integer> apiOrderByEmail = new HashMap<>();
+        if (sent.getRecipients() != null) {
+            List<RecipientResponse> sentRecipients = sent.getRecipients();
+            for (int index = 0; index < sentRecipients.size(); index++) {
+                String email = sentRecipients.get(index).getEmail();
+                if (email != null) {
+                    apiOrderByEmail.put(email.toLowerCase(Locale.ROOT), index);
+                }
+            }
+        }
         List<OrderedRecipient> ordered = new ArrayList<>();
         for (int index = 0; index < requestRecipients.size(); index++) {
             EmbeddedSignatureRecipient r = requestRecipients.get(index);
-            int order = r.getSigningOrder() != null ? r.getSigningOrder() : index + 1;
+            int order;
+            if (usesRoles) {
+                String email = r.getEmail() == null ? null : r.getEmail().toLowerCase(Locale.ROOT);
+                order = apiOrderByEmail.getOrDefault(email, Integer.MAX_VALUE);
+            } else {
+                order = r.getSigningOrder() != null ? r.getSigningOrder() : index + 1;
+            }
             ordered.add(new OrderedRecipient(r, order));
         }
         ordered.sort(Comparator.comparingInt(o -> o.order));

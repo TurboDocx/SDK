@@ -104,6 +104,38 @@ RSpec.describe TurboDocxSdk::TurboSign do
         expect(send_body["templateId"]).to eq(template_id)
         expect(result["recipients"][0]["embedUrl"]).to eq("https://app/sign/doc-3?token=J")
       end
+
+      it "returns recipients in the template's signing order, not the order passed" do
+        # The template's roles sign client first; the API returns its signers in that order
+        signing_url_responses = [
+          { "results" => { "url" => "https://app/sign?token=J", "expiresAt" => nil, "recipientId" => "rec-client" } },
+          { "results" => { "url" => "https://app/sign?token=S", "expiresAt" => nil, "recipientId" => "rec-counter" } }
+        ]
+        allow(mock_client).to receive(:post) do |path, _body|
+          if path == "/turbosign/single/prepare-for-signing"
+            { "success" => true, "documentId" => "doc-4", "status" => "under_review",
+              "recipients" => [
+                { "id" => "rec-client", "name" => "Jane Doe", "email" => "jane@client.com" },
+                { "id" => "rec-counter", "name" => "Sam Lee", "email" => "sam@acme.com" }
+              ] }
+          else
+            signing_url_responses.shift
+          end
+        end
+
+        result = described_class.create_embedded_signature(
+          templateId: template_id,
+          recipients: [
+            { role: "countersigner", name: "Sam Lee", email: "sam@acme.com" },
+            { role: "client", name: "Jane Doe", email: "jane@client.com" }
+          ]
+        )
+
+        expect(result["recipients"].map { |r| r["email"] }).to eq(["jane@client.com", "sam@acme.com"])
+        expect(result["recipients"].map { |r| r["embedUrl"] }).to eq(
+          ["https://app/sign?token=J", "https://app/sign?token=S"]
+        )
+      end
     end
 
     describe ".get_template_signature_setup" do

@@ -339,9 +339,21 @@ module TurboDocxSdk
         # 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER. The index
         # is part of the sort key because Ruby's sort_by is not stable: two recipients with a
         # colliding signingOrder must keep their original relative order (as JS's stable sort does).
-        ordered = recipients.each_with_index
-                            .map { |r, index| [req_val(r, :signingOrder) || index + 1, index, r] }
-                            .sort_by { |order, index, _r| [order, index] }
+        # With template roles the API orders signers by the template's roles (the order it returns
+        # them in), not by the order or signingOrder passed here.
+        uses_roles = recipients.any? { |r| !req_val(r, :role).to_s.empty? }
+        api_order_by_email = {}
+        sent_recipients.each_with_index do |sr, api_index|
+          api_order_by_email[sr["email"].to_s.downcase] = api_index unless sr["email"].nil?
+        end
+        ordered = recipients.each_with_index.map do |r, index|
+          order = if uses_roles
+                    api_order_by_email.fetch(req_val(r, :email).to_s.downcase, Float::INFINITY)
+                  else
+                    req_val(r, :signingOrder) || index + 1
+                  end
+          [order, index, r]
+        end.sort_by { |order, index, _r| [order, index] }
 
         result_recipients = ordered.map do |_order, _index, r|
           email = req_val(r, :email)

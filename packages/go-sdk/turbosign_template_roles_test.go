@@ -149,6 +149,51 @@ func TestTurboSignClient_CreateEmbeddedSignatureWithTemplateRoles(t *testing.T) 
 	assert.Equal(t, "https://app/sign/doc-3?token=J", result.Recipients[0].EmbedURL)
 }
 
+func TestTurboSignClient_CreateEmbeddedSignatureSigningOrderWithTemplateRoles(t *testing.T) {
+	// The template's roles sign client first; the API returns its signers in that order
+	signingURLs := map[string]string{"rec-client": "https://app/sign?token=J", "rec-counter": "https://app/sign?token=S"}
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if calls == 1 {
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"data": map[string]interface{}{
+					"success": true, "documentId": "doc-4", "status": "under_review",
+					"recipients": []map[string]interface{}{
+						{"id": "rec-client", "name": "Jane Doe", "email": "jane@client.com"},
+						{"id": "rec-counter", "name": "Sam Lee", "email": "sam@acme.com"},
+					},
+				},
+			})
+			return
+		}
+		var body map[string]interface{}
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		recipientID, _ := body["recipientId"].(string)
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"data": map[string]interface{}{
+				"results": map[string]interface{}{"url": signingURLs[recipientID], "expiresAt": nil, "recipientId": recipientID},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client := newEmbeddedTestClient(t, server.URL)
+	result, err := client.TurboSign.CreateEmbeddedSignature(context.Background(), &CreateEmbeddedSignatureRequest{
+		TemplateID: rolesTemplateID,
+		Recipients: []EmbeddedSignatureRecipient{
+			{Role: "countersigner", Name: "Sam Lee", Email: "sam@acme.com"},
+			{Role: "client", Name: "Jane Doe", Email: "jane@client.com"},
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, result.Recipients, 2)
+	assert.Equal(t, []string{"jane@client.com", "sam@acme.com"},
+		[]string{result.Recipients[0].Email, result.Recipients[1].Email})
+	assert.Equal(t, []string{"https://app/sign?token=J", "https://app/sign?token=S"},
+		[]string{result.Recipients[0].EmbedURL, result.Recipients[1].EmbedURL})
+}
+
 func TestTurboSignClient_GetTemplateSignatureSetup(t *testing.T) {
 	t.Run("GETs the template's signer roles and unwraps the response", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

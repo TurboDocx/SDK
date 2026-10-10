@@ -121,6 +121,40 @@ class TestCreateEmbeddedSignatureWithRoles:
         assert json.loads(body["fields"]) == []
         assert result["recipients"][0]["embedUrl"] == "https://app/sign/doc-3?token=J"
 
+    @pytest.mark.asyncio
+    async def test_returns_recipients_in_template_signing_order_not_order_passed(self):
+        # The template's roles sign client first; the API returns its signers in that order
+        client = _mock_client()
+        client.post = AsyncMock(
+            side_effect=[
+                {
+                    "success": True,
+                    "documentId": "doc-4",
+                    "status": "under_review",
+                    "recipients": [
+                        {"id": "rec-client", "name": "Jane Doe", "email": "jane@client.com"},
+                        {"id": "rec-counter", "name": "Sam Lee", "email": "sam@acme.com"},
+                    ],
+                },
+                {"results": {"url": "https://app/sign?token=J", "expiresAt": None, "recipientId": "rec-client"}},
+                {"results": {"url": "https://app/sign?token=S", "expiresAt": None, "recipientId": "rec-counter"}},
+            ]
+        )
+        with patch.object(TurboSign, "_get_client", return_value=client):
+            result = await TurboSign.create_embedded_signature(
+                template_id=TEMPLATE_ID,
+                recipients=[
+                    {"role": "countersigner", "name": "Sam Lee", "email": "sam@acme.com"},
+                    {"role": "client", "name": "Jane Doe", "email": "jane@client.com"},
+                ],
+            )
+
+        assert [r["email"] for r in result["recipients"]] == ["jane@client.com", "sam@acme.com"]
+        assert [r["embedUrl"] for r in result["recipients"]] == [
+            "https://app/sign?token=J",
+            "https://app/sign?token=S",
+        ]
+
 
 class TestGetTemplateSignatureSetup:
     @pytest.mark.asyncio

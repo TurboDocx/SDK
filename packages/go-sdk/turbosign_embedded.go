@@ -3,6 +3,7 @@ package turbodocx
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 )
@@ -506,15 +507,37 @@ func (c *TurboSignClient) CreateEmbeddedSignature(ctx context.Context, req *Crea
 
 	// 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER. Use a
 	// stable sort so recipients sharing an order keep their request order (JS .sort() is stable).
+	// With template roles the API orders signers by the template's roles (the order it returns
+	// them in), not by the order or SigningOrder passed here.
+	usesRoles := false
+	for _, r := range req.Recipients {
+		if r.Role != "" {
+			usesRoles = true
+			break
+		}
+	}
+	apiOrderByEmail := make(map[string]int, len(sent.Recipients))
+	for i, sr := range sent.Recipients {
+		apiOrderByEmail[strings.ToLower(sr.Email)] = i
+	}
 	type orderedRecipient struct {
 		recipient EmbeddedSignatureRecipient
 		order     int
 	}
 	ordered := make([]orderedRecipient, 0, len(req.Recipients))
 	for i, r := range req.Recipients {
-		order := r.SigningOrder
-		if order == 0 {
-			order = i + 1
+		var order int
+		if usesRoles {
+			apiOrder, found := apiOrderByEmail[strings.ToLower(r.Email)]
+			if !found {
+				apiOrder = math.MaxInt
+			}
+			order = apiOrder
+		} else {
+			order = r.SigningOrder
+			if order == 0 {
+				order = i + 1
+			}
 		}
 		ordered = append(ordered, orderedRecipient{recipient: r, order: order})
 	}

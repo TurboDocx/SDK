@@ -558,10 +558,28 @@ final class TurboSign
             }
         }
 
-        // 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER.
+        // 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER. With
+        // template roles the API orders signers by the template's roles (the order it returns them
+        // in), not by the order or signingOrder passed here.
+        $usesRoles = false;
+        foreach ($request->recipients as $r) {
+            if ($r->role !== null && $r->role !== '') {
+                $usesRoles = true;
+                break;
+            }
+        }
+        $apiOrderByEmail = [];
+        foreach (array_values($sent->recipients ?? []) as $apiIndex => $sr) {
+            if (is_array($sr) && isset($sr['email'])) {
+                $apiOrderByEmail[strtolower((string) $sr['email'])] = $apiIndex;
+            }
+        }
         $ordered = [];
         foreach ($request->recipients as $index => $r) {
-            $ordered[] = ['r' => $r, 'order' => $r->signingOrder ?? $index + 1];
+            $order = $usesRoles
+                ? ($apiOrderByEmail[strtolower($r->email)] ?? PHP_INT_MAX)
+                : ($r->signingOrder ?? $index + 1);
+            $ordered[] = ['r' => $r, 'order' => $order];
         }
         usort($ordered, static fn(array $a, array $b): int => $a['order'] <=> $b['order']);
 

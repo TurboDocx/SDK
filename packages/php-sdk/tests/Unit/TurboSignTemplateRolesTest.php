@@ -153,6 +153,50 @@ final class TurboSignTemplateRolesTest extends TestCase
         $this->assertSame('https://app/sign/doc-3?token=J', $result->recipients[0]->embedUrl);
     }
 
+    public function testCreateEmbeddedSignatureReturnsRecipientsInTemplateSigningOrder(): void
+    {
+        // The template's roles sign client first; the API returns its signers in that order
+        $this->injectTurboSignClient([
+            $this->ok([
+                'success' => true,
+                'documentId' => 'doc-4',
+                'status' => 'under_review',
+                'message' => 'ok',
+                'recipients' => [
+                    ['id' => 'rec-client', 'name' => 'Jane Doe', 'email' => 'jane@client.com'],
+                    ['id' => 'rec-counter', 'name' => 'Sam Lee', 'email' => 'sam@acme.com'],
+                ],
+            ]),
+            $this->ok(['results' => [
+                'url' => 'https://app/sign?token=J',
+                'expiresAt' => null,
+                'recipientId' => 'rec-client',
+            ]]),
+            $this->ok(['results' => [
+                'url' => 'https://app/sign?token=S',
+                'expiresAt' => null,
+                'recipientId' => 'rec-counter',
+            ]]),
+        ]);
+
+        $result = TurboSign::createEmbeddedSignature(new CreateEmbeddedSignatureRequest(
+            templateId: self::TEMPLATE_ID,
+            recipients: [
+                new EmbeddedSignatureRecipient(name: 'Sam Lee', email: 'sam@acme.com', role: 'countersigner'),
+                new EmbeddedSignatureRecipient(name: 'Jane Doe', email: 'jane@client.com', role: 'client'),
+            ],
+        ));
+
+        $this->assertSame(
+            ['jane@client.com', 'sam@acme.com'],
+            array_map(static fn($r) => $r->email, $result->recipients)
+        );
+        $this->assertSame(
+            ['https://app/sign?token=J', 'https://app/sign?token=S'],
+            array_map(static fn($r) => $r->embedUrl, $result->recipients)
+        );
+    }
+
     public function testGetTemplateSignatureSetupGetsAndUnwrapsRoles(): void
     {
         $this->injectTurboSignClient([
