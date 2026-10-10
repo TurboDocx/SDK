@@ -260,6 +260,37 @@ fmt.Printf("Document ID: %s\n", result.DocumentID)
 fmt.Printf("Message: %s\n", result.Message)
 ```
 
+#### Send a template set up in TurboDocx (signer roles)
+
+Upload a PDF as a template in TurboDocx, add its signers as roles (e.g. "Client", "Countersigner"),
+drag their fields onto the page and save the signature setup. Then send it by setting each
+recipient's `Role`. The fields saved for that role come with it, so `Fields` can be left out.
+
+```go
+// The role keys come from the template (also shown under "Use via API" on the template page)
+setup, err := client.TurboSign.GetTemplateSignatureSetup(ctx, "your-template-id")
+if err != nil {
+    log.Fatal(err)
+}
+for _, role := range setup.Roles {
+    fmt.Printf("%s (order %d, saved signer: %t)\n", role.Key, role.Order, role.HasSavedSigner)
+}
+
+result, err := client.TurboSign.SendSignature(ctx, &turbodocx.SendSignatureRequest{
+    TemplateID: "your-template-id",
+    Recipients: []turbodocx.Recipient{
+        {Role: "client", Name: "Jane Doe", Email: "jane@client.com"},
+        // "countersigner" left out: the signer saved on the template is used
+    },
+})
+```
+
+- Roles sign in the order saved on the template; recipients without a `Role` sign after them, so a role recipient needs no `SigningOrder`.
+- A role left out uses the template's saved signer. If it has none, the API returns a 400 naming the role.
+- An unknown role returns a 400 (`*turbodocx.ValidationError` with `Code` `"UnknownSignerRole"`) whose message lists the template's roles.
+- Any `Fields` you pass are added to the template's (for example an extra witness signature).
+- `Role` works the same way on `CreateSignatureReviewLink` and on `EmbeddedSignatureRecipient` for `CreateEmbeddedSignature`.
+
 #### `SendReminder`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the per-signer cap is spent, does not consume that cap, and only emails signers at the **current** signing order. Pass `nil` for `recipientIDs` to remind everyone eligible; do **not** pass an empty slice, which the API rejects.
@@ -1063,7 +1094,9 @@ Fields: []turbodocx.Field{
 type Recipient struct {
     Name         string `json:"name"`
     Email        string `json:"email"`
-    SigningOrder int    `json:"signingOrder"`
+    SigningOrder int    `json:"signingOrder,omitempty"` // not needed when Role is set
+    Role         string `json:"role,omitempty"`         // template signer role, e.g. "client"
+    // ... Phone, ExternalID, IdentityVerification
 }
 ```
 

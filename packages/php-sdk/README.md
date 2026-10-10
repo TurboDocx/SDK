@@ -292,6 +292,40 @@ if ($result->recipients !== null) {
 $progress = TurboSign::getRecipients($result->documentId);
 ```
 
+#### Send a template set up in TurboDocx (signer roles)
+
+Upload a PDF as a template in TurboDocx, add its signers as roles (e.g. "Client", "Countersigner"),
+drag their fields onto the page and save the signature setup. Then send it by naming each
+recipient's `role`. The fields saved for that role come with it, so `fields` can be left out.
+
+```php
+use TurboDocx\TurboSign;
+use TurboDocx\Types\Recipient;
+use TurboDocx\Types\Requests\SendSignatureRequest;
+
+// The role keys come from the template (also shown under "Use via API" on the template page)
+$setup = TurboSign::getTemplateSignatureSetup('your-template-id');
+foreach ($setup->roles as $role) {
+    echo "{$role->key} (order {$role->order}, saved signer: " . ($role->hasSavedSigner ? 'yes' : 'no') . ")\n";
+}
+
+$result = TurboSign::sendSignature(
+    new SendSignatureRequest(
+        templateId: 'your-template-id',
+        recipients: [
+            new Recipient(name: 'Jane Doe', email: 'jane@client.com', role: 'client'),
+            // 'countersigner' left out: the signer saved on the template is used
+        ],
+    )
+);
+```
+
+- Roles sign in the order saved on the template, so a recipient with a `role` needs no `signingOrder`; recipients without a `role` sign after them (and still need a `signingOrder`).
+- A role left out uses the template's saved signer. If it has none, the API returns a 400 naming the role.
+- An unknown role throws a `ValidationException` listing the template's roles (`$e->errorCode === 'UnknownSignerRole'`).
+- Any `fields` you pass are added to the template's (for example an extra witness signature).
+- `role` works the same way on `createSignatureReviewLink()` (`Recipient`) and `createEmbeddedSignature()` (`EmbeddedSignatureRecipient`).
+
 #### `sendReminder()`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the per-signer cap is already spent, does not consume that cap, and only emails signers at the *current* signing order. Pass `null` (or omit the argument) to remind everyone eligible; do not pass an empty array, which the API rejects.

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "erb"
 require "json"
 require "net/http"
 require "uri"
@@ -60,6 +61,13 @@ module TurboDocxSdk
       #   field. Default true (omit the key). Set false to make the field optional for the
       #   signer. Signature and initial fields are always required: the API rejects
       #   "required" => false on them with a 400.
+      #
+      #   Template signer roles: when sending a +templateId+ whose signers and fields were set up
+      #   in TurboDocx, give each recipient a "role" (e.g. "client") instead of a "signingOrder";
+      #   the fields saved for that role are used, so :fields may be omitted (any passed are
+      #   added). A role left out uses the template's saved signer. List a template's roles with
+      #   +get_template_signature_setup+. An unknown role raises ValidationError, code
+      #   "UnknownSignerRole".
       # @return [Hash] document info with review URL
       # @raise [ValidationError] on invalid request data
       # @raise [AuthenticationError] on invalid credentials
@@ -245,7 +253,9 @@ module TurboDocxSdk
       # A genuine error (anything other than not-in-turn / already-signed) still raises.
       #
       # @param request [Hash] :recipients (Array; each :name, :email, optional :phone, :signingOrder,
-      #   :auth, :fields), and any of :file/:fileName/:fileLink/:templateId/:deliverableId,
+      #   :auth, :fields, :role -- the template signer role this recipient fills; pass every role, as
+      #   one left out falls back to the template's saved signer, who gets no embed URL from this
+      #   call), and any of :file/:fileName/:fileLink/:templateId/:deliverableId,
       #   :documentName, :documentDescription, :senderName, :senderEmail, :ccEmails, :fields (full
       #   field override), :sendEmail, :returnUrl
       # @return [Hash] with "documentId" and "recipients" (each "recipientId", "name", "email",
@@ -272,6 +282,8 @@ module TurboDocxSdk
             "email" => req_val(r, :email),
             "signingOrder" => req_val(r, :signingOrder) || index + 1
           }
+          role = req_val(r, :role)
+          recipient["role"] = role unless role.nil? || role == ""
           recipient["phone"] = phone unless phone.nil?
           recipient["identityVerification"] = identity_verification unless identity_verification.nil?
           recipient
@@ -454,6 +466,30 @@ module TurboDocxSdk
         file_response.body
       end
 
+      # List a template's signer roles, to send it with recipients' +role+.
+      #
+      # A template whose signers and fields were set up in TurboDocx (upload a PDF, drag fields for
+      # each signer, save the signature setup) is sent by naming each recipient's +role+: the fields
+      # saved for that role come with it, so +fields+ can be left out. This returns each role's
+      # "key" (the value for +role+), in signing order, whether the template has a saved signer
+      # used when you leave the role out ("hasSavedSigner", plus "defaultName"/"defaultEmail"), and
+      # its "fieldCount".
+      #
+      # @example
+      #   setup = TurboDocxSdk::TurboSign.get_template_signature_setup("your-template-id")
+      #   setup["roles"].first["key"] # => "client"
+      #
+      # @param template_id [String]
+      # @return [Hash] with "templateId" and "roles" (each "key", "label", "order",
+      #   "hasSavedSigner", optional "defaultName"/"defaultEmail", and "fieldCount")
+      # @raise [NotFoundError] if the template does not exist
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def get_template_signature_setup(template_id)
+        client = get_client
+        client.get("/turbosign/templates/#{ERB::Util.url_encode(template_id.to_s)}/signature-setup")
+      end
+
       # Get the status of a document.
       #
       # The returned Hash carries "status" (e.g. "under_review", "completed", "voided",
@@ -614,7 +650,9 @@ module TurboDocxSdk
 
       def build_signature_form_data(request, sender)
         recipients = request[:recipients] || request["recipients"]
-        fields = request[:fields] || request["fields"]
+        # A template sent with signer roles (recipients carrying "role") takes its fields from the
+        # template, so fields may be omitted; the API still expects the key, so send an empty list.
+        fields = request[:fields] || request["fields"] || []
 
         form_data = {
           "recipients" => JSON.generate(recipients),

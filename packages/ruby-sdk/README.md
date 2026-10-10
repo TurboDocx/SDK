@@ -234,6 +234,34 @@ end
 
 The document source can also be raw bytes or a local file path (`file: File.binread("contract.pdf")` or `file: "contract.pdf"` — the file type is detected from magic bytes), a TurboDocx deliverable (`deliverableId:`), or a TurboSign template (`templateId:`).
 
+#### Send a template set up in TurboDocx (signer roles)
+
+Upload a PDF as a template in TurboDocx, add its signers as roles (e.g. "Client", "Countersigner"),
+drag their fields onto the page and save the signature setup. Then send it by naming each
+recipient's `role`. The fields saved for that role come with it, so `fields` can be left out.
+
+```ruby
+# The role keys come from the template (also shown under "Use via API" on the template page)
+setup = TurboDocxSdk::TurboSign.get_template_signature_setup("your-template-id")
+setup["roles"].each { |r| puts "#{r['key']} (saved signer: #{r['hasSavedSigner']})" }
+# client (saved signer: false)
+# countersigner (saved signer: true)
+
+TurboDocxSdk::TurboSign.send_signature(
+  templateId: "your-template-id",
+  recipients: [
+    { role: "client", name: "Jane Doe", email: "jane@client.com" }
+    # "countersigner" left out: the signer saved on the template is used
+  ]
+)
+```
+
+- Roles sign in the order saved on the template; recipients without a `role` sign after them.
+- A role left out uses the template's saved signer. If it has none, the API returns a 400 naming the role.
+- An unknown role raises `TurboDocxSdk::ValidationError` listing the template's roles (`e.code == "UnknownSignerRole"`).
+- Any `fields` you pass are added to the template's (for example an extra witness signature).
+- `role` works the same way on `create_signature_review_link` and `create_embedded_signature`.
+
 #### `send_reminder(document_id, recipient_ids = nil)`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic

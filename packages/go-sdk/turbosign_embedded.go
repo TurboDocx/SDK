@@ -170,6 +170,10 @@ type EmbeddedRecipientFields struct {
 type EmbeddedSignatureRecipient struct {
 	Name  string
 	Email string
+	// Role is the template signer role this recipient fills, when sending a TemplateID set up with
+	// signer roles. Its saved fields are used, so Fields can be omitted. Pass every role: a role
+	// left out falls back to the template's saved signer, who gets no embed URL from this call.
+	Role  string
 	Phone string
 	// SigningOrder defaults to the recipient's index + 1 (sequential) when 0. 0 is never a valid
 	// 1-indexed order, so a zero value unambiguously means "use the default".
@@ -433,6 +437,7 @@ func (c *TurboSignClient) CreateEmbeddedSignature(ctx context.Context, req *Crea
 			Name:                 r.Name,
 			Email:                r.Email,
 			SigningOrder:         order,
+			Role:                 r.Role,
 			Phone:                phone,
 			IdentityVerification: identity,
 		})

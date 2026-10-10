@@ -18,6 +18,7 @@ Plus the embedded-signing surface (host your own signing UX in an iframe / redir
 
 import json
 from typing import Any, Dict, List, Optional, Union
+from urllib.parse import quote
 
 import httpx
 
@@ -204,7 +205,7 @@ class TurboSign:
     async def create_signature_review_link(
         cls,
         recipients: List[Dict[str, Any]],
-        fields: List[Dict[str, Any]],
+        fields: Optional[List[Dict[str, Any]]] = None,
         *,
         file: Optional[bytes] = None,
         file_name: Optional[str] = None,
@@ -234,8 +235,15 @@ class TurboSign:
 
         Args:
             recipients: List of recipients who will sign
-                Each recipient should have: name, email, signingOrder
-            fields: Signature fields configuration
+                Each recipient should have: name, email, signingOrder. A recipient may
+                instead carry ``role`` (a template signer role key, e.g. "client") when
+                sending a ``template_id`` set up in TurboDocx; it then gets every field saved
+                for that role and signingOrder is not needed (roles sign in the template's
+                order). A role left out uses the template's saved signer. List a template's
+                roles with :meth:`get_template_signature_setup`.
+            fields: Signature fields configuration. Optional when recipients carry a
+                ``role``: the template's saved fields are used and any fields passed here
+                are added to them. Sent as ``[]`` when omitted.
                 Each field should have: type, recipientEmail, and positioning info
                 Optional per-field "metadata" drives conditional (IF/THEN) logic:
                   - On a controlling checkbox: {"metadata": {"fieldKey": "request_changes"}}
@@ -279,7 +287,7 @@ class TurboSign:
             # For file upload, use form data with JSON strings
             form_data: Dict[str, Any] = {
                 "recipients": json.dumps(recipients),
-                "fields": json.dumps(fields),
+                "fields": json.dumps(fields if fields is not None else []),
             }
 
             # Add optional fields
@@ -318,7 +326,7 @@ class TurboSign:
             # Backend expects recipients/fields as JSON strings (same as form-data)
             json_body: Dict[str, Any] = {
                 "recipients": json.dumps(recipients),
-                "fields": json.dumps(fields),
+                "fields": json.dumps(fields if fields is not None else []),
             }
 
             # Add optional fields
@@ -363,7 +371,7 @@ class TurboSign:
     async def send_signature(
         cls,
         recipients: List[Dict[str, Any]],
-        fields: List[Dict[str, Any]],
+        fields: Optional[List[Dict[str, Any]]] = None,
         *,
         file: Optional[bytes] = None,
         file_name: Optional[str] = None,
@@ -393,7 +401,12 @@ class TurboSign:
 
         Args:
             recipients: List of recipients who will sign
-                Each recipient should have: name, email, signingOrder
+                Each recipient should have: name, email, signingOrder. A recipient may
+                instead carry ``role`` (a template signer role key, e.g. "client") when
+                sending a ``template_id`` set up in TurboDocx; it then gets every field saved
+                for that role and signingOrder is not needed (roles sign in the template's
+                order). A role left out uses the template's saved signer. List a template's
+                roles with :meth:`get_template_signature_setup`.
                 Embedded signing (optional, camelCase keys): ``phone`` (E.164; required for
                 SMS), ``externalId`` (your own key, unique in the document) and
                 ``identityVerification`` -- {"mode": "otp", "channel": "email"|"sms"},
@@ -406,7 +419,9 @@ class TurboSign:
                 external_idv and override recipients sign only through a single-use
                 create_signing_url link and are never sent signing, reminder or resend emails.
                 A blank or whitespace-only ``externalId`` counts as absent (stored as null).
-            fields: Signature fields configuration
+            fields: Signature fields configuration. Optional when recipients carry a
+                ``role``: the template's saved fields are used and any fields passed here
+                are added to them. Sent as ``[]`` when omitted.
                 Each field should have: type, recipientEmail, and positioning info
                 Optional per-field "metadata" drives conditional (IF/THEN) logic:
                   - On a controlling checkbox: {"metadata": {"fieldKey": "request_changes"}}
@@ -457,7 +472,7 @@ class TurboSign:
             # For file upload, use form data with JSON strings
             form_data: Dict[str, Any] = {
                 "recipients": json.dumps(recipients),
-                "fields": json.dumps(fields),
+                "fields": json.dumps(fields if fields is not None else []),
             }
 
             # Add optional fields
@@ -501,7 +516,7 @@ class TurboSign:
             # Backend expects recipients/fields as JSON strings (same as form-data)
             json_body: Dict[str, Any] = {
                 "recipients": json.dumps(recipients),
-                "fields": json.dumps(fields),
+                "fields": json.dumps(fields if fields is not None else []),
             }
 
             # Add optional fields
@@ -545,6 +560,39 @@ class TurboSign:
                 "/turbosign/single/prepare-for-signing",
                 data=json_body
             )
+
+    @classmethod
+    async def get_template_signature_setup(cls, template_id: str) -> Dict[str, Any]:
+        """
+        List a template's signer roles, to send it with ``recipients[]["role"]``
+
+        A template whose signers and fields were set up in TurboDocx (upload a PDF, drag
+        fields for each signer, save the signature setup) is sent by naming each recipient's
+        role: the fields saved for that role come with it.
+
+        Args:
+            template_id: ID of the template
+
+        Returns:
+            Dict with:
+                - templateId: The template ID
+                - roles: Roles in signing order, each {key, label, order, hasSavedSigner,
+                  fieldCount} plus defaultName/defaultEmail when hasSavedSigner is true.
+                  ``key`` is the value to pass as a recipient's ``role``.
+
+        Example:
+            >>> setup = await TurboSign.get_template_signature_setup("template-id")
+            >>> [r["key"] for r in setup["roles"]]  # ['client', 'countersigner']
+            >>> await TurboSign.send_signature(
+            ...     template_id="template-id",
+            ...     recipients=[{"role": "client", "name": "Jane Doe", "email": "jane@client.com"}],
+            ... )
+        """
+        client = cls._get_client()
+        # HTTP client auto-unwraps {data: ...} responses
+        return await client.get(
+            f"/turbosign/templates/{quote(template_id, safe='')}/signature-setup"
+        )
 
     @classmethod
     async def get_status(cls, document_id: str) -> Dict[str, Any]:
@@ -1003,7 +1051,11 @@ class TurboSign:
             recipients: List of signer dicts. Each: ``name``, ``email``, optional ``phone``,
                 optional ``signing_order`` (or ``signingOrder``), optional ``auth``
                 ({"email_otp": True} or {"sms": {"phone_number": "+1..."}}), optional
-                ``fields`` shorthand ({"signature": "{signature1}", "date": "{date1}", ...}).
+                ``fields`` shorthand ({"signature": "{signature1}", "date": "{date1}", ...}),
+                optional ``role`` (a template signer role key, passed through when sending a
+                ``template_id`` set up in TurboDocx; that role's saved fields are used). Pass
+                every role: a role left out falls back to the template's saved signer, who
+                gets no embed URL from this call.
             file: PDF file content as bytes.
             file_name: Original filename.
             file_link: URL to the document file.
@@ -1056,6 +1108,8 @@ class TurboSign:
                 "email": r["email"],
                 "signingOrder": r.get("signing_order", r.get("signingOrder", index + 1)),
             }
+            if r.get("role"):
+                recipient["role"] = r["role"]
             if phone:
                 recipient["phone"] = phone
             if identity_verification:
