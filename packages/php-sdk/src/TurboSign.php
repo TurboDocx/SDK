@@ -29,6 +29,7 @@ use TurboDocx\Types\Responses\EmbeddedSignatureRecipientResult;
 use TurboDocx\Types\Responses\EmbeddedSigningSettings;
 use TurboDocx\Types\Responses\ResendEmailResponse;
 use TurboDocx\Types\Responses\SendSignatureResponse;
+use TurboDocx\Types\Responses\TemplateSignatureSetup;
 use TurboDocx\Types\Responses\VoidDocumentResponse;
 
 /**
@@ -260,6 +261,36 @@ final class TurboSign
     }
 
     /**
+     * List a template's signer roles, to send it with a role on each recipient
+     *
+     * A template whose signers and fields were set up in TurboDocx (upload a PDF, drag fields for
+     * each signer, save the signature setup) is sent by naming each recipient's role: the fields
+     * saved for that role come with it. This returns each role's `key` (the value for
+     * Recipient `role`), in signing order, whether the template has a saved signer used when you
+     * leave the role out, and its field count.
+     *
+     * @param string $templateId ID of the template
+     * @return TemplateSignatureSetup
+     *
+     * @example
+     * ```php
+     * $setup = TurboSign::getTemplateSignatureSetup($templateId);
+     * // $setup->roles[0]->key === 'client'
+     * TurboSign::sendSignature(new SendSignatureRequest(
+     *     templateId: $templateId,
+     *     recipients: [new Recipient(name: 'Jane Doe', email: 'jane@client.com', role: 'client')],
+     * ));
+     * ```
+     */
+    public static function getTemplateSignatureSetup(string $templateId): TemplateSignatureSetup
+    {
+        $client = self::getClient();
+        // HTTP client auto-unwraps {data: ...} responses
+        $response = $client->get('/turbosign/templates/' . rawurlencode($templateId) . '/signature-setup');
+        return TemplateSignatureSetup::fromArray(is_array($response) ? $response : []);
+    }
+
+    /**
      * Get the status of a document
      *
      * @param string $documentId ID of the document
@@ -483,6 +514,7 @@ final class TurboSign
                 signingOrder: $r->signingOrder ?? $index + 1,
                 phone: $phone,
                 identityVerification: $identityVerification,
+                role: $r->role,
             );
         }
 
@@ -526,10 +558,28 @@ final class TurboSign
             }
         }
 
-        // 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER.
+        // 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER. With
+        // template roles the API orders signers by the template's roles (the order it returns them
+        // in), not by the order or signingOrder passed here.
+        $usesRoles = false;
+        foreach ($request->recipients as $r) {
+            if ($r->role !== null && $r->role !== '') {
+                $usesRoles = true;
+                break;
+            }
+        }
+        $apiOrderByEmail = [];
+        foreach (array_values($sent->recipients ?? []) as $apiIndex => $sr) {
+            if (is_array($sr) && isset($sr['email'])) {
+                $apiOrderByEmail[strtolower((string) $sr['email'])] = $apiIndex;
+            }
+        }
         $ordered = [];
         foreach ($request->recipients as $index => $r) {
-            $ordered[] = ['r' => $r, 'order' => $r->signingOrder ?? $index + 1];
+            $order = $usesRoles
+                ? ($apiOrderByEmail[strtolower($r->email)] ?? PHP_INT_MAX)
+                : ($r->signingOrder ?? $index + 1);
+            $ordered[] = ['r' => $r, 'order' => $order];
         }
         usort($ordered, static fn(array $a, array $b): int => $a['order'] <=> $b['order']);
 

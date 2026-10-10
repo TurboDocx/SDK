@@ -27,6 +27,7 @@ import {
   SignatureFieldType,
   SignatureScheduleOptions,
   SendReminderResponse,
+  TemplateSignatureSetup,
 } from '../types/sign';
 
 /**
@@ -199,7 +200,8 @@ export class TurboSign {
 
     // Serialize recipients and fields to JSON strings (as n8n node does)
     const recipientsJson = JSON.stringify(request.recipients);
-    const fieldsJson = JSON.stringify(request.fields);
+    // A template sent with signer roles takes its fields from the template, so fields may be omitted
+    const fieldsJson = JSON.stringify(request.fields ?? []);
 
     // Build form data
     const formData: Record<string, any> = {
@@ -284,7 +286,8 @@ export class TurboSign {
 
     // Serialize recipients and fields to JSON strings (as n8n node does)
     const recipientsJson = JSON.stringify(request.recipients);
-    const fieldsJson = JSON.stringify(request.fields);
+    // A template sent with signer roles takes its fields from the template, so fields may be omitted
+    const fieldsJson = JSON.stringify(request.fields ?? []);
 
     // Build form data
     const formData: Record<string, any> = {
@@ -431,6 +434,7 @@ export class TurboSign {
         name: r.name,
         email: r.email,
         signingOrder: r.signingOrder ?? index + 1,
+        ...(r.role ? { role: r.role } : {}),
         ...(phone ? { phone } : {}),
         ...(identityVerification ? { identityVerification } : {}),
       };
@@ -465,9 +469,18 @@ export class TurboSign {
     const sentRecipients = sent.recipients ?? [];
     const recipientIdByEmail = new Map(sentRecipients.map((sr) => [sr.email, sr.id]));
 
-    // 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER.
+    // 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER. With
+    // template roles the API orders signers by the template's roles (the order it returns them in),
+    // not by the order or signingOrder passed here.
+    const usesRoles = request.recipients.some((r) => !!r.role);
+    const apiOrderByEmail = new Map(sentRecipients.map((sr, index) => [sr.email.toLowerCase(), index]));
     const ordered = request.recipients
-      .map((r, index) => ({ r, order: r.signingOrder ?? index + 1 }))
+      .map((r, index) => ({
+        r,
+        order: usesRoles
+          ? apiOrderByEmail.get(r.email.toLowerCase()) ?? Number.MAX_SAFE_INTEGER
+          : r.signingOrder ?? index + 1,
+      }))
       .sort((a, b) => a.order - b.order);
 
     const recipients: EmbeddedSignatureRecipientResult[] = [];
@@ -697,6 +710,35 @@ export class TurboSign {
     // Step 3: Return as Blob
     const arrayBuffer = await fileResponse.arrayBuffer();
     return new Blob([arrayBuffer], { type: 'application/pdf' });
+  }
+
+  /**
+   * List a template's signer roles, to send it with `recipients[].role`
+   *
+   * A template whose signers and fields were set up in TurboDocx (upload a PDF, drag fields for each
+   * signer, save the signature setup) is sent by naming each recipient's role: the fields saved for
+   * that role come with it. This returns each role's `key` (the value for `role`), in signing order,
+   * whether the template has a saved signer used when you leave the role out, and its field count.
+   *
+   * @param templateId - ID of the template
+   * @returns The template's signer roles
+   *
+   * @example
+   * ```typescript
+   * const { roles } = await TurboSign.getTemplateSignatureSetup(templateId);
+   * // roles[0].key === 'client'
+   * await TurboSign.sendSignature({
+   *   templateId,
+   *   recipients: [{ role: 'client', name: 'Jane Doe', email: 'jane@client.com' }],
+   * });
+   * ```
+   */
+  static async getTemplateSignatureSetup(templateId: string): Promise<TemplateSignatureSetup> {
+    const client = this.getClient();
+    // HTTP client auto-unwraps {data: ...} responses
+    return client.get<TemplateSignatureSetup>(
+      `/turbosign/templates/${encodeURIComponent(templateId)}/signature-setup`
+    );
   }
 
   /**

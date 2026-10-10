@@ -276,6 +276,38 @@ for (RecipientResponse r : result.getRecipients()) {
 // For signing progress afterwards, use getRecipients().
 ```
 
+#### Send a template set up in TurboDocx (signer roles)
+
+Upload a PDF as a template in TurboDocx, add its signers as roles (e.g. "Client", "Countersigner"),
+drag their fields onto the page and save the signature setup. Then send it by naming each
+recipient's role with `Recipient.withRole(...)`. The fields saved for that role come with it, so
+`.fields(...)` can be left out.
+
+```java
+// The role keys come from the template (also shown under "Use via API" on the template page)
+TemplateSignatureSetup setup = client.turboSign().getTemplateSignatureSetup("your-template-id");
+for (TemplateSignatureRole role : setup.getRoles()) {
+    System.out.println(role.getKey() + " saved signer: " + role.hasSavedSigner());
+}
+
+SendSignatureResponse result = client.turboSign().sendSignature(
+    new SendSignatureRequest.Builder()
+        .templateId("your-template-id")
+        .recipients(Arrays.asList(
+            Recipient.withRole("client", "Jane Doe", "jane@client.com")
+            // "countersigner" left out: the signer saved on the template is used
+        ))
+        .build()
+);
+```
+
+- Roles sign in the order saved on the template; recipients without a role sign after them.
+- A role left out uses the template's saved signer. If it has none, the API returns a 400 naming the role.
+- An unknown role returns a 400 (`ValidationException` with code `UnknownSignerRole`) listing the template's roles.
+- Any fields you pass are added to the template's (for example an extra witness signature).
+- `role` works the same way on `createSignatureReviewLink` and, via `EmbeddedSignatureRecipient.Builder().role(...)`, on `createEmbeddedSignature`.
+- `new Recipient.Builder().role("client").name(...).email(...)` is the builder form, when you also need a phone or external id.
+
 #### `sendReminder()`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the cap is spent, does not consume that cap, and only emails signers at the current signing order. Use the single-arg overload to remind everyone eligible; do not pass an empty list, which the API rejects.

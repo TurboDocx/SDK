@@ -3,6 +3,7 @@ package turbodocx
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 )
@@ -170,6 +171,10 @@ type EmbeddedRecipientFields struct {
 type EmbeddedSignatureRecipient struct {
 	Name  string
 	Email string
+	// Role is the template signer role this recipient fills, when sending a TemplateID set up with
+	// signer roles. Its saved fields are used, so Fields can be omitted. Pass every role: a role
+	// left out falls back to the template's saved signer, who gets no embed URL from this call.
+	Role  string
 	Phone string
 	// SigningOrder defaults to the recipient's index + 1 (sequential) when 0. 0 is never a valid
 	// 1-indexed order, so a zero value unambiguously means "use the default".
@@ -433,6 +438,7 @@ func (c *TurboSignClient) CreateEmbeddedSignature(ctx context.Context, req *Crea
 			Name:                 r.Name,
 			Email:                r.Email,
 			SigningOrder:         order,
+			Role:                 r.Role,
 			Phone:                phone,
 			IdentityVerification: identity,
 		})
@@ -501,15 +507,37 @@ func (c *TurboSignClient) CreateEmbeddedSignature(ctx context.Context, req *Crea
 
 	// 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER. Use a
 	// stable sort so recipients sharing an order keep their request order (JS .sort() is stable).
+	// With template roles the API orders signers by the template's roles (the order it returns
+	// them in), not by the order or SigningOrder passed here.
+	usesRoles := false
+	for _, r := range req.Recipients {
+		if r.Role != "" {
+			usesRoles = true
+			break
+		}
+	}
+	apiOrderByEmail := make(map[string]int, len(sent.Recipients))
+	for i, sr := range sent.Recipients {
+		apiOrderByEmail[strings.ToLower(sr.Email)] = i
+	}
 	type orderedRecipient struct {
 		recipient EmbeddedSignatureRecipient
 		order     int
 	}
 	ordered := make([]orderedRecipient, 0, len(req.Recipients))
 	for i, r := range req.Recipients {
-		order := r.SigningOrder
-		if order == 0 {
-			order = i + 1
+		var order int
+		if usesRoles {
+			apiOrder, found := apiOrderByEmail[strings.ToLower(r.Email)]
+			if !found {
+				apiOrder = math.MaxInt
+			}
+			order = apiOrder
+		} else {
+			order = r.SigningOrder
+			if order == 0 {
+				order = i + 1
+			}
 		}
 		ordered = append(ordered, orderedRecipient{recipient: r, order: order})
 	}

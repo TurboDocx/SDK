@@ -6,6 +6,12 @@ package com.turbodocx.models;
 public class EmbeddedSignatureRecipient {
     private final String name;
     private final String email;
+    /**
+     * The template signer role this recipient fills, when sending a {@code templateId} set up with
+     * signer roles. Its saved fields are used, so {@code fields} can be omitted. Pass every role: a
+     * role left out falls back to the template's saved signer, who gets no embed URL from this call.
+     */
+    private final String role;
     private final String phone;
     /** Defaults to the recipient's index + 1 (sequential) when null. */
     private final Integer signingOrder;
@@ -15,6 +21,7 @@ public class EmbeddedSignatureRecipient {
     private EmbeddedSignatureRecipient(Builder builder) {
         this.name = builder.name;
         this.email = builder.email;
+        this.role = builder.role;
         this.phone = builder.phone;
         this.signingOrder = builder.signingOrder;
         this.auth = builder.auth;
@@ -27,6 +34,10 @@ public class EmbeddedSignatureRecipient {
 
     public String getEmail() {
         return email;
+    }
+
+    public String getRole() {
+        return role;
     }
 
     public String getPhone() {
@@ -48,6 +59,7 @@ public class EmbeddedSignatureRecipient {
     public static class Builder {
         private String name;
         private String email;
+        private String role;
         private String phone;
         private Integer signingOrder;
         private EmbeddedRecipientAuth auth;
@@ -60,6 +72,11 @@ public class EmbeddedSignatureRecipient {
 
         public Builder email(String email) {
             this.email = email;
+            return this;
+        }
+
+        public Builder role(String role) {
+            this.role = role;
             return this;
         }
 

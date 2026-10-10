@@ -12,8 +12,23 @@ public class Recipient {
     @SerializedName("email")
     private final String email;
 
+    /**
+     * Signing order (1-indexed). Null (omitted) for a recipient with a {@link #getRole() role}: a
+     * template's roles sign in the order saved on the template, and recipients without a role sign
+     * after them.
+     */
     @SerializedName("signingOrder")
-    private final int signingOrder;
+    private final Integer signingOrder;
+
+    /**
+     * The template signer role this recipient fills (e.g. {@code "client"}), when sending a
+     * {@code templateId} whose signers and fields were set up in TurboDocx. The recipient gets every
+     * field saved for that role. A role you leave out uses the signer saved on the template, if it
+     * has one. List a template's roles with {@code TurboSign.getTemplateSignatureSetup}. Null
+     * (default) is omitted from the request.
+     */
+    @SerializedName("role")
+    private final String role;
 
     /**
      * E.164 phone number (e.g. +13055551234). Required when identity verification uses SMS OTP.
@@ -51,6 +66,19 @@ public class Recipient {
         this.phone = phone;
         this.externalId = externalId;
         this.identityVerification = identityVerification;
+        this.role = null;
+    }
+
+    /**
+     * A recipient filling a template signer role. No signing order is needed: roles sign in the
+     * order saved on the template.
+     *
+     * @param role  the role key, from {@code TurboSign.getTemplateSignatureSetup}
+     * @param name  the signer's name
+     * @param email the signer's email
+     */
+    public static Recipient withRole(String role, String name, String email) {
+        return new Builder().role(role).name(name).email(email).build();
     }
 
     private Recipient(Builder builder) {
@@ -60,6 +88,7 @@ public class Recipient {
         this.phone = builder.phone;
         this.externalId = builder.externalId;
         this.identityVerification = builder.identityVerification;
+        this.role = builder.role;
     }
 
     public String getName() {
@@ -70,12 +99,17 @@ public class Recipient {
         return email;
     }
 
-    public int getSigningOrder() {
+    /** The signing order, or null when not set (a recipient with a role). */
+    public Integer getSigningOrder() {
         return signingOrder;
     }
 
     public String getPhone() {
         return phone;
+    }
+
+    public String getRole() {
+        return role;
     }
 
     public String getExternalId() {
@@ -87,14 +121,15 @@ public class Recipient {
     }
 
     /**
-     * Builder for recipients that carry embedded-signing details (phone, externalId, identity
-     * verification). The three-argument constructor remains for the simple email-invite flow.
+     * Builder for recipients that carry a template role or embedded-signing details (phone,
+     * externalId, identity verification). The three-argument constructor remains for the simple email-invite flow.
      */
     public static class Builder {
         private String name;
         private String email;
-        private int signingOrder;
+        private Integer signingOrder;
         private String phone;
+        private String role;
         private String externalId;
         private IdentityVerification identityVerification;
 
@@ -108,8 +143,14 @@ public class Recipient {
             return this;
         }
 
-        public Builder signingOrder(int signingOrder) {
+        public Builder signingOrder(Integer signingOrder) {
             this.signingOrder = signingOrder;
+            return this;
+        }
+
+        /** The template signer role this recipient fills; see {@link Recipient#getRole()}. */
+        public Builder role(String role) {
+            this.role = role;
             return this;
         }
 

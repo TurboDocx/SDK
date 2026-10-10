@@ -18,6 +18,10 @@ final class EmbeddedSignatureRecipient
      * @param int|null $signingOrder Defaults to the recipient's index + 1 (sequential)
      * @param EmbeddedRecipientAuth|null $auth Identity-check shorthand
      * @param EmbeddedRecipientFields|null $fields Field-placement shorthand
+     * @param string|null $role The template signer role this recipient fills, when sending a
+     *     templateId set up with signer roles. Its saved fields are used, so `fields` can be
+     *     omitted. Pass every role: a role left out falls back to the template's saved signer, who
+     *     gets no embed URL from this call.
      */
     public function __construct(
         public string $name,
@@ -26,5 +30,6 @@ final class EmbeddedSignatureRecipient
         public ?int $signingOrder = null,
         public ?EmbeddedRecipientAuth $auth = null,
         public ?EmbeddedRecipientFields $fields = null,
+        public ?string $role = null,
     ) {}
 }

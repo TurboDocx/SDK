@@ -252,6 +252,32 @@ result.recipients?.forEach(r => {
 // For signing progress afterwards, use getRecipients().
 ```
 
+#### Send a template set up in TurboDocx (signer roles)
+
+Upload a PDF as a template in TurboDocx, add its signers as roles (e.g. "Client", "Countersigner"),
+drag their fields onto the page and save the signature setup. Then send it by naming each
+recipient's `role`. The fields saved for that role come with it, so `fields` can be left out.
+
+```typescript
+// The role keys come from the template (also shown under "Use via API" on the template page)
+const { roles } = await TurboSign.getTemplateSignatureSetup('your-template-id');
+// [{ key: 'client', hasSavedSigner: false, ... }, { key: 'countersigner', hasSavedSigner: true, ... }]
+
+await TurboSign.sendSignature({
+  templateId: 'your-template-id',
+  recipients: [
+    { role: 'client', name: 'Jane Doe', email: 'jane@client.com' },
+    // 'countersigner' left out: the signer saved on the template is used
+  ],
+});
+```
+
+- Roles sign in the order saved on the template; recipients without a `role` sign after them.
+- A role left out uses the template's saved signer. If it has none, the API returns a 400 naming the role.
+- An unknown role returns a 400 listing the template's roles.
+- Any `fields` you pass are added to the template's (for example an extra witness signature).
+- `role` works the same way on `createSignatureReviewLink` and `createEmbeddedSignature`.
+
 #### `sendReminder(documentId, recipientIds?)`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic
@@ -977,6 +1003,7 @@ fields: [
 For complete, working examples including template anchors, advanced field types, and various workflows, see the [`examples/`](./examples/) directory:
 
 - [`turbosign-send-simple.ts`](./examples/turbosign-send-simple.ts) - Send document directly with template anchors
+- [`turbosign-template-roles.ts`](./examples/turbosign-template-roles.ts) - Send a template set up in TurboDocx by naming each signer's role
 - [`turbosign-basic.ts`](./examples/turbosign-basic.ts) - Create review link first, then send manually
 - [`turbosign-advanced.ts`](./examples/turbosign-advanced.ts) - Advanced field types (checkbox, readonly, multiline text, etc.)
 

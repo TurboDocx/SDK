@@ -325,6 +325,12 @@ export interface EmbeddedRecipientFields {
 export interface EmbeddedSignatureRecipient {
   name: string;
   email: string;
+  /**
+   * The template signer role this recipient fills, when sending a `templateId` set up with signer
+   * roles. Its saved fields are used, so `fields` can be omitted. Pass every role: a role left out
+   * falls back to the template's saved signer, who gets no embed URL from this call.
+   */
+  role?: string;
   phone?: string;
   /** Defaults to the recipient's index + 1 (sequential). */
   signingOrder?: number;
@@ -533,8 +539,18 @@ export interface Recipient {
   name: string;
   /** Recipient's email address */
   email: string;
-  /** Signing order (1-indexed) */
-  signingOrder: number;
+  /**
+   * Signing order (1-indexed). Required, except for a recipient with a `role`: a template's roles
+   * sign in the order saved on the template, and recipients without a role sign after them.
+   */
+  signingOrder?: number;
+  /**
+   * The template signer role this recipient fills (e.g. `"client"`), when sending a `templateId`
+   * whose signers and fields were set up in TurboDocx. The recipient gets every field saved for that
+   * role. A role you leave out uses the signer saved on the template, if it has one. List a
+   * template's roles with {@link TurboSign.getTemplateSignatureSetup}.
+   */
+  role?: string;
   /** E.164 phone number (e.g. +13055551234). Required when identity verification uses SMS OTP. */
   phone?: string;
   /**
@@ -678,8 +694,12 @@ export interface CreateSignatureReviewLinkRequest {
   templateId?: string;
   /** Recipients who will sign */
   recipients: Recipient[];
-  /** Signature fields configuration */
-  fields: Field[];
+  /**
+   * Signature fields configuration. Optional when sending a template set up in TurboDocx with
+   * signer roles: give each recipient a `role` and the fields saved for that role are used (any
+   * fields you pass here are added to them).
+   */
+  fields?: Field[];
   /** Document name */
   documentName?: string;
   /** Document description */
@@ -738,8 +758,12 @@ export interface SendSignatureRequest {
   templateId?: string;
   /** Recipients who will sign */
   recipients: Recipient[];
-  /** Signature fields configuration */
-  fields: Field[];
+  /**
+   * Signature fields configuration. Optional when sending a template set up in TurboDocx with
+   * signer roles: give each recipient a `role` and the fields saved for that role are used (any
+   * fields you pass here are added to them).
+   */
+  fields?: Field[];
   /** Document name */
   documentName?: string;
   /** Document description */
@@ -786,4 +810,29 @@ export interface SendSignatureResponse {
   recipients?: ReviewRecipient[];
   /** Response message */
   message: string;
+}
+
+/** One signer role of a template, as returned by {@link TurboSign.getTemplateSignatureSetup}. */
+export interface TemplateSignatureRole {
+  /** The value to pass as `recipients[].role` */
+  key: string;
+  /** The role's name in the TurboDocx UI */
+  label: string;
+  /** Signing order of this role */
+  order: number;
+  /** True when the template has a saved signer for this role, used if you leave the role out */
+  hasSavedSigner: boolean;
+  /** The saved signer's name (only when `hasSavedSigner`) */
+  defaultName?: string;
+  /** The saved signer's email (only when `hasSavedSigner`) */
+  defaultEmail?: string;
+  /** How many fields are saved for this role */
+  fieldCount: number;
+}
+
+/** A template's signer roles, for sending it with `recipients[].role` */
+export interface TemplateSignatureSetup {
+  templateId: string;
+  /** Roles in signing order */
+  roles: TemplateSignatureRole[];
 }

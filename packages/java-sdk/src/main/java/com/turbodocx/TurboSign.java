@@ -9,10 +9,13 @@ import okhttp3.Response;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -122,6 +125,28 @@ public final class TurboSign {
                     SendSignatureResponse.class
             );
         }
+    }
+
+    /**
+     * List a template's signer roles, to send it with each recipient's {@code role}.
+     *
+     * <p>A template whose signers and fields were set up in TurboDocx (upload a PDF, drag fields for
+     * each signer, save the signature setup) is sent by naming each recipient's role: the fields
+     * saved for that role come with it. This returns each role's {@code key} (the value for
+     * {@code role}), in signing order, whether the template has a saved signer used when you leave
+     * the role out, and its field count.
+     *
+     * @param templateId ID of the template
+     * @return the template's signer roles
+     * @throws IOException on transport failure
+     */
+    public TemplateSignatureSetup getTemplateSignatureSetup(String templateId) throws IOException {
+        String encodedId = URLEncoder.encode(templateId, StandardCharsets.UTF_8).replace("+", "%20");
+        // HttpClient auto-unwraps the { data: ... } response
+        return httpClient.get(
+                "/turbosign/templates/" + encodedId + "/signature-setup",
+                TemplateSignatureSetup.class
+        );
     }
 
     /**
@@ -380,7 +405,14 @@ public final class TurboSign {
             IdentityVerification identityVerification = resolveIdentityVerification(r.getAuth());
             String phone = resolvePhone(r);
             int order = r.getSigningOrder() != null ? r.getSigningOrder() : index + 1;
-            mappedRecipients.add(new Recipient(r.getName(), r.getEmail(), order, phone, null, identityVerification));
+            mappedRecipients.add(new Recipient.Builder()
+                    .name(r.getName())
+                    .email(r.getEmail())
+                    .signingOrder(order)
+                    .role(r.getRole())
+                    .phone(phone)
+                    .identityVerification(identityVerification)
+                    .build());
         }
 
         // Client-side fail-fast BEFORE the send: an SMS OTP recipient with no resolved phone (mirrors
@@ -458,10 +490,35 @@ public final class TurboSign {
 
         // 2 + 3. Order the request recipients by signing order (stable — keep a copy, never sort
         // the caller's list), mint one embed URL each, and assemble the result IN SIGNING ORDER.
+        // With template roles the API orders signers by the template's roles (the order it
+        // returns them in), not by the order or signingOrder passed here.
+        boolean usesRoles = false;
+        for (EmbeddedSignatureRecipient r : requestRecipients) {
+            if (r.getRole() != null && !r.getRole().isEmpty()) {
+                usesRoles = true;
+                break;
+            }
+        }
+        Map<String, Integer> apiOrderByEmail = new HashMap<>();
+        if (sent.getRecipients() != null) {
+            List<RecipientResponse> sentRecipients = sent.getRecipients();
+            for (int index = 0; index < sentRecipients.size(); index++) {
+                String email = sentRecipients.get(index).getEmail();
+                if (email != null) {
+                    apiOrderByEmail.put(email.toLowerCase(Locale.ROOT), index);
+                }
+            }
+        }
         List<OrderedRecipient> ordered = new ArrayList<>();
         for (int index = 0; index < requestRecipients.size(); index++) {
             EmbeddedSignatureRecipient r = requestRecipients.get(index);
-            int order = r.getSigningOrder() != null ? r.getSigningOrder() : index + 1;
+            int order;
+            if (usesRoles) {
+                String email = r.getEmail() == null ? null : r.getEmail().toLowerCase(Locale.ROOT);
+                order = apiOrderByEmail.getOrDefault(email, Integer.MAX_VALUE);
+            } else {
+                order = r.getSigningOrder() != null ? r.getSigningOrder() : index + 1;
+            }
             ordered.add(new OrderedRecipient(r, order));
         }
         ordered.sort(Comparator.comparingInt(o -> o.order));
@@ -631,7 +688,8 @@ public final class TurboSign {
     ) {
         Map<String, String> formData = new HashMap<>();
         formData.put("recipients", gson.toJson(recipients));
-        formData.put("fields", gson.toJson(fields));
+        // A template sent with signer roles takes its fields from the template, so fields may be omitted
+        formData.put("fields", gson.toJson(fields != null ? fields : new ArrayList<Field>()));
 
         if (documentName != null) {
             formData.put("documentName", documentName);

@@ -289,6 +289,33 @@ for recipient in result["recipients"]:
 # For signing progress afterwards, use get_recipients().
 ```
 
+#### Send a template set up in TurboDocx (signer roles)
+
+Upload a PDF as a template in TurboDocx, add its signers as roles (e.g. "Client", "Countersigner"),
+drag their fields onto the page and save the signature setup. Then send it by naming each
+recipient's `role`. The fields saved for that role come with it, so `fields` can be left out.
+
+```python
+# The role keys come from the template (also shown under "Use via API" on the template page)
+setup = await TurboSign.get_template_signature_setup("your-template-id")
+# setup["roles"] -> [{"key": "client", "hasSavedSigner": False, ...},
+#                    {"key": "countersigner", "hasSavedSigner": True, ...}]
+
+await TurboSign.send_signature(
+    template_id="your-template-id",
+    recipients=[
+        {"role": "client", "name": "Jane Doe", "email": "jane@client.com"},
+        # "countersigner" left out: the signer saved on the template is used
+    ],
+)
+```
+
+- Roles sign in the order saved on the template; recipients without a `role` sign after them.
+- A role left out uses the template's saved signer. If it has none, the API returns a 400 naming the role.
+- An unknown role raises `ValidationError` (400, code `UnknownSignerRole`) listing the template's roles.
+- Any `fields` you pass are added to the template's (for example an extra witness signature).
+- `role` works the same way on `create_signature_review_link()` and `create_embedded_signature()`.
+
 #### `send_reminder()`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the per-signer cap is already spent, does not consume that cap, and only emails signers at the *current* signing order. Omit `recipient_ids` to remind everyone eligible; do not pass an empty list, which the API rejects.

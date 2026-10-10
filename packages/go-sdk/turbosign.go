@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 )
 
@@ -25,9 +26,17 @@ func NewTurboSignClient(http *HTTPClient) *TurboSignClient {
 
 // Recipient represents a document recipient
 type Recipient struct {
-	Name         string `json:"name"`
-	Email        string `json:"email"`
-	SigningOrder int    `json:"signingOrder"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	// SigningOrder is the 1-indexed signing order. Required, except for a recipient with a Role:
+	// a template's roles sign in the order saved on the template, and recipients without a role
+	// sign after them. 0 is never a valid order, so it is left off the wire.
+	SigningOrder int `json:"signingOrder,omitempty"`
+	// Role is the template signer role this recipient fills (e.g. "client"), when sending a
+	// TemplateID whose signers and fields were set up in TurboDocx. The recipient gets every field
+	// saved for that role. A role you leave out uses the signer saved on the template, if it has
+	// one. List a template's roles with GetTemplateSignatureSetup.
+	Role string `json:"role,omitempty"`
 	// Phone is an E.164 phone number (e.g. +13055551234). Required when identity
 	// verification uses SMS OTP. Optional otherwise.
 	Phone string `json:"phone,omitempty"`
@@ -196,7 +205,11 @@ type CreateSignatureReviewLinkRequest struct {
 
 	// Required
 	Recipients []Recipient
-	Fields     []Field
+
+	// Fields configures the signature fields. Optional when sending a template set up in
+	// TurboDocx with signer roles: give each recipient a Role and the fields saved for that role
+	// are used (any fields passed here are added to them).
+	Fields []Field
 
 	// Optional
 	DocumentName        string
@@ -240,7 +253,11 @@ type SendSignatureRequest struct {
 
 	// Required
 	Recipients []Recipient
-	Fields     []Field
+
+	// Fields configures the signature fields. Optional when sending a template set up in
+	// TurboDocx with signer roles: give each recipient a Role and the fields saved for that role
+	// are used (any fields passed here are added to them).
+	Fields []Field
 
 	// Optional
 	DocumentName        string
@@ -463,7 +480,7 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 	if err != nil {
 		return nil, fmt.Errorf("marshal recipients: %w", err)
 	}
-	fieldsJSON, err := json.Marshal(req.Fields)
+	fieldsJSON, err := marshalFields(req.Fields)
 	if err != nil {
 		return nil, fmt.Errorf("marshal fields: %w", err)
 	}
@@ -542,7 +559,7 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 	if err != nil {
 		return nil, fmt.Errorf("marshal recipients: %w", err)
 	}
-	fieldsJSON, err := json.Marshal(req.Fields)
+	fieldsJSON, err := marshalFields(req.Fields)
 	if err != nil {
 		return nil, fmt.Errorf("marshal fields: %w", err)
 	}
@@ -617,6 +634,58 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	return &response, nil
+}
+
+// marshalFields JSON-encodes fields, sending "[]" (never "null") when none were given: a template
+// sent with signer roles takes its fields from the template, so Fields may be omitted.
+func marshalFields(fields []Field) ([]byte, error) {
+	if fields == nil {
+		fields = []Field{}
+	}
+	return json.Marshal(fields)
+}
+
+// TemplateSignatureRole is one signer role of a template, as returned by GetTemplateSignatureSetup.
+type TemplateSignatureRole struct {
+	// Key is the value to pass as Recipient.Role.
+	Key string `json:"key"`
+	// Label is the role's name in the TurboDocx UI.
+	Label string `json:"label"`
+	// Order is the signing order of this role.
+	Order int `json:"order"`
+	// HasSavedSigner is true when the template has a saved signer for this role, used if you
+	// leave the role out.
+	HasSavedSigner bool `json:"hasSavedSigner"`
+	// DefaultName is the saved signer's name (only when HasSavedSigner).
+	DefaultName string `json:"defaultName,omitempty"`
+	// DefaultEmail is the saved signer's email (only when HasSavedSigner).
+	DefaultEmail string `json:"defaultEmail,omitempty"`
+	// FieldCount is how many fields are saved for this role.
+	FieldCount int `json:"fieldCount"`
+}
+
+// TemplateSignatureSetup is a template's signer roles, for sending it with Recipient.Role.
+type TemplateSignatureSetup struct {
+	TemplateID string `json:"templateId"`
+	// Roles in signing order.
+	Roles []TemplateSignatureRole `json:"roles"`
+}
+
+// GetTemplateSignatureSetup lists a template's signer roles, to send it with Recipient.Role.
+//
+// A template whose signers and fields were set up in TurboDocx (upload a PDF, drag fields for each
+// signer, save the signature setup) is sent by naming each recipient's role: the fields saved for
+// that role come with it. This returns each role's Key (the value for Role), in signing order,
+// whether the template has a saved signer used when you leave the role out, and its field count.
+func (c *TurboSignClient) GetTemplateSignatureSetup(ctx context.Context, templateID string) (*TemplateSignatureSetup, error) {
+	var response TemplateSignatureSetup
+
+	err := c.http.Get(ctx, "/turbosign/templates/"+url.PathEscape(templateID)+"/signature-setup", &response)
+	if err != nil {
+		return nil, err
 	}
 
 	return &response, nil
