@@ -124,6 +124,44 @@ describe("TurboSign template signer roles", () => {
     });
   });
 
+  describe("createEmbeddedSignature signing order with roles", () => {
+    it("returns recipients in the template's signing order, not the order passed", async () => {
+      // The template's roles sign client first; the API returns its signers in that order
+      (global as unknown as { fetch: jest.Mock }).fetch = jest
+        .fn()
+        .mockResolvedValueOnce(
+          jsonResponse({
+            data: {
+              success: true,
+              documentId: "doc-4",
+              status: "under_review",
+              recipients: [
+                { id: "rec-client", name: "Jane Doe", email: "jane@client.com" },
+                { id: "rec-counter", name: "Sam Lee", email: "sam@acme.com" },
+              ],
+            },
+          })
+        )
+        .mockResolvedValueOnce(
+          jsonResponse({ data: { results: { url: "https://app/sign?token=J", expiresAt: null, recipientId: "rec-client" } } })
+        )
+        .mockResolvedValueOnce(
+          jsonResponse({ data: { results: { url: "https://app/sign?token=S", expiresAt: null, recipientId: "rec-counter" } } })
+        );
+
+      const result = await TurboSign.createEmbeddedSignature({
+        templateId: TEMPLATE_ID,
+        recipients: [
+          { role: "countersigner", name: "Sam Lee", email: "sam@acme.com" },
+          { role: "client", name: "Jane Doe", email: "jane@client.com" },
+        ],
+      });
+
+      expect(result.recipients.map((r) => r.email)).toEqual(["jane@client.com", "sam@acme.com"]);
+      expect(result.recipients.map((r) => r.embedUrl)).toEqual(["https://app/sign?token=J", "https://app/sign?token=S"]);
+    });
+  });
+
   describe("getTemplateSignatureSetup", () => {
     it("GETs the template's signer roles and unwraps the response", async () => {
       const summary = {

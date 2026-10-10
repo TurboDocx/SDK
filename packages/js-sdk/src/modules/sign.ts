@@ -469,9 +469,18 @@ export class TurboSign {
     const sentRecipients = sent.recipients ?? [];
     const recipientIdByEmail = new Map(sentRecipients.map((sr) => [sr.email, sr.id]));
 
-    // 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER.
+    // 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER. With
+    // template roles the API orders signers by the template's roles (the order it returns them in),
+    // not by the order or signingOrder passed here.
+    const usesRoles = request.recipients.some((r) => !!r.role);
+    const apiOrderByEmail = new Map(sentRecipients.map((sr, index) => [sr.email.toLowerCase(), index]));
     const ordered = request.recipients
-      .map((r, index) => ({ r, order: r.signingOrder ?? index + 1 }))
+      .map((r, index) => ({
+        r,
+        order: usesRoles
+          ? apiOrderByEmail.get(r.email.toLowerCase()) ?? Number.MAX_SAFE_INTEGER
+          : r.signingOrder ?? index + 1,
+      }))
       .sort((a, b) => a.order - b.order);
 
     const recipients: EmbeddedSignatureRecipientResult[] = [];
