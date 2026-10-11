@@ -327,8 +327,8 @@ export interface EmbeddedSignatureRecipient {
   email: string;
   /**
    * The template signer role this recipient fills, when sending a `templateId` set up with signer
-   * roles. Its saved fields are used, so `fields` can be omitted. Pass every role: a role left out
-   * falls back to the template's saved signer, who gets no embed URL from this call.
+   * roles. Its saved fields are used, so `fields` can be omitted. A role left out
+   * falls back to the template's saved signer, who also gets an embed URL in the result.
    */
   role?: string;
   phone?: string;

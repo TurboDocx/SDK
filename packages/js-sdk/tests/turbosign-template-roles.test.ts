@@ -162,6 +162,75 @@ describe("TurboSign template signer roles", () => {
     });
   });
 
+  describe("createEmbeddedSignature with a left-out role", () => {
+    it("also mints an embed URL for the template's saved signer, in API order", async () => {
+      (global as unknown as { fetch: jest.Mock }).fetch = jest
+        .fn()
+        .mockResolvedValueOnce(
+          jsonResponse({
+            data: {
+              success: true,
+              documentId: "doc-5",
+              status: "under_review",
+              recipients: [
+                { id: "rec-client", name: "Jane Doe", email: "jane@client.com" },
+                { id: "rec-counter", name: "Sam Lee", email: "Sam@Acme.com" },
+              ],
+            },
+          })
+        )
+        .mockResolvedValueOnce(
+          jsonResponse({ data: { results: { url: "https://app/sign?token=J", expiresAt: null, recipientId: "rec-client" } } })
+        )
+        .mockResolvedValueOnce(
+          jsonResponse({ data: { results: { url: "https://app/sign?token=S", expiresAt: null, recipientId: "rec-counter" } } })
+        );
+
+      const result = await TurboSign.createEmbeddedSignature({
+        templateId: TEMPLATE_ID,
+        recipients: [{ role: "client", name: "Jane Doe", email: "jane@client.com" }],
+      });
+
+      expect(JSON.parse(bodyOf(0).recipients)).toHaveLength(1);
+      expect(result.recipients.map((r) => r.email)).toEqual(["jane@client.com", "Sam@Acme.com"]);
+      expect(result.recipients.map((r) => r.name)).toEqual(["Jane Doe", "Sam Lee"]);
+      expect(result.recipients.map((r) => r.embedUrl)).toEqual(["https://app/sign?token=J", "https://app/sign?token=S"]);
+      expect(result.recipients.map((r) => r.recipientId)).toEqual(["rec-client", "rec-counter"]);
+    });
+
+    it("gives the saved signer a null URL and pending status when it is not their turn", async () => {
+      (global as unknown as { fetch: jest.Mock }).fetch = jest
+        .fn()
+        .mockResolvedValueOnce(
+          jsonResponse({
+            data: {
+              success: true,
+              documentId: "doc-6",
+              status: "under_review",
+              recipients: [
+                { id: "rec-client", name: "Jane Doe", email: "jane@client.com" },
+                { id: "rec-counter", name: "Sam Lee", email: "sam@acme.com" },
+              ],
+            },
+          })
+        )
+        .mockResolvedValueOnce(
+          jsonResponse({ data: { results: { url: "https://app/sign?token=J", expiresAt: null, recipientId: "rec-client" } } })
+        )
+        .mockResolvedValueOnce(
+          jsonResponse({ message: "not your turn", code: "RecipientNotInTurn" }, 409)
+        );
+
+      const result = await TurboSign.createEmbeddedSignature({
+        templateId: TEMPLATE_ID,
+        recipients: [{ role: "client", name: "Jane Doe", email: "jane@client.com" }],
+      });
+
+      expect(result.recipients.map((r) => r.status)).toEqual(["ready", "pending"]);
+      expect(result.recipients[1].embedUrl).toBeNull();
+    });
+  });
+
   describe("getTemplateSignatureSetup", () => {
     it("GETs the template's signer roles and unwraps the response", async () => {
       const summary = {

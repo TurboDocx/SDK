@@ -14,9 +14,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * TurboSign client for digital signature operations
@@ -520,6 +522,26 @@ public final class TurboSign {
                 order = r.getSigningOrder() != null ? r.getSigningOrder() : index + 1;
             }
             ordered.add(new OrderedRecipient(r, order));
+        }
+        // Signers the API added that the caller did not pass (a template role's saved signer). With
+        // sendEmail=false nobody else can reach them, so mint their embed URLs too.
+        if (sent.getRecipients() != null) {
+            Set<String> requestedEmails = new HashSet<>();
+            for (EmbeddedSignatureRecipient r : requestRecipients) {
+                if (r.getEmail() != null) {
+                    requestedEmails.add(r.getEmail().toLowerCase(Locale.ROOT));
+                }
+            }
+            List<RecipientResponse> sentRecipients = sent.getRecipients();
+            for (int index = 0; index < sentRecipients.size(); index++) {
+                RecipientResponse sr = sentRecipients.get(index);
+                if (sr.getEmail() == null || requestedEmails.contains(sr.getEmail().toLowerCase(Locale.ROOT))) {
+                    continue;
+                }
+                ordered.add(new OrderedRecipient(
+                        new EmbeddedSignatureRecipient.Builder().name(sr.getName()).email(sr.getEmail()).build(),
+                        usesRoles ? index : Integer.MAX_VALUE));
+            }
         }
         ordered.sort(Comparator.comparingInt(o -> o.order));
 

@@ -194,6 +194,98 @@ func TestTurboSignClient_CreateEmbeddedSignatureSigningOrderWithTemplateRoles(t 
 		[]string{result.Recipients[0].EmbedURL, result.Recipients[1].EmbedURL})
 }
 
+// A role the caller leaves out is filled by the template's saved signer. With sendEmail=false
+// nobody else can reach that signer, so the embedded flow mints their embed URL too.
+func TestTurboSignClient_CreateEmbeddedSignatureLeftOutRoleMintsSavedSigner(t *testing.T) {
+	signingURLs := map[string]string{"rec-client": "https://app/sign?token=J", "rec-counter": "https://app/sign?token=S"}
+	calls := 0
+	var sentRecipients []map[string]interface{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if calls == 1 {
+			_, sentRecipients, _ = decodeFormBody(t, r)
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"data": map[string]interface{}{
+					"success": true, "documentId": "doc-5", "status": "under_review",
+					"recipients": []map[string]interface{}{
+						{"id": "rec-client", "name": "Jane Doe", "email": "jane@client.com"},
+						{"id": "rec-counter", "name": "Sam Lee", "email": "Sam@Acme.com"},
+					},
+				},
+			})
+			return
+		}
+		var body map[string]interface{}
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		recipientID, _ := body["recipientId"].(string)
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"data": map[string]interface{}{
+				"results": map[string]interface{}{"url": signingURLs[recipientID], "expiresAt": nil, "recipientId": recipientID},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client := newEmbeddedTestClient(t, server.URL)
+	result, err := client.TurboSign.CreateEmbeddedSignature(context.Background(), &CreateEmbeddedSignatureRequest{
+		TemplateID: rolesTemplateID,
+		Recipients: []EmbeddedSignatureRecipient{{Role: "client", Name: "Jane Doe", Email: "jane@client.com"}},
+	})
+	require.NoError(t, err)
+	assert.Len(t, sentRecipients, 1)
+	require.Len(t, result.Recipients, 2)
+	assert.Equal(t, []string{"jane@client.com", "Sam@Acme.com"},
+		[]string{result.Recipients[0].Email, result.Recipients[1].Email})
+	assert.Equal(t, []string{"Jane Doe", "Sam Lee"},
+		[]string{result.Recipients[0].Name, result.Recipients[1].Name})
+	assert.Equal(t, []string{"https://app/sign?token=J", "https://app/sign?token=S"},
+		[]string{result.Recipients[0].EmbedURL, result.Recipients[1].EmbedURL})
+	assert.Equal(t, []string{"rec-client", "rec-counter"},
+		[]string{result.Recipients[0].RecipientID, result.Recipients[1].RecipientID})
+}
+
+func TestTurboSignClient_CreateEmbeddedSignatureSavedSignerNotInTurnIsPending(t *testing.T) {
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		switch calls {
+		case 1:
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"data": map[string]interface{}{
+					"success": true, "documentId": "doc-6", "status": "under_review",
+					"recipients": []map[string]interface{}{
+						{"id": "rec-client", "name": "Jane Doe", "email": "jane@client.com"},
+						{"id": "rec-counter", "name": "Sam Lee", "email": "sam@acme.com"},
+					},
+				},
+			})
+		case 2:
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"data": map[string]interface{}{
+					"results": map[string]interface{}{"url": "https://app/sign?token=J", "expiresAt": nil, "recipientId": "rec-client"},
+				},
+			})
+		default:
+			writeJSON(w, http.StatusBadRequest, map[string]interface{}{
+				"message": "not this signer's turn",
+				"code":    "RecipientNotInTurn",
+			})
+		}
+	}))
+	defer server.Close()
+
+	client := newEmbeddedTestClient(t, server.URL)
+	result, err := client.TurboSign.CreateEmbeddedSignature(context.Background(), &CreateEmbeddedSignatureRequest{
+		TemplateID: rolesTemplateID,
+		Recipients: []EmbeddedSignatureRecipient{{Role: "client", Name: "Jane Doe", Email: "jane@client.com"}},
+	})
+	require.NoError(t, err)
+	require.Len(t, result.Recipients, 2)
+	assert.Equal(t, "ready", result.Recipients[0].Status)
+	assert.Equal(t, "pending", result.Recipients[1].Status)
+	assert.Empty(t, result.Recipients[1].EmbedURL)
+}
+
 func TestTurboSignClient_GetTemplateSignatureSetup(t *testing.T) {
 	t.Run("GETs the template's signer roles and unwraps the response", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

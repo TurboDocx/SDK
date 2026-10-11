@@ -203,6 +203,75 @@ class TurboSignTemplateRolesTest {
     }
 
     @Test
+    @DisplayName("getSigningOrder stays a primitive int: 0 for a role recipient, the value otherwise")
+    void signingOrderIsPrimitiveInt() {
+        int roleOrder = Recipient.withRole("client", "Jane Doe", "jane@client.com").getSigningOrder();
+        assertEquals(0, roleOrder);
+        int positional = new Recipient("John Doe", "john@example.com", 2).getSigningOrder();
+        assertEquals(2, positional);
+        int built = new Recipient.Builder().name("A").email("a@x.com").signingOrder(3).build().getSigningOrder();
+        assertEquals(3, built);
+    }
+
+    @Test
+    @DisplayName("createEmbeddedSignature also mints an embed URL for the template's saved signer, in API order")
+    void embeddedLeftOutRoleMintsSavedSigner() throws Exception {
+        enqueue(200, "{\"data\":{\"success\":true,\"documentId\":\"doc-5\",\"status\":\"under_review\","
+                + "\"recipients\":[{\"id\":\"rec-client\",\"name\":\"Jane Doe\",\"email\":\"jane@client.com\"},"
+                + "{\"id\":\"rec-counter\",\"name\":\"Sam Lee\",\"email\":\"Sam@Acme.com\"}]}}");
+        enqueue(200, "{\"data\":{\"results\":{\"url\":\"https://app/sign?token=J\",\"expiresAt\":null,"
+                + "\"recipientId\":\"rec-client\"}}}");
+        enqueue(200, "{\"data\":{\"results\":{\"url\":\"https://app/sign?token=S\",\"expiresAt\":null,"
+                + "\"recipientId\":\"rec-counter\"}}}");
+
+        CreateEmbeddedSignatureResponse result = client.turboSign().createEmbeddedSignature(
+                new CreateEmbeddedSignatureRequest.Builder()
+                        .templateId(TEMPLATE_ID)
+                        .recipients(Collections.singletonList(
+                                new EmbeddedSignatureRecipient.Builder()
+                                        .role("client").name("Jane Doe").email("jane@client.com").build()))
+                        .build());
+
+        assertEquals(1, parseArray(bodyOf(server.takeRequest()), "recipients").size());
+        assertEquals(Arrays.asList("jane@client.com", "Sam@Acme.com"),
+                result.getRecipients().stream().map(EmbeddedSignatureRecipientResult::getEmail)
+                        .collect(Collectors.toList()));
+        assertEquals(Arrays.asList("Jane Doe", "Sam Lee"),
+                result.getRecipients().stream().map(EmbeddedSignatureRecipientResult::getName)
+                        .collect(Collectors.toList()));
+        assertEquals(Arrays.asList("https://app/sign?token=J", "https://app/sign?token=S"),
+                result.getRecipients().stream().map(EmbeddedSignatureRecipientResult::getEmbedUrl)
+                        .collect(Collectors.toList()));
+        assertEquals(Arrays.asList("rec-client", "rec-counter"),
+                result.getRecipients().stream().map(EmbeddedSignatureRecipientResult::getRecipientId)
+                        .collect(Collectors.toList()));
+    }
+
+    @Test
+    @DisplayName("createEmbeddedSignature gives a not-in-turn saved signer a null URL and pending status")
+    void embeddedSavedSignerNotInTurnIsPending() throws Exception {
+        enqueue(200, "{\"data\":{\"success\":true,\"documentId\":\"doc-6\",\"status\":\"under_review\","
+                + "\"recipients\":[{\"id\":\"rec-client\",\"name\":\"Jane Doe\",\"email\":\"jane@client.com\"},"
+                + "{\"id\":\"rec-counter\",\"name\":\"Sam Lee\",\"email\":\"sam@acme.com\"}]}}");
+        enqueue(200, "{\"data\":{\"results\":{\"url\":\"https://app/sign?token=J\",\"expiresAt\":null,"
+                + "\"recipientId\":\"rec-client\"}}}");
+        enqueue(409, "{\"message\":\"It is not this recipient's turn to sign yet.\",\"code\":\"RecipientNotInTurn\"}");
+
+        CreateEmbeddedSignatureResponse result = client.turboSign().createEmbeddedSignature(
+                new CreateEmbeddedSignatureRequest.Builder()
+                        .templateId(TEMPLATE_ID)
+                        .recipients(Collections.singletonList(
+                                new EmbeddedSignatureRecipient.Builder()
+                                        .role("client").name("Jane Doe").email("jane@client.com").build()))
+                        .build());
+
+        assertEquals(2, result.getRecipients().size());
+        assertEquals("ready", result.getRecipients().get(0).getStatus());
+        assertEquals("pending", result.getRecipients().get(1).getStatus());
+        assertNull(result.getRecipients().get(1).getEmbedUrl());
+    }
+
+    @Test
     @DisplayName("getTemplateSignatureSetup GETs the template's signer roles and unwraps the response")
     void getTemplateSignatureSetup() throws Exception {
         enqueue(200, "{\"data\":{\"templateId\":\"" + TEMPLATE_ID + "\",\"roles\":["

@@ -172,8 +172,8 @@ type EmbeddedSignatureRecipient struct {
 	Name  string
 	Email string
 	// Role is the template signer role this recipient fills, when sending a TemplateID set up with
-	// signer roles. Its saved fields are used, so Fields can be omitted. Pass every role: a role
-	// left out falls back to the template's saved signer, who gets no embed URL from this call.
+	// signer roles. Its saved fields are used, so Fields can be omitted. A role left out
+	// falls back to the template's saved signer, who also gets an embed URL in the result.
 	Role  string
 	Phone string
 	// SigningOrder defaults to the recipient's index + 1 (sequential) when 0. 0 is never a valid
@@ -540,6 +540,25 @@ func (c *TurboSignClient) CreateEmbeddedSignature(ctx context.Context, req *Crea
 			}
 		}
 		ordered = append(ordered, orderedRecipient{recipient: r, order: order})
+	}
+	// Signers the API added that the caller did not pass (a template role's saved signer). With
+	// sendEmail=false nobody else can reach them, so mint their embed URLs too.
+	requestedEmails := make(map[string]bool, len(req.Recipients))
+	for _, r := range req.Recipients {
+		requestedEmails[strings.ToLower(r.Email)] = true
+	}
+	for i, sr := range sent.Recipients {
+		if requestedEmails[strings.ToLower(sr.Email)] {
+			continue
+		}
+		order := math.MaxInt
+		if usesRoles {
+			order = i
+		}
+		ordered = append(ordered, orderedRecipient{
+			recipient: EmbeddedSignatureRecipient{Name: sr.Name, Email: sr.Email},
+			order:     order,
+		})
 	}
 	sort.SliceStable(ordered, func(a, b int) bool { return ordered[a].order < ordered[b].order })
 

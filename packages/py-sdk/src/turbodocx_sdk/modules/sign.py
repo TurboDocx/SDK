@@ -1053,9 +1053,9 @@ class TurboSign:
                 ({"email_otp": True} or {"sms": {"phone_number": "+1..."}}), optional
                 ``fields`` shorthand ({"signature": "{signature1}", "date": "{date1}", ...}),
                 optional ``role`` (a template signer role key, passed through when sending a
-                ``template_id`` set up in TurboDocx; that role's saved fields are used). Pass
-                every role: a role left out falls back to the template's saved signer, who
-                gets no embed URL from this call.
+                ``template_id`` set up in TurboDocx; that role's saved fields are used). A role
+                left out falls back to the template's saved signer, who also gets an embed
+                URL in the result.
             file: PDF file content as bytes.
             file_name: Original filename.
             file_link: URL to the document file.
@@ -1173,8 +1173,19 @@ class TurboSign:
             for index, sr in enumerate(sent_recipients)
             if sr.get("email")
         }
-        ordered = sorted(
+        requested_emails = {r["email"].lower() for r in recipients}
+        # Signers the API added that the caller did not pass (a template role's saved signer).
+        # With send_email=False nobody else can reach them, so mint their embed URLs too.
+        extras = [
             (
+                {"name": sr.get("name"), "email": sr["email"]},
+                index if uses_roles else float("inf"),
+            )
+            for index, sr in enumerate(sent_recipients)
+            if sr.get("email") and sr["email"].lower() not in requested_emails
+        ]
+        ordered = sorted(
+            [
                 (
                     r,
                     api_order_by_email.get(r["email"].lower(), float("inf"))
@@ -1182,7 +1193,8 @@ class TurboSign:
                     else r.get("signing_order", r.get("signingOrder", index + 1)),
                 )
                 for index, r in enumerate(recipients)
-            ),
+            ]
+            + extras,
             key=lambda pair: pair[1],
         )
 

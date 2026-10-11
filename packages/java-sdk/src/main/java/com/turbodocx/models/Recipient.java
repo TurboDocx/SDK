@@ -13,9 +13,9 @@ public class Recipient {
     private final String email;
 
     /**
-     * Signing order (1-indexed). Null (omitted) for a recipient with a {@link #getRole() role}: a
-     * template's roles sign in the order saved on the template, and recipients without a role sign
-     * after them.
+     * Signing order (1-indexed). Null (omitted from the request) when it is 0, i.e. not set, for a
+     * recipient with a {@link #getRole() role}: a template's roles sign in the order saved on the
+     * template, and recipients without a role sign after them.
      */
     @SerializedName("signingOrder")
     private final Integer signingOrder;
@@ -62,7 +62,7 @@ public class Recipient {
                      IdentityVerification identityVerification) {
         this.name = name;
         this.email = email;
-        this.signingOrder = signingOrder;
+        this.signingOrder = signingOrder == 0 ? null : signingOrder;
         this.phone = phone;
         this.externalId = externalId;
         this.identityVerification = identityVerification;
@@ -84,7 +84,7 @@ public class Recipient {
     private Recipient(Builder builder) {
         this.name = builder.name;
         this.email = builder.email;
-        this.signingOrder = builder.signingOrder;
+        this.signingOrder = builder.signingOrder == 0 ? null : builder.signingOrder;
         this.phone = builder.phone;
         this.externalId = builder.externalId;
         this.identityVerification = builder.identityVerification;
@@ -99,9 +99,9 @@ public class Recipient {
         return email;
     }
 
-    /** The signing order, or null when not set (a recipient with a role). */
-    public Integer getSigningOrder() {
-        return signingOrder;
+    /** The signing order, or 0 when not set (a recipient with a role). */
+    public int getSigningOrder() {
+        return signingOrder == null ? 0 : signingOrder;
     }
 
     public String getPhone() {
@@ -127,7 +127,7 @@ public class Recipient {
     public static class Builder {
         private String name;
         private String email;
-        private Integer signingOrder;
+        private int signingOrder;
         private String phone;
         private String role;
         private String externalId;
@@ -143,8 +143,8 @@ public class Recipient {
             return this;
         }
 
-        public Builder signingOrder(Integer signingOrder) {
-            this.signingOrder = signingOrder;
+        public Builder signingOrder(int signingOrder) {
+            this.signingOrder = signingOrder == 0 ? null : signingOrder;
             return this;
         }
 

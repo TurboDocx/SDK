@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from turbodocx_sdk import TurboSign, ValidationError
+from turbodocx_sdk import ConflictError, TurboSign, ValidationError
 
 TEMPLATE_ID = "84759112-d9d6-443a-bb78-87c427bd7948"
 
@@ -154,6 +154,69 @@ class TestCreateEmbeddedSignatureWithRoles:
             "https://app/sign?token=J",
             "https://app/sign?token=S",
         ]
+
+
+class TestEmbeddedSignatureLeftOutRole:
+    @pytest.mark.asyncio
+    async def test_also_mints_embed_url_for_templates_saved_signer_in_api_order(self):
+        client = _mock_client()
+        client.post = AsyncMock(
+            side_effect=[
+                {
+                    "success": True,
+                    "documentId": "doc-5",
+                    "status": "under_review",
+                    "recipients": [
+                        {"id": "rec-client", "name": "Jane Doe", "email": "jane@client.com"},
+                        {"id": "rec-counter", "name": "Sam Lee", "email": "Sam@Acme.com"},
+                    ],
+                },
+                {"results": {"url": "https://app/sign?token=J", "expiresAt": None, "recipientId": "rec-client"}},
+                {"results": {"url": "https://app/sign?token=S", "expiresAt": None, "recipientId": "rec-counter"}},
+            ]
+        )
+        with patch.object(TurboSign, "_get_client", return_value=client):
+            result = await TurboSign.create_embedded_signature(
+                template_id=TEMPLATE_ID,
+                recipients=[{"role": "client", "name": "Jane Doe", "email": "jane@client.com"}],
+            )
+
+        sent = json.loads(client.post.call_args_list[0][1]["data"]["recipients"])
+        assert len(sent) == 1
+        assert [r["email"] for r in result["recipients"]] == ["jane@client.com", "Sam@Acme.com"]
+        assert [r["name"] for r in result["recipients"]] == ["Jane Doe", "Sam Lee"]
+        assert [r["embedUrl"] for r in result["recipients"]] == [
+            "https://app/sign?token=J",
+            "https://app/sign?token=S",
+        ]
+        assert [r["recipientId"] for r in result["recipients"]] == ["rec-client", "rec-counter"]
+
+    @pytest.mark.asyncio
+    async def test_saved_signer_not_in_turn_is_pending_with_null_url(self):
+        client = _mock_client()
+        client.post = AsyncMock(
+            side_effect=[
+                {
+                    "success": True,
+                    "documentId": "doc-6",
+                    "status": "under_review",
+                    "recipients": [
+                        {"id": "rec-client", "name": "Jane Doe", "email": "jane@client.com"},
+                        {"id": "rec-counter", "name": "Sam Lee", "email": "sam@acme.com"},
+                    ],
+                },
+                {"results": {"url": "https://app/sign?token=J", "expiresAt": None, "recipientId": "rec-client"}},
+                ConflictError("It is not this recipient's turn to sign yet.", 409, "RecipientNotInTurn"),
+            ]
+        )
+        with patch.object(TurboSign, "_get_client", return_value=client):
+            result = await TurboSign.create_embedded_signature(
+                template_id=TEMPLATE_ID,
+                recipients=[{"role": "client", "name": "Jane Doe", "email": "jane@client.com"}],
+            )
+
+        assert [r["status"] for r in result["recipients"]] == ["ready", "pending"]
+        assert result["recipients"][1]["embedUrl"] is None
 
 
 class TestGetTemplateSignatureSetup:

@@ -474,14 +474,25 @@ export class TurboSign {
     // not by the order or signingOrder passed here.
     const usesRoles = request.recipients.some((r) => !!r.role);
     const apiOrderByEmail = new Map(sentRecipients.map((sr, index) => [sr.email.toLowerCase(), index]));
-    const ordered = request.recipients
-      .map((r, index) => ({
-        r,
+    const requestedEmails = new Set(request.recipients.map((r) => r.email.toLowerCase()));
+    type EmbedTarget = { name: string; email: string; auth?: (typeof request.recipients)[number]['auth'] };
+    const ordered: { r: EmbedTarget; order: number }[] = [
+      ...request.recipients.map((r, index) => ({
+        r: r as EmbedTarget,
         order: usesRoles
           ? apiOrderByEmail.get(r.email.toLowerCase()) ?? Number.MAX_SAFE_INTEGER
           : r.signingOrder ?? index + 1,
-      }))
-      .sort((a, b) => a.order - b.order);
+      })),
+      // Signers the API added that the caller did not pass (a template role's saved signer). With
+      // sendEmail=false nobody else can reach them, so mint their embed URLs too.
+      ...sentRecipients
+        .map((sr, index) => ({ sr, index }))
+        .filter(({ sr }) => !requestedEmails.has(sr.email.toLowerCase()))
+        .map(({ sr, index }) => ({
+          r: { name: sr.name, email: sr.email },
+          order: usesRoles ? index : Number.MAX_SAFE_INTEGER,
+        })),
+    ].sort((a, b) => a.order - b.order);
 
     const recipients: EmbeddedSignatureRecipientResult[] = [];
     for (const { r } of ordered) {

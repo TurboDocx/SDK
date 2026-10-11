@@ -50,8 +50,13 @@ final class Recipient
             throw new ValidationException("Invalid email address: {$email}");
         }
 
+        // An empty or whitespace-only role is no role: never sent, and it does not excuse a missing order
+        if ($role !== null && trim($role) === '') {
+            $this->role = null;
+        }
+
         // Validate signing order (only a recipient with a role may leave it out)
-        if ($signingOrder === null && $role === null) {
+        if ($signingOrder === null && $this->role === null) {
             throw new ValidationException('Signing order is required unless the recipient has a role');
         }
         if ($signingOrder !== null && $signingOrder < 1) {

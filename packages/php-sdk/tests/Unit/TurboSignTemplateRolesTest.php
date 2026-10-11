@@ -197,6 +197,112 @@ final class TurboSignTemplateRolesTest extends TestCase
         );
     }
 
+    public function testRecipientWithEmptyRoleIsTreatedAsNoRole(): void
+    {
+        $recipient = new Recipient(name: 'A', email: 'a@x.com', signingOrder: 1, role: '');
+
+        $this->assertNull($recipient->role);
+        $this->assertSame(['name' => 'A', 'email' => 'a@x.com', 'signingOrder' => 1], $recipient->toArray());
+    }
+
+    public function testRecipientWithEmptyRoleAndNoSigningOrderIsRejected(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Signing order is required');
+
+        new Recipient(name: 'A', email: 'a@x.com', role: '');
+    }
+
+    public function testRecipientWithWhitespaceRoleAndNoSigningOrderIsRejected(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Signing order is required');
+
+        new Recipient(name: 'A', email: 'a@x.com', role: "  \t");
+    }
+
+    public function testCreateEmbeddedSignatureAlsoMintsUrlForTemplatesSavedSigner(): void
+    {
+        $this->injectTurboSignClient([
+            $this->ok([
+                'success' => true,
+                'documentId' => 'doc-5',
+                'status' => 'under_review',
+                'message' => 'ok',
+                'recipients' => [
+                    ['id' => 'rec-client', 'name' => 'Jane Doe', 'email' => 'jane@client.com'],
+                    ['id' => 'rec-counter', 'name' => 'Sam Lee', 'email' => 'Sam@Acme.com'],
+                ],
+            ]),
+            $this->ok(['results' => [
+                'url' => 'https://app/sign?token=J',
+                'expiresAt' => null,
+                'recipientId' => 'rec-client',
+            ]]),
+            $this->ok(['results' => [
+                'url' => 'https://app/sign?token=S',
+                'expiresAt' => null,
+                'recipientId' => 'rec-counter',
+            ]]),
+        ], captureHistory: true);
+
+        $result = TurboSign::createEmbeddedSignature(new CreateEmbeddedSignatureRequest(
+            templateId: self::TEMPLATE_ID,
+            recipients: [new EmbeddedSignatureRecipient(name: 'Jane Doe', email: 'jane@client.com', role: 'client')],
+        ));
+
+        $body = $this->capturedJsonBody(0);
+        $this->assertCount(1, json_decode($body['recipients'], true));
+        $this->assertCount(2, $result->recipients);
+        $this->assertSame(
+            ['jane@client.com', 'Sam@Acme.com'],
+            array_map(static fn($r) => $r->email, $result->recipients)
+        );
+        $this->assertSame(
+            ['Jane Doe', 'Sam Lee'],
+            array_map(static fn($r) => $r->name, $result->recipients)
+        );
+        $this->assertSame(
+            ['https://app/sign?token=J', 'https://app/sign?token=S'],
+            array_map(static fn($r) => $r->embedUrl, $result->recipients)
+        );
+        $this->assertSame(
+            ['rec-client', 'rec-counter'],
+            array_map(static fn($r) => $r->recipientId, $result->recipients)
+        );
+    }
+
+    public function testCreateEmbeddedSignatureSavedSignerNotInTurnIsPending(): void
+    {
+        $this->injectTurboSignClient([
+            $this->ok([
+                'success' => true,
+                'documentId' => 'doc-6',
+                'status' => 'under_review',
+                'message' => 'ok',
+                'recipients' => [
+                    ['id' => 'rec-client', 'name' => 'Jane Doe', 'email' => 'jane@client.com'],
+                    ['id' => 'rec-counter', 'name' => 'Sam Lee', 'email' => 'sam@acme.com'],
+                ],
+            ]),
+            $this->ok(['results' => [
+                'url' => 'https://app/sign?token=J',
+                'expiresAt' => null,
+                'recipientId' => 'rec-client',
+            ]]),
+            new Response(400, [], (string) json_encode(['message' => 'not your turn', 'code' => 'RecipientNotInTurn'])),
+        ]);
+
+        $result = TurboSign::createEmbeddedSignature(new CreateEmbeddedSignatureRequest(
+            templateId: self::TEMPLATE_ID,
+            recipients: [new EmbeddedSignatureRecipient(name: 'Jane Doe', email: 'jane@client.com', role: 'client')],
+        ));
+
+        $this->assertCount(2, $result->recipients);
+        $this->assertSame('pending', $result->recipients[1]->status);
+        $this->assertNull($result->recipients[1]->embedUrl);
+    }
+
     public function testGetTemplateSignatureSetupGetsAndUnwrapsRoles(): void
     {
         $this->injectTurboSignClient([

@@ -253,9 +253,8 @@ module TurboDocxSdk
       # A genuine error (anything other than not-in-turn / already-signed) still raises.
       #
       # @param request [Hash] :recipients (Array; each :name, :email, optional :phone, :signingOrder,
-      #   :auth, :fields, :role -- the template signer role this recipient fills; pass every role, as
-      #   one left out falls back to the template's saved signer, who gets no embed URL from this
-      #   call), and any of :file/:fileName/:fileLink/:templateId/:deliverableId,
+      #   :auth, :fields, :role -- the template signer role this recipient fills; a role left out
+      #   falls back to the template's saved signer, who also gets an embed URL in the result), and any of :file/:fileName/:fileLink/:templateId/:deliverableId,
       #   :documentName, :documentDescription, :senderName, :senderEmail, :ccEmails, :fields (full
       #   field override), :sendEmail, :returnUrl
       # @return [Hash] with "documentId" and "recipients" (each "recipientId", "name", "email",
@@ -353,7 +352,18 @@ module TurboDocxSdk
                     req_val(r, :signingOrder) || index + 1
                   end
           [order, index, r]
-        end.sort_by { |order, index, _r| [order, index] }
+        end
+
+        # Signers the API added that the caller did not pass (a template role's saved signer). With
+        # sendEmail=false nobody else can reach them, so mint their embed URLs too.
+        requested_emails = recipients.map { |r| req_val(r, :email).to_s.downcase }
+        sent_recipients.each_with_index do |sr, api_index|
+          next if sr["email"].nil? || requested_emails.include?(sr["email"].to_s.downcase)
+
+          ordered << [uses_roles ? api_index : Float::INFINITY, recipients.length + api_index,
+                      { name: sr["name"], email: sr["email"] }]
+        end
+        ordered = ordered.sort_by { |order, index, _r| [order, index] }
 
         result_recipients = ordered.map do |_order, _index, r|
           email = req_val(r, :email)

@@ -581,6 +581,27 @@ final class TurboSign
                 : ($r->signingOrder ?? $index + 1);
             $ordered[] = ['r' => $r, 'order' => $order];
         }
+        // Signers the API added that the caller did not pass (a template role's saved signer). With
+        // sendEmail=false nobody else can reach them, so mint their embed URLs too.
+        $requestedEmails = [];
+        foreach ($request->recipients as $r) {
+            $requestedEmails[strtolower($r->email)] = true;
+        }
+        foreach (array_values($sent->recipients ?? []) as $apiIndex => $sr) {
+            if (!is_array($sr) || !isset($sr['email'], $sr['id'])) {
+                continue;
+            }
+            if (isset($requestedEmails[strtolower((string) $sr['email'])])) {
+                continue;
+            }
+            $ordered[] = [
+                'r' => new EmbeddedSignatureRecipient(
+                    name: (string) ($sr['name'] ?? ''),
+                    email: (string) $sr['email'],
+                ),
+                'order' => $usesRoles ? $apiIndex : PHP_INT_MAX,
+            ];
+        }
         usort($ordered, static fn(array $a, array $b): int => $a['order'] <=> $b['order']);
 
         $results = [];

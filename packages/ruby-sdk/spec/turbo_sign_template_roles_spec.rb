@@ -138,6 +138,68 @@ RSpec.describe TurboDocxSdk::TurboSign do
       end
     end
 
+    describe ".create_embedded_signature with a left-out role" do
+      let(:send_response) do
+        { "success" => true, "documentId" => "doc-5", "status" => "under_review",
+          "recipients" => [
+            { "id" => "rec-client", "name" => "Jane Doe", "email" => "jane@client.com" },
+            { "id" => "rec-counter", "name" => "Sam Lee", "email" => "Sam@Acme.com" }
+          ] }
+      end
+
+      it "also mints an embed URL for the template's saved signer, in API order" do
+        send_body = nil
+        urls = {
+          "rec-client" => "https://app/sign?token=J",
+          "rec-counter" => "https://app/sign?token=S"
+        }
+        allow(mock_client).to receive(:post) do |path, body|
+          if path == "/turbosign/single/prepare-for-signing"
+            send_body = body
+            send_response
+          else
+            { "results" => { "url" => urls[body["recipientId"]], "expiresAt" => nil,
+                             "recipientId" => body["recipientId"] } }
+          end
+        end
+
+        result = described_class.create_embedded_signature(
+          templateId: template_id,
+          recipients: [{ role: "client", name: "Jane Doe", email: "jane@client.com" }]
+        )
+
+        expect(JSON.parse(send_body["recipients"]).length).to eq(1)
+        expect(result["recipients"].map { |r| r["email"] }).to eq(["jane@client.com", "Sam@Acme.com"])
+        expect(result["recipients"].map { |r| r["name"] }).to eq(["Jane Doe", "Sam Lee"])
+        expect(result["recipients"].map { |r| r["embedUrl"] }).to eq(
+          ["https://app/sign?token=J", "https://app/sign?token=S"]
+        )
+        expect(result["recipients"].map { |r| r["recipientId"] }).to eq(%w[rec-client rec-counter])
+      end
+
+      it "gives the saved signer a null URL and pending status when it is not their turn" do
+        allow(mock_client).to receive(:post) do |path, body|
+          if path == "/turbosign/single/prepare-for-signing"
+            send_response
+          elsif body["recipientId"] == "rec-client"
+            { "results" => { "url" => "https://app/sign?token=J", "expiresAt" => nil,
+                             "recipientId" => "rec-client" } }
+          else
+            raise TurboDocxSdk::ValidationError.new("It is not this recipient's turn to sign yet.",
+                                                    code: "RecipientNotInTurn")
+          end
+        end
+
+        result = described_class.create_embedded_signature(
+          templateId: template_id,
+          recipients: [{ role: "client", name: "Jane Doe", email: "jane@client.com" }]
+        )
+
+        expect(result["recipients"].map { |r| r["status"] }).to eq(%w[ready pending])
+        expect(result["recipients"][1]["embedUrl"]).to be_nil
+      end
+    end
+
     describe ".get_template_signature_setup" do
       it "GETs the template's signer roles and returns the unwrapped hash" do
         summary = {
