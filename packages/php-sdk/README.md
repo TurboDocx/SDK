@@ -1692,6 +1692,7 @@ TurboQuote::applyPriceBook($quote->id, $priceBook->id);
 ```
 
 For more examples, see:
+- [`examples/turbosign-template-roles.php`](./examples/turbosign-template-roles.php) — send a template set up in TurboDocx by naming each signer's role
 - [`examples/turboquote-basic.php`](./examples/turboquote-basic.php) — full quote lifecycle
 - [`examples/turboquote-products.php`](./examples/turboquote-products.php) — products and bundles catalog CRUD
 - [`examples/turboquote-pricebooks.php`](./examples/turboquote-pricebooks.php) — price book management

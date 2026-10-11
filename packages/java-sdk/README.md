@@ -1086,6 +1086,7 @@ List<Field> fields = Arrays.asList(
 For complete, working examples including template anchors, advanced field types, and various workflows, see the [`examples/`](./examples/) directory:
 
 - [`TurboSignSendSimple.java`](./examples/TurboSignSendSimple.java) - Send document directly with template anchors
+- [`TurboSignTemplateRoles.java`](./examples/TurboSignTemplateRoles.java) - Send a template set up in TurboDocx by naming each signer's role
 - [`TurboSignBasic.java`](./examples/TurboSignBasic.java) - Create review link first, then send manually
 - [`TurboSignAdvanced.java`](./examples/TurboSignAdvanced.java) - Advanced field types (checkbox, readonly, multiline text, etc.)
 - [`TurboPartnerBasic.java`](./examples/TurboPartnerBasic.java) - Partner portal: create org, add user, create API key
