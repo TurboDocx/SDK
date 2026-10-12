@@ -243,7 +243,7 @@ class TurboSign:
                 roles with :meth:`get_template_signature_setup`.
             fields: Signature fields configuration. Optional when recipients carry a
                 ``role``: the template's saved fields are used and any fields passed here
-                are added to them. Sent as ``[]`` when omitted.
+                are added to them. Left out of the request when omitted.
                 Each field should have: type, recipientEmail, and positioning info
                 Optional per-field "metadata" drives conditional (IF/THEN) logic:
                   - On a controlling checkbox: {"metadata": {"fieldKey": "request_changes"}}
@@ -429,7 +429,7 @@ class TurboSign:
                 A blank or whitespace-only ``externalId`` counts as absent (stored as null).
             fields: Signature fields configuration. Optional when recipients carry a
                 ``role``: the template's saved fields are used and any fields passed here
-                are added to them. Sent as ``[]`` when omitted.
+                are added to them. Left out of the request when omitted.
                 Each field should have: type, recipientEmail, and positioning info
                 Optional per-field "metadata" drives conditional (IF/THEN) logic:
                   - On a controlling checkbox: {"metadata": {"fieldKey": "request_changes"}}
