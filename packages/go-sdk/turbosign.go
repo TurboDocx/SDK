@@ -480,17 +480,22 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 	if err != nil {
 		return nil, fmt.Errorf("marshal recipients: %w", err)
 	}
-	fieldsJSON, err := marshalFields(req.Fields)
-	if err != nil {
-		return nil, fmt.Errorf("marshal fields: %w", err)
-	}
 
 	// Get sender config from client
 	senderEmail, senderName := c.http.GetSenderConfig()
 
 	formData := map[string]string{
 		"recipients": string(recipientsJSON),
-		"fields":     string(fieldsJSON),
+	}
+
+	// Omit "fields" when none are given: a template sent with signer roles takes its fields from
+	// the template, and any other send gets the API's FieldsRequired error.
+	if len(req.Fields) > 0 {
+		fieldsJSON, err := json.Marshal(req.Fields)
+		if err != nil {
+			return nil, fmt.Errorf("marshal fields: %w", err)
+		}
+		formData["fields"] = string(fieldsJSON)
 	}
 
 	if req.DocumentName != "" {
@@ -559,17 +564,22 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 	if err != nil {
 		return nil, fmt.Errorf("marshal recipients: %w", err)
 	}
-	fieldsJSON, err := marshalFields(req.Fields)
-	if err != nil {
-		return nil, fmt.Errorf("marshal fields: %w", err)
-	}
 
 	// Get sender config from client
 	senderEmail, senderName := c.http.GetSenderConfig()
 
 	formData := map[string]string{
 		"recipients": string(recipientsJSON),
-		"fields":     string(fieldsJSON),
+	}
+
+	// Omit "fields" when none are given: a template sent with signer roles takes its fields from
+	// the template, and any other send gets the API's FieldsRequired error.
+	if len(req.Fields) > 0 {
+		fieldsJSON, err := json.Marshal(req.Fields)
+		if err != nil {
+			return nil, fmt.Errorf("marshal fields: %w", err)
+		}
+		formData["fields"] = string(fieldsJSON)
 	}
 
 	if req.DocumentName != "" {
@@ -637,15 +647,6 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 	}
 
 	return &response, nil
-}
-
-// marshalFields JSON-encodes fields, sending "[]" (never "null") when none were given: a template
-// sent with signer roles takes its fields from the template, so Fields may be omitted.
-func marshalFields(fields []Field) ([]byte, error) {
-	if fields == nil {
-		fields = []Field{}
-	}
-	return json.Marshal(fields)
 }
 
 // TemplateSignatureRole is one signer role of a template, as returned by GetTemplateSignatureSetup.
