@@ -95,13 +95,19 @@ final class TurboSignTemplateRolesTest extends TestCase
         $field = new Field(SignatureFieldType::SIGNATURE, 'jane@client.com', page: 1, x: 10, y: 20, width: 100, height: 30);
 
         TurboSign::sendSignature(new SendSignatureRequest(
-            templateId: self::TEMPLATE_ID, recipients: $recipients, fields: [$field],
+            templateId: self::TEMPLATE_ID,
+            recipients: $recipients,
+            fields: [$field],
         ));
         TurboSign::createSignatureReviewLink(new CreateSignatureReviewLinkRequest(
-            templateId: self::TEMPLATE_ID, recipients: $recipients, fields: [$field],
+            templateId: self::TEMPLATE_ID,
+            recipients: $recipients,
+            fields: [$field],
         ));
         TurboSign::sendSignature(new SendSignatureRequest(
-            templateId: self::TEMPLATE_ID, recipients: $recipients, fields: [],
+            templateId: self::TEMPLATE_ID,
+            recipients: $recipients,
+            fields: [],
         ));
 
         $this->assertSame('signature', json_decode($this->capturedJsonBody(0)['fields'], true)[0]['type']);
