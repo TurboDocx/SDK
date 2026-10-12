@@ -23,7 +23,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
     end
 
     describe ".send_signature" do
-      it "sends each recipient's role and an empty fields list when fields are omitted" do
+      it "sends each recipient's role and no fields key when fields are omitted" do
         allow(mock_client).to receive(:post)
           .and_return({ "success" => true, "documentId" => "doc-1", "status" => "under_review" })
 
@@ -39,7 +39,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
           expect(JSON.parse(body["recipients"])).to eq(
             [{ "role" => "client", "name" => "Jane Doe", "email" => "jane@client.com" }]
           )
-          expect(JSON.parse(body["fields"])).to eq([])
+          expect(body).not_to have_key("fields")
         end
       end
 
@@ -60,8 +60,24 @@ RSpec.describe TurboDocxSdk::TurboSign do
       end
     end
 
+    describe "an empty fields list" do
+      it "is left out of the body rather than sent as []" do
+        allow(mock_client).to receive(:post).and_return({ "success" => true, "documentId" => "doc-1" })
+
+        described_class.send_signature(
+          templateId: template_id,
+          recipients: [{ role: "client", name: "Jane Doe", email: "jane@client.com" }],
+          fields: []
+        )
+
+        expect(mock_client).to have_received(:post) do |_path, body|
+          expect(body).not_to have_key("fields")
+        end
+      end
+    end
+
     describe ".create_signature_review_link" do
-      it "sends roles to prepare-for-review with an empty fields list when fields are omitted" do
+      it "sends roles to prepare-for-review without a fields key when fields are omitted" do
         allow(mock_client).to receive(:post)
           .and_return({ "success" => true, "documentId" => "doc-2", "status" => "review_ready" })
 
@@ -73,7 +89,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
         expect(mock_client).to have_received(:post) do |path, body|
           expect(path).to eq("/turbosign/single/prepare-for-review")
           expect(JSON.parse(body["recipients"])[0]["role"]).to eq("client")
-          expect(JSON.parse(body["fields"])).to eq([])
+          expect(body).not_to have_key("fields")
         end
       end
     end
@@ -100,7 +116,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
         expect(JSON.parse(send_body["recipients"])).to eq(
           [{ "name" => "Jane Doe", "email" => "jane@client.com", "signingOrder" => 1, "role" => "client" }]
         )
-        expect(JSON.parse(send_body["fields"])).to eq([])
+        expect(send_body).not_to have_key("fields")
         expect(send_body["templateId"]).to eq(template_id)
         expect(result["recipients"][0]["embedUrl"]).to eq("https://app/sign/doc-3?token=J")
       end
