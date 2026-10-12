@@ -200,14 +200,15 @@ export class TurboSign {
 
     // Serialize recipients and fields to JSON strings (as n8n node does)
     const recipientsJson = JSON.stringify(request.recipients);
-    // A template sent with signer roles takes its fields from the template, so fields may be omitted
-    const fieldsJson = JSON.stringify(request.fields ?? []);
 
     // Build form data
     const formData: Record<string, any> = {
       recipients: recipientsJson,
-      fields: fieldsJson,
     };
+
+    // Omit `fields` entirely when none are given: a template sent with signer roles takes its
+    // fields from the template, and any other send gets the API's clear FieldsRequired error.
+    if (request.fields && request.fields.length > 0) formData.fields = JSON.stringify(request.fields);
 
     // Add optional fields
     if (request.documentName) formData.documentName = request.documentName;
@@ -286,14 +287,15 @@ export class TurboSign {
 
     // Serialize recipients and fields to JSON strings (as n8n node does)
     const recipientsJson = JSON.stringify(request.recipients);
-    // A template sent with signer roles takes its fields from the template, so fields may be omitted
-    const fieldsJson = JSON.stringify(request.fields ?? []);
 
     // Build form data
     const formData: Record<string, any> = {
       recipients: recipientsJson,
-      fields: fieldsJson,
     };
+
+    // Omit `fields` entirely when none are given: a template sent with signer roles takes its
+    // fields from the template, and any other send gets the API's clear FieldsRequired error.
+    if (request.fields && request.fields.length > 0) formData.fields = JSON.stringify(request.fields);
 
     // Add optional fields
     if (request.documentName) formData.documentName = request.documentName;

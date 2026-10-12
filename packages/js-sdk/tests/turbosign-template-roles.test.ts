@@ -33,7 +33,7 @@ describe("TurboSign template signer roles", () => {
   });
 
   describe("sendSignature", () => {
-    it("sends each recipient's role and an empty fields list when fields are omitted", async () => {
+    it("sends each recipient's role and no fields key when fields are omitted", async () => {
       (global as unknown as { fetch: jest.Mock }).fetch = jest
         .fn()
         .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-1", status: "under_review" } }));
@@ -48,7 +48,44 @@ describe("TurboSign template signer roles", () => {
       const body = bodyOf(0);
       expect(body.templateId).toBe(TEMPLATE_ID);
       expect(JSON.parse(body.recipients)).toEqual([{ role: "client", name: "Jane Doe", email: "jane@client.com" }]);
-      expect(JSON.parse(body.fields)).toEqual([]);
+      expect(body).not.toHaveProperty("fields");
+    });
+
+    it("still sends fields when they are given", async () => {
+      (global as unknown as { fetch: jest.Mock }).fetch = jest
+        .fn()
+        .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-1", status: "under_review" } }));
+      const fields = [
+        { type: "signature", page: 1, x: 10, y: 20, width: 100, height: 30, recipientEmail: "jane@client.com" },
+      ];
+
+      await TurboSign.sendSignature({
+        templateId: TEMPLATE_ID,
+        recipients: [{ name: "Jane Doe", email: "jane@client.com", signingOrder: 1 }],
+        fields: fields as any,
+      });
+      await TurboSign.createSignatureReviewLink({
+        templateId: TEMPLATE_ID,
+        recipients: [{ name: "Jane Doe", email: "jane@client.com", signingOrder: 1 }],
+        fields: fields as any,
+      });
+
+      expect(JSON.parse(bodyOf(0).fields)).toEqual(fields);
+      expect(JSON.parse(bodyOf(1).fields)).toEqual(fields);
+    });
+
+    it("omits fields when an empty list is given", async () => {
+      (global as unknown as { fetch: jest.Mock }).fetch = jest
+        .fn()
+        .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-1", status: "under_review" } }));
+
+      await TurboSign.sendSignature({
+        templateId: TEMPLATE_ID,
+        recipients: [{ role: "client", name: "Jane Doe", email: "jane@client.com" }],
+        fields: [],
+      });
+
+      expect(bodyOf(0)).not.toHaveProperty("fields");
     });
 
     it("surfaces the API's message when a role isn't on the template", async () => {
@@ -87,7 +124,7 @@ describe("TurboSign template signer roles", () => {
 
       expect(fetchMock().mock.calls[0][0]).toContain("/turbosign/single/prepare-for-review");
       expect(JSON.parse(bodyOf(0).recipients)[0].role).toBe("client");
-      expect(JSON.parse(bodyOf(0).fields)).toEqual([]);
+      expect(bodyOf(0)).not.toHaveProperty("fields");
     });
   });
 
@@ -119,7 +156,7 @@ describe("TurboSign template signer roles", () => {
       expect(JSON.parse(bodyOf(0).recipients)).toEqual([
         { name: "Jane Doe", email: "jane@client.com", signingOrder: 1, role: "client" },
       ]);
-      expect(JSON.parse(bodyOf(0).fields)).toEqual([]);
+      expect(bodyOf(0)).not.toHaveProperty("fields");
       expect(result.recipients[0].embedUrl).toBe("https://app/sign/doc-3?token=J");
     });
   });
