@@ -105,15 +105,19 @@ final class TurboSign
         $client = self::getClient();
         $senderConfig = $client->getSenderConfig();
 
-        // Serialize recipients and fields to JSON strings (as backend expects)
+        // Serialize recipients to a JSON string (as backend expects)
         $recipientsJson = json_encode(array_map(fn($r) => $r->toArray(), $request->recipients));
-        $fieldsJson = json_encode(array_map(fn($f) => $f->toArray(), $request->fields));
 
         // Build form data
         $formData = [
             'recipients' => $recipientsJson,
-            'fields' => $fieldsJson,
         ];
+
+        // Omit 'fields' when none are given: a template sent with signer roles takes its fields
+        // from the template, and any other send gets the API's FieldsRequired error.
+        if ($request->fields !== []) {
+            $formData['fields'] = json_encode(array_map(fn($f) => $f->toArray(), $request->fields));
+        }
 
         // Add optional fields
         if ($request->documentName !== null) {
@@ -192,15 +196,19 @@ final class TurboSign
         $client = self::getClient();
         $senderConfig = $client->getSenderConfig();
 
-        // Serialize recipients and fields to JSON strings (as backend expects)
+        // Serialize recipients to a JSON string (as backend expects)
         $recipientsJson = json_encode(array_map(fn($r) => $r->toArray(), $request->recipients));
-        $fieldsJson = json_encode(array_map(fn($f) => $f->toArray(), $request->fields));
 
         // Build form data
         $formData = [
             'recipients' => $recipientsJson,
-            'fields' => $fieldsJson,
         ];
+
+        // Omit 'fields' when none are given: a template sent with signer roles takes its fields
+        // from the template, and any other send gets the API's FieldsRequired error.
+        if ($request->fields !== []) {
+            $formData['fields'] = json_encode(array_map(fn($f) => $f->toArray(), $request->fields));
+        }
 
         // Add optional fields
         if ($request->documentName !== null) {

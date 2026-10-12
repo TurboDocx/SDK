@@ -8,7 +8,9 @@ use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use TurboDocx\Exceptions\ValidationException;
 use TurboDocx\TurboSign;
+use TurboDocx\Types\Field;
 use TurboDocx\Types\Recipient;
+use TurboDocx\Types\SignatureFieldType;
 use TurboDocx\Types\Requests\CreateEmbeddedSignatureRequest;
 use TurboDocx\Types\Requests\CreateSignatureReviewLinkRequest;
 use TurboDocx\Types\Requests\EmbeddedSignatureRecipient;
@@ -59,7 +61,7 @@ final class TurboSignTemplateRolesTest extends TestCase
         new Recipient(name: 'Jane Doe', email: 'jane@client.com');
     }
 
-    public function testSendSignatureSendsRoleAndEmptyFieldsWhenOmitted(): void
+    public function testSendSignatureSendsRoleAndNoFieldsKeyWhenOmitted(): void
     {
         $this->injectTurboSignClient([
             $this->ok(['success' => true, 'documentId' => 'doc-1', 'status' => 'under_review', 'message' => 'ok']),
@@ -79,7 +81,32 @@ final class TurboSignTemplateRolesTest extends TestCase
             [['name' => 'Jane Doe', 'email' => 'jane@client.com', 'role' => 'client']],
             json_decode($body['recipients'], true)
         );
-        $this->assertSame('[]', $body['fields']);
+        $this->assertArrayNotHasKey('fields', $body);
+    }
+
+    public function testFieldsAreStillSentWhenGivenAndOmittedForAnEmptyList(): void
+    {
+        $this->injectTurboSignClient([
+            $this->ok(['success' => true, 'documentId' => 'doc-1', 'status' => 'under_review', 'message' => 'ok']),
+            $this->ok(['success' => true, 'documentId' => 'doc-2', 'status' => 'review_ready', 'message' => 'ok']),
+            $this->ok(['success' => true, 'documentId' => 'doc-3', 'status' => 'under_review', 'message' => 'ok']),
+        ], captureHistory: true);
+        $recipients = [new Recipient(name: 'Jane Doe', email: 'jane@client.com', signingOrder: 1)];
+        $field = new Field(SignatureFieldType::SIGNATURE, 'jane@client.com', page: 1, x: 10, y: 20, width: 100, height: 30);
+
+        TurboSign::sendSignature(new SendSignatureRequest(
+            templateId: self::TEMPLATE_ID, recipients: $recipients, fields: [$field],
+        ));
+        TurboSign::createSignatureReviewLink(new CreateSignatureReviewLinkRequest(
+            templateId: self::TEMPLATE_ID, recipients: $recipients, fields: [$field],
+        ));
+        TurboSign::sendSignature(new SendSignatureRequest(
+            templateId: self::TEMPLATE_ID, recipients: $recipients, fields: [],
+        ));
+
+        $this->assertSame('signature', json_decode($this->capturedJsonBody(0)['fields'], true)[0]['type']);
+        $this->assertSame('signature', json_decode($this->capturedJsonBody(1)['fields'], true)[0]['type']);
+        $this->assertArrayNotHasKey('fields', $this->capturedJsonBody(2));
     }
 
     public function testSendSignatureSurfacesUnknownRoleMessageAndCode(): void
@@ -104,7 +131,7 @@ final class TurboSignTemplateRolesTest extends TestCase
         }
     }
 
-    public function testCreateSignatureReviewLinkSendsRoleAndEmptyFieldsWhenOmitted(): void
+    public function testCreateSignatureReviewLinkSendsRoleAndNoFieldsKeyWhenOmitted(): void
     {
         $this->injectTurboSignClient([
             $this->ok(['success' => true, 'documentId' => 'doc-2', 'status' => 'review_ready', 'message' => 'ok']),
@@ -119,7 +146,7 @@ final class TurboSignTemplateRolesTest extends TestCase
         $this->assertStringContainsString('/turbosign/single/prepare-for-review', (string) $request->getUri());
         $body = $this->capturedJsonBody(0);
         $this->assertSame('client', json_decode($body['recipients'], true)[0]['role']);
-        $this->assertSame('[]', $body['fields']);
+        $this->assertArrayNotHasKey('fields', $body);
     }
 
     public function testCreateEmbeddedSignaturePassesRoleThrough(): void
@@ -149,7 +176,7 @@ final class TurboSignTemplateRolesTest extends TestCase
             [['name' => 'Jane Doe', 'email' => 'jane@client.com', 'signingOrder' => 1, 'role' => 'client']],
             json_decode($body['recipients'], true)
         );
-        $this->assertSame('[]', $body['fields']);
+        $this->assertArrayNotHasKey('fields', $body);
         $this->assertSame('https://app/sign/doc-3?token=J', $result->recipients[0]->embedUrl);
     }
 
