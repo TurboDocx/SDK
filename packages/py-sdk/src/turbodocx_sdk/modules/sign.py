@@ -287,8 +287,12 @@ class TurboSign:
             # For file upload, use form data with JSON strings
             form_data: Dict[str, Any] = {
                 "recipients": json.dumps(recipients),
-                "fields": json.dumps(fields if fields is not None else []),
             }
+
+            # Omit "fields" when none are given: a template sent with signer roles takes its
+            # fields from the template, and any other send gets the API's FieldsRequired error.
+            if fields:
+                form_data["fields"] = json.dumps(fields)
 
             # Add optional fields
             if document_name:
@@ -326,8 +330,12 @@ class TurboSign:
             # Backend expects recipients/fields as JSON strings (same as form-data)
             json_body: Dict[str, Any] = {
                 "recipients": json.dumps(recipients),
-                "fields": json.dumps(fields if fields is not None else []),
             }
+
+            # Omit "fields" when none are given: a template sent with signer roles takes its
+            # fields from the template, and any other send gets the API's FieldsRequired error.
+            if fields:
+                json_body["fields"] = json.dumps(fields)
 
             # Add optional fields
             if document_name:
@@ -472,8 +480,12 @@ class TurboSign:
             # For file upload, use form data with JSON strings
             form_data: Dict[str, Any] = {
                 "recipients": json.dumps(recipients),
-                "fields": json.dumps(fields if fields is not None else []),
             }
+
+            # Omit "fields" when none are given: a template sent with signer roles takes its
+            # fields from the template, and any other send gets the API's FieldsRequired error.
+            if fields:
+                form_data["fields"] = json.dumps(fields)
 
             # Add optional fields
             if document_name:
@@ -516,8 +528,12 @@ class TurboSign:
             # Backend expects recipients/fields as JSON strings (same as form-data)
             json_body: Dict[str, Any] = {
                 "recipients": json.dumps(recipients),
-                "fields": json.dumps(fields if fields is not None else []),
             }
+
+            # Omit "fields" when none are given: a template sent with signer roles takes its
+            # fields from the template, and any other send gets the API's FieldsRequired error.
+            if fields:
+                json_body["fields"] = json.dumps(fields)
 
             # Add optional fields
             if document_name:
