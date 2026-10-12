@@ -710,8 +710,11 @@ public final class TurboSign {
     ) {
         Map<String, String> formData = new HashMap<>();
         formData.put("recipients", gson.toJson(recipients));
-        // A template sent with signer roles takes its fields from the template, so fields may be omitted
-        formData.put("fields", gson.toJson(fields != null ? fields : new ArrayList<Field>()));
+        // Omit "fields" when none are given: a template sent with signer roles takes its fields
+        // from the template, and any other send gets the API's FieldsRequired error.
+        if (fields != null && !fields.isEmpty()) {
+            formData.put("fields", gson.toJson(fields));
+        }
 
         if (documentName != null) {
             formData.put("documentName", documentName);
