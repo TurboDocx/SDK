@@ -276,7 +276,7 @@ await TurboSign.sendSignature({
 - A role left out uses the template's saved signer. If it has none, the API returns a 400 naming the role.
 - An unknown role returns a 400 listing the template's roles.
 - Any `fields` you pass are added to the template's (for example an extra witness signature).
-- Roles work on PDF templates. PowerPoint templates cannot be sent for signature (400 `SignatureNotSupportedForPresentation`). Without roles, `fields` is required and must not be empty (400 `FieldsRequired`).
+- Roles work on PDF templates. Without roles, `fields` is required and must not be empty (400 `FieldsRequired`).
 - `role` works the same way on `createSignatureReviewLink` and `createEmbeddedSignature`.
 
 #### `sendReminder(documentId, recipientIds?)`
@@ -1161,7 +1161,6 @@ The API also returns more specific codes, passed through unchanged:
 | `OptionalNotSupported` | 400 | A `signature` or `initial` field was sent with `required: false`. The signer must always complete those two types. |
 | `InvalidFieldRequired` | 400 | A field's `required` is not a boolean. Send `true`, `false`, or leave it out (leaving it out means required). |
 | `NoEditableFieldsForRecipient` | 400 | A recipient has no field they must fill in: all of their fields are read-only or optional. Give each recipient at least one required, editable field. |
-| `SignatureNotSupportedForPresentation` | 400 | A PowerPoint template or deliverable cannot be sent for signature (send, review link, from a template, from a deliverable, bulk). Use a Word or PDF file. |
 | `FieldsRequired` | 400 | `fields` is missing or empty and no recipient names a `role`. Pass fields, or send a template whose recipients name roles. |
 | `FieldPageOutOfRange` | 400 | A field is placed on a page past the end of the document. |
 | `UnknownSignerRole` | 400 | A recipient's `role` is not one of the template's roles. The message lists them. |
