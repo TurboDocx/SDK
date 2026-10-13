@@ -75,7 +75,7 @@ module TurboDocxSdk
             "/turbosign/single/prepare-for-review",
             file,
             field_name: "file",
-            additional_data: form_data
+            additional_data: with_file_name(form_data, request)
           )
         else
           form_data["fileLink"] = request[:fileLink] || request["fileLink"] if request[:fileLink] || request["fileLink"]
@@ -117,7 +117,7 @@ module TurboDocxSdk
             "/turbosign/single/prepare-for-signing",
             file,
             field_name: "file",
-            additional_data: form_data
+            additional_data: with_file_name(form_data, request)
           )
         else
           form_data["fileLink"] = request[:fileLink] || request["fileLink"] if request[:fileLink] || request["fileLink"]
@@ -610,6 +610,12 @@ module TurboDocxSdk
           "status" => code == "RecipientAlreadySigned" ? "completed" : "pending",
           "identityVerificationMode" => identity_verification && identity_verification["mode"]
         }
+      end
+
+      # upload_file turns "fileName" into the uploaded part's filename (the stored document name).
+      def with_file_name(form_data, request)
+        file_name = request[:fileName] || request["fileName"]
+        file_name ? form_data.merge("fileName" => file_name) : form_data
       end
 
       def build_signature_form_data(request, sender)

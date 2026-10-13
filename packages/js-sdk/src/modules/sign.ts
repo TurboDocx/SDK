@@ -233,7 +233,8 @@ export class TurboSign {
         '/turbosign/single/prepare-for-review',
         request.file,
         'file',
-        formData
+        // uploadFile turns fileName into the uploaded part's filename (the stored document name)
+        request.fileName ? { ...formData, fileName: request.fileName } : formData
       );
       return response;
     } else {
@@ -323,7 +324,8 @@ export class TurboSign {
         '/turbosign/single/prepare-for-signing',
         request.file,
         'file',
-        formData
+        // uploadFile turns fileName into the uploaded part's filename (the stored document name)
+        request.fileName ? { ...formData, fileName: request.fileName } : formData
       );
       return response;
     } else {

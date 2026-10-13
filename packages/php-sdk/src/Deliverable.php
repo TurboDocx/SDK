@@ -27,8 +27,8 @@ final class Deliverable
      * @example
      * ```php
      * Deliverable::configure(new DeliverableConfig(
-     *     apiKey: $_ENV['TURBODOCX_API_KEY'],
-     *     orgId: $_ENV['TURBODOCX_ORG_ID'],
+     *     apiKey: getenv('TURBODOCX_API_KEY'),
+     *     orgId: getenv('TURBODOCX_ORG_ID'),
      * ));
      * ```
      */

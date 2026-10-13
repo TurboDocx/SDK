@@ -118,13 +118,10 @@ use TurboDocx\Types\TemplateConfig;
 use TurboDocx\Types\FieldPlacement;
 use TurboDocx\Types\Requests\SendSignatureRequest;
 
-// 1. Configure with your API key and sender information
-TurboSign::configure(new HttpClientConfig(
-    apiKey: $_ENV['TURBODOCX_API_KEY'],
-    orgId: $_ENV['TURBODOCX_ORG_ID'],
-    senderEmail: $_ENV['TURBODOCX_SENDER_EMAIL'],  // REQUIRED
-    senderName: $_ENV['TURBODOCX_SENDER_NAME']     // OPTIONAL (but strongly recommended)
-));
+// 1. Configure from TURBODOCX_API_KEY, TURBODOCX_ORG_ID, TURBODOCX_SENDER_EMAIL (required)
+//    and TURBODOCX_SENDER_NAME (optional, strongly recommended). fromEnvironment() reads them
+//    with getenv(); $_ENV is empty on a stock php.ini (variables_order = "GPCS").
+TurboSign::configure(HttpClientConfig::fromEnvironment());
 
 // 2. Send a document for signature
 $result = TurboSign::sendSignature(
@@ -245,7 +242,7 @@ echo "Document ID: {$result->documentId}\n";
 
 #### `sendSignature()`
 
-Upload a document and immediately send signature request emails.
+Upload a document and send it for signature. Recipients are emailed their signing links unless you pass `sendEmail: false` (see [Signing in your own app](#signing-in-your-own-app-sendemail-false--createsigningurl)). Pass `fileName` alongside `file` to name the stored document (otherwise it is saved as `document.<ext>`).
 
 ```php
 use TurboDocx\Types\Requests\SendSignatureRequest;
@@ -291,6 +288,43 @@ if ($result->recipients !== null) {
 // For signing progress afterwards, use getRecipients():
 $progress = TurboSign::getRecipients($result->documentId);
 ```
+
+#### Signing in your own app (`sendEmail: false` + `createSigningUrl()`)
+
+Set `sendEmail: false` to create the signature request without emailing anyone, then mint a single-use signing URL for each signer with `createSigningUrl()` when they are ready to sign in your app. Embedded signing must be enabled for your organization; check with `TurboSign::getEmbeddedSigningSettings()->enabled`.
+
+```php
+use TurboDocx\Types\Requests\CreateSigningUrlRequest;
+
+$result = TurboSign::sendSignature(
+    new SendSignatureRequest(
+        recipients: [new Recipient('Alice', 'alice@example.com', 1)],
+        fields: [
+            new Field(
+                type: SignatureFieldType::SIGNATURE,
+                recipientEmail: 'alice@example.com',
+                page: 1,
+                x: 100,
+                y: 500,
+                width: 200,
+                height: 50
+            )
+        ],
+        file: file_get_contents('contract.pdf'),
+        fileName: 'contract.pdf',
+        sendEmail: false  // no signing emails; you hand out the link yourself
+    )
+);
+
+// Mint the link the moment the signer is ready. It is single-use, so don't store it.
+$link = TurboSign::createSigningUrl(
+    $result->documentId,
+    new CreateSigningUrlRequest(recipientId: $result->recipients[0]['id'])
+);
+echo $link->url;  // open in a new tab or redirect to it
+```
+
+`createEmbeddedSignature()` wraps both calls: it sends with `sendEmail` defaulting to `false` and returns a signing URL per recipient.
 
 #### `sendReminder()`
 
