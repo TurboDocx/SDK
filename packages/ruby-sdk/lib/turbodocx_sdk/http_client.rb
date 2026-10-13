@@ -188,7 +188,7 @@ module TurboDocxSdk
       elsif file.respond_to?(:read)
         content = file.read
         mime = detect_file_type(content)
-        filename = additional_data&.dig("fileName") || "document.bin"
+        filename = additional_data&.dig("fileName") || "document.#{file_extension(mime)}"
         parts[field_name] = { io: StringIO.new(content), filename: filename, content_type: mime }
       else
         raise ValidationError, "Unsupported file input type: #{file.class}"
@@ -388,6 +388,15 @@ module TurboDocxSdk
       when 409 then raise ConflictError.new(message, code: api_code)
       when 429 then raise RateLimitError.new(message, code: api_code)
       else raise TurboDocxError.new(message, status_code: code, code: api_code)
+      end
+    end
+
+    def file_extension(mime)
+      case mime
+      when "application/pdf" then "pdf"
+      when /presentationml/ then "pptx"
+      when /wordprocessingml/ then "docx"
+      else "bin"
       end
     end
 
