@@ -320,10 +320,12 @@ class TurboSign:
                 expiration_warning_interval=expiration_warning_interval,
             )
 
+            if file_name:
+                # A form field, not the part's filename: the API checks the part's extension
+                form_data["fileName"] = file_name
             return await client.upload_file(
                 "/turbosign/single/prepare-for-review",
                 file=file,
-                file_name=file_name or None,
                 additional_data=form_data
             )
         else:
@@ -519,10 +521,12 @@ class TurboSign:
                 expiration_warning_interval=expiration_warning_interval,
             )
 
+            if file_name:
+                # A form field, not the part's filename: the API checks the part's extension
+                form_data["fileName"] = file_name
             return await client.upload_file(
                 "/turbosign/single/prepare-for-signing",
                 file=file,
-                file_name=file_name or None,
                 additional_data=form_data
             )
         else:

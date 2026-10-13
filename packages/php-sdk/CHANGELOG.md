@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Quote decline now supports `DRAFT` quotes — previously only quotes that had been sent could be declined.
 
 ### Fixed
-- `TurboSign::sendSignature()`, `createSignatureReviewLink()` and `createEmbeddedSignature()` now send `fileName` as the uploaded file's name. It was ignored before, so every upload was stored as `document.<ext>`.
+- `TurboSign::sendSignature()`, `createSignatureReviewLink()` and `createEmbeddedSignature()` now send `fileName` (as a `fileName` form field, so names without an extension work too). It was ignored before, so every upload was stored as `document.<ext>`.
 - The Packagist package no longer ships tests, config files, manual test scripts or other dev-only files (`.gitattributes` `export-ignore`).
 - README and docblock examples read config with `HttpClientConfig::fromEnvironment()` / `getenv()` instead of `$_ENV`, which is empty on a stock `php.ini`. The `getStatus()` example now treats `status` as the plain string it is.
 

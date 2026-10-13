@@ -242,7 +242,7 @@ echo "Document ID: {$result->documentId}\n";
 
 #### `sendSignature()`
 
-Upload a document and send it for signature. Recipients are emailed their signing links unless you pass `sendEmail: false` (see [Signing in your own app](#signing-in-your-own-app-sendemail-false--createsigningurl)). Pass `fileName` alongside `file` to name the stored document (otherwise it is saved as `document.<ext>`).
+Upload a document and send it for signature. Recipients are emailed their signing links unless you pass `sendEmail: false` (see [Signing in your own app](#signing-in-your-own-app-sendemail-false--createsigningurl)). Pass `fileName` alongside `file` to name the stored document (otherwise it is saved as `document.<ext>`); any name works, with or without an extension.
 
 ```php
 use TurboDocx\Types\Requests\SendSignatureRequest;
@@ -326,7 +326,7 @@ $result = TurboSign::sendSignature(
 
 #### Signing in your own app (`sendEmail: false` + `createSigningUrl()`)
 
-Set `sendEmail: false` to create the signature request without emailing anyone, then mint each signer's URL with `createSigningUrl()` when they are ready to sign in your app. For `otp` and no-verification recipients it is the reusable signing link, valid until the document expires; for `external_idv` and `override` recipients it is single-use and expires minutes after issue. Embedded signing must be enabled for your organization; check with `TurboSign::getEmbeddedSigningSettings()->enabled`.
+Set `sendEmail: false` to create the signature request without emailing anyone, then mint a signing URL for each signer with `createSigningUrl()` when they are ready to sign in your app. For a signer with an email/SMS passcode or no verification, the URL is their reusable signing link for the life of the document, so treat it like a password; `external_idv` and `override` signers get a single-use URL that expires in about 5 minutes. Embedded signing must be enabled for your organization; check with `TurboSign::getEmbeddedSigningSettings()->enabled`.
 
 ```php
 use TurboDocx\Types\Requests\CreateSigningUrlRequest;
@@ -351,10 +351,11 @@ $result = TurboSign::sendSignature(
     )
 );
 
-// Mint the link the moment the signer is ready. It is single-use, so don't store it.
+// Mint the link when the signer is ready. Don't log or store it: it is a bearer link.
+$recipientId = $result->recipients[0]['id'] ?? throw new RuntimeException('No recipient returned');
 $link = TurboSign::createSigningUrl(
     $result->documentId,
-    new CreateSigningUrlRequest(recipientId: $result->recipients[0]['id'])
+    new CreateSigningUrlRequest(recipientId: $recipientId)
 );
 echo $link->url;  // open in a new tab or redirect to it
 ```

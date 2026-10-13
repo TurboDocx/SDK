@@ -1,23 +1,25 @@
 /**
- * `fileName` on a Buffer upload must reach the API as the multipart file part's filename (the API
- * stores it as the document's file name). Real HttpClient, mocked fetch, so the FormData is inspected.
+ * `fileName` on an upload travels as a `fileName` form field (the API stores it as the document's
+ * file name). The uploaded part keeps a safe name, because the API checks its extension.
+ * Real HttpClient, mocked fetch, so the FormData is inspected.
  */
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 import { TurboSign } from "../src/modules/sign";
 
 const pdf = Buffer.from("%PDF-1.4 fake pdf bytes");
+const ok = (data: unknown) => ({ ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" }, json: async () => data });
 
 function mockFetch(): jest.Mock {
-  const fetchMock = jest.fn().mockResolvedValue({
-    ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
-    json: async () => ({ data: { success: true, documentId: "doc-1", status: "under_review", recipients: [], message: "ok" } }),
-  });
+  const fetchMock = jest.fn().mockResolvedValue(ok({ data: { success: true, documentId: "doc-1", status: "under_review", recipients: [], message: "ok" } }));
   (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
   return fetchMock;
 }
 
-function uploadedFile(fetchMock: jest.Mock): { name: string; formData: FormData } {
+function sentForm(fetchMock: jest.Mock): { partName: string; fileNameField: unknown } {
   const formData = fetchMock.mock.calls[0][1].body as FormData;
-  return { name: (formData.get("file") as File).name, formData };
+  return { partName: (formData.get("file") as File).name, fileNameField: formData.get("fileName") };
 }
 
 describe("TurboSign file uploads forward fileName", () => {
@@ -25,28 +27,47 @@ describe("TurboSign file uploads forward fileName", () => {
     TurboSign.configure({ apiKey: "k", orgId: "o", senderEmail: "test@company.com" });
   });
 
-  it("sendSignature names the uploaded part with fileName, not as a form field", async () => {
+  it("sendSignature sends fileName as a form field and keeps the part named document.<ext>", async () => {
     const fetchMock = mockFetch();
     await TurboSign.sendSignature({ recipients: [], fields: [], file: pdf, fileName: "Lease-Agreement-2026.pdf" });
-    const { name, formData } = uploadedFile(fetchMock);
-    expect(name).toBe("Lease-Agreement-2026.pdf");
-    expect(formData.has("fileName")).toBe(false);
+    expect(sentForm(fetchMock)).toEqual({ partName: "document.pdf", fileNameField: "Lease-Agreement-2026.pdf" });
   });
 
-  it("sendSignature falls back to document.<ext> without fileName", async () => {
+  it("a fileName without an extension still uploads a valid document.pdf part", async () => {
+    const fetchMock = mockFetch();
+    await TurboSign.sendSignature({ recipients: [], fields: [], file: pdf, fileName: "Lease Agreement 2026" });
+    expect(sentForm(fetchMock)).toEqual({ partName: "document.pdf", fileNameField: "Lease Agreement 2026" });
+  });
+
+  it("sendSignature without fileName sends no fileName field", async () => {
     const fetchMock = mockFetch();
     await TurboSign.sendSignature({ recipients: [], fields: [], file: pdf });
-    expect(uploadedFile(fetchMock).name).toBe("document.pdf");
+    expect(sentForm(fetchMock)).toEqual({ partName: "document.pdf", fileNameField: null });
   });
 
-  it("createSignatureReviewLink names the uploaded part with fileName", async () => {
+  it("a file path keeps its basename as the part and still forwards fileName", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "filename-test-"));
+    const filePath = path.join(dir, "scan_0001.pdf");
+    fs.writeFileSync(filePath, pdf);
+    const fetchMock = mockFetch();
+    await TurboSign.sendSignature({ recipients: [], fields: [], file: filePath, fileName: "Lease-2026.pdf" });
+    expect(sentForm(fetchMock)).toEqual({ partName: "scan_0001.pdf", fileNameField: "Lease-2026.pdf" });
+  });
+
+  it("a browser File keeps its own name as the part and still forwards fileName", async () => {
+    const fetchMock = mockFetch();
+    const file = new File([pdf], "upload.pdf", { type: "application/pdf" });
+    await TurboSign.sendSignature({ recipients: [], fields: [], file, fileName: "Lease-2026.pdf" });
+    expect(sentForm(fetchMock)).toEqual({ partName: "upload.pdf", fileNameField: "Lease-2026.pdf" });
+  });
+
+  it("createSignatureReviewLink forwards fileName", async () => {
     const fetchMock = mockFetch();
     await TurboSign.createSignatureReviewLink({ recipients: [], fields: [], file: pdf, fileName: "Review-Copy.pdf" });
-    expect(uploadedFile(fetchMock).name).toBe("Review-Copy.pdf");
+    expect(sentForm(fetchMock).fileNameField).toBe("Review-Copy.pdf");
   });
 
   it("createEmbeddedSignature forwards fileName to the upload", async () => {
-    const ok = (data: unknown) => ({ ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" }, json: async () => data });
     const fetchMock = jest.fn()
       .mockResolvedValueOnce(ok({ data: { success: true, documentId: "doc-1", status: "under_review", recipients: [{ id: "rec-1", name: "Jane Doe", email: "jane@example.com" }], message: "ok" } }))
       .mockResolvedValueOnce(ok({ data: { results: { url: "https://app.example.com/e", expiresAt: null, recipientId: "rec-1", identityVerificationMode: null, pendingChecks: [] } } }));
@@ -56,6 +77,12 @@ describe("TurboSign file uploads forward fileName", () => {
       fileName: "Embedded-Contract.pdf",
       recipients: [{ name: "Jane Doe", email: "jane@example.com", fields: { signature: "{signature1}" } }],
     });
-    expect(uploadedFile(fetchMock).name).toBe("Embedded-Contract.pdf");
+    expect(sentForm(fetchMock).fileNameField).toBe("Embedded-Contract.pdf");
+  });
+
+  it("the fileLink path does not send fileName", async () => {
+    const fetchMock = mockFetch();
+    await TurboSign.sendSignature({ recipients: [], fields: [], fileLink: "https://example.com/a.pdf", fileName: "Ignored.pdf" });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).not.toHaveProperty("fileName");
   });
 });

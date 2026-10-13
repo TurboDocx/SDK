@@ -14,8 +14,8 @@ use TurboDocx\Types\Requests\EmbeddedSignatureRecipient;
 use TurboDocx\Types\Requests\SendSignatureRequest;
 
 /**
- * A `fileName` on a file upload must reach the API as the uploaded part's filename (the API
- * stores it as the document's file name); without one the upload falls back to `document.<ext>`.
+ * A `fileName` on a file upload travels as a `fileName` form field (the API stores it as the
+ * document's file name). The uploaded part keeps `document.<ext>`, because the API checks its extension.
  */
 final class TurboSignFileNameTest extends TestCase
 {
@@ -49,10 +49,13 @@ final class TurboSignFileNameTest extends TestCase
         return null;
     }
 
-    private function hasFormField(string $name, int $index = 0): bool
+    private function formField(string $name, int $index = 0): ?string
     {
         $body = (string) $this->requestHistory[$index]['request']->getBody();
-        return preg_match('/name="' . preg_quote($name, '/') . '"\r?\n/', $body) === 1;
+        if (preg_match('/name="' . preg_quote($name, '/') . '"\r?\n.*?\r?\n\r?\n(.*?)\r?\n--/s', $body, $matches) === 1) {
+            return $matches[1];
+        }
+        return null;
     }
 
     public function testSendSignatureForwardsFileName(): void
@@ -66,8 +69,8 @@ final class TurboSignFileNameTest extends TestCase
             fileName: 'Lease-Agreement-2026.pdf',
         ));
 
-        $this->assertSame('Lease-Agreement-2026.pdf', $this->uploadedFileName());
-        $this->assertFalse($this->hasFormField('fileName'), 'fileName is the part filename, not a stray form field');
+        $this->assertSame('Lease-Agreement-2026.pdf', $this->formField('fileName'));
+        $this->assertSame('document.pdf', $this->uploadedFileName());
     }
 
     public function testSendSignatureWithoutFileNameFallsBackToDocumentExtension(): void
@@ -76,6 +79,17 @@ final class TurboSignFileNameTest extends TestCase
 
         TurboSign::sendSignature(new SendSignatureRequest(recipients: [], fields: [], file: self::PDF));
 
+        $this->assertSame('document.pdf', $this->uploadedFileName());
+        $this->assertNull($this->formField('fileName'));
+    }
+
+    public function testFileNameWithoutExtensionKeepsTheUploadedPartValid(): void
+    {
+        $this->injectTurboSignClient([$this->okResponse()], true);
+
+        TurboSign::sendSignature(new SendSignatureRequest(recipients: [], fields: [], file: self::PDF, fileName: 'Lease Agreement 2026'));
+
+        $this->assertSame('Lease Agreement 2026', $this->formField('fileName'));
         $this->assertSame('document.pdf', $this->uploadedFileName());
     }
 
@@ -90,7 +104,7 @@ final class TurboSignFileNameTest extends TestCase
             fileName: 'Review-Copy.pdf',
         ));
 
-        $this->assertSame('Review-Copy.pdf', $this->uploadedFileName());
+        $this->assertSame('Review-Copy.pdf', $this->formField('fileName'));
     }
 
     public function testCreateEmbeddedSignatureForwardsFileName(): void
@@ -118,6 +132,6 @@ final class TurboSignFileNameTest extends TestCase
             fileName: 'Embedded-Contract.pdf',
         ));
 
-        $this->assertSame('Embedded-Contract.pdf', $this->uploadedFileName(0));
+        $this->assertSame('Embedded-Contract.pdf', $this->formField('fileName', 0));
     }
 }
