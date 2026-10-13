@@ -24,6 +24,10 @@ When bumping, update **all** of these to the identical `MAJOR.MINOR.PATCH` strin
 | java-sdk | `packages/java-sdk/pom.xml` **and** `packages/java-sdk/src/main/java/com/turbodocx/ClientContext.java` | `<version>` + `static final String VERSION` |
 | ruby-sdk | `packages/ruby-sdk/turbodocx-sdk.gemspec` **and** `packages/ruby-sdk/lib/turbodocx_sdk.rb` | `spec.version` + `VERSION =` (Ruby carries the version in two places — keep them in sync) |
 
+**Java README install snippets.** `packages/java-sdk/README.md` pins the version in its Maven, Gradle
+Groovy and Gradle Kotlin snippets (Java has no version-less install). Bump all three with the pom, or
+the README hands users an old SDK (they sat at 0.6.1 / 0.2.0 while the SDK was 0.8.0).
+
 **Why py/java/ruby carry the version twice:** the registry manifest (`pyproject.toml`,
 `pom.xml`, `.gemspec`) is not readable at runtime, but the client-context User-Agent must
 emit `@turbodocx/sdk/<version>` — the exact token the backend keys on to classify a request

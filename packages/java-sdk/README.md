@@ -87,21 +87,21 @@ A modern, developer-first alternative to legacy e-signature platforms:
 <dependency>
     <groupId>com.turbodocx</groupId>
     <artifactId>turbodocx-sdk</artifactId>
-    <version>0.6.1</version>
+    <version>0.8.0</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'com.turbodocx:turbodocx-sdk:0.2.0'
+implementation 'com.turbodocx:turbodocx-sdk:0.8.0'
 ```
 
 <details>
 <summary>Gradle Kotlin DSL</summary>
 
 ```kotlin
-implementation("com.turbodocx:turbodocx-sdk:0.2.0")
+implementation("com.turbodocx:turbodocx-sdk:0.8.0")
 ```
 </details>
 
@@ -275,6 +275,44 @@ for (RecipientResponse r : result.getRecipients()) {
 
 // For signing progress afterwards, use getRecipients().
 ```
+
+#### Embedded signing: `sendEmail(false)` + `createSigningUrl()`
+
+To show the signing page in your own app instead of emailing a link, send with `sendEmail(false)`, then mint each signer's URL with `createSigningUrl()` when they're ready to sign. Embedded signing must be enabled for your organization.
+
+```java
+// 1. Create the request without emailing the signer a link (passcode and completed-copy emails still go out).
+SendSignatureResponse sent = client.turboSign().sendSignature(
+    new SendSignatureRequest.Builder()
+        .fileLink("https://example.com/contract.pdf")
+        .sendEmail(false)
+        .recipients(Arrays.asList(
+            new Recipient.Builder()
+                .name("Jane Doe")
+                .email("jane@example.com")
+                .signingOrder(1)
+                .externalId("your_customer_123") // your own key for the signer
+                .build()
+        ))
+        .fields(Arrays.asList(
+            new Field.Builder().type("signature").recipientEmail("jane@example.com").page(1).x(100).y(500).width(200).height(50).build()
+        ))
+        .build()
+);
+
+// 2. When the signer clicks "Sign" in your app, mint their URL (exactly one of externalId / recipientId).
+CreateSigningUrlResponse link = client.turboSign().createSigningUrl(
+    sent.getDocumentId(),
+    new CreateSigningUrlRequest.Builder()
+        .externalId("your_customer_123")
+        .build()
+);
+
+// Redirect the signer to it, or embed it in an iframe.
+System.out.println(link.getUrl());
+```
+
+Request the URL at click time and don't store it. For `otp` and no-verification recipients it is the reusable signing link, valid until the document expires; for `external_idv` and `override` recipients it is single-use and expires minutes after issue (pass `.identityAssertion(...)` for `external_idv`). A signer whose turn hasn't come yet gets a `TurboDocxException.ConflictException` with code `RecipientNotInTurn`. For the full flow, including identity verification, see [`examples/TurboSignEmbeddedIdentity.java`](./examples/TurboSignEmbeddedIdentity.java).
 
 #### `sendReminder()`
 
@@ -1156,12 +1194,12 @@ The SDK includes a comprehensive manual test class to verify all functionality l
 ### Running Manual Tests
 
 ```bash
-# Using Maven
-mvn exec:java -Dexec.mainClass="com.turbodocx.ManualTest"
+# Using Maven (the class lives under src/test, so it is never packaged into the published jar)
+mvn test-compile exec:java -Dexec.mainClass="com.turbodocx.ManualTest" -Dexec.classpathScope=test
 
 # Or compile and run directly
-mvn clean compile
-java -cp target/classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/stdout -q) com.turbodocx.ManualTest
+mvn clean test-compile
+java -cp target/test-classes:target/classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/stdout -q) com.turbodocx.ManualTest
 ```
 
 ### What It Tests
@@ -1178,7 +1216,7 @@ The `ManualTest.java` class tests all SDK methods:
 
 ### Configuration
 
-Before running, update the hardcoded values in `src/main/java/com/turbodocx/ManualTest.java`:
+Before running, update the hardcoded values in `src/test/java/com/turbodocx/ManualTest.java`:
 - `API_KEY` - Your TurboDocx API key
 - `BASE_URL` - API endpoint (default: `http://localhost:3000`)
 - `ORG_ID` - Your organization UUID
