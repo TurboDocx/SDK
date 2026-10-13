@@ -102,7 +102,7 @@ Fields use **coordinate-based positioning**:
 - `x`, `y` — position from top-left in points
 - `width`, `height` — field dimensions in points
 - `recipientEmail` — binds field to a specific signer
-- `type` — field type (`signature`, `initials`, `date`, `text`, etc.)
+- `type` — field type (`signature`, `initial`, `date`, `text`, etc.)
 
 ## Type/Model Organization
 
