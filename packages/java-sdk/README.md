@@ -482,7 +482,7 @@ AuditTrailResponse audit = client.turboSign().getAuditTrail("doc-uuid-here");
 
 System.out.println("Document: " + audit.getDocument().getName());
 
-for (AuditTrailEntry entry : audit.getAuditTrail()) {
+for (AuditTrailResponse.AuditTrailEntry entry : audit.getAuditTrail()) {
     System.out.println(entry.getActionType() + " - " + entry.getTimestamp());
     if (entry.getUser() != null) {
         System.out.println("  By: " + entry.getUser().getName() + " (" + entry.getUser().getEmail() + ")");
@@ -1223,7 +1223,7 @@ public class ContractController {
 
 ## Local Testing
 
-The SDK includes a comprehensive manual test class to verify all functionality locally.
+The SDK includes a manual test class (`ManualTest`) for exercising the core TurboSign methods against a live or local API.
 
 ### Running Manual Tests
 
@@ -1253,20 +1253,21 @@ Before running, update the hardcoded values in `src/test/java/com/turbodocx/Manu
 - `API_KEY` - Your TurboDocx API key
 - `BASE_URL` - API endpoint (default: `http://localhost:3000`)
 - `ORG_ID` - Your organization UUID
-- `TEST_PDF_PATH` - Path to a test PDF file
+- `TEST_PDF_PATH` - Path to a test PDF file (required: the class exits at startup if this file is missing)
 - `TEST_EMAIL` - Email address for testing
 - `FILE_URL` - A publicly accessible document URL (for the file-URL send)
+- The `senderEmail` / `senderName` set on the client builder in `main()`
 
 `ManualTestDeliverable.java` (same folder) exercises the Deliverable API the same way: set its constants, then run it with `mvn test-compile exec:java -Dexec.mainClass="com.turbodocx.ManualTestDeliverable" -Dexec.classpathScope=test`.
 
 ### Expected Output
 
 With the calls uncommented, the test class will:
-1. Upload a test document
-2. Send it for signature
-3. Check the status
-4. Test void and resend operations
-5. Print results for each operation
+1. Create a review link from `FILE_URL`
+2. Upload the test PDF and send it for signature
+3. Check the status and download the document
+4. Test resend and void
+5. Fetch the audit trail, printing the result of each step
 
 ---
 
