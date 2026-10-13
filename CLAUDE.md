@@ -10,7 +10,7 @@ packages/
 ├── py-sdk/      # Python (turbodocx-sdk)
 ├── go-sdk/      # Go (github.com/TurboDocx/SDK/packages/go-sdk)
 ├── php-sdk/     # PHP (turbodocx/sdk)
-├── java-sdk/    # Java (com.turbodocx:sdk)
+├── java-sdk/    # Java (com.turbodocx:turbodocx-sdk)
 └── ruby-sdk/    # Ruby (turbodocx-sdk)
 .github/workflows/  # Per-SDK CI + publish workflows
 ```

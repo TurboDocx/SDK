@@ -8,7 +8,7 @@
 
 The most developer-friendly **DocuSign & PandaDoc alternative** for **e-signatures** and **document generation**. Send documents for signature and automate document workflows programmatically.
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.turbodocx/sdk.svg)](https://search.maven.org/artifact/com.turbodocx/sdk)
+[![Maven Central](https://img.shields.io/maven-central/v/com.turbodocx/turbodocx-sdk.svg)](https://search.maven.org/artifact/com.turbodocx/turbodocx-sdk)
 [![Java](https://img.shields.io/badge/Java-11+-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-agentskills.io-8A2BE2)](https://agentskills.io)
@@ -87,21 +87,21 @@ A modern, developer-first alternative to legacy e-signature platforms:
 <dependency>
     <groupId>com.turbodocx</groupId>
     <artifactId>turbodocx-sdk</artifactId>
-    <version>0.6.1</version>
+    <version>0.8.0</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'com.turbodocx:turbodocx-sdk:0.2.0'
+implementation 'com.turbodocx:turbodocx-sdk:0.8.0'
 ```
 
 <details>
 <summary>Gradle Kotlin DSL</summary>
 
 ```kotlin
-implementation("com.turbodocx:turbodocx-sdk:0.2.0")
+implementation("com.turbodocx:turbodocx-sdk:0.8.0")
 ```
 </details>
 
@@ -276,6 +276,44 @@ for (RecipientResponse r : result.getRecipients()) {
 // For signing progress afterwards, use getRecipients().
 ```
 
+#### Embedded signing: `sendEmail(false)` + `createSigningUrl()`
+
+To show the signing page in your own app instead of emailing a link, send with `sendEmail(false)`, then mint each signer's URL with `createSigningUrl()` when they're ready to sign. Embedded signing must be enabled for your organization.
+
+```java
+// 1. Create the request without emailing the signer a link (passcode and completed-copy emails still go out).
+SendSignatureResponse sent = client.turboSign().sendSignature(
+    new SendSignatureRequest.Builder()
+        .fileLink("https://example.com/contract.pdf")
+        .sendEmail(false)
+        .recipients(Arrays.asList(
+            new Recipient.Builder()
+                .name("Jane Doe")
+                .email("jane@example.com")
+                .signingOrder(1)
+                .externalId("your_customer_123") // your own key for the signer
+                .build()
+        ))
+        .fields(Arrays.asList(
+            new Field.Builder().type("signature").recipientEmail("jane@example.com").page(1).x(100).y(500).width(200).height(50).build()
+        ))
+        .build()
+);
+
+// 2. When the signer clicks "Sign" in your app, mint their URL (exactly one of externalId / recipientId).
+CreateSigningUrlResponse link = client.turboSign().createSigningUrl(
+    sent.getDocumentId(),
+    new CreateSigningUrlRequest.Builder()
+        .externalId("your_customer_123")
+        .build()
+);
+
+// Redirect the signer to it, or embed it in an iframe.
+System.out.println(link.getUrl());
+```
+
+Request the URL at click time and don't store it. For `otp` and no-verification recipients it is the reusable signing link, valid until the document expires; for `external_idv` and `override` recipients it is single-use and expires minutes after issue (pass `.identityAssertion(...)` for `external_idv`). A signer whose turn hasn't come yet gets a `TurboDocxException.ConflictException` with code `RecipientNotInTurn`. For the full flow, including identity verification, see [`examples/TurboSignEmbeddedIdentity.java`](./examples/TurboSignEmbeddedIdentity.java).
+
 #### `sendReminder()`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the cap is spent, does not consume that cap, and only emails signers at the current signing order. Use the single-arg overload to remind everyone eligible; do not pass an empty list, which the API rejects.
@@ -384,7 +422,7 @@ byte[] pdfBytes = client.turboSign().download("doc-uuid-here");
 Files.write(Paths.get("signed-contract.pdf"), pdfBytes);
 ```
 
-#### `void()`
+#### `voidDocument()`
 
 Cancel a signature request.
 
@@ -411,7 +449,7 @@ AuditTrailResponse audit = client.turboSign().getAuditTrail("doc-uuid-here");
 
 System.out.println("Document: " + audit.getDocument().getName());
 
-for (AuditTrailEntry entry : audit.getAuditTrail()) {
+for (AuditTrailResponse.AuditTrailEntry entry : audit.getAuditTrail()) {
     System.out.println(entry.getActionType() + " - " + entry.getTimestamp());
     if (entry.getUser() != null) {
         System.out.println("  By: " + entry.getUser().getName() + " (" + entry.getUser().getEmail() + ")");
@@ -718,7 +756,7 @@ Recipient signs
 
 ### Configuration
 
-Build a client via `TurboDocxClient.Builder().buildWebhooksClient()` — this variant skips the `senderEmail` requirement that `buildSignClient()` enforces, since webhook routes don't send emails.
+Build a client via `TurboDocxClient.Builder().buildWebhooksClient()` — this variant skips the `senderEmail` requirement that `build()` enforces, since webhook routes don't send emails.
 
 ```java
 import com.turbodocx.TurboDocxClient;
@@ -1151,26 +1189,25 @@ public class ContractController {
 
 ## Local Testing
 
-The SDK includes a comprehensive manual test class to verify all functionality locally.
+The SDK includes a manual test class (`ManualTest`) for exercising the core TurboSign methods against a live or local API.
 
 ### Running Manual Tests
 
 ```bash
-# Using Maven
-mvn exec:java -Dexec.mainClass="com.turbodocx.ManualTest"
+# Using Maven (the class lives under src/test, so it is never packaged into the published jar)
+mvn test-compile exec:java -Dexec.mainClass="com.turbodocx.ManualTest" -Dexec.classpathScope=test
 
 # Or compile and run directly
-mvn clean compile
-java -cp target/classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/stdout -q) com.turbodocx.ManualTest
+mvn clean test-compile
+java -cp target/test-classes:target/classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/stdout -q) com.turbodocx.ManualTest
 ```
 
 ### What It Tests
 
-The `ManualTest.java` class tests all SDK methods:
+`ManualTest.java` covers these methods. Every call in its `main()` is commented out: uncomment the ones you want to run, then start it with the command above.
 - ✅ `createSignatureReviewLink()` - Document upload for review
 - ✅ `sendSignature()` - Send for signature
 - ✅ `getStatus()` - Check document status
-- ✅ `getRecipients()` - Per-recipient signing status (who signed, who is pending)
 - ✅ `download()` - Download signed document
 - ✅ `voidDocument()` - Cancel signature request
 - ✅ `resendEmail()` - Resend signature emails
@@ -1178,21 +1215,25 @@ The `ManualTest.java` class tests all SDK methods:
 
 ### Configuration
 
-Before running, update the hardcoded values in `src/main/java/com/turbodocx/ManualTest.java`:
+Before running, update the hardcoded values in `src/test/java/com/turbodocx/ManualTest.java`:
 - `API_KEY` - Your TurboDocx API key
 - `BASE_URL` - API endpoint (default: `http://localhost:3000`)
 - `ORG_ID` - Your organization UUID
-- `TEST_FILE_PATH` - Path to a test PDF/DOCX file
+- `TEST_PDF_PATH` - Path to a test PDF file (required: the class exits at startup if this file is missing)
 - `TEST_EMAIL` - Email address for testing
+- `FILE_URL` - A publicly accessible document URL (for the file-URL send)
+- The `senderEmail` / `senderName` set on the client builder in `main()`
+
+`ManualTestDeliverable.java` (same folder) exercises the Deliverable API the same way: set its constants, then run it with `mvn test-compile exec:java -Dexec.mainClass="com.turbodocx.ManualTestDeliverable" -Dexec.classpathScope=test`.
 
 ### Expected Output
 
-The test class will:
-1. Upload a test document
-2. Send it for signature
-3. Check the status
-4. Test void and resend operations
-5. Print results for each operation
+With the calls uncommented, the test class will:
+1. Create a review link from `FILE_URL`
+2. Upload the test PDF and send it for signature
+3. Check the status and download the document
+4. Test resend and void
+5. Fetch the audit trail, printing the result of each step
 
 ---
 

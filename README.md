@@ -101,7 +101,7 @@ Two skills are included:
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" width="20"/> **Python** | [turbodocx-sdk](./packages/py-sdk) | `pip install turbodocx-sdk` | [![PyPI](https://img.shields.io/pypi/v/turbodocx-sdk?logo=pypi&logoColor=white)](https://pypi.org/project/turbodocx-sdk/) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg" width="20"/> **PHP** | [turbodocx/sdk](./packages/php-sdk) | `composer require turbodocx/sdk` | [![Packagist](https://img.shields.io/packagist/v/turbodocx/sdk?logo=packagist&logoColor=white)](https://packagist.org/packages/turbodocx/sdk) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg" width="20"/> **Go** | [turbodocx-sdk](./packages/go-sdk) | `go get github.com/TurboDocx/SDK/packages/go-sdk` | [![Go](https://img.shields.io/github/v/tag/TurboDocx/SDK?filter=packages/go-sdk/*&logo=go&logoColor=white&label=go)](./packages/go-sdk) |
-| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="20"/> **Java** | [com.turbodocx:turbodocx-sdk](./packages/java-sdk) | `implementation 'com.turbodocx:turbodocx-sdk:0.1.4'` | [![Maven Central](https://img.shields.io/maven-central/v/com.turbodocx/turbodocx-sdk?logo=apachemaven)](https://search.maven.org/artifact/com.turbodocx/turbodocx-sdk) |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="20"/> **Java** | [com.turbodocx:turbodocx-sdk](./packages/java-sdk) | `implementation 'com.turbodocx:turbodocx-sdk:0.8.0'` | [![Maven Central](https://img.shields.io/maven-central/v/com.turbodocx/turbodocx-sdk?logo=apachemaven)](https://search.maven.org/artifact/com.turbodocx/turbodocx-sdk) |
 | <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/ruby/ruby-original.svg" width="20"/> **Ruby** | [turbodocx-sdk](./packages/ruby-sdk) | `gem install turbodocx-sdk` | [![Gem](https://img.shields.io/gem/v/turbodocx-sdk?logo=rubygems&logoColor=white)](https://rubygems.org/gems/turbodocx-sdk) |
 
 ### Coming Soon
@@ -182,7 +182,7 @@ composer require turbodocx/sdk
 <dependency>
     <groupId>com.turbodocx</groupId>
     <artifactId>turbodocx-sdk</artifactId>
-    <version>0.1.4</version>
+    <version>0.8.0</version>
 </dependency>
 ```
 </details>
