@@ -775,3 +775,50 @@ class TestErrorHandling:
                     recipients=[{"name": "Test", "email": "invalid-email", "signingOrder": 1}],
                     fields=[]
                 )
+
+
+class TestFileNameFormField:
+    """fileName travels as a form field (the API stores it as the document's file name); the
+    uploaded part keeps document.<ext>, because the API checks that extension."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        TurboSign._client = None
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("method", ["send_signature", "create_signature_review_link"])
+    async def test_file_name_is_sent_as_form_field(self, method):
+        with patch.object(TurboSign, '_get_client') as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.upload_file = AsyncMock(return_value={"success": True, "documentId": "doc-1"})
+            mock_client.sender_email = "test@example.com"
+            mock_client.sender_name = None
+            mock_get_client.return_value = mock_client
+
+            await getattr(TurboSign, method)(
+                file=b"%PDF-1.4 fake",
+                file_name="Lease Agreement 2026",
+                recipients=[{"name": "John Doe", "email": "john@example.com", "signingOrder": 1}],
+                fields=[{"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientEmail": "john@example.com"}],
+            )
+
+            kwargs = mock_client.upload_file.call_args.kwargs
+            assert kwargs["additional_data"]["fileName"] == "Lease Agreement 2026"
+            assert kwargs.get("file_name") is None  # part name falls back to document.<ext>
+
+    @pytest.mark.asyncio
+    async def test_no_file_name_sends_no_field(self):
+        with patch.object(TurboSign, '_get_client') as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.upload_file = AsyncMock(return_value={"success": True, "documentId": "doc-1"})
+            mock_client.sender_email = "test@example.com"
+            mock_client.sender_name = None
+            mock_get_client.return_value = mock_client
+
+            await TurboSign.send_signature(
+                file=b"%PDF-1.4 fake",
+                recipients=[{"name": "John Doe", "email": "john@example.com", "signingOrder": 1}],
+                fields=[{"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientEmail": "john@example.com"}],
+            )
+
+            assert "fileName" not in mock_client.upload_file.call_args.kwargs["additional_data"]

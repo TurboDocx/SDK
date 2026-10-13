@@ -233,7 +233,7 @@ export class TurboSign {
         '/turbosign/single/prepare-for-review',
         request.file,
         'file',
-        // uploadFile turns fileName into the uploaded part's filename (the stored document name)
+        // Sent as a form field: the API stores it as the document's file name, whatever its extension
         request.fileName ? { ...formData, fileName: request.fileName } : formData
       );
       return response;
@@ -324,7 +324,7 @@ export class TurboSign {
         '/turbosign/single/prepare-for-signing',
         request.file,
         'file',
-        // uploadFile turns fileName into the uploaded part's filename (the stored document name)
+        // Sent as a form field: the API stores it as the document's file name, whatever its extension
         request.fileName ? { ...formData, fileName: request.fileName } : formData
       );
       return response;

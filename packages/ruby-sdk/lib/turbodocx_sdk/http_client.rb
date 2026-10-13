@@ -188,7 +188,7 @@ module TurboDocxSdk
       elsif file.respond_to?(:read)
         content = file.read
         mime = detect_file_type(content)
-        filename = additional_data&.dig("fileName") || "document.#{file_extension(mime)}"
+        filename = "document.#{file_extension(mime)}" # the API checks this extension; fileName is a form field
         parts[field_name] = { io: StringIO.new(content), filename: filename, content_type: mime }
       else
         raise ValidationError, "Unsupported file input type: #{file.class}"
@@ -196,7 +196,6 @@ module TurboDocxSdk
 
       if additional_data
         additional_data.each do |key, value|
-          next if key == "fileName"
           parts[key.to_s] = value.is_a?(Hash) || value.is_a?(Array) ? JSON.generate(value) : value.to_s
         end
       end

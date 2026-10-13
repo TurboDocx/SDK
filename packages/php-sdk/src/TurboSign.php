@@ -51,10 +51,10 @@ final class TurboSign
      * // Reads TURBODOCX_API_KEY, TURBODOCX_ORG_ID, TURBODOCX_SENDER_EMAIL, TURBODOCX_SENDER_NAME via getenv()
      * TurboSign::configure(HttpClientConfig::fromEnvironment());
      *
-     * // Or explicitly ($_ENV is empty on a stock php.ini, so use getenv())
+     * // Or explicitly ($_ENV is empty on a stock php.ini, so use getenv(); `?: null` keeps an unset variable null)
      * TurboSign::configure(new HttpClientConfig(
-     *     apiKey: getenv('TURBODOCX_API_KEY'),
-     *     orgId: getenv('TURBODOCX_ORG_ID'),
+     *     apiKey: getenv('TURBODOCX_API_KEY') ?: null,
+     *     orgId: getenv('TURBODOCX_ORG_ID') ?: null,
      *     senderEmail: 'support@yourcompany.com',
      *     senderName: 'Your Company Name'  // Strongly recommended
      * ));
@@ -146,7 +146,7 @@ final class TurboSign
                 '/turbosign/single/prepare-for-review',
                 $request->file,
                 'file',
-                // uploadFile() turns fileName into the uploaded part's filename (the stored document name)
+                // Sent as a form field: the API stores it as the document's file name, whatever its extension
                 $request->fileName !== null ? [...$formData, 'fileName' => $request->fileName] : $formData
             );
             return CreateSignatureReviewLinkResponse::fromArray($response);
@@ -242,7 +242,7 @@ final class TurboSign
                 '/turbosign/single/prepare-for-signing',
                 $request->file,
                 'file',
-                // uploadFile() turns fileName into the uploaded part's filename (the stored document name)
+                // Sent as a form field: the API stores it as the document's file name, whatever its extension
                 $request->fileName !== null ? [...$formData, 'fileName' => $request->fileName] : $formData
             );
             return SendSignatureResponse::fromArray($response);

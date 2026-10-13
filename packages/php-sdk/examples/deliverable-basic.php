@@ -19,8 +19,8 @@ use TurboDocx\Deliverable;
 
 // 1. Configure with your API credentials
 Deliverable::configure(new DeliverableConfig(
-    apiKey: getenv('TURBODOCX_API_KEY'),
-    orgId: getenv('TURBODOCX_ORG_ID'),
+    apiKey: getenv('TURBODOCX_API_KEY') ?: null,
+    orgId: getenv('TURBODOCX_ORG_ID') ?: null,
 ));
 
 // 2. Generate a deliverable from a template

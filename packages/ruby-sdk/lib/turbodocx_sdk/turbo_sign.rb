@@ -612,7 +612,7 @@ module TurboDocxSdk
         }
       end
 
-      # upload_file turns "fileName" into the uploaded part's filename (the stored document name).
+      # Sent as a form field: the API stores it as the document's file name, whatever its extension.
       def with_file_name(form_data, request)
         file_name = request[:fileName] || request["fileName"]
         file_name ? form_data.merge("fileName" => file_name) : form_data

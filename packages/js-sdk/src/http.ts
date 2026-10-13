@@ -287,7 +287,7 @@ export class HttpClient {
       // Buffer: detect type from content
       fileBuffer = file;
       const detected = detectFileType(fileBuffer);
-      fileName = additionalData?.fileName || `document.${detected.extension}`;
+      fileName = `document.${detected.extension}`; // the API checks this extension; a caller's fileName is a form field
       mimeType = detected.mimetype;
     } else {
       // Browser File object: use native properties
@@ -297,7 +297,6 @@ export class HttpClient {
       // Add additional form fields
       if (additionalData) {
         Object.entries(additionalData).forEach(([key, value]) => {
-          if (key === 'fileName') return;
           formData.append(key, typeof value === 'object' ? JSON.stringify(value) : value);
         });
       }
@@ -330,10 +329,9 @@ export class HttpClient {
     const blob = new Blob([toBlobPart(fileBuffer)], { type: mimeType });
     formData.append(fieldName, blob, fileName);
 
-    // Add additional form fields (except fileName which is only used for file metadata)
+    // Add additional form fields (fileName included: the API stores it as the document's file name)
     if (additionalData) {
       Object.entries(additionalData).forEach(([key, value]) => {
-        if (key === 'fileName') return; // Skip fileName - it's used for file blob, not as form field
         formData.append(key, typeof value === 'object' ? JSON.stringify(value) : value);
       });
     }

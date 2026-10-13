@@ -511,8 +511,10 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 	var response CreateSignatureReviewLinkResponse
 
 	if len(req.File) > 0 {
-		fileName := req.FileName
-		err := c.http.UploadFile(ctx, "/turbosign/single/prepare-for-review", req.File, fileName, formData, &response)
+		if req.FileName != "" {
+			formData["fileName"] = req.FileName // a form field: the API checks the uploaded part's extension
+		}
+		err := c.http.UploadFile(ctx, "/turbosign/single/prepare-for-review", req.File, "", formData, &response)
 		if err != nil {
 			return nil, err
 		}
@@ -597,8 +599,10 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 	var response SendSignatureResponse
 
 	if len(req.File) > 0 {
-		fileName := req.FileName
-		err := c.http.UploadFile(ctx, "/turbosign/single/prepare-for-signing", req.File, fileName, formData, &response)
+		if req.FileName != "" {
+			formData["fileName"] = req.FileName // a form field: the API checks the uploaded part's extension
+		}
+		err := c.http.UploadFile(ctx, "/turbosign/single/prepare-for-signing", req.File, "", formData, &response)
 		if err != nil {
 			return nil, err
 		}
