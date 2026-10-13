@@ -422,7 +422,7 @@ byte[] pdfBytes = client.turboSign().download("doc-uuid-here");
 Files.write(Paths.get("signed-contract.pdf"), pdfBytes);
 ```
 
-#### `void()`
+#### `voidDocument()`
 
 Cancel a signature request.
 
@@ -756,7 +756,7 @@ Recipient signs
 
 ### Configuration
 
-Build a client via `TurboDocxClient.Builder().buildWebhooksClient()` — this variant skips the `senderEmail` requirement that `buildSignClient()` enforces, since webhook routes don't send emails.
+Build a client via `TurboDocxClient.Builder().buildWebhooksClient()` — this variant skips the `senderEmail` requirement that `build()` enforces, since webhook routes don't send emails.
 
 ```java
 import com.turbodocx.TurboDocxClient;
@@ -1204,7 +1204,7 @@ java -cp target/test-classes:target/classes:$(mvn dependency:build-classpath -Dm
 
 ### What It Tests
 
-The `ManualTest.java` class tests all SDK methods:
+`ManualTest.java` covers these methods. Every call in its `main()` is commented out: uncomment the ones you want to run, then start it with the command above.
 - ✅ `createSignatureReviewLink()` - Document upload for review
 - ✅ `sendSignature()` - Send for signature
 - ✅ `getStatus()` - Check document status
@@ -1223,11 +1223,11 @@ Before running, update the hardcoded values in `src/test/java/com/turbodocx/Manu
 - `TEST_EMAIL` - Email address for testing
 - `FILE_URL` - A publicly accessible document URL (for the file-URL send)
 
-`ManualTestDeliverable.java` (same folder) exercises the Deliverable API the same way: set its constants, then run it with `-Dexec.mainClass="com.turbodocx.ManualTestDeliverable"`.
+`ManualTestDeliverable.java` (same folder) exercises the Deliverable API the same way: set its constants, then run it with `mvn test-compile exec:java -Dexec.mainClass="com.turbodocx.ManualTestDeliverable" -Dexec.classpathScope=test`.
 
 ### Expected Output
 
-The test class will:
+With the calls uncommented, the test class will:
 1. Upload a test document
 2. Send it for signature
 3. Check the status
