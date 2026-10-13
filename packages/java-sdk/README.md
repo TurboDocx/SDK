@@ -8,7 +8,7 @@
 
 The most developer-friendly **DocuSign & PandaDoc alternative** for **e-signatures** and **document generation**. Send documents for signature and automate document workflows programmatically.
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.turbodocx/sdk.svg)](https://search.maven.org/artifact/com.turbodocx/sdk)
+[![Maven Central](https://img.shields.io/maven-central/v/com.turbodocx/turbodocx-sdk.svg)](https://search.maven.org/artifact/com.turbodocx/turbodocx-sdk)
 [![Java](https://img.shields.io/badge/Java-11+-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-agentskills.io-8A2BE2)](https://agentskills.io)
@@ -1208,7 +1208,6 @@ The `ManualTest.java` class tests all SDK methods:
 - ✅ `createSignatureReviewLink()` - Document upload for review
 - ✅ `sendSignature()` - Send for signature
 - ✅ `getStatus()` - Check document status
-- ✅ `getRecipients()` - Per-recipient signing status (who signed, who is pending)
 - ✅ `download()` - Download signed document
 - ✅ `voidDocument()` - Cancel signature request
 - ✅ `resendEmail()` - Resend signature emails
@@ -1220,8 +1219,11 @@ Before running, update the hardcoded values in `src/test/java/com/turbodocx/Manu
 - `API_KEY` - Your TurboDocx API key
 - `BASE_URL` - API endpoint (default: `http://localhost:3000`)
 - `ORG_ID` - Your organization UUID
-- `TEST_FILE_PATH` - Path to a test PDF/DOCX file
+- `TEST_PDF_PATH` - Path to a test PDF file
 - `TEST_EMAIL` - Email address for testing
+- `FILE_URL` - A publicly accessible document URL (for the file-URL send)
+
+`ManualTestDeliverable.java` (same folder) exercises the Deliverable API the same way: set its constants, then run it with `-Dexec.mainClass="com.turbodocx.ManualTestDeliverable"`.
 
 ### Expected Output
 
