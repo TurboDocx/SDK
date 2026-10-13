@@ -199,16 +199,16 @@ TurboSign.configure({ apiKey: process.env.TURBODOCX_API_KEY });
 const { documentId, recipients } = await TurboSign.sendSignature({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
-    { name: 'John Doe', email: 'john@example.com', order: 1 }
+    { name: 'John Doe', email: 'john@example.com', signingOrder: 1 }
   ],
   fields: [
-    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }
+    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientEmail: 'john@example.com' }
   ]
 });
 
 // The created recipients come back on the send result (id, name, email).
 // Signing links are emailed to them — they are not returned here.
-console.log(`✅ Document sent to ${recipients[0].name} <${recipients[0].email}>`);
+console.log(`✅ Document sent to ${recipients?.[0]?.name} <${recipients?.[0]?.email}>`);
 ```
 
 ---
@@ -246,21 +246,21 @@ Specify exact positions for signature fields using page coordinates:
 const result = await TurboSign.sendSignature({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
-    { name: 'Alice Smith', email: 'alice@example.com', order: 1 },
-    { name: 'Bob Johnson', email: 'bob@example.com', order: 2 }
+    { name: 'Alice Smith', email: 'alice@example.com', signingOrder: 1 },
+    { name: 'Bob Johnson', email: 'bob@example.com', signingOrder: 2 }
   ],
   fields: [
     // Alice's signature and date on page 1
-    { type: 'signature', page: 1, x: 100, y: 650, width: 200, height: 50, recipientOrder: 1 },
-    { type: 'date', page: 1, x: 320, y: 650, width: 100, height: 30, recipientOrder: 1 },
+    { type: 'signature', page: 1, x: 100, y: 650, width: 200, height: 50, recipientEmail: 'alice@example.com' },
+    { type: 'date', page: 1, x: 320, y: 650, width: 100, height: 30, recipientEmail: 'alice@example.com' },
 
     // Bob's signature and date on page 1
-    { type: 'signature', page: 1, x: 100, y: 720, width: 200, height: 50, recipientOrder: 2 },
-    { type: 'date', page: 1, x: 320, y: 720, width: 100, height: 30, recipientOrder: 2 },
+    { type: 'signature', page: 1, x: 100, y: 720, width: 200, height: 50, recipientEmail: 'bob@example.com' },
+    { type: 'date', page: 1, x: 320, y: 720, width: 100, height: 30, recipientEmail: 'bob@example.com' },
 
     // Initials on page 2
-    { type: 'initials', page: 2, x: 500, y: 750, width: 60, height: 30, recipientOrder: 1 },
-    { type: 'initials', page: 2, x: 500, y: 780, width: 60, height: 30, recipientOrder: 2 }
+    { type: 'initial', page: 2, x: 500, y: 750, width: 60, height: 30, recipientEmail: 'alice@example.com' },
+    { type: 'initial', page: 2, x: 500, y: 780, width: 60, height: 30, recipientEmail: 'bob@example.com' }
   ],
   documentName: 'Service Agreement',
   senderName: 'Acme Corp',
@@ -276,19 +276,19 @@ Use text anchors in your PDF to automatically position signature fields:
 const result = await TurboSign.sendSignature({
   fileLink: 'https://example.com/contract-with-placeholders.pdf',
   recipients: [
-    { name: 'Alice Smith', email: 'alice@example.com', order: 1 },
-    { name: 'Bob Johnson', email: 'bob@example.com', order: 2 }
+    { name: 'Alice Smith', email: 'alice@example.com', signingOrder: 1 },
+    { name: 'Bob Johnson', email: 'bob@example.com', signingOrder: 2 }
   ],
   fields: [
     // Fields anchored to text markers in the PDF
-    { type: 'signature', anchor: '{SIGNATURE_ALICE}', width: 200, height: 50, recipientOrder: 1 },
-    { type: 'date', anchor: '{DATE_ALICE}', width: 100, height: 30, recipientOrder: 1 },
-    { type: 'signature', anchor: '{SIGNATURE_BOB}', width: 200, height: 50, recipientOrder: 2 },
-    { type: 'date', anchor: '{DATE_BOB}', width: 100, height: 30, recipientOrder: 2 },
+    { type: 'signature', template: { anchor: '{SIGNATURE_ALICE}', placement: 'replace', size: { width: 200, height: 50 } }, recipientEmail: 'alice@example.com' },
+    { type: 'date', template: { anchor: '{DATE_ALICE}', placement: 'replace', size: { width: 100, height: 30 } }, recipientEmail: 'alice@example.com' },
+    { type: 'signature', template: { anchor: '{SIGNATURE_BOB}', placement: 'replace', size: { width: 200, height: 50 } }, recipientEmail: 'bob@example.com' },
+    { type: 'date', template: { anchor: '{DATE_BOB}', placement: 'replace', size: { width: 100, height: 30 } }, recipientEmail: 'bob@example.com' },
 
     // Text fields for additional info
-    { type: 'text', anchor: '{TITLE_ALICE}', width: 150, height: 25, recipientOrder: 1 },
-    { type: 'text', anchor: '{TITLE_BOB}', width: 150, height: 25, recipientOrder: 2 }
+    { type: 'text', template: { anchor: '{TITLE_ALICE}', placement: 'replace', size: { width: 150, height: 25 } }, recipientEmail: 'alice@example.com' },
+    { type: 'text', template: { anchor: '{TITLE_BOB}', placement: 'replace', size: { width: 150, height: 25 } }, recipientEmail: 'bob@example.com' }
   ]
 });
 ```
@@ -306,12 +306,12 @@ TurboSign.configure({ apiKey: process.env.TURBODOCX_API_KEY });
 const { documentId } = await TurboSign.sendSignature({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
-    { name: 'Alice', email: 'alice@example.com', order: 1 },
-    { name: 'Bob', email: 'bob@example.com', order: 2 }
+    { name: 'Alice', email: 'alice@example.com', signingOrder: 1 },
+    { name: 'Bob', email: 'bob@example.com', signingOrder: 2 }
   ],
   fields: [
-    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 },
-    { type: 'signature', page: 1, x: 100, y: 600, width: 200, height: 50, recipientOrder: 2 }
+    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientEmail: 'alice@example.com' },
+    { type: 'signature', page: 1, x: 100, y: 600, width: 200, height: 50, recipientEmail: 'bob@example.com' }
   ]
 });
 
@@ -383,7 +383,7 @@ language-specific form.
 
 | SDK | Minimum Version |
 |:----|:----------------|
-| JavaScript/TypeScript | Node.js 16+ |
+| JavaScript/TypeScript | Node.js 18+ |
 | Python | Python 3.9+ |
 | PHP | PHP 8.1+ |
 | Go | Go 1.21+ |
