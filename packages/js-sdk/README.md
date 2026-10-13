@@ -119,6 +119,7 @@ Works with Claude Code, GitHub Copilot, Cursor, OpenCode, and other AI coding ag
 ## Quick Start
 
 ```typescript
+import { readFileSync } from 'fs';
 import { TurboSign } from '@turbodocx/sdk';
 
 // 1. Configure with your API key and sender information
@@ -131,7 +132,7 @@ TurboSign.configure({
 
 // 2. Send a document for signature
 const result = await TurboSign.sendSignature({
-  file: pdfBuffer,
+  file: readFileSync('./contract.pdf'),
   documentName: 'Partnership Agreement',
   recipients: [
     { name: 'John Doe', email: 'john@example.com', signingOrder: 1 }
@@ -210,10 +211,10 @@ Upload a document for review without sending signature emails. Returns a preview
 const result = await TurboSign.createSignatureReviewLink({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
-    { name: 'John Doe', email: 'john@example.com', order: 1 }
+    { name: 'John Doe', email: 'john@example.com', signingOrder: 1 }
   ],
   fields: [
-    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 }
+    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientEmail: 'john@example.com' }
   ],
   documentName: 'Service Agreement',        // Optional
   documentDescription: 'Q4 Contract',       // Optional
@@ -234,12 +235,12 @@ Upload a document and immediately send signature request emails.
 const result = await TurboSign.sendSignature({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
-    { name: 'Alice', email: 'alice@example.com', order: 1 },
-    { name: 'Bob', email: 'bob@example.com', order: 2 }  // Signs after Alice
+    { name: 'Alice', email: 'alice@example.com', signingOrder: 1 },
+    { name: 'Bob', email: 'bob@example.com', signingOrder: 2 }  // Signs after Alice
   ],
   fields: [
-    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 1 },
-    { type: 'signature', page: 1, x: 100, y: 600, width: 200, height: 50, recipientOrder: 2 }
+    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientEmail: 'alice@example.com' },
+    { type: 'signature', page: 1, x: 100, y: 600, width: 200, height: 50, recipientEmail: 'bob@example.com' }
   ]
 });
 
@@ -357,18 +358,17 @@ Two `delivery` fields are easy to misread:
 
 #### `download(documentId)`
 
-Download the signed document as a Buffer/Blob.
+Download the signed document. Returns a `Blob` (the document must be completed).
 
 ```typescript
 const signedPdf = await TurboSign.download('doc-uuid-here');
 
-// Node.js: Save to file
+// Node.js: Save to file (a Blob is not a Buffer, so convert it first)
 import { writeFileSync } from 'fs';
-writeFileSync('signed-contract.pdf', signedPdf);
+writeFileSync('signed-contract.pdf', Buffer.from(await signedPdf.arrayBuffer()));
 
 // Browser: Trigger download
-const blob = new Blob([signedPdf], { type: 'application/pdf' });
-const url = URL.createObjectURL(blob);
+const url = URL.createObjectURL(signedPdf);
 window.open(url);
 ```
 
@@ -425,8 +425,8 @@ The `TurboPartner` module provides partner portal operations for managing organi
 import { TurboPartner } from '@turbodocx/sdk';
 
 TurboPartner.configure({
-  partnerApiKey: process.env.TURBODOCX_PARTNER_API_KEY,  // Must start with TDXP-
-  partnerId: process.env.TURBODOCX_PARTNER_ID,           // UUID format
+  partnerApiKey: process.env.TURBODOCX_PARTNER_API_KEY!,  // Must start with TDXP-
+  partnerId: process.env.TURBODOCX_PARTNER_ID!,           // UUID format
 });
 ```
 
@@ -926,7 +926,7 @@ The `checkbox` type doubles as the **controlling** field for conditional logic (
   y: 500,               // Y position from top (pixels)
   width: 200,           // Field width (pixels)
   height: 50,           // Field height (pixels)
-  recipientOrder: 1,    // Which recipient this field belongs to
+  recipientEmail: 'john@example.com',  // Which recipient this field belongs to (a recipient's email)
   required: true        // Optional: default true. Set false to let the signer skip it (not allowed on signature/initial)
 }
 ```
@@ -986,20 +986,20 @@ For complete, working examples including template anchors, advanced field types,
 const result = await TurboSign.sendSignature({
   fileLink: 'https://example.com/contract.pdf',
   recipients: [
-    { name: 'Employee', email: 'employee@company.com', order: 1 },
-    { name: 'Manager', email: 'manager@company.com', order: 2 },
-    { name: 'HR', email: 'hr@company.com', order: 3 }
+    { name: 'Employee', email: 'employee@company.com', signingOrder: 1 },
+    { name: 'Manager', email: 'manager@company.com', signingOrder: 2 },
+    { name: 'HR', email: 'hr@company.com', signingOrder: 3 }
   ],
   fields: [
     // Employee signs first
-    { type: 'signature', page: 1, x: 100, y: 400, width: 200, height: 50, recipientOrder: 1 },
-    { type: 'date', page: 1, x: 320, y: 400, width: 100, height: 30, recipientOrder: 1 },
+    { type: 'signature', page: 1, x: 100, y: 400, width: 200, height: 50, recipientEmail: 'employee@company.com' },
+    { type: 'date', page: 1, x: 320, y: 400, width: 100, height: 30, recipientEmail: 'employee@company.com' },
     // Manager signs second
-    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientOrder: 2 },
-    { type: 'date', page: 1, x: 320, y: 500, width: 100, height: 30, recipientOrder: 2 },
+    { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientEmail: 'manager@company.com' },
+    { type: 'date', page: 1, x: 320, y: 500, width: 100, height: 30, recipientEmail: 'manager@company.com' },
     // HR signs last
-    { type: 'signature', page: 1, x: 100, y: 600, width: 200, height: 50, recipientOrder: 3 },
-    { type: 'date', page: 1, x: 320, y: 600, width: 100, height: 30, recipientOrder: 3 }
+    { type: 'signature', page: 1, x: 100, y: 600, width: 200, height: 50, recipientEmail: 'hr@company.com' },
+    { type: 'date', page: 1, x: 320, y: 600, width: 100, height: 30, recipientEmail: 'hr@company.com' }
   ]
 });
 ```
@@ -1047,7 +1047,7 @@ app.post('/api/send-contract', async (req, res) => {
 
     res.json({ success: true, documentId: result.documentId });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
   }
 });
 ```
@@ -1166,7 +1166,7 @@ import {
   CreateSignatureReviewLinkRequest,
   Recipient,
   Field,
-  DocumentStatus,
+  DocumentStatusResponse,
   TurboDocxError
 } from '@turbodocx/sdk';
 
@@ -1184,7 +1184,7 @@ const result = await TurboSign.sendSignature(options);
 
 ## Requirements
 
-- Node.js 16+
+- Node.js 18+ (uses the global `fetch`, `FormData` and `Blob`)
 - TypeScript 4.7+ (if using TypeScript)
 
 ---
