@@ -357,7 +357,7 @@ simulated external identity verification), and completes via postMessage — in
 | Type | Description |
 |:-----|:------------|
 | `signature` | Signature field (draw or type) |
-| `initials` | Initials field |
+| `initial` | Initials field |
 | `text` | Free-form text input |
 | `date` | Date stamp |
 | `checkbox` | Checkbox / agreement — also the **controlling** field for conditional (IF/THEN) logic |

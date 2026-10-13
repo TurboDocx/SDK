@@ -846,7 +846,7 @@ print(prepared.get("email"))  # may be absent for an API-created quote — rende
 | Type | Description |
 |:-----|:------------|
 | `signature` | Signature field (draw or type) |
-| `initials` | Initials field |
+| `initial` | Initials field |
 | `text` | Free-form text input |
 | `date` | Date stamp |
 | `checkbox` | Checkbox / agreement |

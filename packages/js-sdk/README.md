@@ -903,7 +903,7 @@ console.log(quote.preparedBy?.email);  // may be undefined for an API-created qu
 | Type | Description |
 |:-----|:------------|
 | `signature` | Signature field (draw or type) |
-| `initials` | Initials field |
+| `initial` | Initials field |
 | `text` | Free-form text input |
 | `date` | Date stamp |
 | `checkbox` | Checkbox / agreement |

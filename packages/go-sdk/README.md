@@ -1001,7 +1001,7 @@ if err == nil {
 | Type | Description |
 |:-----|:------------|
 | `signature` | Signature field (draw or type) |
-| `initials` | Initials field |
+| `initial` | Initials field |
 | `text` | Free-form text input |
 | `date` | Date stamp |
 | `checkbox` | Checkbox / agreement |
@@ -1071,7 +1071,7 @@ type Recipient struct {
 
 ```go
 type Field struct {
-    Type            string          `json:"type"`                      // signature, initials, text, date, checkbox
+    Type            string          `json:"type"`                      // signature, initial, text, date, checkbox
     Page            int             `json:"page,omitempty"`            // Page number (1-indexed)
     X               int             `json:"x,omitempty"`               // X coordinate
     Y               int             `json:"y,omitempty"`               // Y coordinate
