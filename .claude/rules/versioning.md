@@ -28,7 +28,7 @@ When bumping, update **all** of these to the identical `MAJOR.MINOR.PATCH` strin
 `packages/java-sdk/README.md` (Maven, Gradle Groovy, Gradle Kotlin) and the root `README.md` (the
 language-table Gradle line and the Java Maven snippet). Bump all five with the pom, or the READMEs hand
 users an old SDK (they sat at 0.6.1 / 0.2.0 / 0.1.4 while the SDK was 0.8.0). Check with
-`git grep -n "turbodocx-sdk" -- README.md packages/java-sdk/README.md`.
+`git grep -nE "turbodocx-sdk:[0-9]|<version>[0-9]" -- README.md packages/java-sdk/README.md` (exactly five lines).
 
 **Why py/java/ruby carry the version twice:** the registry manifest (`pyproject.toml`,
 `pom.xml`, `.gemspec`) is not readable at runtime, but the client-context User-Agent must
@@ -42,7 +42,7 @@ drifted this way once: py `__version__` sat at 0.2.0 and java `ClientContext.VER
 ## Checklist for a release bump
 
 1. Pick the new version (semver: breaking → MAJOR, additive → MINOR, fix → PATCH).
-2. Update the field(s) above in all six SDKs to that exact string.
+2. Update the field(s) above in all six SDKs to that exact string, plus the five Java README install pins.
 3. Grep to confirm none were missed and none still carry the old version:
    ```bash
    git grep -nE '"version"|version *=|const Version|<version>|spec\.version|VERSION *=' packages/*/  # spot every version site
