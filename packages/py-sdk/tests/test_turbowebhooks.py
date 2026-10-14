@@ -562,6 +562,24 @@ class TestVerifyWebhookSignature:
             self.BODY, sig, self.TIMESTAMP, "secret\ud800", now=lambda: self.NOW_SECONDS,
         ) is False
 
+    @pytest.mark.parametrize("as_bytes", [bytes, bytearray, memoryview])
+    def test_accepts_every_header_and_the_secret_as_raw_bytes(self, as_bytes):
+        # A raw ASGI/WSGI receiver hands over header bytes; the timestamp used to be signed as "b'...'"
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        raw = lambda text: as_bytes(text.encode("ascii"))
+        assert verify_webhook_signature(
+            self.BODY, raw(sig), raw(self.TIMESTAMP), raw(self.SECRET), now=lambda: self.NOW_SECONDS,
+        ) is True
+        assert verify_webhook_signature(
+            self.BODY, raw(sig), raw(self.TIMESTAMP), raw(self.SECRET), tolerance_seconds=0,
+        ) is True
+
+    def test_rejects_non_ascii_bytes_timestamp_without_raising(self):
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        assert verify_webhook_signature(
+            self.BODY, sig, "1747000000é".encode("utf-8"), self.SECRET, tolerance_seconds=0,
+        ) is False
+
     def test_accepts_secret_as_bytes(self):
         # e.g. a secret read from os.environb or a vault client; used to raise, then silently failed
         sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
