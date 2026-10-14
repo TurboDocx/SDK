@@ -147,7 +147,7 @@ final class TurboSign
                 $request->file,
                 'file',
                 // Sent as a form field: the API stores it as the document's file name, whatever its extension
-                $request->fileName !== null ? [...$formData, 'fileName' => $request->fileName] : $formData
+                $request->fileName !== null && $request->fileName !== '' ? [...$formData, 'fileName' => $request->fileName] : $formData
             );
             return CreateSignatureReviewLinkResponse::fromArray($response);
         } else {
@@ -243,7 +243,7 @@ final class TurboSign
                 $request->file,
                 'file',
                 // Sent as a form field: the API stores it as the document's file name, whatever its extension
-                $request->fileName !== null ? [...$formData, 'fileName' => $request->fileName] : $formData
+                $request->fileName !== null && $request->fileName !== '' ? [...$formData, 'fileName' => $request->fileName] : $formData
             );
             return SendSignatureResponse::fromArray($response);
         } else {

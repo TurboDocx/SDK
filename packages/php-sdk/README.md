@@ -242,7 +242,7 @@ echo "Document ID: {$result->documentId}\n";
 
 #### `sendSignature()`
 
-Upload a document and send it for signature. Recipients are emailed their signing links unless you pass `sendEmail: false` (see [Signing in your own app](#signing-in-your-own-app-sendemail-false--createsigningurl)). Pass `fileName` alongside `file` to name the stored document (otherwise it is saved as `document.<ext>`); any name works, with or without an extension.
+Upload a document and send it for signature. Recipients are emailed their signing links unless you pass `sendEmail: false` (see [Signing in your own app](#signing-in-your-own-app-sendemail-false--createsigningurl)). Pass `fileName` alongside `file` to name the stored file (otherwise it is saved as `document.<ext>`): any non-empty name up to 255 characters, with or without an extension. The document's display name is `documentName` when given, otherwise `fileName` up to its first `.`.
 
 ```php
 use TurboDocx\Types\Requests\SendSignatureRequest;

@@ -38,10 +38,13 @@ func TestTurboSign_FileNameIsAFormField(t *testing.T) {
 	require.NoError(t, err)
 	_, err = client.TurboSign.SendSignature(context.Background(), &SendSignatureRequest{File: pdf, Recipients: recipients, Fields: fields})
 	require.NoError(t, err)
+	_, err = client.TurboSign.SendSignature(context.Background(), &SendSignatureRequest{File: pdf, FileName: "", Recipients: recipients, Fields: fields})
+	require.NoError(t, err)
 
 	assert.Equal(t, []sent{
 		{"document.pdf", "Lease Agreement 2026"},
 		{"document.pdf", "Review-Copy.pdf"},
 		{"document.pdf", ""},
+		{"document.pdf", ""}, // an explicit empty FileName sends no field either
 	}, got)
 }

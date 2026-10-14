@@ -249,7 +249,7 @@ class TurboSign:
                 "required": False on them with a 400.
                 Field dicts are passed through verbatim, so keys stay camelCase.
             file: PDF file content as bytes
-            file_name: Original filename
+            file_name: Stored file name for an uploaded ``file`` (non-empty, max 255 chars; no extension needed)
             file_link: URL to document file
             deliverable_id: TurboDocx deliverable ID
             template_id: TurboDocx template ID
@@ -422,7 +422,7 @@ class TurboSign:
                 "required": False on them with a 400.
                 Field dicts are passed through verbatim, so keys stay camelCase.
             file: PDF file content as bytes
-            file_name: Original filename
+            file_name: Stored file name for an uploaded ``file`` (non-empty, max 255 chars; no extension needed)
             file_link: URL to document file
             deliverable_id: TurboDocx deliverable ID
             template_id: TurboDocx template ID
@@ -1009,7 +1009,7 @@ class TurboSign:
                 ({"email_otp": True} or {"sms": {"phone_number": "+1..."}}), optional
                 ``fields`` shorthand ({"signature": "{signature1}", "date": "{date1}", ...}).
             file: PDF file content as bytes.
-            file_name: Original filename.
+            file_name: Stored file name for an uploaded ``file`` (non-empty, max 255 chars; no extension needed).
             file_link: URL to the document file.
             template_id: TurboDocx template id.
             deliverable_id: TurboDocx deliverable id.
