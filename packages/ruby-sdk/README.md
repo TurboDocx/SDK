@@ -234,6 +234,35 @@ end
 
 The document source can also be raw bytes or a local file path (`file: File.binread("contract.pdf")` or `file: "contract.pdf"` — the file type is detected from magic bytes), a TurboDocx deliverable (`deliverableId:`), or a TurboSign template (`templateId:`).
 
+#### Send a template set up in TurboDocx (signer roles)
+
+Upload a PDF as a template in TurboDocx, add its signers as roles (e.g. "Client", "Countersigner"),
+drag their fields onto the page and save the signature setup. Then send it by naming each
+recipient's `role`. The fields saved for that role come with it, so `fields` can be left out.
+
+```ruby
+# The role keys come from the template (also shown under "Use via API" on the template page)
+setup = TurboDocxSdk::TurboSign.get_template_signature_setup("your-template-id")
+setup["roles"].each { |r| puts "#{r['key']} (saved signer: #{r['hasSavedSigner']})" }
+# client (saved signer: false)
+# countersigner (saved signer: true)
+
+TurboDocxSdk::TurboSign.send_signature(
+  templateId: "your-template-id",
+  recipients: [
+    { role: "client", name: "Jane Doe", email: "jane@client.com" }
+    # "countersigner" left out: the signer saved on the template is used
+  ]
+)
+```
+
+- Roles sign in the order saved on the template; recipients without a `role` sign after them.
+- A role left out uses the template's saved signer. If it has none, the API returns a 400 naming the role.
+- An unknown role raises `TurboDocxSdk::ValidationError` listing the template's roles (`e.code == "UnknownSignerRole"`).
+- Any `fields` you pass are added to the template's (for example an extra witness signature).
+- Roles work on PDF templates. Without roles, `fields` is required and must not be empty (400 `FieldsRequired`).
+- `role` works the same way on `create_signature_review_link` and `create_embedded_signature`.
+
 #### `send_reminder(document_id, recipient_ids = nil)`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic
@@ -1216,6 +1245,7 @@ Each constants module also exposes an `ALL` array of its valid values (e.g. `Tur
 For complete, working examples, see the [`examples/`](./examples/) directory:
 
 - [`turbosign_basic.rb`](./examples/turbosign_basic.rb) — Send a document for signature, poll status, download the signed PDF
+- [`turbosign_template_roles.rb`](./examples/turbosign_template_roles.rb) — Send a template set up in TurboDocx by naming each signer's role
 - [`turbowebhooks_crud.rb`](./examples/turbowebhooks_crud.rb) — Create/get/update/delete the signature webhook + verify HMAC signatures
 - [`turboquote_basic.rb`](./examples/turboquote_basic.rb) — Full quote lifecycle: create company, quote, line items, download PDF, send
 - [`turboquote_products.rb`](./examples/turboquote_products.rb) — Products and bundles catalog management
@@ -1366,6 +1396,14 @@ The API also returns more specific codes, passed through unchanged:
 | `OptionalNotSupported` | 400 | A `signature` or `initial` field was sent with `required: false`. The signer must always complete those two types. |
 | `InvalidFieldRequired` | 400 | A field's `required` is not a boolean. Send `true`, `false`, or leave it out (leaving it out means required). |
 | `NoEditableFieldsForRecipient` | 400 | A recipient has no field they must fill in: all of their fields are read-only or optional. Give each recipient at least one required, editable field. |
+| `FieldsRequired` | 400 | `fields` is missing or empty and no recipient names a `role`. Pass fields, or send a template whose recipients name roles. |
+| `FieldPageOutOfRange` | 400 | A field is placed on a page past the end of the document. |
+| `UnknownSignerRole` | 400 | A recipient's `role` is not one of the template's roles. The message lists them. |
+| `DuplicateSignerRole` | 400 | More than one recipient was given for the same role. |
+| `SignerRoleUnfilled` | 400 | A role has no recipient and no signer saved on the template. |
+| `TemplateHasNoSignerRoles` | 400 | `role` was used on a template with no saved signature setup. |
+| `RoleRequiresTemplate` | 400 | `role` was used without a `templateId`. |
+| `TemplateRolesNeedPdfTemplate` | 400 | Roles can only be sent for a PDF signature template. For a Word template, generate a deliverable and send it with `deliverableId`. |
 | `QuoteHasNoLineItems` | 400 | The quote has no line items. Add at least one before sending. |
 | `QuoteExpired` | 400 | The quote is past its `validUntil` date. |
 | `QuoteValidUntilRequired` | 400 | The quote has no `validUntil` date set. |

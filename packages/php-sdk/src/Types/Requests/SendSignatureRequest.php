@@ -14,7 +14,9 @@ final class SendSignatureRequest
 {
     /**
      * @param array<Recipient> $recipients Recipients who will sign
-     * @param array<Field> $fields Signature fields configuration
+     * @param array<Field> $fields Signature fields configuration. Optional when sending a template
+     *     set up in TurboDocx with signer roles: give each recipient a `role` and the fields saved for
+     *     that role are used (any fields you pass here are added to them).
      * @param string|null $file PDF file content as bytes
      * @param string|null $fileName Original filename (used when file is provided)
      * @param string|null $fileLink URL to document file
@@ -42,7 +44,7 @@ final class SendSignatureRequest
      */
     public function __construct(
         public array $recipients,
-        public array $fields,
+        public array $fields = [],
         public ?string $file = null,
         public ?string $fileName = null,
         public ?string $fileLink = null,

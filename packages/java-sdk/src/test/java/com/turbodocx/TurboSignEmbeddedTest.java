@@ -457,8 +457,8 @@ class TurboSignEmbeddedTest {
                 .build());
 
         JsonObject body = takeBody();
-        JsonArray fields = JsonParser.parseString(body.get("fields").getAsString()).getAsJsonArray();
-        assertEquals(0, fields.size());
+        // An empty list means no fields: the key is left out rather than sent as "[]".
+        assertFalse(body.has("fields"));
     }
 
     @Test

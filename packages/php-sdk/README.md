@@ -292,6 +292,41 @@ if ($result->recipients !== null) {
 $progress = TurboSign::getRecipients($result->documentId);
 ```
 
+#### Send a template set up in TurboDocx (signer roles)
+
+Upload a PDF as a template in TurboDocx, add its signers as roles (e.g. "Client", "Countersigner"),
+drag their fields onto the page and save the signature setup. Then send it by naming each
+recipient's `role`. The fields saved for that role come with it, so `fields` can be left out.
+
+```php
+use TurboDocx\TurboSign;
+use TurboDocx\Types\Recipient;
+use TurboDocx\Types\Requests\SendSignatureRequest;
+
+// The role keys come from the template (also shown under "Use via API" on the template page)
+$setup = TurboSign::getTemplateSignatureSetup('your-template-id');
+foreach ($setup->roles as $role) {
+    echo "{$role->key} (order {$role->order}, saved signer: " . ($role->hasSavedSigner ? 'yes' : 'no') . ")\n";
+}
+
+$result = TurboSign::sendSignature(
+    new SendSignatureRequest(
+        templateId: 'your-template-id',
+        recipients: [
+            new Recipient(name: 'Jane Doe', email: 'jane@client.com', role: 'client'),
+            // 'countersigner' left out: the signer saved on the template is used
+        ],
+    )
+);
+```
+
+- Roles sign in the order saved on the template, so a recipient with a `role` needs no `signingOrder`; recipients without a `role` sign after them (and still need a `signingOrder`).
+- A role left out uses the template's saved signer. If it has none, the API returns a 400 naming the role.
+- An unknown role throws a `ValidationException` listing the template's roles (`$e->errorCode === 'UnknownSignerRole'`).
+- Any `fields` you pass are added to the template's (for example an extra witness signature).
+- Roles work on PDF templates. Without roles, `fields` is required and must not be empty (400 `FieldsRequired`).
+- `role` works the same way on `createSignatureReviewLink()` (`Recipient`) and `createEmbeddedSignature()` (`EmbeddedSignatureRecipient`).
+
 #### `sendReminder()`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the per-signer cap is already spent, does not consume that cap, and only emails signers at the *current* signing order. Pass `null` (or omit the argument) to remind everyone eligible; do not pass an empty array, which the API rejects.
@@ -1658,6 +1693,7 @@ TurboQuote::applyPriceBook($quote->id, $priceBook->id);
 ```
 
 For more examples, see:
+- [`examples/turbosign-template-roles.php`](./examples/turbosign-template-roles.php) — send a template set up in TurboDocx by naming each signer's role
 - [`examples/turboquote-basic.php`](./examples/turboquote-basic.php) — full quote lifecycle
 - [`examples/turboquote-products.php`](./examples/turboquote-products.php) — products and bundles catalog CRUD
 - [`examples/turboquote-pricebooks.php`](./examples/turboquote-pricebooks.php) — price book management
@@ -1718,6 +1754,14 @@ The API also returns more specific codes, passed through unchanged:
 | `OptionalNotSupported` | 400 | A `signature` or `initial` field was sent with `required: false`. The signer must always complete those two types. |
 | `InvalidFieldRequired` | 400 | A field's `required` is not a boolean. Send `true`, `false`, or leave it out (leaving it out means required). |
 | `NoEditableFieldsForRecipient` | 400 | A recipient has no field they must fill in: all of their fields are read-only or optional. Give each recipient at least one required, editable field. |
+| `FieldsRequired` | 400 | `fields` is missing or empty and no recipient names a `role`. Pass fields, or send a template whose recipients name roles. |
+| `FieldPageOutOfRange` | 400 | A field is placed on a page past the end of the document. |
+| `UnknownSignerRole` | 400 | A recipient's `role` is not one of the template's roles. The message lists them. |
+| `DuplicateSignerRole` | 400 | More than one recipient was given for the same role. |
+| `SignerRoleUnfilled` | 400 | A role has no recipient and no signer saved on the template. |
+| `TemplateHasNoSignerRoles` | 400 | `role` was used on a template with no saved signature setup. |
+| `RoleRequiresTemplate` | 400 | `role` was used without a `templateId`. |
+| `TemplateRolesNeedPdfTemplate` | 400 | Roles can only be sent for a PDF signature template. For a Word template, generate a deliverable and send it with `deliverableId`. |
 | `QuoteHasNoLineItems` | 400 | The quote has no line items. Add at least one before sending. |
 | `QuoteExpired` | 400 | The quote is past its `validUntil` date. |
 | `QuoteValidUntilRequired` | 400 | The quote has no `validUntil` date set. |

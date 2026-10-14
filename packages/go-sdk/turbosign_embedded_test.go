@@ -359,10 +359,9 @@ func TestTurboSignClient_CreateEmbeddedSignature(t *testing.T) {
 	})
 
 	// Cross-language consistency: with no top-level Fields and no recipient shorthand, the
-	// send-signature `fields` value must marshal to "[]" (an iterable empty array) — NOT "null".
-	// js/python/php/java/ruby all emit "[]"; a nil Go slice would marshal to "null", which a
-	// backend that JSON-parses and iterates the fields string cannot iterate.
-	t.Run("sends empty fields as [] not null when no fields provided", func(t *testing.T) {
+	// send-signature body leaves the `fields` key out entirely (never "[]" or "null"), so a role
+	// send relies on the template's saved fields and any other send gets the API's FieldsRequired.
+	t.Run("omits the fields key when no fields provided", func(t *testing.T) {
 		var sentBody map[string]interface{}
 		server := newEmbeddedWrapperServer(t, embeddedServerConfig{
 			sentRecipients: []map[string]string{{"id": "rec-1", "email": "a@example.com", "name": "A"}},
@@ -383,7 +382,7 @@ func TestTurboSignClient_CreateEmbeddedSignature(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotNil(t, sentBody)
-		assert.Equal(t, "[]", sentBody["fields"], "empty fields must serialize to [] not null")
+		assert.NotContains(t, sentBody, "fields", "empty fields must be omitted")
 	})
 
 	// Turn-aware degradation: the two not-in-turn aliases both map to "pending" with empty URL.
