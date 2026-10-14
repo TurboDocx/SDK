@@ -131,6 +131,8 @@ TurboSign.configure({
 });
 
 // 2. Send a document for signature
+// contract.pdf must contain the text {signature1} where the signature goes
+// (or position the field with page/x/y coordinates instead, see Field Positioning)
 const result = await TurboSign.sendSignature({
   file: readFileSync('./contract.pdf'),
   documentName: 'Partnership Agreement',
@@ -327,7 +329,7 @@ Check the document-level status. For per-recipient detail, use
 const status = await TurboSign.getStatus('doc-uuid-here');
 
 console.log('Document Status:', status.status);  // 'under_review' | 'completed' | 'voided' | 'expired' | ...
-// expiresAt is the signing-window deadline (ISO 8601), or undefined when expiration is off.
+// expiresAt is the signing-window deadline (ISO 8601), or null when expiration is off.
 console.log('Expires:', status.expiresAt ?? 'never');
 ```
 
@@ -1043,8 +1045,8 @@ async function waitForCompletion(documentId: string, maxAttempts = 60) {
       return await TurboSign.download(documentId);
     }
 
-    if (status.status === 'voided') {
-      throw new Error('Document was voided');
+    if (status.status === 'voided' || status.status === 'expired') {
+      throw new Error(`Document was ${status.status}`);
     }
 
     // Wait 30 seconds between checks
@@ -1063,7 +1065,11 @@ import { TurboSign } from '@turbodocx/sdk';
 
 const app = express();
 
-TurboSign.configure({ apiKey: process.env.TURBODOCX_API_KEY });
+TurboSign.configure({
+  apiKey: process.env.TURBODOCX_API_KEY,
+  orgId: process.env.TURBODOCX_ORG_ID,
+  senderEmail: process.env.TURBODOCX_SENDER_EMAIL,  // REQUIRED for TurboSign
+});
 
 app.post('/api/send-contract', async (req, res) => {
   try {
@@ -1088,6 +1094,8 @@ The SDK includes a comprehensive manual test script to verify all functionality 
 
 ### Running Manual Tests
 
+These scripts live in the repository (they are not part of the npm package), so run them from a clone of `packages/js-sdk`.
+
 ```bash
 # Install dependencies
 npm install
@@ -1111,9 +1119,10 @@ The `manual-test.ts` file tests all SDK methods:
 
 Before running, update the hardcoded values in `manual-test.ts`:
 - `API_KEY` - Your TurboDocx API key
-- `BASE_URL` - API endpoint (default: `http://localhost:3000`)
+- `BASE_URL` - API endpoint (default: `https://api.turbodocx.com`)
 - `ORG_ID` - Your organization UUID
-- `TEST_FILE_PATH` - Path to a test PDF/DOCX file
+- `TEST_PDF_PATH` - Path to a test PDF/DOCX file
+- `FILE_URL` - A publicly accessible PDF URL (for the file-URL tests)
 - `TEST_EMAIL` - Email address for testing
 
 ### Expected Output
