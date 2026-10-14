@@ -93,6 +93,18 @@ final class TurboSignFileNameTest extends TestCase
         $this->assertSame('document.pdf', $this->uploadedFileName());
     }
 
+    public function testEmptyFileNameSendsNoField(): void
+    {
+        $this->injectTurboSignClient([$this->okResponse()], true);
+
+        // The API rejects an empty fileName (400), so an empty string must be left out like null
+        TurboSign::sendSignature(new SendSignatureRequest(recipients: [], fields: [], file: self::PDF, fileName: ''));
+
+        $body = (string) $this->requestHistory[0]['request']->getBody();
+        $this->assertStringNotContainsString('name="fileName"', $body);
+        $this->assertSame('document.pdf', $this->uploadedFileName());
+    }
+
     public function testCreateSignatureReviewLinkForwardsFileName(): void
     {
         $this->injectTurboSignClient([$this->okResponse()], true);

@@ -809,7 +809,8 @@ class TestFileNameFormField:
             assert kwargs.get("file_name") is None  # part name falls back to document.<ext>
 
     @pytest.mark.asyncio
-    async def test_no_file_name_sends_no_field(self):
+    @pytest.mark.parametrize("file_name", [None, ""])
+    async def test_no_file_name_sends_no_field(self, file_name):
         with patch.object(TurboSign, '_get_client') as mock_get_client:
             mock_client = MagicMock()
             mock_client.upload_file = AsyncMock(return_value={"success": True, "documentId": "doc-1"})
@@ -819,6 +820,7 @@ class TestFileNameFormField:
 
             await TurboSign.send_signature(
                 file=b"%PDF-1.4 fake",
+                file_name=file_name,
                 recipients=[{"name": "John Doe", "email": "john@example.com", "signingOrder": 1}],
                 fields=[{"type": "signature", "page": 1, "x": 100, "y": 500, "width": 200, "height": 50, "recipientEmail": "john@example.com"}],
             )

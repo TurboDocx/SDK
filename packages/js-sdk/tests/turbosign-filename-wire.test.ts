@@ -45,6 +45,12 @@ describe("TurboSign file uploads forward fileName", () => {
     expect(sentForm(fetchMock)).toEqual({ partName: "document.pdf", fileNameField: null });
   });
 
+  it("an empty fileName sends no field (the API rejects an empty one)", async () => {
+    const fetchMock = mockFetch();
+    await TurboSign.sendSignature({ recipients: [], fields: [], file: pdf, fileName: "" });
+    expect(sentForm(fetchMock)).toEqual({ partName: "document.pdf", fileNameField: null });
+  });
+
   it("a file path keeps its basename as the part and still forwards fileName", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "filename-test-"));
     const filePath = path.join(dir, "scan_0001.pdf");

@@ -681,7 +681,8 @@ module TurboDocxSdk
       # Sent as a form field: the API stores it as the document's file name, whatever its extension.
       def with_file_name(form_data, request)
         file_name = request[:fileName] || request["fileName"]
-        file_name ? form_data.merge("fileName" => file_name) : form_data
+        # An empty fileName is left out: the API rejects an empty one
+        file_name.nil? || file_name.to_s.empty? ? form_data : form_data.merge("fileName" => file_name)
       end
 
       def build_signature_form_data(request, sender)

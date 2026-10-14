@@ -160,6 +160,16 @@ class TurboSignTest {
         String reviewBody = server.takeRequest().getBody().readUtf8();
         assertTrue(reviewBody.matches("(?s).*name=\"fileName\".*?\r\n\r\nReview-Copy.pdf\r\n.*"), reviewBody);
         assertTrue(reviewBody.contains("filename=\"document.pdf\""), reviewBody);
+
+        server.enqueue(new MockResponse().setResponseCode(200)
+                .setHeader("Content-Type", "application/json").setBody(gson.toJson(responseData)));
+        client.turboSign().sendSignature(new SendSignatureRequest.Builder()
+                .file(new byte[]{0x25, 0x50, 0x44, 0x46})
+                .fileName("") // the API rejects an empty fileName, so none is sent
+                .recipients(Collections.singletonList(new Recipient("John Doe", "john@example.com", 1)))
+                .fields(Collections.singletonList(new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
+                .build());
+        assertFalse(server.takeRequest().getBody().readUtf8().contains("name=\"fileName\""));
     }
 
     @Test

@@ -55,6 +55,13 @@ RSpec.describe "TurboSign file uploads forward fileName" do
     expect(captured_parts.first).not_to have_key("fileName")
   end
 
+  it "an empty fileName sends no field (the API rejects an empty one)" do
+    sign.send_signature(recipients: [], fields: [], file: pdf, fileName: "")
+
+    expect(captured_parts.first).not_to have_key("fileName")
+    expect(captured_parts.first["file"][:filename]).to eq("document.pdf")
+  end
+
   it "create_signature_review_link names the uploaded part with fileName" do
     sign.create_signature_review_link(recipients: [], fields: [], file: pdf, fileName: "Review-Copy.pdf")
 
