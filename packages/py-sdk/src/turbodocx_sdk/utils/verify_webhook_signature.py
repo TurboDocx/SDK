@@ -21,7 +21,7 @@ from typing import Callable, Optional, Union
 def verify_webhook_signature(
     raw_body: Union[str, bytes],
     signature_header: Union[str, bytes],
-    timestamp_header: str,
+    timestamp_header: Union[str, bytes],
     secret: Union[str, bytes],
     *,
     tolerance_seconds: int = 300,
@@ -38,7 +38,7 @@ def verify_webhook_signature(
         signature_header: Value of the `X-TurboDocx-Signature` header
             (format: "sha256=<hex>"), as str or bytes.
         timestamp_header: Value of the `X-TurboDocx-Timestamp` header
-            (Unix epoch seconds, as string).
+            (Unix epoch seconds), as str or bytes.
         secret: Webhook secret returned by `create_webhook` or
             `regenerate_webhook_secret`, as str or bytes.
         tolerance_seconds: Maximum acceptable age of the timestamp, in seconds.
@@ -54,6 +54,14 @@ def verify_webhook_signature(
     if not signature_header or not timestamp_header or not secret:
         return False
 
+    # Raw header bytes (e.g. from an ASGI/WSGI receiver): the timestamp is signed as text, so
+    # decode it; a non-ASCII timestamp can't be a valid one.
+    if isinstance(timestamp_header, (bytes, bytearray, memoryview)):
+        try:
+            timestamp_header = bytes(timestamp_header).decode("ascii")
+        except UnicodeDecodeError:
+            return False
+
     if tolerance_seconds > 0:
         try:
             ts = int(timestamp_header)
@@ -66,7 +74,7 @@ def verify_webhook_signature(
     try:
         body_bytes = raw_body.encode("utf-8") if isinstance(raw_body, str) else raw_body
         signed_string = f"{timestamp_header}.".encode("utf-8") + body_bytes
-        secret_bytes = bytes(secret) if isinstance(secret, (bytes, bytearray)) else secret.encode("utf-8")
+        secret_bytes = bytes(secret) if isinstance(secret, (bytes, bytearray, memoryview)) else secret.encode("utf-8")
         digest = hmac.new(secret_bytes, signed_string, sha256).hexdigest()
         expected = ("sha256=" + digest).encode("ascii")
 
@@ -74,7 +82,7 @@ def verify_webhook_signature(
         # malformed header into a 500 instead of a rejected delivery.
         if isinstance(signature_header, str):
             provided = signature_header.encode("utf-8")
-        elif isinstance(signature_header, (bytes, bytearray)):
+        elif isinstance(signature_header, (bytes, bytearray, memoryview)):
             provided = bytes(signature_header)
         else:
             return False
