@@ -541,6 +541,33 @@ class TestVerifyWebhookSignature:
             now=lambda: self.NOW_SECONDS,
         )
 
+    # Malformed headers must return False, never raise: a receiver should answer 401, not 500.
+    @pytest.mark.parametrize("signature_header", [
+        "sha256=\u00e9",                       # non-ASCII (hmac.compare_digest raised TypeError on str)
+        "sha256=" + "\u00e9" * 32,             # non-ASCII, same UTF-8 byte length as a real signature
+        "sha256=\ud800",                       # lone surrogate (can't be UTF-8 encoded)
+        12345,                                  # not a string at all
+    ])
+    def test_rejects_malformed_signature_header_without_raising(self, signature_header):
+        assert verify_webhook_signature(
+            self.BODY, signature_header, self.TIMESTAMP, self.SECRET, now=lambda: self.NOW_SECONDS,
+        ) is False
+
+    def test_rejects_unencodable_body_or_secret_without_raising(self):
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        assert verify_webhook_signature(
+            self.BODY + "\ud800", sig, self.TIMESTAMP, self.SECRET, now=lambda: self.NOW_SECONDS,
+        ) is False
+        assert verify_webhook_signature(
+            self.BODY, sig, self.TIMESTAMP, "secret\ud800", now=lambda: self.NOW_SECONDS,
+        ) is False
+
+    def test_accepts_valid_signature_header_as_bytes(self):
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        assert verify_webhook_signature(
+            self.BODY, sig.encode("ascii"), self.TIMESTAMP, self.SECRET, now=lambda: self.NOW_SECONDS,
+        ) is True
+
     def test_accepts_bytes_body(self):
         sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
         assert verify_webhook_signature(

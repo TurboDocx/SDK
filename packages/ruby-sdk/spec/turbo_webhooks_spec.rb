@@ -569,6 +569,15 @@ RSpec.describe "TurboDocxSdk.verify_webhook_signature" do
     ).to be(false)
   end
 
+  it "returns false (never raises) on a non-ASCII or invalid UTF-8 signature header" do
+    ts = Time.now.to_i.to_s
+    ["sha256=\u00e9", "sha256=" + ("\u00e9" * 32), "sha256=\xFF".dup.force_encoding("UTF-8")].each do |header|
+      expect(
+        TurboDocxSdk.verify_webhook_signature(payload: payload, signature_header: header, timestamp_header: ts, secret: secret)
+      ).to be(false)
+    end
+  end
+
   it "returns false on a non-numeric timestamp" do
     expect(
       TurboDocxSdk.verify_webhook_signature(

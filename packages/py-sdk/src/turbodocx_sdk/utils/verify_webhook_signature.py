@@ -20,7 +20,7 @@ from typing import Callable, Optional, Union
 
 def verify_webhook_signature(
     raw_body: Union[str, bytes],
-    signature_header: str,
+    signature_header: Union[str, bytes],
     timestamp_header: str,
     secret: str,
     *,
@@ -63,12 +63,24 @@ def verify_webhook_signature(
         if abs(current_time - ts) > tolerance_seconds:
             return False
 
-    body_bytes = raw_body.encode("utf-8") if isinstance(raw_body, str) else raw_body
-    signed_string = f"{timestamp_header}.".encode("utf-8") + body_bytes
+    try:
+        body_bytes = raw_body.encode("utf-8") if isinstance(raw_body, str) else raw_body
+        signed_string = f"{timestamp_header}.".encode("utf-8") + body_bytes
+        digest = hmac.new(secret.encode("utf-8"), signed_string, sha256).hexdigest()
+        expected = ("sha256=" + digest).encode("ascii")
 
-    secret_bytes = secret.encode("utf-8")
-    digest = hmac.new(secret_bytes, signed_string, sha256).hexdigest()
-    expected = "sha256=" + digest
+        # Compare bytes: hmac.compare_digest raises TypeError on non-ASCII str, which would turn a
+        # malformed header into a 500 instead of a rejected delivery.
+        if isinstance(signature_header, str):
+            provided = signature_header.encode("utf-8")
+        elif isinstance(signature_header, (bytes, bytearray)):
+            provided = bytes(signature_header)
+        else:
+            return False
 
-    # Constant-time string comparison.
-    return hmac.compare_digest(expected, signature_header)
+        # Constant-time comparison.
+        return hmac.compare_digest(expected, provided)
+    except (TypeError, ValueError, AttributeError):
+        # Unencodable text (e.g. a lone surrogate raises UnicodeEncodeError, a ValueError) or a
+        # wrongly-typed argument: fail closed, as the contract above promises.
+        return False

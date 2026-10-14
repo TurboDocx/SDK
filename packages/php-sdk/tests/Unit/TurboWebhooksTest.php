@@ -281,6 +281,14 @@ final class TurboWebhooksTest extends TestCase
         );
     }
 
+    public function testVerifyRejectsNonAsciiSignatureWithoutThrowing(): void
+    {
+        $ts = (string) self::NOW_SECONDS;
+        foreach (["sha256=\u{e9}", 'sha256=' . str_repeat("\u{e9}", 32), "sha256=\xFF"] as $header) {
+            $this->assertFalse(verifyWebhookSignature(self::BODY, $header, $ts, self::SECRET, 300, self::NOW_SECONDS));
+        }
+    }
+
     public function testVerifyRejectsLengthMismatchedSignature(): void
     {
         $ts = (string) self::NOW_SECONDS;
