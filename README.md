@@ -193,7 +193,11 @@ composer require turbodocx/sdk
 import { TurboSign } from '@turbodocx/sdk';
 
 // Configure once
-TurboSign.configure({ apiKey: process.env.TURBODOCX_API_KEY });
+TurboSign.configure({
+  apiKey: process.env.TURBODOCX_API_KEY,
+  orgId: process.env.TURBODOCX_ORG_ID,
+  senderEmail: process.env.TURBODOCX_SENDER_EMAIL,  // REQUIRED for TurboSign
+});
 
 // Send for signature
 const { documentId, recipients } = await TurboSign.sendSignature({
@@ -300,7 +304,12 @@ const result = await TurboSign.sendSignature({
 ```typescript
 import { TurboSign } from '@turbodocx/sdk';
 
-TurboSign.configure({ apiKey: process.env.TURBODOCX_API_KEY });
+// Configure once
+TurboSign.configure({
+  apiKey: process.env.TURBODOCX_API_KEY,
+  orgId: process.env.TURBODOCX_ORG_ID,
+  senderEmail: process.env.TURBODOCX_SENDER_EMAIL,  // REQUIRED for TurboSign
+});
 
 // 1. Send document for signature
 const { documentId } = await TurboSign.sendSignature({
@@ -320,7 +329,7 @@ console.log(`Document ID: ${documentId}`);
 // 2. Check status
 const status = await TurboSign.getStatus(documentId);
 console.log(`Status: ${status.status}`);  // 'under_review', 'completed', 'voided', 'expired', ...
-console.log(`Expires: ${status.expiresAt ?? 'never'}`);  // ISO deadline, or undefined when expiration is off
+console.log(`Expires: ${status.expiresAt ?? 'never'}`);  // ISO deadline, or null when expiration is off
 
 // getStatus returns the document-level status (and the expiration deadline). For per-signer detail:
 const { recipients, summary } = await TurboSign.getRecipients(documentId);
