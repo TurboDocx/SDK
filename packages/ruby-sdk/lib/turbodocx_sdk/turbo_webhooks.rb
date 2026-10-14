@@ -288,8 +288,9 @@ module TurboDocxSdk
     expected = "sha256=#{digest}"
 
     secure_compare(expected, signature_header)
-  rescue ArgumentError, TypeError
-    # Non-numeric timestamp (Integer() raised) or similar bad input.
+  rescue ArgumentError, TypeError, EncodingError
+    # Non-numeric timestamp (Integer() raised), headers/body in encodings that can't be combined,
+    # or similar bad input.
     false
   end
 

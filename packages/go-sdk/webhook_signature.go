@@ -27,7 +27,7 @@ type VerifyWebhookSignatureOptions struct {
 
 // VerifyWebhookSignature verifies a TurboDocx webhook delivery.
 //
-// Format matches the backend's webhookService.generateSignature:
+// Format matches how TurboDocx signs each delivery:
 //
 //	Header:        X-TurboDocx-Signature: sha256=<hex>
 //	Timestamp:     X-TurboDocx-Timestamp: <unix-seconds>

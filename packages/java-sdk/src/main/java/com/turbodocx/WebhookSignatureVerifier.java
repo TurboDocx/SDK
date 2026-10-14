@@ -14,7 +14,7 @@ import javax.crypto.spec.SecretKeySpec;
  * Webhook signature verification helper.
  *
  * <p>Verifies the {@code X-TurboDocx-Signature} header on an incoming webhook
- * delivery. Format matches the backend's {@code webhookService.generateSignature}:</p>
+ * delivery. Format matches how TurboDocx signs each delivery:</p>
  * <ul>
  *   <li>Header:        {@code X-TurboDocx-Signature: sha256=<hex>}</li>
  *   <li>Timestamp:     {@code X-TurboDocx-Timestamp: <unix-seconds>}</li>

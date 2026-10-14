@@ -2,7 +2,7 @@
 Webhook signature verification helper.
 
 Verifies the X-TurboDocx-Signature header on an incoming webhook delivery.
-Format matches the backend's webhookService.generateSignature:
+Format matches how TurboDocx signs each delivery:
   - Header:        X-TurboDocx-Signature: sha256=<hex>
   - Timestamp:     X-TurboDocx-Timestamp: <unix-seconds>
   - String signed: f"{timestamp}.{raw_body}"
@@ -22,7 +22,7 @@ def verify_webhook_signature(
     raw_body: Union[str, bytes],
     signature_header: Union[str, bytes],
     timestamp_header: str,
-    secret: str,
+    secret: Union[str, bytes],
     *,
     tolerance_seconds: int = 300,
     now: Optional[Callable[[], int]] = None,
@@ -36,11 +36,11 @@ def verify_webhook_signature(
             primitive that preserves raw bytes (e.g. Flask's `request.get_data()`
             or FastAPI's `await request.body()`).
         signature_header: Value of the `X-TurboDocx-Signature` header
-            (format: "sha256=<hex>").
+            (format: "sha256=<hex>"), as str or bytes.
         timestamp_header: Value of the `X-TurboDocx-Timestamp` header
             (Unix epoch seconds, as string).
         secret: Webhook secret returned by `create_webhook` or
-            `regenerate_webhook_secret`.
+            `regenerate_webhook_secret`, as str or bytes.
         tolerance_seconds: Maximum acceptable age of the timestamp, in seconds.
             Defaults to 300 (5 minutes). Set to 0 to disable the timestamp check
             (NOT recommended in production).
@@ -66,7 +66,8 @@ def verify_webhook_signature(
     try:
         body_bytes = raw_body.encode("utf-8") if isinstance(raw_body, str) else raw_body
         signed_string = f"{timestamp_header}.".encode("utf-8") + body_bytes
-        digest = hmac.new(secret.encode("utf-8"), signed_string, sha256).hexdigest()
+        secret_bytes = bytes(secret) if isinstance(secret, (bytes, bytearray)) else secret.encode("utf-8")
+        digest = hmac.new(secret_bytes, signed_string, sha256).hexdigest()
         expected = ("sha256=" + digest).encode("ascii")
 
         # Compare bytes: hmac.compare_digest raises TypeError on non-ASCII str, which would turn a
