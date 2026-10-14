@@ -578,6 +578,17 @@ RSpec.describe "TurboDocxSdk.verify_webhook_signature" do
     end
   end
 
+  it "returns false (never raises) when the timestamp and body encodings can't be combined" do
+    # Integer() accepts the UTF-16 digits, then building "#{timestamp}.#{body}" raised Encoding::CompatibilityError
+    [["1700000000é", "é".b, 0], ["1700000000".encode("UTF-16LE"), payload, 0], [Time.now.to_i.to_s.encode("UTF-16LE"), payload, 300]].each do |ts, body, tolerance|
+      expect(
+        TurboDocxSdk.verify_webhook_signature(
+          payload: body, signature_header: "sha256=00", timestamp_header: ts, secret: secret, tolerance_seconds: tolerance
+        )
+      ).to be(false)
+    end
+  end
+
   it "returns false on a non-numeric timestamp" do
     expect(
       TurboDocxSdk.verify_webhook_signature(

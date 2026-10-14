@@ -8,7 +8,7 @@ namespace TurboDocx\Utils;
  * Webhook signature verification helper.
  *
  * Verifies the X-TurboDocx-Signature header on an incoming webhook delivery.
- * Format matches the backend's webhookService->generateSignature:
+ * Format matches how TurboDocx signs each delivery:
  *   - Header:        X-TurboDocx-Signature: sha256=<hex>
  *   - Timestamp:     X-TurboDocx-Timestamp: <unix-seconds>
  *   - String signed: "{$timestamp}.{$rawBody}"

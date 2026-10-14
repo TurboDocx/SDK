@@ -562,6 +562,13 @@ class TestVerifyWebhookSignature:
             self.BODY, sig, self.TIMESTAMP, "secret\ud800", now=lambda: self.NOW_SECONDS,
         ) is False
 
+    def test_accepts_secret_as_bytes(self):
+        # e.g. a secret read from os.environb or a vault client; used to raise, then silently failed
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        assert verify_webhook_signature(
+            self.BODY, sig, self.TIMESTAMP, self.SECRET.encode("utf-8"), now=lambda: self.NOW_SECONDS,
+        ) is True
+
     def test_accepts_valid_signature_header_as_bytes(self):
         sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
         assert verify_webhook_signature(
