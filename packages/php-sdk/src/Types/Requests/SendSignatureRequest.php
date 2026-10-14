@@ -16,7 +16,7 @@ final class SendSignatureRequest
      * @param array<Recipient> $recipients Recipients who will sign
      * @param array<Field> $fields Signature fields configuration
      * @param string|null $file PDF file content as bytes
-     * @param string|null $fileName Original filename (used when file is provided)
+     * @param string|null $fileName Stored file name for an uploaded file (non-empty, max 255 chars; no extension needed)
      * @param string|null $fileLink URL to document file
      * @param string|null $deliverableId TurboDocx deliverable ID
      * @param string|null $templateId TurboDocx template ID

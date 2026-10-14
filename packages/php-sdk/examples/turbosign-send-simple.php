@@ -110,7 +110,8 @@ function sendDirectlyExample(): void
         echo "Document ID: {$result->documentId}\n";
         echo "Message: {$result->message}\n";
 
-        // Signing links are emailed to recipients — they are not returned by the API.
+        // Signing links are emailed to recipients. To sign inside your own app instead, send with
+        // sendEmail: false and mint a link per signer with TurboSign::createSigningUrl().
         // getRecipients reports who has signed and who you are still waiting on.
         try {
             $progress = TurboSign::getRecipients($result->documentId);

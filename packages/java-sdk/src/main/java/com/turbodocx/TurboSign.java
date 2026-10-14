@@ -47,11 +47,13 @@ public final class TurboSign {
         );
 
         if (request.hasFile()) {
-            String fileName = request.getFileName();
+            if (request.getFileName() != null && !request.getFileName().isEmpty()) {
+                formData.put("fileName", request.getFileName()); // a form field: the API checks the uploaded part's extension
+            }
             return httpClient.uploadFile(
                     "/turbosign/single/prepare-for-review",
                     request.getFile(),
-                    fileName,
+                    null,
                     formData,
                     CreateSignatureReviewLinkResponse.class
             );
@@ -97,11 +99,13 @@ public final class TurboSign {
         }
 
         if (request.hasFile()) {
-            String fileName = request.getFileName();
+            if (request.getFileName() != null && !request.getFileName().isEmpty()) {
+                formData.put("fileName", request.getFileName()); // a form field: the API checks the uploaded part's extension
+            }
             return httpClient.uploadFile(
                     "/turbosign/single/prepare-for-signing",
                     request.getFile(),
-                    fileName,
+                    null,
                     formData,
                     SendSignatureResponse.class
             );

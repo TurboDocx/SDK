@@ -233,7 +233,8 @@ export class TurboSign {
         '/turbosign/single/prepare-for-review',
         request.file,
         'file',
-        formData
+        // Sent as a form field: the API stores it as the document's file name, whatever its extension
+        request.fileName ? { ...formData, fileName: request.fileName } : formData
       );
       return response;
     } else {
@@ -323,7 +324,8 @@ export class TurboSign {
         '/turbosign/single/prepare-for-signing',
         request.file,
         'file',
-        formData
+        // Sent as a form field: the API stores it as the document's file name, whatever its extension
+        request.fileName ? { ...formData, fileName: request.fileName } : formData
       );
       return response;
     } else {

@@ -338,7 +338,7 @@ export interface EmbeddedSignatureRecipient {
  */
 export interface CreateEmbeddedSignatureRequest {
   file?: string | File | Buffer;
-  fileName?: string;
+  fileName?: string; // stored file name for an uploaded `file` (non-empty, max 255 chars)
   fileLink?: string;
   templateId?: string;
   deliverableId?: string;
@@ -668,7 +668,7 @@ export interface EmbeddedSigningSettings {
 export interface CreateSignatureReviewLinkRequest {
   /** PDF file as file path, Buffer, or browser File */
   file?: string | File | Buffer;
-  /** Original filename (used when file is a Buffer) */
+  /** Stored file name for an uploaded `file` (any non-empty name, max 255 chars; no extension needed) */
   fileName?: string;
   /** URL to document file */
   fileLink?: string;
@@ -728,7 +728,7 @@ export interface CreateSignatureReviewLinkResponse {
 export interface SendSignatureRequest {
   /** PDF file as file path, Buffer, or browser File */
   file?: string | File | Buffer;
-  /** Original filename (used when file is a Buffer) */
+  /** Stored file name for an uploaded `file` (any non-empty name, max 255 chars; no extension needed) */
   fileName?: string;
   /** URL to document file */
   fileLink?: string;
