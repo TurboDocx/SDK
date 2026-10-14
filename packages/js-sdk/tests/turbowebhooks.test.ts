@@ -593,6 +593,12 @@ describe("verifyWebhookSignature", () => {
     ).toBe(false);
   });
 
+  it("should reject a non-ASCII signature header without throwing", () => {
+    for (const header of ["sha256=\u00e9", "sha256=" + "\u00e9".repeat(32), "sha256=\ud800"]) {
+      expect(verifyWebhookSignature(BODY, header, TIMESTAMP, SECRET, { now: () => NOW_SECONDS })).toBe(false);
+    }
+  });
+
   it("should accept a Buffer body", () => {
     expect(
       verifyWebhookSignature(Buffer.from(BODY, "utf8"), validSig, TIMESTAMP, SECRET, {

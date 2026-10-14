@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -97,6 +98,15 @@ func TestVerifyWebhookSignature(t *testing.T) {
 			[]byte(testBody), sig, "not-a-number", testSecret,
 			&VerifyWebhookSignatureOptions{Now: nowFn(testNowSeconds)},
 		))
+	})
+
+	t.Run("rejects non-ASCII and invalid UTF-8 signatures without panicking", func(t *testing.T) {
+		for _, header := range []string{"sha256=\u00e9", "sha256=" + strings.Repeat("\u00e9", 32), "sha256=\xff"} {
+			assert.False(t, VerifyWebhookSignature(
+				[]byte(testBody), header, testTimestamp, testSecret,
+				&VerifyWebhookSignatureOptions{Now: nowFn(testNowSeconds)},
+			))
+		}
 	})
 
 	t.Run("rejects length-mismatched signature without crashing", func(t *testing.T) {
