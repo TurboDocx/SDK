@@ -2,7 +2,7 @@
 Webhook signature verification helper.
 
 Verifies the X-TurboDocx-Signature header on an incoming webhook delivery.
-Format matches the backend's webhookService.generateSignature:
+Format matches how TurboDocx signs each delivery:
   - Header:        X-TurboDocx-Signature: sha256=<hex>
   - Timestamp:     X-TurboDocx-Timestamp: <unix-seconds>
   - String signed: f"{timestamp}.{raw_body}"
@@ -20,9 +20,9 @@ from typing import Callable, Optional, Union
 
 def verify_webhook_signature(
     raw_body: Union[str, bytes],
-    signature_header: str,
-    timestamp_header: str,
-    secret: str,
+    signature_header: Union[str, bytes],
+    timestamp_header: Union[str, bytes],
+    secret: Union[str, bytes],
     *,
     tolerance_seconds: int = 300,
     now: Optional[Callable[[], int]] = None,
@@ -36,11 +36,11 @@ def verify_webhook_signature(
             primitive that preserves raw bytes (e.g. Flask's `request.get_data()`
             or FastAPI's `await request.body()`).
         signature_header: Value of the `X-TurboDocx-Signature` header
-            (format: "sha256=<hex>").
+            (format: "sha256=<hex>"), as str or bytes.
         timestamp_header: Value of the `X-TurboDocx-Timestamp` header
-            (Unix epoch seconds, as string).
+            (Unix epoch seconds), as str or bytes.
         secret: Webhook secret returned by `create_webhook` or
-            `regenerate_webhook_secret`.
+            `regenerate_webhook_secret`, as str or bytes.
         tolerance_seconds: Maximum acceptable age of the timestamp, in seconds.
             Defaults to 300 (5 minutes). Set to 0 to disable the timestamp check
             (NOT recommended in production).
@@ -54,6 +54,14 @@ def verify_webhook_signature(
     if not signature_header or not timestamp_header or not secret:
         return False
 
+    # Raw header bytes (e.g. from an ASGI/WSGI receiver): the timestamp is signed as text, so
+    # decode it; a non-ASCII timestamp can't be a valid one.
+    if isinstance(timestamp_header, (bytes, bytearray, memoryview)):
+        try:
+            timestamp_header = bytes(timestamp_header).decode("ascii")
+        except UnicodeDecodeError:
+            return False
+
     if tolerance_seconds > 0:
         try:
             ts = int(timestamp_header)
@@ -63,12 +71,25 @@ def verify_webhook_signature(
         if abs(current_time - ts) > tolerance_seconds:
             return False
 
-    body_bytes = raw_body.encode("utf-8") if isinstance(raw_body, str) else raw_body
-    signed_string = f"{timestamp_header}.".encode("utf-8") + body_bytes
+    try:
+        body_bytes = raw_body.encode("utf-8") if isinstance(raw_body, str) else raw_body
+        signed_string = f"{timestamp_header}.".encode("utf-8") + body_bytes
+        secret_bytes = bytes(secret) if isinstance(secret, (bytes, bytearray, memoryview)) else secret.encode("utf-8")
+        digest = hmac.new(secret_bytes, signed_string, sha256).hexdigest()
+        expected = ("sha256=" + digest).encode("ascii")
 
-    secret_bytes = secret.encode("utf-8")
-    digest = hmac.new(secret_bytes, signed_string, sha256).hexdigest()
-    expected = "sha256=" + digest
+        # Compare bytes: hmac.compare_digest raises TypeError on non-ASCII str, which would turn a
+        # malformed header into a 500 instead of a rejected delivery.
+        if isinstance(signature_header, str):
+            provided = signature_header.encode("utf-8")
+        elif isinstance(signature_header, (bytes, bytearray, memoryview)):
+            provided = bytes(signature_header)
+        else:
+            return False
 
-    # Constant-time string comparison.
-    return hmac.compare_digest(expected, signature_header)
+        # Constant-time comparison.
+        return hmac.compare_digest(expected, provided)
+    except (TypeError, ValueError, AttributeError):
+        # Unencodable text (e.g. a lone surrogate raises UnicodeEncodeError, a ValueError) or a
+        # wrongly-typed argument: fail closed, as the contract above promises.
+        return False

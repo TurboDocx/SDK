@@ -268,7 +268,7 @@ module TurboDocxSdk
   def self.verify_webhook_signature(payload:, signature_header:, timestamp_header:, secret:, tolerance_seconds: 300, now: nil)
     # Non-String / nil / empty inputs all fail closed -- honoring the
     # documented "never raises on bad input" contract without relying on the
-    # rescue below (which only covers Integer() parse failures).
+    # rescue below (Integer() parse failures, type errors and encoding clashes).
     return false unless signature_header.is_a?(String) && !signature_header.empty?
     return false unless timestamp_header.is_a?(String) && !timestamp_header.empty?
     return false unless secret.is_a?(String) && !secret.empty?
@@ -288,8 +288,9 @@ module TurboDocxSdk
     expected = "sha256=#{digest}"
 
     secure_compare(expected, signature_header)
-  rescue ArgumentError, TypeError
-    # Non-numeric timestamp (Integer() raised) or similar bad input.
+  rescue ArgumentError, TypeError, EncodingError
+    # Non-numeric timestamp (Integer() raised), headers/body in encodings that can't be combined,
+    # or similar bad input.
     false
   end
 
