@@ -92,5 +92,5 @@ client (fetch mocked): its endpoints, error propagation, and the kiosk mint retr
 - **Completion is push** — the single-signer path listens for the `turbosign:completed` postMessage;
   the widget surfaces it as an `onCompleted` callback. In production, pin the listener to your known
   TurboSign origin and/or confirm via the `completed` webhook.
-- **The kiosk mints just-in-time** — a later signer's URL is created only when it's their turn; the
-  backend enforces the order.
+- **The kiosk mints just-in-time** — TurboSign won't issue a later signer's URL until it's their turn,
+  and refuses an out-of-turn signature even with a valid link.
