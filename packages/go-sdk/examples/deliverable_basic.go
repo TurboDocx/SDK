@@ -9,7 +9,7 @@ import (
 	"log"
 	"os"
 
-	turbodocx "github.com/turbodocx/turbodocx-go"
+	turbodocx "github.com/TurboDocx/SDK/packages/go-sdk"
 )
 
 func main() {

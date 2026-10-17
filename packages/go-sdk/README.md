@@ -8,8 +8,7 @@
 
 The most developer-friendly **DocuSign & PandaDoc alternative** for **e-signatures**, **document generation**, and **partner management**. Send documents for signature, automate document workflows, and manage partner organizations programmatically.
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/turbodocx/sdk.svg)](https://pkg.go.dev/github.com/turbodocx/sdk)
-[![Go Report Card](https://goreportcard.com/badge/github.com/turbodocx/sdk)](https://goreportcard.com/report/github.com/turbodocx/sdk)
+[![Go Reference](https://pkg.go.dev/badge/github.com/TurboDocx/SDK/packages/go-sdk.svg)](https://pkg.go.dev/github.com/TurboDocx/SDK/packages/go-sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-agentskills.io-8A2BE2)](https://agentskills.io)
 [![Quickstart Skill](https://skills.sh/b/TurboDocx/quickstart)](https://github.com/TurboDocx/quickstart)
@@ -83,7 +82,7 @@ A modern, developer-first alternative to legacy e-signature platforms:
 ## Installation
 
 ```bash
-go get github.com/turbodocx/sdk
+go get github.com/TurboDocx/SDK/packages/go-sdk
 ```
 
 ---
@@ -111,7 +110,7 @@ import (
     "log"
     "os"
 
-    turbodocx "github.com/turbodocx/sdk"
+    turbodocx "github.com/TurboDocx/SDK/packages/go-sdk"
 )
 
 func main() {
