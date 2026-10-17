@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { otpTurnMessage } from "@/lib/statusCopy";
 import { type KioskSigner, mintNextWithRetry, startKiosk } from "@/lib/turbosign";
 
-// In production, pin this to your known TurboSign origin. Left null here, the listener instead pins to
-// the origin of the URL it just framed (derived below), so a forged `turbosign:completed` from any
-// other frame/extension/ad on the page is ignored.
+// In production, pin this to your known TurboSign origin. Left null here, the listener pins to the
+// origin of the URL it just framed (derived below). Origin pinning only rejects other sites; the
+// listener also checks `event.source` and the documentId, so another frame or window on the TurboSign
+// origin can't mark the current signer done and advance the queue.
 const TURBOSIGN_ORIGIN: string | null = null;
 
 const BLANK = [
@@ -29,6 +30,8 @@ export function Kiosk() {
   const currentRef = useRef<KioskSigner | null>(null);
   // The origin of the currently-framed signing URL — the only origin we accept a completion from.
   const expectedOriginRef = useRef<string | null>(null);
+  // Our signing iframe — the only window we accept a completion from.
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Frame a signer: a `ready` signer already has a URL; a `pending` one is minted on demand.
   async function frame(signer: KioskSigner, docId: string) {
@@ -54,7 +57,11 @@ export function Kiosk() {
     const handler = async (event: MessageEvent) => {
       const expected = TURBOSIGN_ORIGIN ?? expectedOriginRef.current;
       if (!expected || event.origin !== expected) return;
-      if (!event.data || (event.data as { type?: string }).type !== "turbosign:completed") return;
+      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) return;
+      const data = event.data as { type?: string; documentId?: string } | null;
+      if (!data || data.type !== "turbosign:completed") return;
+      // The signing page sends the documentId; a completion for any other document is not this kiosk's.
+      if (data.documentId !== undefined && data.documentId !== documentId) return;
 
       const done = currentRef.current;
       const next = queue.find((s) => s.recipientId !== done?.recipientId && s.status !== "completed");
@@ -165,7 +172,7 @@ export function Kiosk() {
 
         {embedUrl && (
           <div className="overflow-hidden rounded-xl border">
-            <iframe src={embedUrl} title="Sign the document" allow="clipboard-write" className="block h-[720px] w-full" />
+            <iframe ref={iframeRef} src={embedUrl} title="Sign the document" allow="clipboard-write" className="block h-[720px] w-full" />
           </div>
         )}
 

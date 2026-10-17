@@ -2,7 +2,7 @@
 
 A single host web-app that embeds TurboSign four ways, so you can compare the approaches side by side:
 
-- **Single signer** — the host hand-rolls the `<iframe>` and its own origin-checked
+- **Single signer** — the host hand-rolls the `<iframe>` and its own origin- and source-checked
   `window.addEventListener("message", …)` completion listener.
 - **External IdV** — your own identity provider verifies the signer (simulated here by an "Identity
   Verification Simulator" dialog), and the server passes that verification as an `identityAssertion`
@@ -91,6 +91,7 @@ client (fetch mocked): its endpoints, error propagation, and the kiosk mint retr
   `getEmbeddedSigningSettings()`) fails with `OtpOverrideNotAllowed`.
 - **Completion is push** — the single-signer path listens for the `turbosign:completed` postMessage;
   the widget surfaces it as an `onCompleted` callback. In production, pin the listener to your known
-  TurboSign origin and/or confirm via the `completed` webhook.
+  TurboSign origin, check `event.source` is your iframe's `contentWindow` (origin alone doesn't stop
+  another frame on the TurboSign origin), and/or confirm via the `completed` webhook.
 - **The kiosk mints just-in-time** — a later signer's URL is created only when it's their turn; the
   backend enforces the order.
