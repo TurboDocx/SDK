@@ -12,7 +12,7 @@ use TurboDocx\Types\IdentityAssertion;
 use TurboDocx\Types\Requests\CreateSigningUrlRequest;
 
 /**
- * Tests for TurboSign::createSigningUrl — the single-use embedded signing URL minter.
+ * Tests for TurboSign::createSigningUrl — the embedded signing URL minter.
  *
  * Mirrors the js-sdk suite: XOR selector validation, https-only returnUrl, and the double-envelope
  * unwrap ({ data: { results } } -> results). XOR/returnUrl checks run before the HTTP client is

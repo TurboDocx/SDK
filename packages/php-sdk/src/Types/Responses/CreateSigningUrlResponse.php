@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace TurboDocx\Types\Responses;
 
 /**
- * The single-use embedded signing URL and its metadata. Mirrors the TypeScript SDK's
- * `CreateSigningUrlResponse`.
+ * The embedded signing URL and its metadata: the reusable signing link for `otp` / no-verification
+ * recipients, or a single-use link for `external_idv` / `override` recipients. Mirrors the
+ * TypeScript SDK's `CreateSigningUrlResponse`.
  */
 final class CreateSigningUrlResponse
 {
