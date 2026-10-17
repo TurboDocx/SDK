@@ -21,7 +21,8 @@ public class EmbeddedSignatureRecipientResult {
      * {@code "ready"} signer, the mode the backend resolved for the URL; for {@code "pending"} /
      * {@code "completed"} no URL was minted, so it is the mode you requested via {@code auth} (null
      * when you set none, even if the org's default channel applies). {@code createSigningUrl}
-     * reports the effective mode.
+     * reports the effective mode. From {@code createEmbeddedSignature} it is only ever {@code "otp"}
+     * or null.
      */
     private final String identityVerificationMode;
 
