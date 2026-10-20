@@ -107,11 +107,9 @@ public class TurboSignBasic {
             System.out.println("Status: " + result.getStatus());
             System.out.println("Preview URL: " + result.getPreviewUrl());
 
-            if (result.getRecipients() != null) {
-                System.out.println("\nRecipients:");
-                for (RecipientResponse recipient : result.getRecipients()) {
-                    System.out.println("  " + recipient.getName() + " (" + recipient.getEmail() + ") - " + recipient.getStatus());
-                }
+            System.out.println("\nRecipients:");
+            for (ReviewRecipient recipient : result.getRecipients()) {
+                System.out.println("  " + recipient.getName() + " (" + recipient.getEmail() + ") - " + recipient.getId());
             }
 
             System.out.println("\nYou can now:");

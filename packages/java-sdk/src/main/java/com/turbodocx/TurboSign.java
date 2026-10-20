@@ -507,14 +507,12 @@ public final class TurboSign {
                 break;
             }
         }
+        List<RecipientResponse> sentRecipients = sent.getRecipients();
         Map<String, Integer> apiOrderByEmail = new HashMap<>();
-        if (sent.getRecipients() != null) {
-            List<RecipientResponse> sentRecipients = sent.getRecipients();
-            for (int index = 0; index < sentRecipients.size(); index++) {
-                String email = sentRecipients.get(index).getEmail();
-                if (email != null) {
-                    apiOrderByEmail.put(email.toLowerCase(Locale.ROOT), index);
-                }
+        for (int index = 0; index < sentRecipients.size(); index++) {
+            String email = sentRecipients.get(index).getEmail();
+            if (email != null) {
+                apiOrderByEmail.put(email.toLowerCase(Locale.ROOT), index);
             }
         }
         List<OrderedRecipient> ordered = new ArrayList<>();
@@ -531,23 +529,20 @@ public final class TurboSign {
         }
         // Signers the API added that the caller did not pass (a template role's saved signer). With
         // sendEmail=false nobody else can reach them, so mint their embed URLs too.
-        if (sent.getRecipients() != null) {
-            Set<String> requestedEmails = new HashSet<>();
-            for (EmbeddedSignatureRecipient r : requestRecipients) {
-                if (r.getEmail() != null) {
-                    requestedEmails.add(r.getEmail().toLowerCase(Locale.ROOT));
-                }
+        Set<String> requestedEmails = new HashSet<>();
+        for (EmbeddedSignatureRecipient r : requestRecipients) {
+            if (r.getEmail() != null) {
+                requestedEmails.add(r.getEmail().toLowerCase(Locale.ROOT));
             }
-            List<RecipientResponse> sentRecipients = sent.getRecipients();
-            for (int index = 0; index < sentRecipients.size(); index++) {
-                RecipientResponse sr = sentRecipients.get(index);
-                if (sr.getEmail() == null || requestedEmails.contains(sr.getEmail().toLowerCase(Locale.ROOT))) {
-                    continue;
-                }
-                ordered.add(new OrderedRecipient(
-                        new EmbeddedSignatureRecipient.Builder().name(sr.getName()).email(sr.getEmail()).build(),
-                        usesRoles ? index : Integer.MAX_VALUE));
+        }
+        for (int index = 0; index < sentRecipients.size(); index++) {
+            RecipientResponse sr = sentRecipients.get(index);
+            if (sr.getEmail() == null || requestedEmails.contains(sr.getEmail().toLowerCase(Locale.ROOT))) {
+                continue;
             }
+            ordered.add(new OrderedRecipient(
+                    new EmbeddedSignatureRecipient.Builder().name(sr.getName()).email(sr.getEmail()).build(),
+                    usesRoles ? index : Integer.MAX_VALUE));
         }
         ordered.sort(Comparator.comparingInt(o -> o.order));
 

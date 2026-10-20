@@ -549,6 +549,47 @@ class TurboSignEmbeddedTest {
     }
 
     @Test
+    @DisplayName("createEmbeddedSignature throws EmbeddedRecipientNotReturned when send returns an empty recipients list")
+    void createEmbeddedSignatureEmptySentRecipients() {
+        // getRecipients() is never null, so the role-ordering loops run over an empty list and the
+        // missing id surfaces as the typed error (not an NPE).
+        enqueueJson(sendEnvelope("doc-10", new String[0][]));
+
+        TurboDocxException.ValidationException ex = assertThrows(
+                TurboDocxException.ValidationException.class,
+                () -> client.turboSign().createEmbeddedSignature(
+                        new CreateEmbeddedSignatureRequest.Builder()
+                                .templateId("tmpl-1")
+                                .recipients(Collections.singletonList(
+                                        new EmbeddedSignatureRecipient.Builder()
+                                                .role("client").name("Wanted").email("wanted@example.com").build()))
+                                .build()));
+        assertEquals("EmbeddedRecipientNotReturned", ex.getCode());
+    }
+
+    @Test
+    @DisplayName("createEmbeddedSignature throws EmbeddedRecipientNotReturned when the send response has no recipients key")
+    void createEmbeddedSignatureAbsentSentRecipients() {
+        JsonObject body = new JsonObject();
+        body.addProperty("success", true);
+        body.addProperty("documentId", "doc-11");
+        body.addProperty("status", "under_review");
+        body.addProperty("message", "ok");
+        enqueueJson(body.toString());
+
+        TurboDocxException.ValidationException ex = assertThrows(
+                TurboDocxException.ValidationException.class,
+                () -> client.turboSign().createEmbeddedSignature(
+                        new CreateEmbeddedSignatureRequest.Builder()
+                                .templateId("tmpl-1")
+                                .recipients(Collections.singletonList(
+                                        new EmbeddedSignatureRecipient.Builder()
+                                                .role("client").name("Wanted").email("wanted@example.com").build()))
+                                .build()));
+        assertEquals("EmbeddedRecipientNotReturned", ex.getCode());
+    }
+
+    @Test
     @DisplayName("createSigningUrl treats an empty returnUrl as absent — no error and omitted from the request, while a valid https returnUrl is sent")
     void createSigningUrlEmptyReturnUrlIsAbsent() throws Exception {
         // Empty returnUrl: must not throw InvalidReturnUrl and must not appear on the wire.
