@@ -28,6 +28,8 @@ public class CreateEmbeddedSignatureRequest {
     private final Boolean sendEmail;
     /** Optional completion fallback. Must be an https URL. Passed to each embed URL. */
     private final String returnUrl;
+    /** How each embedded signing page shows its page navigation. Passed to each embed URL. */
+    private final PageNavigation pageNavigation;
 
     private CreateEmbeddedSignatureRequest(Builder builder) {
         this.file = builder.file;
@@ -44,6 +46,7 @@ public class CreateEmbeddedSignatureRequest {
         this.fields = builder.fields;
         this.sendEmail = builder.sendEmail;
         this.returnUrl = builder.returnUrl;
+        this.pageNavigation = builder.pageNavigation;
     }
 
     public byte[] getFile() {
@@ -102,6 +105,10 @@ public class CreateEmbeddedSignatureRequest {
         return returnUrl;
     }
 
+    public PageNavigation getPageNavigation() {
+        return pageNavigation;
+    }
+
     public boolean hasFile() {
         return file != null && file.length > 0;
     }
@@ -121,6 +128,7 @@ public class CreateEmbeddedSignatureRequest {
         private List<Field> fields;
         private Boolean sendEmail;
         private String returnUrl;
+        private PageNavigation pageNavigation;
 
         public Builder file(byte[] file) {
             this.file = file;
@@ -198,6 +206,12 @@ public class CreateEmbeddedSignatureRequest {
         /** Completion fallback URL, forwarded to each embed URL (https only). */
         public Builder returnUrl(String returnUrl) {
             this.returnUrl = returnUrl;
+            return this;
+        }
+
+        /** How each embedded signing page shows its page navigation, forwarded to each embed URL. */
+        public Builder pageNavigation(PageNavigation pageNavigation) {
+            this.pageNavigation = pageNavigation;
             return this;
         }
 
