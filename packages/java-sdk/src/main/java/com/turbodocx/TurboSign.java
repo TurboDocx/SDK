@@ -141,6 +141,8 @@ public final class TurboSign {
      *
      * @param templateId ID of the template
      * @return the template's signer roles
+     * @throws TurboDocxException.NotFoundException (404, code {@code SignatureSetupNotFound}) when the
+     *         template has no saved signature setup, or is not a template in your organization
      * @throws IOException on transport failure
      */
     public TemplateSignatureSetup getTemplateSignatureSetup(String templateId) throws IOException {

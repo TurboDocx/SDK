@@ -19,6 +19,20 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 | createSigningUrl | `createSigningUrl()` | `create_signing_url()` | `CreateSigningURL()` | `createSigningUrl()` | `createSigningUrl()` | `create_signing_url()` |
 | getEmbeddedSigningSettings | `getEmbeddedSigningSettings()` | `get_embedded_signing_settings()` | `GetEmbeddedSigningSettings()` | `getEmbeddedSigningSettings()` | `getEmbeddedSigningSettings()` | `get_embedded_signing_settings()` |
 | createEmbeddedSignature | `createEmbeddedSignature()` | `create_embedded_signature()` | `CreateEmbeddedSignature()` | `createEmbeddedSignature()` | `createEmbeddedSignature()` | `create_embedded_signature()` |
+| getTemplateSignatureSetup | `getTemplateSignatureSetup()` | `get_template_signature_setup()` | `GetTemplateSignatureSetup()` | `getTemplateSignatureSetup()` | `getTemplateSignatureSetup()` | `get_template_signature_setup()` |
+
+**getTemplateSignatureSetup note:** `GET /turbosign/templates/{id}/signature-setup` lists a
+template's signer roles (`key` is the value for `recipients[].role`), in signing order. JS, Go, PHP
+and Java return a typed `TemplateSignatureSetup`; Python and Ruby return the raw `Dict`/`Hash`
+(`templateId`, `roles`), matching how they handle every other TurboSign read. A template with no
+saved signature setup, or one outside the caller's org, is a 404 with code `SignatureSetupNotFound`
+(the not-found error class in each SDK); every SDK's docstring and README say so.
+
+**Send `fields` rule:** both send paths (and embedded signing, which sends through them) always
+send `fields`, as `[]` when the caller passes none, never a missing key and never `null`. Without
+roles the API rejects a missing key with 400 `FieldsRequired` but accepts an empty list (a review
+link with no fields is valid; fields are placed in the preview). On a role send the API reads `[]`
+exactly like a missing key and uses the template's saved fields.
 
 **Embedded signing notes:** `createSigningUrl` posts `{ recipientId | externalId (exactly one),
 returnUrl? (https), identityAssertion? }` and unwraps `{ data: { results } }`. The API rejects unknown

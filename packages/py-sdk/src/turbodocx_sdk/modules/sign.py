@@ -609,6 +609,10 @@ class TurboSign:
                   fieldCount} plus defaultName/defaultEmail when hasSavedSigner is true.
                   ``key`` is the value to pass as a recipient's ``role``.
 
+        Raises:
+            NotFoundError: (404, code ``SignatureSetupNotFound``) when the template has no saved
+                signature setup, or is not a template in your organization.
+
         Example:
             >>> setup = await TurboSign.get_template_signature_setup("template-id")
             >>> [r["key"] for r in setup["roles"]]  # ['client', 'countersigner']

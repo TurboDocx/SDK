@@ -754,6 +754,8 @@ export class TurboSign {
    *
    * @param templateId - ID of the template
    * @returns The template's signer roles
+   * @throws {NotFoundError} (404, code `SignatureSetupNotFound`) when the template has no saved
+   *   signature setup, or is not a template in your organization
    *
    * @example
    * ```typescript

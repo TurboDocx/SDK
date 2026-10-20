@@ -512,7 +512,8 @@ module TurboDocxSdk
       # @param template_id [String]
       # @return [Hash] with "templateId" and "roles" (each "key", "label", "order",
       #   "hasSavedSigner", optional "defaultName"/"defaultEmail", and "fieldCount")
-      # @raise [NotFoundError] if the template does not exist
+      # @raise [NotFoundError] (404, code "SignatureSetupNotFound") when the template has no saved
+      #   signature setup, or is not a template in your organization
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
       def get_template_signature_setup(template_id)

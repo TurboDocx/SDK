@@ -693,6 +693,9 @@ type TemplateSignatureSetup struct {
 // signer, save the signature setup) is sent by naming each recipient's role: the fields saved for
 // that role come with it. This returns each role's Key (the value for Role), in signing order,
 // whether the template has a saved signer used when you leave the role out, and its field count.
+//
+// It returns a *NotFoundError (404, code SignatureSetupNotFound) when the template has no saved
+// signature setup, or is not a template in your organization.
 func (c *TurboSignClient) GetTemplateSignatureSetup(ctx context.Context, templateID string) (*TemplateSignatureSetup, error) {
 	var response TemplateSignatureSetup
 

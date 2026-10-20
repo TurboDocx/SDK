@@ -282,6 +282,8 @@ final class TurboSign
      *
      * @param string $templateId ID of the template
      * @return TemplateSignatureSetup
+     * @throws \TurboDocx\Exceptions\NotFoundException (404, code `SignatureSetupNotFound`) when the
+     *     template has no saved signature setup, or is not a template in your organization
      *
      * @example
      * ```php
