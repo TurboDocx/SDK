@@ -264,10 +264,11 @@ export class TurboSign {
   }
 
   /**
-   * Send signature request and immediately send emails
+   * Send a document for signature
    *
-   * This method uploads a document with signature fields and recipients,
-   * then immediately sends signature request emails to all recipients.
+   * This method uploads a document with signature fields and recipients and
+   * sends it for signature. Recipients are emailed their signing links unless
+   * `sendEmail` is `false`.
    *
    * @param request - Document, recipients, and fields configuration
    * @returns Document with confirmation message

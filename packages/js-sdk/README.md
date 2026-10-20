@@ -231,7 +231,9 @@ console.log('Document ID:', result.documentId);
 
 #### `sendSignature(options)`
 
-Upload a document and immediately send signature request emails.
+Upload a document and send it for signature. Recipients are emailed their signing links unless you pass `sendEmail: false`.
+
+Pass `fileName` alongside `file` to name the stored file: any non-empty name up to 255 characters, with or without an extension. Without it (or with an empty one) the file keeps the uploaded part's name: `document.<ext>` for a `Buffer`, or a file path's / browser `File`'s own name when it ends in `.pdf`, `.docx` or `.pptx` (otherwise `document.<ext>`). The document's display name is `documentName` when given, otherwise the stored file name up to its first `.`.
 
 ```typescript
 const result = await TurboSign.sendSignature({

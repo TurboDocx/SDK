@@ -346,7 +346,11 @@ export interface EmbeddedSignatureRecipient {
  */
 export interface CreateEmbeddedSignatureRequest {
   file?: string | File | Buffer;
-  fileName?: string; // stored file name for an uploaded `file` (non-empty, max 255 chars)
+  /**
+   * Stored file name for an uploaded `file` (max 255 chars; no extension needed). Empty or
+   * omitted: the uploaded part's name is stored.
+   */
+  fileName?: string;
   fileLink?: string;
   templateId?: string;
   deliverableId?: string;
@@ -690,7 +694,10 @@ export interface EmbeddedSigningSettings {
 export interface CreateSignatureReviewLinkRequest {
   /** PDF file as file path, Buffer, or browser File */
   file?: string | File | Buffer;
-  /** Stored file name for an uploaded `file` (any non-empty name, max 255 chars; no extension needed) */
+  /**
+   * Stored file name for an uploaded `file` (max 255 chars; no extension needed). Empty or
+   * omitted: the uploaded part's name is stored.
+   */
   fileName?: string;
   /** URL to document file */
   fileLink?: string;
@@ -754,7 +761,10 @@ export interface CreateSignatureReviewLinkResponse {
 export interface SendSignatureRequest {
   /** PDF file as file path, Buffer, or browser File */
   file?: string | File | Buffer;
-  /** Stored file name for an uploaded `file` (any non-empty name, max 255 chars; no extension needed) */
+  /**
+   * Stored file name for an uploaded `file` (max 255 chars; no extension needed). Empty or
+   * omitted: the uploaded part's name is stored.
+   */
   fileName?: string;
   /** URL to document file */
   fileLink?: string;

@@ -267,7 +267,8 @@ class TurboSign:
                 "required": False on them with a 400.
                 Field dicts are passed through verbatim, so keys stay camelCase.
             file: PDF file content as bytes
-            file_name: Stored file name for an uploaded ``file`` (non-empty, max 255 chars; no extension needed)
+            file_name: Stored file name for an uploaded ``file`` (max 255 chars; no extension needed).
+                Empty or omitted: the uploaded part's name is stored.
             file_link: URL to document file
             deliverable_id: TurboDocx deliverable ID
             template_id: TurboDocx template ID
@@ -412,10 +413,11 @@ class TurboSign:
         expiration_warning_interval: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Send signature request and immediately send emails
+        Send a document for signature
 
-        This method uploads a document with signature fields and recipients,
-        then immediately sends signature request emails to all recipients.
+        This method uploads a document with signature fields and recipients and
+        sends it for signature. Recipients are emailed their signing links unless
+        ``send_email`` is ``False``.
 
         Args:
             recipients: List of recipients who will sign
@@ -453,7 +455,8 @@ class TurboSign:
                 "required": False on them with a 400.
                 Field dicts are passed through verbatim, so keys stay camelCase.
             file: PDF file content as bytes
-            file_name: Stored file name for an uploaded ``file`` (non-empty, max 255 chars; no extension needed)
+            file_name: Stored file name for an uploaded ``file`` (max 255 chars; no extension needed).
+                Empty or omitted: the uploaded part's name is stored.
             file_link: URL to document file
             deliverable_id: TurboDocx deliverable ID
             template_id: TurboDocx template ID
@@ -1091,7 +1094,8 @@ class TurboSign:
                 left out falls back to the template's saved signer, who also gets an embed
                 URL in the result.
             file: PDF file content as bytes.
-            file_name: Stored file name for an uploaded ``file`` (non-empty, max 255 chars; no extension needed).
+            file_name: Stored file name for an uploaded ``file`` (max 255 chars; no extension needed).
+                Empty or omitted: the uploaded part's name is stored.
             file_link: URL to the document file.
             template_id: TurboDocx template id.
             deliverable_id: TurboDocx deliverable id.

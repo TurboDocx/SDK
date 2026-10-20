@@ -266,7 +266,9 @@ print(f"Document ID: {result['documentId']}")
 
 #### `send_signature()`
 
-Upload a document and immediately send signature request emails.
+Upload a document and send it for signature. Recipients are emailed their signing links unless you pass `send_email=False`.
+
+Pass `file_name` alongside `file` to name the stored file: any non-empty name up to 255 characters, with or without an extension. Without it (or with an empty one) the file keeps the uploaded part's name: `document.<ext>` for `bytes`, or a file path's basename when it ends in `.pdf`, `.docx` or `.pptx` (otherwise `document.<ext>`). The document's display name is `documentName` when given, otherwise the stored file name up to its first `.`.
 
 ```python
 result = await TurboSign.send_signature(

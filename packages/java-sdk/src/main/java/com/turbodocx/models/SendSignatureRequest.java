@@ -127,6 +127,12 @@ public class SendSignatureRequest {
             return this;
         }
 
+        /**
+         * Stored file name for an uploaded {@link #file(byte[])} (max 255 chars; no extension
+         * needed). Sent as a {@code fileName} form field; the uploaded part itself is named
+         * {@code document.<ext>}, because the API checks that extension. Null or empty:
+         * {@code document.<ext>} is stored.
+         */
         public Builder fileName(String fileName) {
             this.fileName = fileName;
             return this;

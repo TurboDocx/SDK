@@ -195,7 +195,10 @@ type SignatureSchedule struct {
 
 type CreateSignatureReviewLinkRequest struct {
 	// File content (use this OR FileLink/DeliverableID/TemplateID)
-	File     []byte
+	File []byte
+	// FileName sets the stored file name for an uploaded File (max 255 chars; no extension
+	// needed). Sent as a "fileName" form field; the uploaded part itself is always named
+	// document.<ext>, because the API checks that extension. Empty: document.<ext> is stored.
 	FileName string
 
 	// Alternative file sources
@@ -243,7 +246,10 @@ type CreateSignatureReviewLinkResponse struct {
 // SendSignatureRequest is the request for SendSignature
 type SendSignatureRequest struct {
 	// File content (use this OR FileLink/DeliverableID/TemplateID)
-	File     []byte
+	File []byte
+	// FileName sets the stored file name for an uploaded File (max 255 chars; no extension
+	// needed). Sent as a "fileName" form field; the uploaded part itself is always named
+	// document.<ext>, because the API checks that extension. Empty: document.<ext> is stored.
 	FileName string
 
 	// Alternative file sources
