@@ -29,6 +29,7 @@ export {
   type BulkImportResult,
 } from './types/quote-shared';
 export * from './types/quote';
+export * from './types/quote-payment';
 export * from './types/quote-line-item';
 export * from './types/product';
 export * from './types/bundle';
