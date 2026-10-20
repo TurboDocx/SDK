@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"reflect"
 	"strconv"
 )
 
@@ -97,11 +98,53 @@ func quoteQueryParams(opts interface{}) string {
 		}
 	}
 
+	addQueryTaggedSlices(q, opts)
+
 	encoded := q.Encode()
 	if encoded == "" {
 		return ""
 	}
 	return "?" + encoded
+}
+
+// addQueryTaggedSlices adds the []string fields tagged `query:"name"` as repeated params. They
+// send several values under a key a single-value field already uses (e.g. BillingFrequencies
+// next to BillingFrequency, both "billingFrequency"), which a JSON tag can't express.
+func addQueryTaggedSlices(q url.Values, opts interface{}) {
+	v := reflect.ValueOf(opts)
+	for v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return
+		}
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Struct {
+		return
+	}
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		key := t.Field(i).Tag.Get("query")
+		values, ok := v.Field(i).Interface().([]string)
+		if key == "" || !ok {
+			continue
+		}
+		for _, value := range values {
+			q.Add(key, value)
+		}
+	}
+}
+
+// duplicate POSTs to a /duplicate path: the copy's name when given, else no body (the API names
+// the copy "Copy of …"), and unwraps { result }.
+func (c *QuoteClient) duplicate(ctx context.Context, path string, opts []DuplicateOptions, result interface{}) error {
+	var body interface{}
+	if len(opts) > 0 && opts[0].Name != "" {
+		body = map[string]string{"name": opts[0].Name}
+	}
+	resp := struct {
+		Result interface{} `json:"result"`
+	}{Result: result}
+	return c.http.Post(ctx, path, body, &resp)
 }
 
 // --- Bulk import helper ---
@@ -132,6 +175,30 @@ func (c *QuoteClient) ListQuotes(ctx context.Context, options *ListQuotesOptions
 		return nil, err
 	}
 	return &result, nil
+}
+
+// GetQuoteSummary retrieves the quote list's summary cards (pipeline, win rate, monthly
+// recurring…) for a set of filters, in one currency. The status filter is ignored.
+func (c *QuoteClient) GetQuoteSummary(ctx context.Context, options *QuoteSummaryOptions) (*QuoteSummary, error) {
+	var resp struct {
+		Summary QuoteSummary `json:"summary"`
+	}
+	if err := c.http.Get(ctx, "/v1/quotes/summary"+quoteQueryParams(options), &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Summary, nil
+}
+
+// ListQuoteCreators retrieves the people and API keys who created the org's quotes — the ids for
+// the CreatedBy filter
+func (c *QuoteClient) ListQuoteCreators(ctx context.Context) ([]QuoteCreator, error) {
+	var resp struct {
+		Results []QuoteCreator `json:"results"`
+	}
+	if err := c.http.Get(ctx, "/v1/quotes/creators", &resp); err != nil {
+		return nil, err
+	}
+	return resp.Results, nil
 }
 
 // CreateQuote creates a new quote
@@ -178,7 +245,9 @@ func (c *QuoteClient) UpdateQuote(ctx context.Context, id string, request *Updat
 	return &resp.Result, nil
 }
 
-// DeleteQuote deletes a quote by ID
+// DeleteQuote deletes a quote. A sent quote is refused with a 409 ConflictError
+// (CANNOT_DELETE_SENT_QUOTE) — void it instead — and so is an accepted one
+// (CANNOT_DELETE_ACCEPTED_QUOTE). by ID
 func (c *QuoteClient) DeleteQuote(ctx context.Context, id string) (*QuoteSuccessResponse, error) {
 	var result QuoteSuccessResponse
 	if err := c.http.Delete(ctx, "/v1/quotes/"+id, &result); err != nil {
@@ -187,15 +256,14 @@ func (c *QuoteClient) DeleteQuote(ctx context.Context, id string) (*QuoteSuccess
 	return &result, nil
 }
 
-// DuplicateQuote duplicates a quote
-func (c *QuoteClient) DuplicateQuote(ctx context.Context, id string) (*Quote, error) {
-	var resp struct {
-		Result Quote `json:"result"`
-	}
-	if err := c.http.Post(ctx, "/v1/quotes/"+id+"/duplicate", nil, &resp); err != nil {
+// DuplicateQuote duplicates a quote. Pass DuplicateOptions{Name: …} to name the copy; without it the
+// copy is called "Copy of <name>".
+func (c *QuoteClient) DuplicateQuote(ctx context.Context, id string, opts ...DuplicateOptions) (*Quote, error) {
+	var result Quote
+	if err := c.duplicate(ctx, "/v1/quotes/"+id+"/duplicate", opts, &result); err != nil {
 		return nil, err
 	}
-	return &resp.Result, nil
+	return &result, nil
 }
 
 // ApplyPriceBook applies a price book to a quote
@@ -241,7 +309,7 @@ func (c *QuoteClient) DownloadQuotePdf(ctx context.Context, id string) ([]byte, 
 // QUOTES -- STATUS TRANSITIONS
 // ============================================
 
-// SendQuote sends a quote for approval
+// SendQuote sends a quote to its contact for signature
 func (c *QuoteClient) SendQuote(ctx context.Context, id string, request *SendQuoteRequest) (*SendQuoteResponse, error) {
 	// API returns { result, message } but our public type uses json:"quote".
 	var resp struct {
@@ -368,6 +436,71 @@ func (c *QuoteClient) RemoveLineItem(ctx context.Context, quoteID string, itemID
 }
 
 // ============================================
+// CUSTOM LINE ITEM IMAGES
+// Up to three per custom item (a line with no catalog product), PNG or JPEG, 2MB each.
+// Changes are allowed on draft quotes only.
+// ============================================
+
+// lineItemImagesResult unwraps { results: [...] } from the line item image endpoints
+type lineItemImagesResult struct {
+	Results []LineItemImage `json:"results"`
+}
+
+// GetQuoteLineItemImages retrieves every custom line item's images (up to three, in order),
+// keyed by line item ID
+func (c *QuoteClient) GetQuoteLineItemImages(ctx context.Context, quoteID string) (QuoteLineItemImagesResponse, error) {
+	var resp struct {
+		Results QuoteLineItemImagesResponse `json:"results"`
+	}
+	if err := c.http.Get(ctx, "/v1/quotes/"+quoteID+"/items/images", &resp); err != nil {
+		return nil, err
+	}
+	return resp.Results, nil
+}
+
+// GetLineItemImages retrieves one custom line item's images, in order
+func (c *QuoteClient) GetLineItemImages(ctx context.Context, quoteID string, itemID string) ([]LineItemImage, error) {
+	var resp lineItemImagesResult
+	if err := c.http.Get(ctx, "/v1/quotes/"+quoteID+"/items/"+itemID+"/images", &resp); err != nil {
+		return nil, err
+	}
+	return resp.Results, nil
+}
+
+// AddLineItemImages adds images (file paths or bytes) to a custom line item and returns all of
+// its images. Each image is sent as an "images" part with the type detected from its bytes.
+func (c *QuoteClient) AddLineItemImages(ctx context.Context, quoteID string, itemID string, images []ProductImageInput) ([]LineItemImage, error) {
+	files, err := resolveProductImages(images)
+	if err != nil {
+		return nil, err
+	}
+	var resp lineItemImagesResult
+	if err := c.http.PostImagesMultipart(ctx, "/v1/quotes/"+quoteID+"/items/"+itemID+"/images", files, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Results, nil
+}
+
+// ReorderLineItemImages sets the order of a custom line item's images, first to last
+func (c *QuoteClient) ReorderLineItemImages(ctx context.Context, quoteID string, itemID string, imageIDs []string) ([]LineItemImage, error) {
+	var resp lineItemImagesResult
+	body := map[string][]string{"imageIds": imageIDs}
+	if err := c.http.Put(ctx, "/v1/quotes/"+quoteID+"/items/"+itemID+"/images/order", body, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Results, nil
+}
+
+// RemoveLineItemImage removes one image from a custom line item and returns the images left
+func (c *QuoteClient) RemoveLineItemImage(ctx context.Context, quoteID string, itemID string, imageID string) ([]LineItemImage, error) {
+	var resp lineItemImagesResult
+	if err := c.http.Delete(ctx, "/v1/quotes/"+quoteID+"/items/"+itemID+"/images/"+imageID, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Results, nil
+}
+
+// ============================================
 // PRODUCTS
 // ============================================
 
@@ -461,15 +594,14 @@ func (c *QuoteClient) DeleteProduct(ctx context.Context, id string) (*QuoteSucce
 	return &result, nil
 }
 
-// DuplicateProduct duplicates a product
-func (c *QuoteClient) DuplicateProduct(ctx context.Context, id string) (*Product, error) {
-	var resp struct {
-		Result Product `json:"result"`
-	}
-	if err := c.http.Post(ctx, "/v1/products/"+id+"/duplicate", nil, &resp); err != nil {
+// DuplicateProduct duplicates a product. Pass DuplicateOptions{Name: …} to name the copy; without it the
+// copy is called "Copy of <name>".
+func (c *QuoteClient) DuplicateProduct(ctx context.Context, id string, opts ...DuplicateOptions) (*Product, error) {
+	var result Product
+	if err := c.duplicate(ctx, "/v1/products/"+id+"/duplicate", opts, &result); err != nil {
 		return nil, err
 	}
-	return &resp.Result, nil
+	return &result, nil
 }
 
 // GetProductPrimaryImages retrieves primary images for the given product IDs
@@ -479,6 +611,19 @@ func (c *QuoteClient) GetProductPrimaryImages(ctx context.Context, productIDs []
 	}
 	body := map[string][]string{"productIds": productIDs}
 	if err := c.http.Post(ctx, "/v1/products/primary-images", body, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Results, nil
+}
+
+// GetProductQuoteImages retrieves the images each product shows on a quote: up to three, in
+// display order (1–100 product IDs)
+func (c *QuoteClient) GetProductQuoteImages(ctx context.Context, productIDs []string) (ProductQuoteImagesResponse, error) {
+	var resp struct {
+		Results ProductQuoteImagesResponse `json:"results"`
+	}
+	body := map[string][]string{"productIds": productIDs}
+	if err := c.http.Post(ctx, "/v1/products/quote-images", body, &resp); err != nil {
 		return nil, err
 	}
 	return resp.Results, nil
@@ -578,7 +723,8 @@ func (c *QuoteClient) UpdatePriceBook(ctx context.Context, id string, request *U
 	return &resp.Result, nil
 }
 
-// DeletePriceBook deletes a price book by ID
+// DeletePriceBook deletes a price book by ID. The org's default price book is refused (400
+// PriceBookIsDefault).
 func (c *QuoteClient) DeletePriceBook(ctx context.Context, id string) (*QuoteSuccessResponse, error) {
 	var result QuoteSuccessResponse
 	if err := c.http.Delete(ctx, "/v1/pricebooks/"+id, &result); err != nil {
@@ -587,15 +733,14 @@ func (c *QuoteClient) DeletePriceBook(ctx context.Context, id string) (*QuoteSuc
 	return &result, nil
 }
 
-// DuplicatePriceBook duplicates a price book
-func (c *QuoteClient) DuplicatePriceBook(ctx context.Context, id string) (*PriceBook, error) {
-	var resp struct {
-		Result PriceBook `json:"result"`
-	}
-	if err := c.http.Post(ctx, "/v1/pricebooks/"+id+"/duplicate", nil, &resp); err != nil {
+// DuplicatePriceBook duplicates a price book. Pass DuplicateOptions{Name: …} to name the copy; without it the
+// copy is called "Copy of <name>".
+func (c *QuoteClient) DuplicatePriceBook(ctx context.Context, id string, opts ...DuplicateOptions) (*PriceBook, error) {
+	var result PriceBook
+	if err := c.duplicate(ctx, "/v1/pricebooks/"+id+"/duplicate", opts, &result); err != nil {
 		return nil, err
 	}
-	return &resp.Result, nil
+	return &result, nil
 }
 
 // ListPriceBookProducts retrieves products associated with a price book
@@ -671,15 +816,14 @@ func (c *QuoteClient) DeleteBundle(ctx context.Context, id string) (*QuoteSucces
 	return &result, nil
 }
 
-// DuplicateBundle duplicates a bundle
-func (c *QuoteClient) DuplicateBundle(ctx context.Context, id string) (*Bundle, error) {
-	var resp struct {
-		Result Bundle `json:"result"`
-	}
-	if err := c.http.Post(ctx, "/v1/bundles/"+id+"/duplicate", nil, &resp); err != nil {
+// DuplicateBundle duplicates a bundle. Pass DuplicateOptions{Name: …} to name the copy; without it the
+// copy is called "Copy of <name>".
+func (c *QuoteClient) DuplicateBundle(ctx context.Context, id string, opts ...DuplicateOptions) (*Bundle, error) {
+	var result Bundle
+	if err := c.duplicate(ctx, "/v1/bundles/"+id+"/duplicate", opts, &result); err != nil {
 		return nil, err
 	}
-	return &resp.Result, nil
+	return &result, nil
 }
 
 // ============================================
@@ -736,7 +880,9 @@ func (c *QuoteClient) UpdateCompany(ctx context.Context, id string, request *Upd
 	return &resp.Result, nil
 }
 
-// DeleteCompany deletes a company by ID
+// DeleteCompany deletes a company and its contacts. Refused with a 409 ConflictError
+// (CompanyHasOpenQuotes) while it has open quotes (draft or sent) — see
+// GetCompanyOpenQuotes.
 func (c *QuoteClient) DeleteCompany(ctx context.Context, id string) (*QuoteSuccessResponse, error) {
 	var result QuoteSuccessResponse
 	if err := c.http.Delete(ctx, "/v1/companies/"+id, &result); err != nil {
@@ -745,8 +891,18 @@ func (c *QuoteClient) DeleteCompany(ctx context.Context, id string) (*QuoteSucce
 	return &result, nil
 }
 
+// GetCompanyOpenQuotes retrieves the open quotes (draft or sent) for a company:
+// what blocks deleting it
+func (c *QuoteClient) GetCompanyOpenQuotes(ctx context.Context, companyID string) (*OpenQuotesResponse, error) {
+	var result OpenQuotesResponse
+	if err := c.http.Get(ctx, "/v1/companies/"+companyID+"/open-quotes", &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // ListCompanyContacts retrieves contacts for a specific company
-func (c *QuoteClient) ListCompanyContacts(ctx context.Context, companyID string, options *PaginationParams) (*ContactListResponse, error) {
+func (c *QuoteClient) ListCompanyContacts(ctx context.Context, companyID string, options *ListCompanyContactsOptions) (*ContactListResponse, error) {
 	var result ContactListResponse
 	qs := quoteQueryParams(options)
 	if err := c.http.Get(ctx, "/v1/companies/"+companyID+"/contacts"+qs, &result); err != nil {
@@ -798,10 +954,22 @@ func (c *QuoteClient) UpdateContact(ctx context.Context, id string, request *Upd
 	return &resp.Result, nil
 }
 
-// DeleteContact deletes a contact by ID
+// DeleteContact deletes a contact. Refused with a 409 ConflictError when they are the
+// company's only contact (LastContact) or the contact on open quotes (ContactHasOpenQuotes) —
+// see GetContactOpenQuotes.
 func (c *QuoteClient) DeleteContact(ctx context.Context, id string) (*QuoteSuccessResponse, error) {
 	var result QuoteSuccessResponse
 	if err := c.http.Delete(ctx, "/v1/contacts/"+id, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetContactOpenQuotes retrieves the open quotes (draft or sent) made out to a
+// contact: what blocks deleting them
+func (c *QuoteClient) GetContactOpenQuotes(ctx context.Context, contactID string) (*OpenQuotesResponse, error) {
+	var result OpenQuotesResponse
+	if err := c.http.Get(ctx, "/v1/contacts/"+contactID+"/open-quotes", &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -999,6 +1167,18 @@ func (c *QuoteClient) UpdateQuoteNumberConfig(ctx context.Context, format *Quote
 		Results QuoteNumberConfig `json:"results"`
 	}
 	if err := c.http.Patch(ctx, "/v1/quotes/number-config", format, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Results, nil
+}
+
+// GetNextQuoteNumber retrieves the number the next new quote will get. Read only — the counter
+// doesn't move, so a quote created by someone else in between takes it first.
+func (c *QuoteClient) GetNextQuoteNumber(ctx context.Context) (*NextQuoteNumber, error) {
+	var resp struct {
+		Results NextQuoteNumber `json:"results"`
+	}
+	if err := c.http.Get(ctx, "/v1/quotes/number-config/next", &resp); err != nil {
 		return nil, err
 	}
 	return &resp.Results, nil

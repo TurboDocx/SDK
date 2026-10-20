@@ -7,6 +7,8 @@ public class Company {
     private String id;
     private String orgId;
     private String name;
+    /** The company's own email (null for companies created without one) */
+    private String email;
     private String phone;
     private String city;
     private String state;
@@ -23,6 +25,7 @@ public class Company {
     public String getId() { return id; }
     public String getOrgId() { return orgId; }
     public String getName() { return name; }
+    public String getEmail() { return email; }
     public String getPhone() { return phone; }
     public String getCity() { return city; }
     public String getState() { return state; }

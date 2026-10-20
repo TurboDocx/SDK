@@ -27,6 +27,14 @@ import type {
   ApplyPriceBookResponse,
   QuoteNumberConfig,
   QuoteNumberFormat,
+  QuoteSummary,
+  QuoteSummaryOptions,
+  QuoteCreator,
+  NextQuoteNumber,
+  DuplicateOptions,
+  OpenQuotesResponse,
+  LineItemImage,
+  QuoteLineItemImagesResponse,
 } from '../types/quote';
 import type {
   LineItem,
@@ -43,6 +51,7 @@ import type {
   ListProductsOptions,
   ProductListResponse,
   ProductPrimaryImagesResponse,
+  ProductQuoteImagesResponse,
 } from '../types/product';
 import type {
   PriceBook,
@@ -72,6 +81,7 @@ import type {
   CreateContactRequest,
   UpdateContactRequest,
   ListContactsOptions,
+  ListCompanyContactsOptions,
   ContactListResponse,
 } from '../types/contact';
 import type {
@@ -107,6 +117,25 @@ function toQueryParams(request?: Record<string, any>): Record<string, string | s
   return Object.keys(params).length > 0 ? params : undefined;
 }
 
+// Each image is an "images" part: a path is read, a Buffer's type comes from its magic bytes,
+// a File goes as is.
+function appendImages(formData: FormData, images: Array<string | File | Buffer>): void {
+  for (const image of images) {
+    if (typeof image === 'string') {
+      const fileBuffer = fs.readFileSync(image);
+      const detected = detectFileType(fileBuffer);
+      const blob = new Blob([toBlobPart(fileBuffer)], { type: detected.mimetype });
+      formData.append('images', blob, nodePath.basename(image));
+    } else if (image instanceof Buffer) {
+      const detected = detectFileType(image);
+      const blob = new Blob([toBlobPart(image)], { type: detected.mimetype });
+      formData.append('images', blob, `image.${detected.extension}`);
+    } else {
+      formData.append('images', image as File, (image as File).name);
+    }
+  }
+}
+
 function buildProductFormData(request: Record<string, any>): FormData {
   const formData = new FormData();
   const { images, ...dataFields } = request;
@@ -114,24 +143,13 @@ function buildProductFormData(request: Record<string, any>): FormData {
   formData.append('data', JSON.stringify(dataFields));
 
   if (images) {
-    for (const image of images as Array<string | File | Buffer>) {
-      if (typeof image === 'string') {
-        const fileBuffer = fs.readFileSync(image);
-        const detected = detectFileType(fileBuffer);
-        const blob = new Blob([toBlobPart(fileBuffer)], { type: detected.mimetype });
-        formData.append('images', blob, nodePath.basename(image));
-      } else if (image instanceof Buffer) {
-        const detected = detectFileType(image);
-        const blob = new Blob([toBlobPart(image)], { type: detected.mimetype });
-        formData.append('images', blob, `image.${detected.extension}`);
-      } else {
-        formData.append('images', image as File, (image as File).name);
-      }
-    }
+    appendImages(formData, images as Array<string | File | Buffer>);
   }
 
   return formData;
 }
+
+
 
 export class TurboQuote {
   private static client: HttpClient;
@@ -153,6 +171,17 @@ export class TurboQuote {
   // Backend single-entity responses come as { result: T, message?: string }
   // after smartUnwrap strips the outer { data: ... } wrapper.
   private static unwrap<T>(response: { result: T }): T {
+    return response.result;
+  }
+
+  // Shared POST for the four duplicate endpoints: the copy's name when given, else no body (the
+  // API names the copy "Copy of …").
+  private static async postDuplicate<T>(path: string, options?: DuplicateOptions): Promise<T> {
+    const client = this.getClient();
+    const response =
+      options?.name !== undefined
+        ? await client.post<{ result: T }>(path, { name: options.name })
+        : await client.post<{ result: T }>(path);
     return response.result;
   }
 
@@ -181,6 +210,16 @@ export class TurboQuote {
     return response.results;
   }
 
+  /**
+   * The number the next new quote will get. Read only — the counter doesn't move, so a quote
+   * created by someone else in between takes it first. Any role that can create quotes.
+   */
+  static async getNextQuoteNumber(): Promise<NextQuoteNumber> {
+    const client = this.getClient();
+    const response = await client.get<{ results: NextQuoteNumber }>('/v1/quotes/number-config/next');
+    return response.results;
+  }
+
   // ============================================
   // QUOTES — CRUD
   // ============================================
@@ -188,6 +227,23 @@ export class TurboQuote {
   static async listQuotes(options?: ListQuotesOptions): Promise<QuoteListResponse> {
     const client = this.getClient();
     return client.get<QuoteListResponse>('/v1/quotes', toQueryParams(options));
+  }
+
+  /**
+   * The quote list's summary cards (pipeline, win rate, monthly recurring…) for a set of
+   * filters, in one currency (`summaryCurrency`). The status filter is ignored.
+   */
+  static async getQuoteSummary(options?: QuoteSummaryOptions): Promise<QuoteSummary> {
+    const client = this.getClient();
+    const response = await client.get<{ summary: QuoteSummary }>('/v1/quotes/summary', toQueryParams(options));
+    return response.summary;
+  }
+
+  /** The people and API keys who created the org's quotes — the ids for the `createdBy` filter. */
+  static async listQuoteCreators(): Promise<QuoteCreator[]> {
+    const client = this.getClient();
+    const response = await client.get<{ results: QuoteCreator[] }>('/v1/quotes/creators');
+    return response.results;
   }
 
   static async createQuote(request: CreateQuoteRequest): Promise<Quote> {
@@ -220,14 +276,17 @@ export class TurboQuote {
     return this.unwrap(await client.patch<{ result: Quote }>(`/v1/quotes/${id}`, request));
   }
 
+  /**
+   * Delete a quote. A sent quote is refused with a 409 (`CANNOT_DELETE_SENT_QUOTE`) — void it
+   * instead — and so is an accepted one (`CANNOT_DELETE_ACCEPTED_QUOTE`).
+   */
   static async deleteQuote(id: string): Promise<SuccessResponse> {
     const client = this.getClient();
     return client.delete<SuccessResponse>(`/v1/quotes/${id}`);
   }
 
-  static async duplicateQuote(id: string): Promise<Quote> {
-    const client = this.getClient();
-    return this.unwrap(await client.post<{ result: Quote }>(`/v1/quotes/${id}/duplicate`));
+  static async duplicateQuote(id: string, options?: DuplicateOptions): Promise<Quote> {
+    return this.postDuplicate<Quote>(`/v1/quotes/${id}/duplicate`, options);
   }
 
   static async applyPriceBook(quoteId: string, priceBookId: string): Promise<ApplyPriceBookResponse> {
@@ -323,6 +382,61 @@ export class TurboQuote {
   }
 
   // ============================================
+  // CUSTOM LINE ITEM IMAGES
+  // Up to three per custom item (a line with no catalog product), PNG or JPEG, 2MB each.
+  // Changes are allowed on draft quotes only.
+  // ============================================
+
+  /** Every custom line item's images (up to three, in order), keyed by line item id. */
+  static async getQuoteLineItemImages(quoteId: string): Promise<QuoteLineItemImagesResponse> {
+    const client = this.getClient();
+    const response = await client.get<{ results: QuoteLineItemImagesResponse }>(`/v1/quotes/${quoteId}/items/images`);
+    return response.results;
+  }
+
+  /** One custom line item's images, in order. */
+  static async getLineItemImages(quoteId: string, itemId: string): Promise<LineItemImage[]> {
+    const client = this.getClient();
+    const response = await client.get<{ results: LineItemImage[] }>(`/v1/quotes/${quoteId}/items/${itemId}/images`);
+    return response.results;
+  }
+
+  /** Add images to a custom line item (file paths, Buffers or Files). Returns all of its images. */
+  static async addLineItemImages(
+    quoteId: string,
+    itemId: string,
+    images: Array<string | File | Buffer>
+  ): Promise<LineItemImage[]> {
+    const client = this.getClient();
+    const formData = new FormData();
+    appendImages(formData, images);
+    const response = await client.postFormData<{ results: LineItemImage[] }>(
+      `/v1/quotes/${quoteId}/items/${itemId}/images`,
+      formData
+    );
+    return response.results;
+  }
+
+  /** Set the order of a custom line item's images, first to last. */
+  static async reorderLineItemImages(quoteId: string, itemId: string, imageIds: string[]): Promise<LineItemImage[]> {
+    const client = this.getClient();
+    const response = await client.put<{ results: LineItemImage[] }>(
+      `/v1/quotes/${quoteId}/items/${itemId}/images/order`,
+      { imageIds }
+    );
+    return response.results;
+  }
+
+  /** Remove one image from a custom line item. Returns the images left. */
+  static async removeLineItemImage(quoteId: string, itemId: string, imageId: string): Promise<LineItemImage[]> {
+    const client = this.getClient();
+    const response = await client.delete<{ results: LineItemImage[] }>(
+      `/v1/quotes/${quoteId}/items/${itemId}/images/${imageId}`
+    );
+    return response.results;
+  }
+
+  // ============================================
   // PRODUCTS
   // ============================================
 
@@ -363,14 +477,20 @@ export class TurboQuote {
     return client.delete<SuccessResponse>(`/v1/products/${id}`);
   }
 
-  static async duplicateProduct(id: string): Promise<Product> {
-    const client = this.getClient();
-    return this.unwrap(await client.post<{ result: Product }>(`/v1/products/${id}/duplicate`));
+  static async duplicateProduct(id: string, options?: DuplicateOptions): Promise<Product> {
+    return this.postDuplicate<Product>(`/v1/products/${id}/duplicate`, options);
   }
 
   static async getProductPrimaryImages(productIds: string[]): Promise<ProductPrimaryImagesResponse> {
     const client = this.getClient();
     const response = await client.post<{ results: ProductPrimaryImagesResponse }>('/v1/products/primary-images', { productIds });
+    return response.results;
+  }
+
+  /** The images each product shows on a quote: up to three, in display order (1–100 product ids). */
+  static async getProductQuoteImages(productIds: string[]): Promise<ProductQuoteImagesResponse> {
+    const client = this.getClient();
+    const response = await client.post<{ results: ProductQuoteImagesResponse }>('/v1/products/quote-images', { productIds });
     return response.results;
   }
 
@@ -406,14 +526,14 @@ export class TurboQuote {
     return this.unwrap(await client.patch<{ result: PriceBook }>(`/v1/pricebooks/${id}`, request));
   }
 
+  /** Delete a price book. The org's default price book is refused (400 `PriceBookIsDefault`). */
   static async deletePriceBook(id: string): Promise<SuccessResponse> {
     const client = this.getClient();
     return client.delete<SuccessResponse>(`/v1/pricebooks/${id}`);
   }
 
-  static async duplicatePriceBook(id: string): Promise<PriceBook> {
-    const client = this.getClient();
-    return this.unwrap(await client.post<{ result: PriceBook }>(`/v1/pricebooks/${id}/duplicate`));
+  static async duplicatePriceBook(id: string, options?: DuplicateOptions): Promise<PriceBook> {
+    return this.postDuplicate<PriceBook>(`/v1/pricebooks/${id}/duplicate`, options);
   }
 
   static async listPriceBookProducts(id: string, options?: ListPriceBookProductsOptions): Promise<PriceBookProductListResponse> {
@@ -454,9 +574,8 @@ export class TurboQuote {
     return client.delete<SuccessResponse>(`/v1/bundles/${id}`);
   }
 
-  static async duplicateBundle(id: string): Promise<Bundle> {
-    const client = this.getClient();
-    return this.unwrap(await client.post<{ result: Bundle }>(`/v1/bundles/${id}/duplicate`));
+  static async duplicateBundle(id: string, options?: DuplicateOptions): Promise<Bundle> {
+    return this.postDuplicate<Bundle>(`/v1/bundles/${id}/duplicate`, options);
   }
 
   // ============================================
@@ -487,12 +606,22 @@ export class TurboQuote {
     return this.unwrap(await client.patch<{ result: Company }>(`/v1/companies/${id}`, request));
   }
 
+  /**
+   * Delete a company and its contacts. Refused with a 409 (`CompanyHasOpenQuotes`) while it has
+   * open quotes (draft or sent) — see `getCompanyOpenQuotes`.
+   */
   static async deleteCompany(id: string): Promise<SuccessResponse> {
     const client = this.getClient();
     return client.delete<SuccessResponse>(`/v1/companies/${id}`);
   }
 
-  static async listCompanyContacts(companyId: string, options?: PaginationParams): Promise<ContactListResponse> {
+  /** The open quotes (draft or sent) for a company: what blocks deleting it. */
+  static async getCompanyOpenQuotes(companyId: string): Promise<OpenQuotesResponse> {
+    const client = this.getClient();
+    return client.get<OpenQuotesResponse>(`/v1/companies/${companyId}/open-quotes`);
+  }
+
+  static async listCompanyContacts(companyId: string, options?: ListCompanyContactsOptions): Promise<ContactListResponse> {
     const client = this.getClient();
     return client.get<ContactListResponse>(`/v1/companies/${companyId}/contacts`, toQueryParams(options));
   }
@@ -520,9 +649,19 @@ export class TurboQuote {
     return this.unwrap(await client.patch<{ result: Contact }>(`/v1/contacts/${id}`, request));
   }
 
+  /**
+   * Delete a contact. Refused with a 409 when they are the company's only contact (`LastContact`)
+   * or the contact on open quotes (`ContactHasOpenQuotes`) — see `getContactOpenQuotes`.
+   */
   static async deleteContact(id: string): Promise<SuccessResponse> {
     const client = this.getClient();
     return client.delete<SuccessResponse>(`/v1/contacts/${id}`);
+  }
+
+  /** The open quotes (draft or sent) made out to a contact: what blocks deleting them. */
+  static async getContactOpenQuotes(contactId: string): Promise<OpenQuotesResponse> {
+    const client = this.getClient();
+    return client.get<OpenQuotesResponse>(`/v1/contacts/${contactId}/open-quotes`);
   }
 
   // ============================================

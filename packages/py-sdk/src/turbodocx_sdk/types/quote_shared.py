@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 from typing_extensions import Literal, TypedDict
 
 # Literal union types (used as type hints, not runtime values)
-QuoteStatus = Literal["draft", "pending_approval", "sent", "accepted", "declined", "voided"]
+QuoteStatus = Literal["draft", "sent", "accepted", "declined", "voided"]
 
 BillingFrequency = Literal["monthly", "quarterly", "annual", "one-time"]
 
@@ -23,6 +23,9 @@ Currency = Literal["USD", "EUR", "GBP", "CAD", "AUD", "INR"]
 CategoryType = Literal["product_category", "pricebook_type", "company_industry", "bundle_category"]
 
 DiscountType = Literal["percent", "amount"]
+
+# Direction for every list's sortBy
+SortDirection = Literal["asc", "desc"]
 
 
 class PaginationParams(TypedDict, total=False):

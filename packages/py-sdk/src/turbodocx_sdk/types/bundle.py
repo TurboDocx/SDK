@@ -53,6 +53,9 @@ class Bundle(TypedDict, total=False):
     updatedOn: str
     items: List[BundleItem]
     category: Dict[str, Any]
+    # list_bundles only: active items, and the price per billing frequency
+    itemCount: int
+    billingTotals: Dict[str, float]
 
 
 class _BundleItemInputRequired(TypedDict):
@@ -108,8 +111,11 @@ class ListBundlesOptions(TypedDict, total=False):
     offset: int
     query: str
     categoryIds: Any  # string | string[]
-    currency: str  # Currency literal
+    currency: Any  # Currency | List[Currency]
     showInCatalog: bool
+    # "name" | "itemCount" | "totalListPrice" | "totalFinalPrice" | "createdOn"
+    sortBy: str
+    sortDirection: str  # "asc" | "desc"
 
 
 class BundleListResponse(TypedDict, total=False):

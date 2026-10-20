@@ -2,7 +2,7 @@
  * Shared types for the TurboQuote module
  */
 
-export type QuoteStatus = 'draft' | 'pending_approval' | 'sent' | 'accepted' | 'declined' | 'voided';
+export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'declined' | 'voided';
 
 export type BillingFrequency = 'monthly' | 'quarterly' | 'annual' | 'one-time';
 
@@ -15,6 +15,14 @@ export type Currency = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'INR';
 export type CategoryType = 'product_category' | 'pricebook_type' | 'company_industry' | 'bundle_category';
 
 export type DiscountType = 'percent' | 'amount';
+
+/** Direction for every list's `sortBy`. */
+export type SortDirection = 'asc' | 'desc';
+
+/**
+ * One value, or several (sent as a repeated query param: `?currency=USD&currency=EUR`).
+ */
+export type OneOrMany<T> = T | T[];
 
 export interface PaginationParams {
   limit?: number;

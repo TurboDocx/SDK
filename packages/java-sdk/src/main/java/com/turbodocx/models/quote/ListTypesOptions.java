@@ -12,6 +12,10 @@ public class ListTypesOptions {
     private String query;
     private CategoryType categoryType;
     private Boolean includeUsage;
+    /** Sort column: "name" or "usageCount" (usage needs a categoryType; default name, A to Z) */
+    private String sortBy;
+    /** "asc" or "desc" */
+    private String sortDirection;
 
     public Integer getLimit() { return limit; }
     public void setLimit(Integer limit) { this.limit = limit; }
@@ -24,6 +28,11 @@ public class ListTypesOptions {
     public Boolean getIncludeUsage() { return includeUsage; }
     public void setIncludeUsage(Boolean includeUsage) { this.includeUsage = includeUsage; }
 
+    public String getSortBy() { return sortBy; }
+    public void setSortBy(String sortBy) { this.sortBy = sortBy; }
+    public String getSortDirection() { return sortDirection; }
+    public void setSortDirection(String sortDirection) { this.sortDirection = sortDirection; }
+
     public Map<String, Object> toQueryParams() {
         Map<String, Object> params = new LinkedHashMap<>();
         if (limit != null) params.put("limit", limit.toString());
@@ -31,6 +40,8 @@ public class ListTypesOptions {
         if (query != null) params.put("query", query);
         if (categoryType != null) params.put("categoryType", categoryType.getValue());
         if (includeUsage != null) params.put("includeUsage", includeUsage.toString());
+        if (sortBy != null) params.put("sortBy", sortBy);
+        if (sortDirection != null) params.put("sortDirection", sortDirection);
         return params.isEmpty() ? null : params;
     }
 }

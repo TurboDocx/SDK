@@ -2,7 +2,7 @@
  * TypeScript types for TurboQuote — PriceBook entity and request/response types
  */
 
-import type { DiscountType, PaginationParams, PaginatedResponse } from './quote-shared';
+import type { DiscountType, PaginationParams, PaginatedResponse, SortDirection } from './quote-shared';
 import type { Product } from './product';
 
 // ============================================
@@ -41,6 +41,11 @@ export interface PriceBook {
   productPricing?: PriceBookProductPricing[];
   priceBookType?: { id: string; name: string; categoryType: string };
   productCount?: number;
+  /**
+   * listPriceBooks only: products with their own price in this book (an amount discount, or a
+   * percent different from the book's discount).
+   */
+  overrideCount?: number;
 }
 
 // ============================================
@@ -77,11 +82,22 @@ export interface UpdatePriceBookRequest {
   isDefault?: boolean;
   showInQuoteBuilder?: boolean;
   productPricing?: PriceBookProductPricingInput[];
+  /**
+   * Put every product of the book back on the book's own discount. Applied before any
+   * `productPricing` in the same request.
+   */
+  resetProductPricing?: boolean;
 }
+
+/** `name` | `discountPercent` | `overrideCount` | `validFrom` | `validTo` | `createdOn` */
+export type PriceBookSortBy = 'name' | 'discountPercent' | 'overrideCount' | 'validFrom' | 'validTo' | 'createdOn';
 
 export interface ListPriceBooksOptions extends PaginationParams {
   priceBookTypeIds?: string | string[];
   showInQuoteBuilder?: boolean;
+  /** Default `createdOn` newest first. */
+  sortBy?: PriceBookSortBy;
+  sortDirection?: SortDirection;
 }
 
 export interface ListPriceBookProductsOptions extends PaginationParams {

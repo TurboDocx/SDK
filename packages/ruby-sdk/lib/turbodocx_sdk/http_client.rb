@@ -115,6 +115,23 @@ module TurboDocxSdk
       execute(request, url)
     end
 
+    # PUT request with JSON body.
+    # @param path [String]
+    # @param data [Hash, nil] request body
+    # @return [Object] parsed, unwrapped, normalized response
+    # @raise [ValidationError] on 400 response
+    # @raise [AuthenticationError] on 401 response
+    # @raise [NotFoundError] on 404 response
+    # @raise [RateLimitError] on 429 response
+    # @raise [NetworkError] on connection failure
+    def put(path, data = nil)
+      url = build_url(path)
+      request = Net::HTTP::Put.new(url)
+      apply_headers(request)
+      request.body = JSON.generate(data) if data
+      execute(request, url)
+    end
+
     # DELETE request.
     # @param path [String]
     # @return [Object] parsed, unwrapped, normalized response

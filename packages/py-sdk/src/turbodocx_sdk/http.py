@@ -423,6 +423,37 @@ class HttpClient:
             except Exception as e:
                 raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}") from e
 
+    async def put(self, path: str, data: Optional[Dict[str, Any]] = None) -> Any:
+        """
+        Make PUT request to API
+
+        Args:
+            path: API endpoint path
+            data: Request body data (will be sent as JSON)
+
+        Returns:
+            Response data
+        """
+        url = f"{self.base_url}{path}"
+        headers = self._get_headers()
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            try:
+                response = await client.put(url, headers=headers, json=data)
+
+                if not response.is_success:
+                    await self._handle_error_response(response)
+
+                return normalize_response(self._smart_unwrap(response.json()))
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out after 120 seconds: {str(e) or 'Timeout'}") from e
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network request failed: {str(e) or 'Connection error'}") from e
+            except TurboDocxError:
+                raise
+            except Exception as e:
+                raise NetworkError(f"Request failed: {str(e) or 'Unknown error'}") from e
+
     async def delete(self, path: str) -> Any:
         """
         Make DELETE request to API

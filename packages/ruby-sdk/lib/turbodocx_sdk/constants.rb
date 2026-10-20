@@ -3,12 +3,11 @@
 module TurboDocxSdk
   module QuoteStatus
     DRAFT = "draft"
-    PENDING_APPROVAL = "pending_approval"
     SENT = "sent"
     ACCEPTED = "accepted"
     DECLINED = "declined"
     VOIDED = "voided"
-    ALL = [DRAFT, PENDING_APPROVAL, SENT, ACCEPTED, DECLINED, VOIDED].freeze
+    ALL = [DRAFT, SENT, ACCEPTED, DECLINED, VOIDED].freeze
   end
 
   module BillingFrequency

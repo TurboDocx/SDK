@@ -11,14 +11,20 @@ final class ListBundlesRequest
 {
     /**
      * @param string|string[]|null $categoryIds
+     * @param string|string[]|null $currency
      */
     public function __construct(
         public readonly ?int $limit = null,
         public readonly ?int $offset = null,
         public readonly ?string $query = null,
         public readonly string|array|null $categoryIds = null,
-        public readonly ?string $currency = null,
+        // One currency or several
+        public readonly string|array|null $currency = null,
         public readonly ?bool $showInCatalog = null,
+        // Sort column: 'name' | 'itemCount' | 'totalListPrice' | 'totalFinalPrice' | 'createdOn' (default createdOn, newest first)
+        public readonly ?string $sortBy = null,
+        // 'asc' | 'desc'
+        public readonly ?string $sortDirection = null,
     ) {}
 
     /**
@@ -49,6 +55,13 @@ final class ListBundlesRequest
         }
         if ($this->showInCatalog !== null) {
             $params['showInCatalog'] = $this->showInCatalog ? 'true' : 'false';
+        }
+
+        if ($this->sortBy !== null) {
+            $params['sortBy'] = $this->sortBy;
+        }
+        if ($this->sortDirection !== null) {
+            $params['sortDirection'] = $this->sortDirection;
         }
 
         return $params;

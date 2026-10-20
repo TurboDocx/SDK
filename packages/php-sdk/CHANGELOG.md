@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- TurboQuote list sorting: `sortBy` / `sortDirection` on `ListQuotesRequest`, `ListProductsRequest`, `ListPriceBooksRequest`, `ListBundlesRequest`, `ListCompaniesRequest`, `ListContactsRequest` (also used by `listCompanyContacts()`) and `ListTypesRequest`. Left out, each list keeps its old order.
+- Quote list filters on `ListQuotesRequest`: `companyIds`, `currencies` (`currency` now takes one value or an array too), the `expired` status, `createdBy`, `createdByApiKeys`, `validUntilWindow`, `validUntilFrom`, `validUntilTo`, `summaryCurrency`. `QuoteListResponse` gains `statusCounts` (`QuoteStatusCounts`) and `summary` (`QuoteSummary`); each `Quote` from the list carries `isExpired`, `isSignatureExpired` and `lineItemCount`.
+- `ListProductsRequest` `billingFrequency` / `currency` and `ListBundlesRequest` `currency` take one value or an array; `ListContactsRequest` takes `companyIds`.
+- `TurboQuote::getQuoteSummary(?QuoteSummaryRequest)`, `listQuoteCreators()` (`QuoteCreator[]`), `getNextQuoteNumber()` (`NextQuoteNumber`), `getCompanyOpenQuotes()` / `getContactOpenQuotes()` (`OpenQuotesResponse`), `getProductQuoteImages()`, and custom line item images: `getQuoteLineItemImages()`, `getLineItemImages()`, `addLineItemImages()`, `reorderLineItemImages()`, `removeLineItemImage()` (`LineItemImage`).
+- `duplicateQuote()`, `duplicateProduct()`, `duplicatePriceBook()` and `duplicateBundle()` take an optional name for the copy.
+- Companies: `email` on `Company`, `CreateCompanyRequest` and `UpdateCompanyRequest` (`includeEmail: true` + `email: null` clears it). `UpdatePriceBookRequest` takes `resetProductPricing`. `PriceBook` gains `overrideCount`; `Bundle` gains `itemCount` and `billingTotals`; `ContactListResponse` gains `company`.
+- `HttpClient::put()`. `FileTypeDetector` recognises PNG and JPEG.
+
+### Changed
+- **API behaviour, all SDK versions:** deleting a sent quote is refused with a 409 (`ConflictException`, code `CANNOT_DELETE_SENT_QUOTE`) — void it instead. Deleting a company or contact with open quotes, or a company's last contact, is a 409 (`CompanyHasOpenQuotes`, `ContactHasOpenQuotes`, `LastContact`); deleting the default price book is a 400 `PriceBookIsDefault`.
+
+### Removed
+- `QuoteStatus` lists only the released quote statuses: `DRAFT`, `SENT`, `ACCEPTED`, `DECLINED`, `VOIDED`.
+
 ## [0.9.0] - 2026-10-20
 
 ### Added

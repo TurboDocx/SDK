@@ -1693,22 +1693,15 @@ final class TurboQuoteTest extends TestCase
     // ENUMS
     // ============================================
 
-    public function testQuoteStatusPendingApprovalExists(): void
-    {
-        $status = QuoteStatus::PENDING_APPROVAL;
-        $this->assertSame('pending_approval', $status->value);
-    }
-
     public function testQuoteStatusEnumHasAllValues(): void
     {
         $cases = array_map(fn(QuoteStatus $s) => $s->value, QuoteStatus::cases());
         $this->assertContains('draft', $cases);
-        $this->assertContains('pending_approval', $cases);
         $this->assertContains('sent', $cases);
         $this->assertContains('accepted', $cases);
         $this->assertContains('declined', $cases);
         $this->assertContains('voided', $cases);
-        $this->assertCount(6, $cases);
+        $this->assertCount(5, $cases);
     }
 
     public function testBundleItemStatusEnumValues(): void
@@ -2204,6 +2197,8 @@ class MockHttpClient extends \TurboDocx\HttpClient
     public ?string $lastPatchPath = null;
     public mixed $lastPatchData = null;
     public ?string $lastDeletePath = null;
+    public ?string $lastPutPath = null;
+    public mixed $lastPutData = null;
     public ?string $lastGetRawPath = null;
     public ?string $lastPostFormDataPath = null;
     /** @var array<int, array<string, mixed>> */
@@ -2220,6 +2215,7 @@ class MockHttpClient extends \TurboDocx\HttpClient
     private mixed $postReturn = null;
     private mixed $patchReturn = null;
     private mixed $deleteReturn = null;
+    private mixed $putReturn = null;
     private string $getRawReturn = '';
     private mixed $postFormDataReturn = null;
     private mixed $patchFormDataReturn = null;
@@ -2256,6 +2252,11 @@ class MockHttpClient extends \TurboDocx\HttpClient
     public function setDeleteReturn(mixed $return): void
     {
         $this->deleteReturn = $return;
+    }
+
+    public function setPutReturn(mixed $return): void
+    {
+        $this->putReturn = $return;
     }
 
     public function setGetRawReturn(string $return): void
@@ -2322,6 +2323,13 @@ class MockHttpClient extends \TurboDocx\HttpClient
     {
         $this->lastDeletePath = $path;
         return $this->deleteReturn;
+    }
+
+    public function put(string $path, ?array $data = null): mixed
+    {
+        $this->lastPutPath = $path;
+        $this->lastPutData = $data;
+        return $this->putReturn;
     }
 
     public function getRaw(string $path): string

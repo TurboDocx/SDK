@@ -25,6 +25,8 @@ final class Company implements \JsonSerializable
         public readonly ?string $updatedOn = null,
         public readonly ?int $contactCount = null,
         public readonly ?QuoteType $industry = null,
+        // The company's own email (null for companies created without one)
+        public readonly ?string $email = null,
     ) {}
 
     /**
@@ -49,6 +51,7 @@ final class Company implements \JsonSerializable
             updatedOn: $data['updatedOn'] ?? null,
             contactCount: isset($data['contactCount']) ? (int) $data['contactCount'] : null,
             industry: isset($data['industry']) ? QuoteType::fromArray($data['industry']) : null,
+            email: $data['email'] ?? null,
         );
     }
 
@@ -61,6 +64,7 @@ final class Company implements \JsonSerializable
             'id' => $this->id,
             'orgId' => $this->orgId,
             'name' => $this->name,
+            'email' => $this->email,
             'phone' => $this->phone,
             'city' => $this->city,
             'state' => $this->state,

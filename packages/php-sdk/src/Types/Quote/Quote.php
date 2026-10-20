@@ -52,6 +52,13 @@ final class Quote implements \JsonSerializable
          * @var array<string, string>|null
          */
         public readonly ?array $preparedBy = null,
+        // listQuotes only: how many line items the quote has
+        public readonly ?int $lineItemCount = null,
+        // listQuotes only: the quote's signature request has expired
+        public readonly ?bool $isSignatureExpired = null,
+        // listQuotes only: a draft or sent quote past its Valid until day (UTC), or whose
+        // signature expired. The same rule as the "expired" status filter.
+        public readonly ?bool $isExpired = null,
     ) {}
 
     /**
@@ -95,6 +102,9 @@ final class Quote implements \JsonSerializable
             creator: $data['creator'] ?? null,
             statusInfo: isset($data['statusInfo']) ? QuoteStatusInfo::fromArray($data['statusInfo']) : null,
             preparedBy: $data['preparedBy'] ?? null,
+            lineItemCount: isset($data['lineItemCount']) ? (int) $data['lineItemCount'] : null,
+            isSignatureExpired: isset($data['isSignatureExpired']) ? (bool) $data['isSignatureExpired'] : null,
+            isExpired: isset($data['isExpired']) ? (bool) $data['isExpired'] : null,
         );
     }
 
@@ -150,6 +160,15 @@ final class Quote implements \JsonSerializable
         }
         if ($this->preparedBy !== null) {
             $data['preparedBy'] = $this->preparedBy;
+        }
+        if ($this->lineItemCount !== null) {
+            $data['lineItemCount'] = $this->lineItemCount;
+        }
+        if ($this->isSignatureExpired !== null) {
+            $data['isSignatureExpired'] = $this->isSignatureExpired;
+        }
+        if ($this->isExpired !== null) {
+            $data['isExpired'] = $this->isExpired;
         }
 
         return $data;

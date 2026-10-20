@@ -9,18 +9,11 @@ from typing import get_args
 from turbodocx_sdk.types.quote_shared import QuoteStatus
 
 
-EXPECTED_STATUSES = {"draft", "pending_approval", "sent", "accepted", "declined", "voided"}
+EXPECTED_STATUSES = {"draft", "sent", "accepted", "declined", "voided"}
 
 
 class TestQuoteStatus:
     """Verify QuoteStatus Literal includes all backend statuses"""
-
-    def test_pending_approval_is_valid_status(self):
-        """pending_approval must be a member of QuoteStatus"""
-        actual = set(get_args(QuoteStatus))
-        assert "pending_approval" in actual, (
-            f"'pending_approval' missing from QuoteStatus. Got: {actual}"
-        )
 
     def test_all_backend_statuses_present(self):
         """QuoteStatus must include every status the backend supports"""

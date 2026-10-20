@@ -23,6 +23,8 @@ public class PriceBook {
     private List<PriceBookProductPricing> productPricing;
     private PriceBookType priceBookType;
     private Integer productCount;
+    /** listPriceBooks only: products with their own price in this book */
+    private Integer overrideCount;
 
     public String getId() { return id; }
     public String getOrgId() { return orgId; }
@@ -41,6 +43,7 @@ public class PriceBook {
     public List<PriceBookProductPricing> getProductPricing() { return productPricing; }
     public PriceBookType getPriceBookType() { return priceBookType; }
     public Integer getProductCount() { return productCount; }
+    public Integer getOverrideCount() { return overrideCount; }
 
     /**
      * Nested price book type reference.

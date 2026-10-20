@@ -3,9 +3,8 @@ require "turbodocx_sdk"
 
 RSpec.describe "TurboDocxSdk Constants" do
   describe "QuoteStatus" do
-    it "defines all 6 status values" do
+    it "defines all 5 status values" do
       expect(TurboDocxSdk::QuoteStatus::DRAFT).to eq("draft")
-      expect(TurboDocxSdk::QuoteStatus::PENDING_APPROVAL).to eq("pending_approval")
       expect(TurboDocxSdk::QuoteStatus::SENT).to eq("sent")
       expect(TurboDocxSdk::QuoteStatus::ACCEPTED).to eq("accepted")
       expect(TurboDocxSdk::QuoteStatus::DECLINED).to eq("declined")
@@ -14,7 +13,7 @@ RSpec.describe "TurboDocxSdk Constants" do
 
     it "provides ALL constant" do
       expect(TurboDocxSdk::QuoteStatus::ALL).to contain_exactly(
-        "draft", "pending_approval", "sent", "accepted", "declined", "voided"
+        "draft", "sent", "accepted", "declined", "voided"
       )
     end
   end

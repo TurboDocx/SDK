@@ -883,15 +883,15 @@ No `SenderEmail` on the client — but sending a quote *does* create a signature
 
 | Group | Methods |
 |---|---|
-| **Quotes** | `ListQuotes`, `CreateQuote`, `GetQuote`, `UpdateQuote`, `DeleteQuote`, `DuplicateQuote`, `DownloadQuotePdf` |
+| **Quotes** | `ListQuotes`, `CreateQuote`, `GetQuote`, `UpdateQuote`, `DeleteQuote`, `DuplicateQuote`, `DownloadQuotePdf`, `GetQuoteSummary`, `ListQuoteCreators`, `GetNextQuoteNumber` |
 | **Quote status** | `SendQuote`, `SendQuoteWithDeliverable`, `DeclineQuote`, `VoidQuote`, `HandleExpiredQuote` (void/decline an expired quote and reissue it) |
 | **Price book application** | `ApplyPriceBook`, `RemovePriceBook` |
-| **Line items** | `ListLineItems`, `AddLineItems`, `AddBundleLineItems`, `UpdateLineItem`, `RemoveLineItem` |
-| **Products** | `ListProducts`, `CreateProduct`, `GetProduct`, `UpdateProduct`, `DeleteProduct`, `DuplicateProduct`, `GetProductPrimaryImages` |
+| **Line items** | `ListLineItems`, `AddLineItems`, `AddBundleLineItems`, `UpdateLineItem`, `RemoveLineItem`, `GetQuoteLineItemImages`, `GetLineItemImages`, `AddLineItemImages`, `ReorderLineItemImages`, `RemoveLineItemImage` |
+| **Products** | `ListProducts`, `CreateProduct`, `GetProduct`, `UpdateProduct`, `DeleteProduct`, `DuplicateProduct`, `GetProductPrimaryImages`, `GetProductQuoteImages` |
 | **Price books** | `ListPriceBooks`, `CreatePriceBook`, `GetPriceBook`, `UpdatePriceBook`, `DeletePriceBook`, `DuplicatePriceBook`, `ListPriceBookProducts` |
 | **Bundles** | `ListBundles`, `CreateBundle`, `GetBundle`, `UpdateBundle`, `DeleteBundle`, `DuplicateBundle` |
-| **Companies** | `ListCompanies`, `CreateCompany`, `GetCompany`, `UpdateCompany`, `DeleteCompany`, `ListCompanyContacts` |
-| **Contacts** | `ListContacts`, `CreateContact`, `UpdateContact`, `DeleteContact` |
+| **Companies** | `ListCompanies`, `CreateCompany`, `GetCompany`, `UpdateCompany`, `DeleteCompany`, `ListCompanyContacts`, `GetCompanyOpenQuotes` |
+| **Contacts** | `ListContacts`, `CreateContact`, `UpdateContact`, `DeleteContact`, `GetContactOpenQuotes` |
 | **Templates** | `ListTemplates`, `GetTemplate`, `GetTemplateByID`, `CreateTemplate`, `UpdateTemplate`, `DeleteTemplate` |
 | **Types/categories** | `ListTypes`, `CreateType`, `UpdateType`, `DeleteType` |
 | **Convenience** | `CreateAndSend` |
@@ -950,6 +950,68 @@ resp, err := client.SendQuote(ctx, quote.ID, &turbodocx.SendQuoteRequest{
     },
 })
 ```
+
+#### Sorting, filters and the list summary
+
+Every list takes `sortBy` / `sortDirection` (`asc` | `desc`); leave them out for the order the
+list always had. Sort columns: quotes `updatedOn` · `createdOn` · `total` · `validUntil` · `quoteNumber`;
+products `name` · `listPrice` · `createdOn`; price books `name` · `discountPercent` · `overrideCount` ·
+`validFrom` · `validTo` · `createdOn`; bundles `name` · `itemCount` · `totalListPrice` · `totalFinalPrice` ·
+`createdOn`; companies `name` · `contactCount` · `lastActivityDate`; contacts `name` · `createdOn`;
+types `name` · `usageCount`.
+
+The quote list also filters by several companies (`companyIds`) and currencies (`currencies`), by
+`expired` in `statuses` (a draft or sent quote past its Valid until day, UTC, or whose signature
+expired), by creator (`createdBy`, ids from the creators call; `createdByApiKeys` for API-key quotes)
+and by Valid until (`validUntilWindow` = `thisWeek` | `thisMonth` | `past`, `validUntilFrom` /
+`validUntilTo`). Each quote carries `isExpired` and `lineItemCount`; the response adds
+`statusCounts` (per tab) and `summary` (pipeline, win rate, monthly recurring, in `summaryCurrency`).
+
+Go option structs take the sort as `SortBy` / `SortDirection` (`SortAsc` / `SortDesc`). Products and
+bundles take several values in `BillingFrequencies` / `CurrencyCodes` next to the single fields.
+
+```go
+str := func(s string) *string { return &s }
+
+page, err := client.ListQuotes(ctx, &turbodocx.ListQuotesOptions{
+	Statuses:         []string{"sent", turbodocx.QuoteListStatusExpired},
+	Currencies:       []string{"USD", "EUR"},
+	ValidUntilWindow: str(turbodocx.ValidUntilThisMonth),
+	SortBy:           str(turbodocx.QuoteSortByValidUntil),
+	SortDirection:    str(turbodocx.SortAsc),
+})
+fmt.Println(page.StatusCounts.Expired, page.Summary.WinRate.Percent)
+
+creators, _ := client.ListQuoteCreators(ctx) // IDs for CreatedBy
+summary, _ := client.GetQuoteSummary(ctx, &turbodocx.QuoteSummaryOptions{CreatedBy: []string{creators[0].ID}})
+next, _ := client.GetNextQuoteNumber(ctx) // read only
+
+copy, _ := client.DuplicateQuote(ctx, quote.ID, turbodocx.DuplicateOptions{Name: "Q4 renewal"}) // name is optional
+```
+
+`DuplicateQuote`, `DuplicateProduct`, `DuplicatePriceBook` and `DuplicateBundle` take an optional
+`DuplicateOptions{Name: …}` (otherwise "Copy of …"). Companies take an optional `Email` (`ClearEmail()` on
+update); `UpdatePriceBookRequest.ResetProductPricing` puts every product back on the book's discount.
+`ListCompanyContacts` now takes `*ListCompanyContactsOptions` (pagination plus the sort).
+
+#### Custom line item images
+
+A custom line item (one with no catalog product) can show up to three images on the quote (PNG or
+JPEG, 2 MB each; draft quotes only). Catalog products use `GetProductQuoteImages(ctx, productIDs)`.
+
+```go
+images, err := client.AddLineItemImages(ctx, quote.ID, itemID, []turbodocx.ProductImageInput{{FilePath: "./diagram.png"}})
+_, err = client.ReorderLineItemImages(ctx, quote.ID, itemID, []string{images[1].ID, images[0].ID})
+_, err = client.RemoveLineItemImage(ctx, quote.ID, itemID, images[0].ID)
+byItem, err := client.GetQuoteLineItemImages(ctx, quote.ID) // map[lineItemID][]LineItemImage
+```
+
+**Deletes the API refuses.** `DeleteQuote` on a **sent** quote is a 409 `*ConflictError` with code
+`CANNOT_DELETE_SENT_QUOTE` — void it instead; an accepted quote is a 409 `CANNOT_DELETE_ACCEPTED_QUOTE`.
+`DeleteCompany` is a 409 `CompanyHasOpenQuotes` while the company has open quotes (draft or
+sent), and `DeleteContact` is a 409 `LastContact` (the company's only contact) or `ContactHasOpenQuotes`.
+`DeletePriceBook` on the org's default price book is a 400 `*ValidationError` `PriceBookIsDefault`. Branch on
+`err.Code`; `GetCompanyOpenQuotes` / `GetContactOpenQuotes` list the open quotes that block a delete.
 
 #### Sender identity — "Prepared by"
 

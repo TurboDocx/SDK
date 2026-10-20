@@ -47,6 +47,29 @@ module TurboDocxSdk
         client.get("/v1/quotes", to_query_params(options))
       end
 
+      # The quote list's summary cards (pipeline, win rate, monthly recurring...) for a set of
+      # filters, in one currency (+summaryCurrency+). Takes the list_quotes filters; the status
+      # filter is ignored.
+      #
+      # @param options [Hash, nil] filters (camelCase keys, as for list_quotes)
+      # @return [Hash] the summary ("currency", "openPipeline", "winRate", ...)
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def get_quote_summary(options = nil)
+        client = get_client
+        client.get("/v1/quotes/summary", to_query_params(options))["summary"]
+      end
+
+      # The people and API keys who created the org's quotes -- the ids for the +createdBy+ filter.
+      #
+      # @return [Array<Hash>] each { "id", "name", "email" (nil for an API key), "isAPIKey", "apiKeyDeleted" }
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def list_quote_creators
+        client = get_client
+        client.get("/v1/quotes/creators")["results"]
+      end
+
       # Create a new quote.
       #
       # @param request [Hash] :name (required), :companyId (required), :contactId (required),
@@ -99,10 +122,12 @@ module TurboDocxSdk
         unwrap(client.patch("/v1/quotes/#{id}", request))
       end
 
-      # Delete a quote.
+      # Delete a quote. A sent quote is refused (void it instead), and so is an accepted one.
       #
       # @param id [String]
       # @return [Hash] { "message" => "..." }
+      # @raise [ConflictError] for a sent (CANNOT_DELETE_SENT_QUOTE) or accepted
+      #   (CANNOT_DELETE_ACCEPTED_QUOTE) quote
       # @raise [NotFoundError] if the quote does not exist
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
@@ -111,16 +136,19 @@ module TurboDocxSdk
         client.delete("/v1/quotes/#{id}")
       end
 
-      # Duplicate a quote.
+      # Duplicate a bundle. +name+ names the copy; left out, it is "Copy of <name>".
       #
       # @param id [String]
+      # @param name [String, nil] the copy's name
+      # @param name [String, nil] the copy's name
+      # @param name [String, nil] the copy's name
+      # @param name [String, nil] the copy's name
       # @return [Hash] the duplicated quote
       # @raise [NotFoundError] if the quote does not exist
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
-      def duplicate_quote(id)
-        client = get_client
-        unwrap(client.post("/v1/quotes/#{id}/duplicate"))
+      def duplicate_quote(id, name: nil)
+        post_duplicate("/v1/quotes/#{id}/duplicate", name)
       end
 
       # Apply a price book to a quote.
@@ -374,6 +402,77 @@ module TurboDocxSdk
       end
 
       # ============================================
+      # CUSTOM LINE ITEM IMAGES
+      # Up to three per custom item (a line with no catalog product), PNG or JPEG,
+      # 2MB each. Changes are allowed on draft quotes only.
+      # ============================================
+
+      # Every custom line item's images (up to three, in order), keyed by line item id.
+      #
+      # @param quote_id [String]
+      # @return [Hash] line_item_id => Array<Hash>
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def get_quote_line_item_images(quote_id)
+        client = get_client
+        client.get("/v1/quotes/#{quote_id}/items/images")["results"]
+      end
+
+      # One custom line item's images, in order.
+      #
+      # @param quote_id [String]
+      # @param item_id [String]
+      # @return [Array<Hash>]
+      # @raise [NotFoundError] if the quote or line item does not exist
+      # @raise [NetworkError] on connection failure
+      def get_line_item_images(quote_id, item_id)
+        client = get_client
+        client.get("/v1/quotes/#{quote_id}/items/#{item_id}/images")["results"]
+      end
+
+      # Add images to a custom line item. Returns all of its images.
+      #
+      # @param quote_id [String]
+      # @param item_id [String]
+      # @param images [Array<String, IO>] file paths or IO objects (PNG or JPEG)
+      # @return [Array<Hash>]
+      # @raise [ValidationError] on a wrong type, a too-large image, more than three, or a sent quote
+      # @raise [NetworkError] on connection failure
+      def add_line_item_images(quote_id, item_id, images)
+        client = get_client
+        response = client.post_form_data(
+          "/v1/quotes/#{quote_id}/items/#{item_id}/images", { "images" => image_parts(images) }
+        )
+        response["results"]
+      end
+
+      # Set the order of a custom line item's images, first to last.
+      #
+      # @param quote_id [String]
+      # @param item_id [String]
+      # @param image_ids [Array<String>]
+      # @return [Array<Hash>] the images in their new order
+      # @raise [ValidationError] on invalid ids or a sent quote
+      # @raise [NetworkError] on connection failure
+      def reorder_line_item_images(quote_id, item_id, image_ids)
+        client = get_client
+        client.put("/v1/quotes/#{quote_id}/items/#{item_id}/images/order", { "imageIds" => image_ids })["results"]
+      end
+
+      # Remove one image from a custom line item. Returns the images left.
+      #
+      # @param quote_id [String]
+      # @param item_id [String]
+      # @param image_id [String]
+      # @return [Array<Hash>]
+      # @raise [NotFoundError] if the image does not exist
+      # @raise [NetworkError] on connection failure
+      def remove_line_item_image(quote_id, item_id, image_id)
+        client = get_client
+        client.delete("/v1/quotes/#{quote_id}/items/#{item_id}/images/#{image_id}")["results"]
+      end
+
+      # ============================================
       # PRODUCTS
       # ============================================
 
@@ -477,9 +576,8 @@ module TurboDocxSdk
       # @raise [NotFoundError] if the product does not exist
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
-      def duplicate_product(id)
-        client = get_client
-        unwrap(client.post("/v1/products/#{id}/duplicate"))
+      def duplicate_product(id, name: nil)
+        post_duplicate("/v1/products/#{id}/duplicate", name)
       end
 
       # Get primary images for multiple products.
@@ -491,6 +589,18 @@ module TurboDocxSdk
       def get_product_primary_images(product_ids)
         client = get_client
         response = client.post("/v1/products/primary-images", { "productIds" => product_ids })
+        response["results"]
+      end
+
+      # The images each product shows on a quote: up to three, in display order.
+      #
+      # @param product_ids [Array<String>] 1-100 product ids
+      # @return [Hash] product_id => Array<Hash> (empty when none)
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def get_product_quote_images(product_ids)
+        client = get_client
+        response = client.post("/v1/products/quote-images", { "productIds" => product_ids })
         response["results"]
       end
 
@@ -600,9 +710,8 @@ module TurboDocxSdk
       # @raise [NotFoundError] if the price book does not exist
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
-      def duplicate_price_book(id)
-        client = get_client
-        unwrap(client.post("/v1/pricebooks/#{id}/duplicate"))
+      def duplicate_price_book(id, name: nil)
+        post_duplicate("/v1/pricebooks/#{id}/duplicate", name)
       end
 
       # List products in a price book.
@@ -718,9 +827,8 @@ module TurboDocxSdk
       # @raise [NotFoundError] if the bundle does not exist
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
-      def duplicate_bundle(id)
-        client = get_client
-        unwrap(client.post("/v1/bundles/#{id}/duplicate"))
+      def duplicate_bundle(id, name: nil)
+        post_duplicate("/v1/bundles/#{id}/duplicate", name)
       end
 
       # ============================================
@@ -792,16 +900,29 @@ module TurboDocxSdk
         unwrap(client.patch("/v1/companies/#{id}", request))
       end
 
-      # Delete a company.
+      # Delete a company and its contacts. Refused while it has open quotes (draft or
+      # sent) -- see +get_company_open_quotes+.
       #
       # @param id [String]
       # @return [Hash] { "message" => "..." }
+      # @raise [ConflictError] with code CompanyHasOpenQuotes
       # @raise [NotFoundError] if the company does not exist
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
       def delete_company(id)
         client = get_client
         client.delete("/v1/companies/#{id}")
+      end
+
+      # The open quotes (draft or sent) for a company: what blocks deleting it.
+      #
+      # @param company_id [String]
+      # @return [Hash] { "results" => [{ "id", "quoteNumber", "name", "status", "updatedOn" }], "totalRecords" => N }
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def get_company_open_quotes(company_id)
+        client = get_client
+        client.get("/v1/companies/#{company_id}/open-quotes")
       end
 
       # List contacts for a company.
@@ -874,16 +995,29 @@ module TurboDocxSdk
         unwrap(client.patch("/v1/contacts/#{id}", request))
       end
 
-      # Delete a contact.
+      # Delete a contact. Refused when they are the company's only contact, or the contact on
+      # open quotes -- see +get_contact_open_quotes+.
       #
       # @param id [String]
       # @return [Hash] { "message" => "..." }
+      # @raise [ConflictError] with code LastContact or ContactHasOpenQuotes
       # @raise [NotFoundError] if the contact does not exist
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
       def delete_contact(id)
         client = get_client
         client.delete("/v1/contacts/#{id}")
+      end
+
+      # The open quotes (draft or sent) made out to a contact: what blocks deleting them.
+      #
+      # @param contact_id [String]
+      # @return [Hash] { "results" => [...], "totalRecords" => N }
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def get_contact_open_quotes(contact_id)
+        client = get_client
+        client.get("/v1/contacts/#{contact_id}/open-quotes")
       end
 
       # ============================================
@@ -1067,6 +1201,17 @@ module TurboDocxSdk
         response["results"]
       end
 
+      # The number the next new quote will get. Read only -- the counter doesn't move, so a quote
+      # created by someone else in between takes it first.
+      #
+      # @return [Hash] { "nextNumber" => String, "sequence" => Integer, "canEdit" => Boolean }
+      # @raise [AuthenticationError] on invalid credentials
+      # @raise [NetworkError] on connection failure
+      def get_next_quote_number
+        client = get_client
+        client.get("/v1/quotes/number-config/next")["results"]
+      end
+
       # ============================================
       # CONVENIENCE
       # ============================================
@@ -1137,32 +1282,37 @@ module TurboDocxSdk
         params.empty? ? nil : params
       end
 
+      # POST to a duplicate endpoint: the copy's name when given, else no body (the API names
+      # the copy "Copy of ...").
+      def post_duplicate(path, name)
+        client = get_client
+        unwrap(name.nil? ? client.post(path) : client.post(path, { "name" => name }))
+      end
+
       # Build form data hash for product creation/update with images.
       def build_product_form_data(data_fields, images)
         form_data = {}
         form_data["data"] = JSON.generate(data_fields)
 
-        file_parts = []
-        images.each do |image|
-          if image.is_a?(String)
-            # File path
-            content = File.binread(image)
-            file_parts << {
-              io: StringIO.new(content),
-              filename: File.basename(image),
-              content_type: detect_image_type(content)
-            }
-          elsif image.respond_to?(:read)
-            content = image.read
-            file_parts << {
-              io: StringIO.new(content),
-              filename: "image.bin",
-              content_type: detect_image_type(content)
-            }
-          end
-        end
+        file_parts = image_parts(images, io_filename: "image.bin")
         form_data["images"] = file_parts unless file_parts.empty?
         form_data
+      end
+
+      # One multipart part per image: a path keeps its basename, an IO is named
+      # +io_filename+ (default image.<detected ext>). The type comes from the bytes.
+      def image_parts(images, io_filename: nil)
+        images.filter_map do |image|
+          if image.is_a?(String)
+            content = File.binread(image)
+            { io: StringIO.new(content), filename: File.basename(image), content_type: detect_image_type(content) }
+          elsif image.respond_to?(:read)
+            content = image.read
+            type = detect_image_type(content)
+            ext = { "image/png" => "png", "image/jpeg" => "jpg" }.fetch(type, "bin")
+            { io: StringIO.new(content), filename: io_filename || "image.#{ext}", content_type: type }
+          end
+        end
       end
 
       # Detect MIME type for product images from magic bytes.

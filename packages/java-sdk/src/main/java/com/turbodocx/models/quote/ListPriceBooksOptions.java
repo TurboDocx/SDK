@@ -13,6 +13,10 @@ public class ListPriceBooksOptions {
     private String query;
     private List<String> priceBookTypeIds;
     private Boolean showInQuoteBuilder;
+    /** Sort column: "name", "discountPercent", "overrideCount", "validFrom", "validTo" or "createdOn" (default createdOn, newest first) */
+    private String sortBy;
+    /** "asc" or "desc" */
+    private String sortDirection;
 
     public Integer getLimit() { return limit; }
     public void setLimit(Integer limit) { this.limit = limit; }
@@ -25,6 +29,11 @@ public class ListPriceBooksOptions {
     public Boolean getShowInQuoteBuilder() { return showInQuoteBuilder; }
     public void setShowInQuoteBuilder(Boolean showInQuoteBuilder) { this.showInQuoteBuilder = showInQuoteBuilder; }
 
+    public String getSortBy() { return sortBy; }
+    public void setSortBy(String sortBy) { this.sortBy = sortBy; }
+    public String getSortDirection() { return sortDirection; }
+    public void setSortDirection(String sortDirection) { this.sortDirection = sortDirection; }
+
     public Map<String, Object> toQueryParams() {
         Map<String, Object> params = new LinkedHashMap<>();
         if (limit != null) params.put("limit", limit.toString());
@@ -32,6 +41,8 @@ public class ListPriceBooksOptions {
         if (query != null) params.put("query", query);
         if (priceBookTypeIds != null) params.put("priceBookTypeIds", priceBookTypeIds);
         if (showInQuoteBuilder != null) params.put("showInQuoteBuilder", showInQuoteBuilder.toString());
+        if (sortBy != null) params.put("sortBy", sortBy);
+        if (sortDirection != null) params.put("sortDirection", sortDirection);
         return params.isEmpty() ? null : params;
     }
 }

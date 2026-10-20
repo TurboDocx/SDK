@@ -17,6 +17,10 @@ final class ListCompaniesRequest
         public readonly ?int $offset = null,
         public readonly ?string $query = null,
         public readonly string|array|null $industryIds = null,
+        // Sort column: 'name' | 'contactCount' | 'lastActivityDate' (default lastActivityDate, most recent first)
+        public readonly ?string $sortBy = null,
+        // 'asc' | 'desc'
+        public readonly ?string $sortDirection = null,
     ) {}
 
     /**
@@ -41,6 +45,13 @@ final class ListCompaniesRequest
             } else {
                 $params['industryIds'] = $this->industryIds;
             }
+        }
+
+        if ($this->sortBy !== null) {
+            $params['sortBy'] = $this->sortBy;
+        }
+        if ($this->sortDirection !== null) {
+            $params['sortDirection'] = $this->sortDirection;
         }
 
         return $params;

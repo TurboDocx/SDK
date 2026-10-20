@@ -1462,7 +1462,10 @@ TURBODOCX_ORG_ID=your-org-id
 | | `getQuote(id)` | Get quote by ID (includes `statusInfo` and `preparedBy`) |
 | | `updateQuote(id, UpdateQuoteRequest)` | Update quote fields |
 | | `deleteQuote(id)` | Delete a quote |
-| | `duplicateQuote(id)` | Duplicate a quote |
+| | `duplicateQuote(id, ?name)` | Duplicate a quote (optional name for the copy) |
+| | `getQuoteSummary(?QuoteSummaryRequest)` | The list's summary cards (pipeline, win rate…) for a set of filters |
+| | `listQuoteCreators()` | People and API keys who created quotes (ids for the `createdBy` filter) |
+| | `getNextQuoteNumber()` | The number the next quote will get (read only) |
 | | `downloadQuotePdf(id)` | Download quote as PDF (raw bytes) |
 | **Quote Actions** | `sendQuote(id, ?SendQuoteRequest)` | Send a quote to the contact |
 | | `sendQuoteWithDeliverable(id, SendQuoteWithDeliverableRequest)` | Send with a TurboDocx-generated document attached |
@@ -1476,36 +1479,44 @@ TURBODOCX_ORG_ID=your-org-id
 | | `addBundleLineItems(quoteId, AddBundleLineItemRequest\|array)` | Add one or more bundle line items |
 | | `updateLineItem(quoteId, itemId, UpdateLineItemRequest)` | Update a line item |
 | | `removeLineItem(quoteId, itemId)` | Remove a line item |
+| | `getQuoteLineItemImages(quoteId)` | Every custom line item's images, keyed by line item ID |
+| | `getLineItemImages(quoteId, itemId)` | One custom line item's images |
+| | `addLineItemImages(quoteId, itemId, images[])` | Add images (paths or bytes) to a custom line item |
+| | `reorderLineItemImages(quoteId, itemId, imageIds[])` | Set the image order |
+| | `removeLineItemImage(quoteId, itemId, imageId)` | Remove one image |
 | **Products** | `listProducts(?ListProductsRequest)` | List catalog products |
 | | `createProduct(CreateProductRequest)` | Create a product (supports image upload) |
 | | `getProduct(id)` | Get product by ID |
 | | `updateProduct(id, UpdateProductRequest)` | Update a product |
 | | `deleteProduct(id)` | Delete a product |
-| | `duplicateProduct(id)` | Duplicate a product |
+| | `duplicateProduct(id, ?name)` | Duplicate a product (optional name for the copy) |
 | | `getProductPrimaryImages(productIds[])` | Batch-fetch primary images for product IDs |
+| | `getProductQuoteImages(productIds[])` | The images each product shows on a quote (up to three) |
 | **Price Books** | `listPriceBooks(?ListPriceBooksRequest)` | List price books |
 | | `createPriceBook(CreatePriceBookRequest)` | Create a price book |
 | | `getPriceBook(id)` | Get price book by ID |
 | | `updatePriceBook(id, UpdatePriceBookRequest)` | Update a price book |
 | | `deletePriceBook(id)` | Delete a price book |
-| | `duplicatePriceBook(id)` | Duplicate a price book |
+| | `duplicatePriceBook(id, ?name)` | Duplicate a price book (optional name for the copy) |
 | | `listPriceBookProducts(id, ?ListPriceBookProductsRequest)` | List products with custom pricing in a price book |
 | **Bundles** | `listBundles(?ListBundlesRequest)` | List catalog bundles |
 | | `createBundle(CreateBundleRequest)` | Create a bundle |
 | | `getBundle(id)` | Get bundle by ID |
 | | `updateBundle(id, UpdateBundleRequest)` | Update a bundle |
 | | `deleteBundle(id)` | Delete a bundle |
-| | `duplicateBundle(id)` | Duplicate a bundle |
+| | `duplicateBundle(id, ?name)` | Duplicate a bundle (optional name for the copy) |
 | **Companies** | `listCompanies(?ListCompaniesRequest)` | List companies |
 | | `createCompany(CreateCompanyRequest)` | Create a company |
 | | `getCompany(id)` | Get company by ID |
 | | `updateCompany(id, UpdateCompanyRequest)` | Update a company |
-| | `deleteCompany(id)` | Delete a company |
+| | `deleteCompany(id)` | Delete a company (409 while it has open quotes) |
+| | `getCompanyOpenQuotes(companyId)` | The open quotes that block deleting a company |
 | | `listCompanyContacts(companyId, ?ListContactsRequest)` | List contacts for a company |
 | **Contacts** | `listContacts(?ListContactsRequest)` | List contacts |
 | | `createContact(CreateContactRequest)` | Create a contact |
 | | `updateContact(id, UpdateContactRequest)` | Update a contact |
-| | `deleteContact(id)` | Delete a contact |
+| | `deleteContact(id)` | Delete a contact (409 for the last contact or one on open quotes) |
+| | `getContactOpenQuotes(contactId)` | The open quotes that block deleting a contact |
 | **Templates** | `listTemplates(?ListTemplatesRequest)` | List quote templates |
 | | `getTemplate()` | Get the org's active quote template |
 | | `getTemplateById(id)` | Get a template by ID |
@@ -1606,6 +1617,67 @@ $result = TurboQuote::sendQuote($quote->id, new SendQuoteRequest(
     expirationWarning: ['value' => 2, 'unit' => 'days'],// warn 2 days before validUntil
 ));
 ```
+
+### Sorting, Filters and the List Summary
+
+Every list takes `sortBy` / `sortDirection` (`asc` | `desc`); leave them out for the order the
+list always had. Sort columns: quotes `updatedOn` · `createdOn` · `total` · `validUntil` · `quoteNumber`;
+products `name` · `listPrice` · `createdOn`; price books `name` · `discountPercent` · `overrideCount` ·
+`validFrom` · `validTo` · `createdOn`; bundles `name` · `itemCount` · `totalListPrice` · `totalFinalPrice` ·
+`createdOn`; companies `name` · `contactCount` · `lastActivityDate`; contacts `name` · `createdOn`;
+types `name` · `usageCount`.
+
+The quote list also filters by several companies (`companyIds`) and currencies (`currencies`), by
+`expired` in `statuses` (a draft or sent quote past its Valid until day, UTC, or whose signature
+expired), by creator (`createdBy`, ids from the creators call; `createdByApiKeys` for API-key quotes)
+and by Valid until (`validUntilWindow` = `thisWeek` | `thisMonth` | `past`, `validUntilFrom` /
+`validUntilTo`). Each quote carries `isExpired` and `lineItemCount`; the response adds
+`statusCounts` (per tab) and `summary` (pipeline, win rate, monthly recurring, in `summaryCurrency`).
+
+```php
+use TurboDocx\Types\Requests\Quote\ListQuotesRequest;
+use TurboDocx\Types\Requests\Quote\QuoteSummaryRequest;
+
+$page = TurboQuote::listQuotes(new ListQuotesRequest(
+    statuses: ['sent', 'expired'],
+    currencies: ['USD', 'EUR'],
+    validUntilWindow: 'thisMonth',
+    sortBy: 'validUntil',
+    sortDirection: 'asc',
+    summaryCurrency: 'USD',
+));
+echo $page->statusCounts?->expired, ' ', $page->summary?->winRate['percent'];
+
+$creators = TurboQuote::listQuoteCreators();            // ids for createdBy
+$summary = TurboQuote::getQuoteSummary(new QuoteSummaryRequest(createdBy: [$creators[0]->id]));
+$next = TurboQuote::getNextQuoteNumber();               // read only
+
+$copy = TurboQuote::duplicateQuote($quote->id, 'Q4 renewal'); // name is optional
+```
+
+`duplicateQuote()`, `duplicateProduct()`, `duplicatePriceBook()` and `duplicateBundle()` take an optional
+name (otherwise "Copy of …"). `ListProductsRequest` / `ListBundlesRequest` take one value or an array for
+`billingFrequency` / `currency`. Companies take an optional `email` (`includeEmail: true` + `email: null`
+clears it); `UpdatePriceBookRequest(resetProductPricing: true)` puts every product back on the book's discount.
+
+### Custom Line Item Images
+
+A custom line item (one with no catalog product) can show up to three images on the quote (PNG or
+JPEG, 2 MB each; draft quotes only). Catalog products use `getProductQuoteImages($productIds)`.
+
+```php
+$images = TurboQuote::addLineItemImages($quote->id, $itemId, ['/path/to/diagram.png']); // paths or raw bytes
+TurboQuote::reorderLineItemImages($quote->id, $itemId, [$images[1]->id, $images[0]->id]);
+TurboQuote::removeLineItemImage($quote->id, $itemId, $images[0]->id);
+$byItem = TurboQuote::getQuoteLineItemImages($quote->id); // [lineItemId => LineItemImage[]]
+```
+
+**Deletes the API refuses.** `deleteQuote()` on a **sent** quote is a 409 `ConflictException` with code
+`CANNOT_DELETE_SENT_QUOTE` — void it instead; an accepted quote is a 409 `CANNOT_DELETE_ACCEPTED_QUOTE`.
+`deleteCompany()` is a 409 `CompanyHasOpenQuotes` while the company has open quotes (draft or
+sent), and `deleteContact()` is a 409 `LastContact` (the company's only contact) or `ContactHasOpenQuotes`.
+`deletePriceBook()` on the org's default price book is a 400 `ValidationException` `PriceBookIsDefault`. Branch on
+`$e->errorCode`; `getCompanyOpenQuotes()` / `getContactOpenQuotes()` list the open quotes that block a delete.
 
 ### Sender Identity — "Prepared by"
 

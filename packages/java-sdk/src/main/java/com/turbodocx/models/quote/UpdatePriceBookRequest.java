@@ -15,6 +15,8 @@ public class UpdatePriceBookRequest extends TrackableRequest {
     private Boolean isDefault;
     private Boolean showInQuoteBuilder;
     private List<PriceBookProductPricingInput> productPricing;
+    /** Put every product back on the book's discount (before any productPricing in the request) */
+    private Boolean resetProductPricing;
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; markFieldSet("name"); }
@@ -34,4 +36,6 @@ public class UpdatePriceBookRequest extends TrackableRequest {
     public void setShowInQuoteBuilder(Boolean showInQuoteBuilder) { this.showInQuoteBuilder = showInQuoteBuilder; markFieldSet("showInQuoteBuilder"); }
     public List<PriceBookProductPricingInput> getProductPricing() { return productPricing; }
     public void setProductPricing(List<PriceBookProductPricingInput> productPricing) { this.productPricing = productPricing; markFieldSet("productPricing"); }
+    public Boolean getResetProductPricing() { return resetProductPricing; }
+    public void setResetProductPricing(Boolean resetProductPricing) { this.resetProductPricing = resetProductPricing; markFieldSet("resetProductPricing"); }
 }

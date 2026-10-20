@@ -10,12 +10,11 @@ import "encoding/json"
 type QuoteStatus string
 
 const (
-	QuoteStatusDraft           QuoteStatus = "draft"
-	QuoteStatusPendingApproval QuoteStatus = "pending_approval"
-	QuoteStatusSent            QuoteStatus = "sent"
-	QuoteStatusAccepted        QuoteStatus = "accepted"
-	QuoteStatusDeclined        QuoteStatus = "declined"
-	QuoteStatusVoided          QuoteStatus = "voided"
+	QuoteStatusDraft    QuoteStatus = "draft"
+	QuoteStatusSent     QuoteStatus = "sent"
+	QuoteStatusAccepted QuoteStatus = "accepted"
+	QuoteStatusDeclined QuoteStatus = "declined"
+	QuoteStatusVoided   QuoteStatus = "voided"
 )
 
 // BillingFrequency represents a billing interval
@@ -56,6 +55,29 @@ const (
 	CurrencyCAD Currency = "CAD"
 	CurrencyAUD Currency = "AUD"
 	CurrencyINR Currency = "INR"
+)
+
+// List sorting and quote list filter values (the options take them as plain strings)
+const (
+	// SortAsc / SortDesc are the SortDirection values for every list
+	SortAsc  = "asc"
+	SortDesc = "desc"
+
+	// QuoteListStatusExpired is the "expired" quote list status filter: a draft or sent quote
+	// past its Valid until day (UTC), or whose signature expired. It is not a stored status.
+	QuoteListStatusExpired = "expired"
+
+	// ListQuotes SortBy values (default QuoteSortByCreatedOn, newest first)
+	QuoteSortByUpdatedOn   = "updatedOn"
+	QuoteSortByCreatedOn   = "createdOn"
+	QuoteSortByTotal       = "total"
+	QuoteSortByValidUntil  = "validUntil"
+	QuoteSortByQuoteNumber = "quoteNumber"
+
+	// ListQuotes ValidUntilWindow values, in UTC days
+	ValidUntilThisWeek  = "thisWeek"  // today through today + 6
+	ValidUntilThisMonth = "thisMonth" // the current calendar month
+	ValidUntilPast      = "past"      // before today
 )
 
 // CategoryType represents a category classification
@@ -138,10 +160,20 @@ type QuoteStatusInfo struct {
 }
 
 // QuoteCreator represents the creator of a quote
+//
+// The same type is returned by ListQuoteCreators, which fills Name, Email, IsAPIKey and
+// APIKeyDeleted instead of FirstName / LastName.
 type QuoteCreator struct {
 	ID        string `json:"id"`
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
+	FirstName string `json:"firstName,omitempty"`
+	LastName  string `json:"lastName,omitempty"`
+	// Name is a person's name (else email), or the API key's name (ListQuoteCreators)
+	Name string `json:"name,omitempty"`
+	// Email is nil for an API key
+	Email    *string `json:"email,omitempty"`
+	IsAPIKey bool    `json:"isAPIKey,omitempty"`
+	// APIKeyDeleted marks an API key that has since been deleted (its quotes stay)
+	APIKeyDeleted bool `json:"apiKeyDeleted,omitempty"`
 }
 
 // QuotePreparedBy is the resolved "Prepared by" identity shown on the quote PDF and preview,
@@ -193,6 +225,13 @@ type Quote struct {
 	StatusInfo         *QuoteStatusInfo `json:"statusInfo,omitempty"`
 	// PreparedBy is folded on by GetQuote from the response's sibling "preparedBy".
 	PreparedBy *QuotePreparedBy `json:"preparedBy,omitempty"`
+	// LineItemCount is set by ListQuotes: how many line items the quote has
+	LineItemCount *int `json:"lineItemCount,omitempty"`
+	// IsSignatureExpired is set by ListQuotes: the quote's signature request has expired
+	IsSignatureExpired *bool `json:"isSignatureExpired,omitempty"`
+	// IsExpired is set by ListQuotes: a draft or sent quote past its Valid until day (UTC), or
+	// whose signature expired. The same rule as the "expired" status filter.
+	IsExpired *bool `json:"isExpired,omitempty"`
 }
 
 // ============================================
@@ -276,14 +315,56 @@ func (r UpdateQuoteRequest) MarshalJSON() ([]byte, error) {
 }
 
 // ListQuotesOptions holds the filter/pagination options for listing quotes
+//
+// Statuses also takes "expired" (QuoteListStatusExpired): a draft or sent quote past its Valid
+// until day (UTC), or whose signature expired. SortBy is one of the QuoteSortBy* values
+// (default createdOn, newest first); SortDirection is SortAsc or SortDesc.
 type ListQuotesOptions struct {
-	Limit      *int     `json:"limit,omitempty"`
-	Offset     *int     `json:"offset,omitempty"`
-	Query      *string  `json:"query,omitempty"`
-	Statuses   []string `json:"statuses,omitempty"`
-	CompanyID  *string  `json:"companyId,omitempty"`
-	ContactID  *string  `json:"contactId,omitempty"`
-	CurrencyCode *string `json:"currency,omitempty"`
+	Limit        *int     `json:"limit,omitempty"`
+	Offset       *int     `json:"offset,omitempty"`
+	Query        *string  `json:"query,omitempty"`
+	Statuses     []string `json:"statuses,omitempty"`
+	CompanyID    *string  `json:"companyId,omitempty"`
+	CompanyIDs   []string `json:"companyIds,omitempty"`
+	ContactID    *string  `json:"contactId,omitempty"`
+	CurrencyCode *string  `json:"currency,omitempty"`
+	Currencies   []string `json:"currencies,omitempty"`
+	// CreatedBy holds the ids of the users who created the quotes (see ListQuoteCreators)
+	CreatedBy []string `json:"createdBy,omitempty"`
+	// CreatedByAPIKeys picks quotes created by any API key (ORed with CreatedBy)
+	CreatedByAPIKeys *bool `json:"createdByApiKeys,omitempty"`
+	// ValidUntilWindow is one of the ValidUntil* window values
+	ValidUntilWindow *string `json:"validUntilWindow,omitempty"`
+	// ValidUntilFrom / ValidUntilTo are inclusive YYYY-MM-DD bounds
+	ValidUntilFrom  *string `json:"validUntilFrom,omitempty"`
+	ValidUntilTo    *string `json:"validUntilTo,omitempty"`
+	SortBy          *string `json:"sortBy,omitempty"`
+	SortDirection   *string `json:"sortDirection,omitempty"`
+	SummaryCurrency *string `json:"summaryCurrency,omitempty"`
+}
+
+// QuoteSummaryOptions holds the filters for GetQuoteSummary (the ListQuotes filters; the status
+// filter is ignored)
+type QuoteSummaryOptions struct {
+	Query            *string  `json:"query,omitempty"`
+	CompanyID        *string  `json:"companyId,omitempty"`
+	CompanyIDs       []string `json:"companyIds,omitempty"`
+	ContactID        *string  `json:"contactId,omitempty"`
+	CurrencyCode     *string  `json:"currency,omitempty"`
+	Currencies       []string `json:"currencies,omitempty"`
+	CreatedBy        []string `json:"createdBy,omitempty"`
+	CreatedByAPIKeys *bool    `json:"createdByApiKeys,omitempty"`
+	ValidUntilWindow *string  `json:"validUntilWindow,omitempty"`
+	ValidUntilFrom   *string  `json:"validUntilFrom,omitempty"`
+	ValidUntilTo     *string  `json:"validUntilTo,omitempty"`
+	// SummaryCurrency is the currency of the summary (default: the one filtered currency, else USD)
+	SummaryCurrency *string `json:"summaryCurrency,omitempty"`
+}
+
+// DuplicateOptions names the copy made by a Duplicate* call. Left out (or empty), the copy is
+// called "Copy of <name>".
+type DuplicateOptions struct {
+	Name string
 }
 
 // SendQuoteRequest is the request to send a quote.
@@ -389,7 +470,100 @@ type QuoteListResponse struct {
 	Results      []Quote        `json:"results"`
 	TotalRecords int            `json:"totalRecords"`
 	Stats        QuoteListStats `json:"stats"`
+	// StatusCounts holds the quotes per list tab (every filter except the status filter)
+	StatusCounts *QuoteStatusCounts `json:"statusCounts,omitempty"`
+	// Summary holds the list's summary cards, in one currency
+	Summary *QuoteSummary `json:"summary,omitempty"`
 }
+
+// QuoteStatusCounts holds the quotes per list tab. Expired overlaps Draft and Sent.
+type QuoteStatusCounts struct {
+	All      int `json:"all"`
+	Draft    int `json:"draft"`
+	Sent     int `json:"sent"`
+	Accepted int `json:"accepted"`
+	Declined int `json:"declined"`
+	Voided   int `json:"voided"`
+	Expired  int `json:"expired"`
+}
+
+// QuoteSummaryAmount is a total with how many quotes make it up
+type QuoteSummaryAmount struct {
+	Total float64 `json:"total"`
+	Count int     `json:"count"`
+}
+
+// QuoteSummaryCount is a count of quotes
+type QuoteSummaryCount struct {
+	Count int `json:"count"`
+}
+
+// QuoteWinRate is accepted / (accepted + declined) over the last WindowDays.
+// Percent is nil when no quote was decided.
+type QuoteWinRate struct {
+	Percent    *float64 `json:"percent"`
+	Accepted   int      `json:"accepted"`
+	Declined   int      `json:"declined"`
+	WindowDays int      `json:"windowDays"`
+}
+
+// QuoteSummary holds the quote list's summary cards, in one currency
+type QuoteSummary struct {
+	CurrencyCode string `json:"currency"`
+	// OpenPipeline: draft and sent quotes that aren't expired
+	OpenPipeline QuoteSummaryAmount `json:"openPipeline"`
+	Completed    struct {
+		Accepted int `json:"accepted"`
+		Declined int `json:"declined"`
+	} `json:"completed"`
+	CreatedThisMonth QuoteSummaryCount `json:"createdThisMonth"`
+	// WaitingToSign: sent quotes that aren't expired
+	WaitingToSign QuoteSummaryCount `json:"waitingToSign"`
+	WonThisMonth  QuoteSummaryCount `json:"wonThisMonth"`
+	// Currencies lists every currency the org's quotes are in, A to Z
+	Currencies []string     `json:"currencies"`
+	WinRate    QuoteWinRate `json:"winRate"`
+	// MonthlyRecurring: the monthly subtotal of accepted quotes
+	MonthlyRecurring QuoteSummaryAmount `json:"monthlyRecurring"`
+}
+
+// NextQuoteNumber is the number the next new quote will get (read only: the counter doesn't move)
+type NextQuoteNumber struct {
+	NextNumber string `json:"nextNumber"`
+	Sequence   int    `json:"sequence"`
+	// CanEdit reports whether the caller can change numbering (administrators)
+	CanEdit bool `json:"canEdit"`
+}
+
+// OpenQuoteSummary is an open quote (draft or sent) for a company or contact
+type OpenQuoteSummary struct {
+	ID          string      `json:"id"`
+	QuoteNumber string      `json:"quoteNumber"`
+	Name        *string     `json:"name"`
+	Status      QuoteStatus `json:"status"`
+	UpdatedOn   string      `json:"updatedOn"`
+}
+
+// OpenQuotesResponse holds the open quotes that block deleting a company or contact: the newest
+// 50, and how many in all
+type OpenQuotesResponse struct {
+	Results      []OpenQuoteSummary `json:"results"`
+	TotalRecords int                `json:"totalRecords"`
+}
+
+// LineItemImage is an image on a custom line item (a line with no catalog product)
+type LineItemImage struct {
+	ID           string `json:"id"`
+	LineItemID   string `json:"lineItemId"`
+	FileID       string `json:"fileId"`
+	DisplayOrder int    `json:"displayOrder"`
+	FileName     string `json:"fileName"`
+	FileType     string `json:"fileType"`
+	ImageData    string `json:"imageData,omitempty"`
+}
+
+// QuoteLineItemImagesResponse maps line item IDs to their images (up to three, in order)
+type QuoteLineItemImagesResponse map[string][]LineItemImage
 
 // SendQuoteResponse is the response from sending a quote
 type SendQuoteResponse struct {
@@ -719,14 +893,22 @@ func (r UpdateProductRequest) MarshalJSON() ([]byte, error) {
 }
 
 // ListProductsOptions holds the filter/pagination options for listing products
+//
+// BillingFrequencies and CurrencyCodes filter by several values (sent as repeated
+// billingFrequency / currency params, alongside the single BillingFrequency / CurrencyCode).
+// SortBy is "name", "listPrice" or "createdOn" (default createdOn, newest first).
 type ListProductsOptions struct {
-	Limit            *int     `json:"limit,omitempty"`
-	Offset           *int     `json:"offset,omitempty"`
-	Query            *string  `json:"query,omitempty"`
-	CategoryIDs      []string `json:"categoryIds,omitempty"`
-	BillingFrequency *string  `json:"billingFrequency,omitempty"`
-	CurrencyCode     *string  `json:"currency,omitempty"`
-	ShowInCatalog    *bool    `json:"showInCatalog,omitempty"`
+	Limit              *int     `json:"limit,omitempty"`
+	Offset             *int     `json:"offset,omitempty"`
+	Query              *string  `json:"query,omitempty"`
+	CategoryIDs        []string `json:"categoryIds,omitempty"`
+	BillingFrequency   *string  `json:"billingFrequency,omitempty"`
+	BillingFrequencies []string `json:"-" query:"billingFrequency"`
+	CurrencyCode       *string  `json:"currency,omitempty"`
+	CurrencyCodes      []string `json:"-" query:"currency"`
+	ShowInCatalog      *bool    `json:"showInCatalog,omitempty"`
+	SortBy             *string  `json:"sortBy,omitempty"`
+	SortDirection      *string  `json:"sortDirection,omitempty"`
 }
 
 // ProductListResponse is the response from listing products
@@ -741,6 +923,10 @@ type ProductListResponse struct {
 
 // ProductPrimaryImagesResponse maps product IDs to their primary image (or null)
 type ProductPrimaryImagesResponse map[string]*ProductImage
+
+// ProductQuoteImagesResponse maps product IDs to the images they show on a quote (up to three,
+// in display order; empty when none)
+type ProductQuoteImagesResponse map[string][]ProductImage
 
 // ============================================
 // PriceBook Types
@@ -787,6 +973,8 @@ type PriceBook struct {
 	ProductPricing     []PriceBookProductPricing `json:"productPricing,omitempty"`
 	PriceBookType      *PriceBookType            `json:"priceBookType,omitempty"`
 	ProductCount       *int                      `json:"productCount,omitempty"`
+	// OverrideCount is set by ListPriceBooks: products with their own price in this book
+	OverrideCount *int `json:"overrideCount,omitempty"`
 }
 
 // PriceBookProductPricingInput represents a product pricing entry for create/update
@@ -822,7 +1010,10 @@ type UpdatePriceBookRequest struct {
 	IsDefault          *bool                          `json:"isDefault,omitempty"`
 	ShowInQuoteBuilder *bool                          `json:"showInQuoteBuilder,omitempty"`
 	ProductPricing     []PriceBookProductPricingInput `json:"productPricing,omitempty"`
-	nullFields         map[string]bool                `json:"-"`
+	// ResetProductPricing puts every product back on the book's discount (before any
+	// ProductPricing in the same request)
+	ResetProductPricing *bool           `json:"resetProductPricing,omitempty"`
+	nullFields          map[string]bool `json:"-"`
 }
 
 // ClearDescription explicitly sets description to null in the JSON payload.
@@ -854,12 +1045,17 @@ func (r UpdatePriceBookRequest) MarshalJSON() ([]byte, error) {
 }
 
 // ListPriceBooksOptions holds the filter/pagination options for listing price books
+//
+// SortBy is "name", "discountPercent", "overrideCount", "validFrom", "validTo" or "createdOn"
+// (default createdOn, newest first).
 type ListPriceBooksOptions struct {
 	Limit              *int     `json:"limit,omitempty"`
 	Offset             *int     `json:"offset,omitempty"`
 	Query              *string  `json:"query,omitempty"`
 	PriceBookTypeIDs   []string `json:"priceBookTypeIds,omitempty"`
 	ShowInQuoteBuilder *bool    `json:"showInQuoteBuilder,omitempty"`
+	SortBy             *string  `json:"sortBy,omitempty"`
+	SortDirection      *string  `json:"sortDirection,omitempty"`
 }
 
 // ListPriceBookProductsOptions holds the filter/pagination options for listing price book products
@@ -939,6 +1135,10 @@ type Bundle struct {
 	UpdatedOn             string          `json:"updatedOn"`
 	Items                 []BundleItem    `json:"items,omitempty"`
 	Category              *BundleCategory `json:"category,omitempty"`
+	// ItemCount is set by ListBundles: the bundle's active items
+	ItemCount *int `json:"itemCount,omitempty"`
+	// BillingTotals is set by ListBundles: the bundle price per billing frequency
+	BillingTotals map[string]float64 `json:"billingTotals,omitempty"`
 }
 
 // BundleItemInput represents a bundle item entry for create/update
@@ -1023,13 +1223,19 @@ func (r UpdateBundleRequest) MarshalJSON() ([]byte, error) {
 }
 
 // ListBundlesOptions holds the filter/pagination options for listing bundles
+//
+// CurrencyCodes filters by several currencies (repeated currency params). SortBy is "name",
+// "itemCount", "totalListPrice", "totalFinalPrice" or "createdOn" (default createdOn, newest first).
 type ListBundlesOptions struct {
 	Limit         *int     `json:"limit,omitempty"`
 	Offset        *int     `json:"offset,omitempty"`
 	Query         *string  `json:"query,omitempty"`
 	CategoryIDs   []string `json:"categoryIds,omitempty"`
 	CurrencyCode  *string  `json:"currency,omitempty"`
+	CurrencyCodes []string `json:"-" query:"currency"`
 	ShowInCatalog *bool    `json:"showInCatalog,omitempty"`
+	SortBy        *string  `json:"sortBy,omitempty"`
+	SortDirection *string  `json:"sortDirection,omitempty"`
 }
 
 // BundleListResponse is the response from listing bundles
@@ -1051,6 +1257,7 @@ type Company struct {
 	ID               string     `json:"id"`
 	OrgID            string     `json:"orgId"`
 	Name             string     `json:"name"`
+	Email            *string    `json:"email"`
 	Phone            *string    `json:"phone"`
 	City             *string    `json:"city"`
 	State            *string    `json:"state"`
@@ -1077,6 +1284,7 @@ type CreateCompanyContactInput struct {
 type CreateCompanyRequest struct {
 	Name       string                      `json:"name"`
 	Contacts   []CreateCompanyContactInput `json:"contacts"`
+	Email      *string                     `json:"email,omitempty"`
 	Phone      *string                     `json:"phone,omitempty"`
 	City       *string                     `json:"city,omitempty"`
 	State      *string                     `json:"state,omitempty"`
@@ -1087,12 +1295,20 @@ type CreateCompanyRequest struct {
 // UpdateCompanyRequest is the request to update a company
 type UpdateCompanyRequest struct {
 	Name       *string         `json:"name,omitempty"`
+	Email      *string         `json:"email,omitempty"`
 	Phone      *string         `json:"phone,omitempty"`
 	City       *string         `json:"city,omitempty"`
 	State      *string         `json:"state,omitempty"`
 	Country    *string         `json:"country,omitempty"`
 	IndustryID *string         `json:"industryId,omitempty"`
 	nullFields map[string]bool `json:"-"`
+}
+
+// ClearEmail explicitly sets email to null in the JSON payload.
+func (r *UpdateCompanyRequest) ClearEmail() {
+	if r.nullFields == nil { r.nullFields = make(map[string]bool) }
+	r.nullFields["email"] = true
+	r.Email = nil
 }
 
 // ClearPhone explicitly sets phone to null in the JSON payload.
@@ -1145,11 +1361,15 @@ func (r UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 }
 
 // ListCompaniesOptions holds the filter/pagination options for listing companies
+//
+// SortBy is "name", "contactCount" or "lastActivityDate" (default lastActivityDate, most recent first).
 type ListCompaniesOptions struct {
-	Limit       *int     `json:"limit,omitempty"`
-	Offset      *int     `json:"offset,omitempty"`
-	Query       *string  `json:"query,omitempty"`
-	IndustryIDs []string `json:"industryIds,omitempty"`
+	Limit         *int     `json:"limit,omitempty"`
+	Offset        *int     `json:"offset,omitempty"`
+	Query         *string  `json:"query,omitempty"`
+	IndustryIDs   []string `json:"industryIds,omitempty"`
+	SortBy        *string  `json:"sortBy,omitempty"`
+	SortDirection *string  `json:"sortDirection,omitempty"`
 }
 
 // CompanyListResponse is the response from listing companies
@@ -1232,17 +1452,35 @@ func (r UpdateContactRequest) MarshalJSON() ([]byte, error) {
 }
 
 // ListContactsOptions holds the filter/pagination options for listing contacts
+//
+// SortBy is "name" or "createdOn" (default createdOn, newest first).
 type ListContactsOptions struct {
-	Limit     *int    `json:"limit,omitempty"`
-	Offset    *int    `json:"offset,omitempty"`
-	Query     *string `json:"query,omitempty"`
-	CompanyID *string `json:"companyId,omitempty"`
+	Limit         *int     `json:"limit,omitempty"`
+	Offset        *int     `json:"offset,omitempty"`
+	Query         *string  `json:"query,omitempty"`
+	CompanyID     *string  `json:"companyId,omitempty"`
+	CompanyIDs    []string `json:"companyIds,omitempty"`
+	SortBy        *string  `json:"sortBy,omitempty"`
+	SortDirection *string  `json:"sortDirection,omitempty"`
+}
+
+// ListCompanyContactsOptions holds the search, sort and pagination options for one company's contacts.
+// SortBy is "name" or "createdOn" (default createdOn, newest first).
+type ListCompanyContactsOptions struct {
+	Limit         *int    `json:"limit,omitempty"`
+	Offset        *int    `json:"offset,omitempty"`
+	Query         *string `json:"query,omitempty"`
+	SortBy        *string `json:"sortBy,omitempty"`
+	SortDirection *string `json:"sortDirection,omitempty"`
 }
 
 // ContactListResponse is the response from listing contacts
 type ContactListResponse struct {
 	Results      []Contact `json:"results"`
 	TotalRecords int       `json:"totalRecords"`
+	// Company is set when the list is for one company; its ContactCount is the company's active
+	// contacts whatever the search (a company can't lose its last contact)
+	Company *Company `json:"company,omitempty"`
 }
 
 // ============================================
@@ -1404,12 +1642,16 @@ type UpdateQuoteTypeRequest struct {
 }
 
 // ListTypesOptions holds the filter/pagination options for listing types
+//
+// SortBy is "name" or "usageCount" (usage needs a CategoryType); default name, A to Z.
 type ListTypesOptions struct {
-	Limit        *int    `json:"limit,omitempty"`
-	Offset       *int    `json:"offset,omitempty"`
-	Query        *string `json:"query,omitempty"`
-	CategoryType *string `json:"categoryType,omitempty"`
-	IncludeUsage *bool   `json:"includeUsage,omitempty"`
+	Limit         *int    `json:"limit,omitempty"`
+	Offset        *int    `json:"offset,omitempty"`
+	Query         *string `json:"query,omitempty"`
+	CategoryType  *string `json:"categoryType,omitempty"`
+	IncludeUsage  *bool   `json:"includeUsage,omitempty"`
+	SortBy        *string `json:"sortBy,omitempty"`
+	SortDirection *string `json:"sortDirection,omitempty"`
 }
 
 // QuoteTypeListResponse is the response from listing types
