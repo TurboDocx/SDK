@@ -97,7 +97,7 @@ type CreateSigningURLResponse struct {
 	// URL is the URL to open (new tab / redirect) or embed for the signer.
 	URL string `json:"url"`
 	// ExpiresAt is when the URL stops working (ISO 8601). Single-use links (external_idv /
-	// override) expire minutes after issue. For otp/no-verification recipients the URL is the
+	// override) expire 5 minutes after issue. For otp/no-verification recipients the URL is the
 	// reusable signing link, so this is the document's own expiry, or nil when it doesn't expire.
 	ExpiresAt   *string `json:"expiresAt"`
 	RecipientID string  `json:"recipientId"`
@@ -340,7 +340,7 @@ func expandRecipientFields(recipient EmbeddedSignatureRecipient) []Field {
 // CreateSigningURL mints an embedded signing URL for one recipient — request it the moment the
 // signer is ready (never store it). For otp / no-verification recipients it is the reusable signing
 // link, valid until the document expires; only external_idv / override recipients get a single-use
-// link that expires minutes after issue. The Go counterpart of the JS SDK's createSigningUrl.
+// link that expires 5 minutes after issue. The Go counterpart of the JS SDK's createSigningUrl.
 //
 // Provide exactly one of RecipientID or ExternalID (both or neither is a client-side
 // ValidationError). IdentityAssertion is only for external_idv recipients; ReturnURL, when set,

@@ -138,7 +138,7 @@ module TurboDocxSdk
       # Mint an embedded signing URL for one recipient -- request it the moment the signer is ready
       # (never store it). For otp / no-verification recipients it is the reusable signing link, valid
       # until the document expires; only external_idv / override recipients get a single-use link
-      # that expires minutes after issue. The counterpart of DocuSign's createRecipientView / BoldSign's
+      # that expires 5 minutes after issue. The counterpart of DocuSign's createRecipientView / BoldSign's
       # GetEmbeddedSignLink. Open the returned +url+ in a new tab, redirect to it, or embed it.
       #
       # Provide EXACTLY ONE of +recipient_id+ / +external_id+ (an empty string counts as absent);
@@ -161,7 +161,7 @@ module TurboDocxSdk
       # @param return_url [String, nil] where TurboSign returns the signer after completion (https only)
       # @return [Hash] with "url", "expiresAt", "recipientId", "externalId",
       #   "identityVerificationMode" and "pendingChecks". "expiresAt": single-use links
-      #   (external_idv / override) expire minutes after issue; for otp/no-verification recipients
+      #   (external_idv / override) expire 5 minutes after issue; for otp/no-verification recipients
       #   the URL is the reusable signing link, so it is the document's own expiry, or nil when the
       #   document doesn't expire.
       # @raise [ValidationError] if not exactly one selector is given, or return_url is not https

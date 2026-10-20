@@ -15,7 +15,7 @@ public class CreateSigningUrlResponse {
 
     /**
      * When the URL stops working (ISO 8601). Single-use links ({@code external_idv} /
-     * {@code override}) expire minutes after issue. For {@code otp}/no-verification recipients the
+     * {@code override}) expire 5 minutes after issue. For {@code otp}/no-verification recipients the
      * URL is the reusable signing link, so this is the document's own expiry, or null when the
      * document doesn't expire.
      */

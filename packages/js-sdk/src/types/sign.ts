@@ -641,7 +641,7 @@ export interface CreateSigningUrlResponse {
   url: string;
   /**
    * When the URL stops working (ISO 8601). Single-use links (`external_idv` / `override`) expire
-   * minutes after issue. For `otp` / no-verification recipients the URL is the reusable signing link,
+   * 5 minutes after issue. For `otp` / no-verification recipients the URL is the reusable signing link,
    * so this is the document's own expiry, or `null` when the document doesn't expire.
    */
   expiresAt: string | null;

@@ -293,7 +293,7 @@ public final class TurboSign {
      * Mint an embedded signing URL for one recipient — request it the moment the signer is ready
      * (never store it). For {@code otp} / no-verification recipients it is the reusable signing link,
      * valid until the document expires; only {@code external_idv} / {@code override} recipients get a
-     * single-use link that expires minutes after issue. Open the returned {@code url} in a new tab or
+     * single-use link that expires 5 minutes after issue. Open the returned {@code url} in a new tab or
      * redirect to it.
      *
      * <p>Provide exactly one of {@code recipientId} / {@code externalId}. {@code identityAssertion}
