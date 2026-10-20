@@ -4,7 +4,8 @@
 
 import * as fs from 'fs';
 import * as nodePath from 'path';
-import { HttpClient, QuoteClientConfig, detectFileType, toBlobPart } from '../http';
+import { HttpClient, QuoteClientConfig, detectFileType } from '../http';
+import { toBlobPart } from '../utils/blob-part';
 import type { BulkImportResult, PaginationParams, SuccessResponse } from '../types/quote-shared';
 import type {
   Quote,

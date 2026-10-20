@@ -114,10 +114,10 @@ export interface DocumentStatusResponse {
   /**
    * ISO timestamp when the signing window closes, if the document has a deadline.
    *
-   * Absent when expiration is off (the default), which means the document never expires.
+   * null when expiration is off (the default), which means the document never expires.
    * Once this instant passes the signing links stop working and the document becomes 'expired'.
    */
-  expiresAt?: string;
+  expiresAt: string | null;
 }
 
 // ============================================
