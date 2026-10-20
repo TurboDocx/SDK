@@ -374,7 +374,7 @@ CreateSigningUrlResponse link = client.turboSign().createSigningUrl(
 |:--|:--|
 | `recipientId` | The TurboDocx recipient id. Provide this or `externalId`, not both. |
 | `externalId` | The `externalId` you set on the recipient when sending. |
-| `identityAssertion` | Required only for `external_idv` recipients (`IdentityAssertion.Builder`: `provider`, `verificationId`, `verifiedAt`, `subjectEmail`, plus optional `method`, `methodDetail`, `assuranceLevel`, `verifiedName`, `evidenceUrl`, `overrideEmailMatching`). |
+| `identityAssertion` | Required only for `external_idv` recipients (`IdentityAssertion.Builder`: `provider`, `verificationId`, `verifiedAt`, `subjectEmail`, plus optional `method`, `methodDetail` (required when `method` is `"other"`), `assuranceLevel`, `verifiedName`, `evidenceUrl`, `overrideEmailMatching`). |
 | `returnUrl` | Where the signer goes after completing. Must be https. An empty string counts as not set. |
 
 `CreateSigningUrlResponse`: `getUrl()`, `getExpiresAt()` (ISO 8601: 5 minutes after issue for a single-use link, otherwise the document's `expiresAt`, or null when the document has no expiry), `getRecipientId()`, `getExternalId()`, `getIdentityVerificationMode()` (`"otp"`, `"external_idv"`, `"override"` or null) and `getPendingChecks()` (passcode steps left on the page, `"email_otp"` / `"sms_otp"`).
