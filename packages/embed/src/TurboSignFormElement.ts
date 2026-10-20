@@ -44,7 +44,8 @@ function toCssLength(value: string | null): string {
 
 /**
  * The `<turbosign-form>` custom element. Register it with {@link defineTurboSignForm} (called
- * automatically when this module is imported in a browser).
+ * automatically when this module is imported in a browser). Its `embed-url` is the per-recipient embed
+ * URL from `TurboSign.createEmbeddedSignature` (`recipients[i].embedUrl`) or `TurboSign.createSigningUrl` (`url`).
  */
 export class TurboSignFormElement extends HTMLElement {
   /** Attributes that trigger {@link attributeChangedCallback} when changed. */

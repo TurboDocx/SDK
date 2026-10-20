@@ -19,7 +19,7 @@ import { MISSING_ORIGIN_WARNING } from './missingOriginWarning.js';
 
 /** Props for {@link TurboSignForm}. */
 export interface TurboSignFormProps {
-  /** The per-recipient embed URL returned by `TurboSign.createEmbeddedSignature`. */
+  /** The per-recipient embed URL from `TurboSign.createEmbeddedSignature` (`recipients[i].embedUrl`) or `TurboSign.createSigningUrl` (`url`). */
   embedUrl: string;
   /**
    * The exact origin the signing page is served from (e.g. `"https://app.turbodocx.com"`). Enables
