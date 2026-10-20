@@ -84,7 +84,7 @@ public class Recipient {
     private Recipient(Builder builder) {
         this.name = builder.name;
         this.email = builder.email;
-        this.signingOrder = builder.signingOrder == 0 ? null : builder.signingOrder;
+        this.signingOrder = builder.signingOrder;
         this.phone = builder.phone;
         this.externalId = builder.externalId;
         this.identityVerification = builder.identityVerification;
@@ -127,7 +127,8 @@ public class Recipient {
     public static class Builder {
         private String name;
         private String email;
-        private int signingOrder;
+        // Boxed so 0 ("not set") can be held as null: assigning null into an int would unbox and NPE
+        private Integer signingOrder;
         private String phone;
         private String role;
         private String externalId;
@@ -143,8 +144,9 @@ public class Recipient {
             return this;
         }
 
+        /** The signing order (1-indexed); 0 means not set and leaves it off the request. */
         public Builder signingOrder(int signingOrder) {
-            this.signingOrder = signingOrder == 0 ? null : signingOrder;
+            this.signingOrder = signingOrder == 0 ? null : Integer.valueOf(signingOrder);
             return this;
         }
 

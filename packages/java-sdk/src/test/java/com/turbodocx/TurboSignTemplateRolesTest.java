@@ -151,6 +151,16 @@ class TurboSignTemplateRolesTest {
     }
 
     @Test
+    @DisplayName("Recipient.Builder.signingOrder(0) builds (no NPE) and leaves signingOrder off the wire, like the constructor")
+    void builderSigningOrderZero() {
+        Recipient built = new Recipient.Builder().name("A").email("a@x.com").signingOrder(0).build();
+        assertEquals(0, built.getSigningOrder());
+        JsonObject json = new com.google.gson.Gson().toJsonTree(built).getAsJsonObject();
+        assertFalse(json.has("signingOrder"));
+        assertEquals(new com.google.gson.Gson().toJsonTree(new Recipient("A", "a@x.com", 0)), json);
+    }
+
+    @Test
     @DisplayName("sendSignature surfaces the API's message and code when a role isn't on the template")
     void unknownRoleError() {
         enqueue(400, "{\"message\":\"Unknown role \\\"clinet\\\". This template's roles are: client, countersigner\","
