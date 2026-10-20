@@ -892,7 +892,7 @@ class TurboSign:
 
         For ``otp`` / no-verification recipients it is the reusable signing link, valid until the
         document expires; only ``external_idv`` / ``override`` recipients get a single-use link
-        that expires minutes after issue.
+        that expires 5 minutes after issue.
 
         Request it the moment the signer is ready (never store it). Open the returned ``url``
         in a new tab, redirect to it, or embed it in an iframe. This is the counterpart of
@@ -918,7 +918,7 @@ class TurboSign:
             Dict with the signing URL and its metadata (camelCase, straight from the API):
                 - url: The URL to open / redirect to / embed for the signer.
                 - expiresAt: When the URL stops working (ISO 8601). Single-use links
-                  (external_idv / override) expire minutes after issue. For
+                  (external_idv / override) expire 5 minutes after issue. For
                   otp/no-verification recipients the URL is the reusable signing link, so
                   this is the document's own expiry, or None when it doesn't expire.
                 - recipientId: The resolved recipient id.
