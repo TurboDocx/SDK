@@ -311,10 +311,19 @@ SendSignatureResponse result = client.turboSign().sendSignature(
 
 #### Embedded signing: `sendEmail(false)` + `createSigningUrl()`
 
-To show the signing page in your own app instead of emailing a link, send with `sendEmail(false)`, then mint each signer's URL with `createSigningUrl()` when they're ready to sign. Embedded signing must be enabled for your organization.
+To show the signing page in your own app instead of emailing a link, send with `sendEmail(false)`, then mint each signer's URL with `createSigningUrl()` when they're ready to sign.
+
+Embedded signing must be enabled for your organization, and the send does not check it for you. A send whose recipients don't use an OTP passcode succeeds and reserves a signature credit even when embedded signing is off. Then `createSigningUrl()` throws `TurboDocxException.AuthorizationException` (403, code `EmbeddedSigningNotEnabled`). Check `getEmbeddedSigningSettings().isEnabled()` before you send:
 
 ```java
-// 1. Create the request without emailing the signer a link (passcode and completed-copy emails still go out).
+if (!client.turboSign().getEmbeddedSigningSettings().isEnabled()) {
+    throw new IllegalStateException("Embedded signing is not enabled for this organization");
+}
+
+// 1. Create the request with signer emails off. sendEmail(false) suppresses the signing-link email,
+//    the initial CC notification, later signers' "your turn" emails and the scheduled reminder and
+//    expiry-warning emails. Passcode emails, the completed-copy email and explicit resendEmail() /
+//    sendReminder() calls still go out.
 SendSignatureResponse sent = client.turboSign().sendSignature(
     new SendSignatureRequest.Builder()
         .fileLink("https://example.com/contract.pdf")
@@ -345,7 +354,89 @@ CreateSigningUrlResponse link = client.turboSign().createSigningUrl(
 System.out.println(link.getUrl());
 ```
 
-Request the URL at click time and don't store it. For `otp` and no-verification recipients it is the reusable signing link, valid until the document expires; for `external_idv` and `override` recipients it is single-use and expires minutes after issue (pass `.identityAssertion(...)` for `external_idv`). A signer whose turn hasn't come yet gets a `TurboDocxException.ConflictException` with code `RecipientNotInTurn`. For the full flow, including identity verification, see [`examples/TurboSignEmbeddedIdentity.java`](./examples/TurboSignEmbeddedIdentity.java).
+Request the URL at click time and don't store it. For `otp` and no-verification recipients it is the reusable signing link (`?token=`), valid until the document's `expiresAt`. When the document has no expiry, `expiresAt` is null and the link does not expire. For `external_idv` and `override` recipients it is a single-use link (`?sut=`) that expires 5 minutes after issue (pass `.identityAssertion(...)` for `external_idv`). A signer whose turn hasn't come yet gets a `TurboDocxException.ConflictException` with code `RecipientNotInTurn`. For the full flow, including identity verification, see [`examples/TurboSignEmbeddedIdentity.java`](./examples/TurboSignEmbeddedIdentity.java).
+
+#### `createSigningUrl()`
+
+Mint the signing URL for one recipient of a sent document. Call it when the signer is ready to sign.
+
+```java
+CreateSigningUrlResponse link = client.turboSign().createSigningUrl(
+    "doc-uuid-here",
+    new CreateSigningUrlRequest.Builder()
+        .recipientId("recipient-uuid-here")     // or .externalId("your_customer_123"): exactly one
+        .returnUrl("https://your-app.example.com/signed") // optional, https only
+        .build()
+);
+```
+
+| Request field | Notes |
+|:--|:--|
+| `recipientId` | The TurboDocx recipient id. Provide this or `externalId`, not both. |
+| `externalId` | The `externalId` you set on the recipient when sending. |
+| `identityAssertion` | Required only for `external_idv` recipients (`IdentityAssertion.Builder`: `provider`, `verificationId`, `verifiedAt`, `subjectEmail`, plus optional `method`, `methodDetail`, `assuranceLevel`, `verifiedName`, `evidenceUrl`, `overrideEmailMatching`). |
+| `returnUrl` | Where the signer goes after completing. Must be https. An empty string counts as not set. |
+
+`CreateSigningUrlResponse`: `getUrl()`, `getExpiresAt()` (ISO 8601: 5 minutes after issue for a single-use link, otherwise the document's `expiresAt`, or null when the document has no expiry), `getRecipientId()`, `getExternalId()`, `getIdentityVerificationMode()` (`"otp"`, `"external_idv"`, `"override"` or null) and `getPendingChecks()` (passcode steps left on the page, `"email_otp"` / `"sms_otp"`).
+
+Before any request is sent, the SDK throws `ValidationException` with code `RecipientSelectorInvalid` when you give neither or both selectors, and `InvalidReturnUrl` for a non-https `returnUrl`. The API returns 403 `EmbeddedSigningNotEnabled` when embedded signing is off and 409 `RecipientNotInTurn` for a signer whose turn hasn't come.
+
+#### `getEmbeddedSigningSettings()`
+
+Read your organization's embedded-signing settings. Read-only.
+
+```java
+EmbeddedSigningSettings settings = client.turboSign().getEmbeddedSigningSettings();
+if (settings.isEnabled()) {
+    System.out.println("Default passcode channel: " + settings.getDefaultChannel());
+}
+```
+
+`EmbeddedSigningSettings`: `isEnabled()` (embedded signing is on), `isAllowExternalIdv()` (you may assert identity with your own provider), `isAllowIdentityOverride()` (links that skip identity verification are allowed), `getDefaultChannel()` (`"none"`, `"email"` or `"sms"`; may be null), `getAllowChannelOverride()` (`Boolean`; `false` means a recipient channel other than the default is rejected with `OtpOverrideNotAllowed`; null when not reported) and `getAllowedFrameAncestors()` (origins allowed to embed the signing page in an iframe; empty means framing is denied everywhere).
+
+#### `createEmbeddedSignature()`
+
+Send a document and mint each signer's embedded signing URL in one call. It wraps `sendSignature()` + `createSigningUrl()` and adds no endpoint of its own. `sendEmail` defaults to `false`.
+
+```java
+CreateEmbeddedSignatureResponse result = client.turboSign().createEmbeddedSignature(
+    new CreateEmbeddedSignatureRequest.Builder()
+        .fileLink("https://example.com/contract.pdf")
+        .documentName("Service Agreement")
+        .recipients(Arrays.asList(
+            new EmbeddedSignatureRecipient.Builder()
+                .name("Jane Doe")
+                .email("jane@example.com")
+                .auth(EmbeddedRecipientAuth.emailOtp()) // or EmbeddedRecipientAuth.sms("+15551234567")
+                .fields(new EmbeddedRecipientFields.Builder()
+                    .signature("{signature1}")  // anchor text in the document
+                    .date("{date1}")
+                    .build())
+                .build()
+        ))
+        .returnUrl("https://your-app.example.com/signed")
+        .build()
+);
+
+for (EmbeddedSignatureRecipientResult r : result.getRecipients()) {
+    System.out.println(r.getEmail() + " " + r.getStatus() + " " + r.getEmbedUrl());
+}
+```
+
+| Request field | Notes |
+|:--|:--|
+| `file` + `fileName` / `fileLink` / `templateId` / `deliverableId` | The document source, as on `sendSignature()`. |
+| `documentName`, `documentDescription`, `senderName`, `senderEmail`, `ccEmails` | As on `sendSignature()`. |
+| `recipients` | `EmbeddedSignatureRecipient`: `name`, `email`, optional `role`, `phone`, `signingOrder` (defaults to position + 1), `auth` and `fields`. |
+| `auth` | `EmbeddedRecipientAuth.emailOtp()` or `.sms(phone)`. Leave it out to use the org's default channel. Only email and SMS passcodes are supported here; for `external_idv` or `override`, use `sendSignature()` + `createSigningUrl()`. |
+| `fields` (per recipient) | `EmbeddedRecipientFields`: `signature`, `date`, `initials`, `fullName`, each the anchor text to replace. |
+| `fields` (request) | Optional full `Field` list. When set, it replaces every recipient's shorthand. |
+| `sendEmail` | Defaults to `false`. |
+| `returnUrl` | Optional completion URL passed to each embed URL. https only. |
+
+`CreateEmbeddedSignatureResponse`: `getDocumentId()` and `getRecipients()`, in signing order. Each `EmbeddedSignatureRecipientResult` has `getRecipientId()`, `getName()`, `getEmail()`, `getStatus()` (`"ready"`, `"pending"` or `"completed"`), `getEmbedUrl()` (set only when `"ready"`; mint it later with `createSigningUrl()`) and `getIdentityVerificationMode()`.
+
+The document is sent before the URLs are minted. If embedded signing is off and no recipient uses a passcode, the send succeeds and the call then throws `AuthorizationException` (403 `EmbeddedSigningNotEnabled`), leaving a sent document. Check `getEmbeddedSigningSettings().isEnabled()` first.
 
 #### `sendReminder()`
 
@@ -1228,7 +1319,8 @@ The SDK includes a manual test class (`ManualTest`) for exercising the core Turb
 ### Running Manual Tests
 
 ```bash
-# Using Maven (the class lives under src/test, so it is never packaged into the published jar)
+# Using Maven. The class lives under src/test, so releases after 0.8.0 leave it out of the jar
+# (the 0.8.0 jar on Maven Central still contains ManualTest and ManualTestDeliverable).
 mvn test-compile exec:java -Dexec.mainClass="com.turbodocx.ManualTest" -Dexec.classpathScope=test
 
 # Or compile and run directly
@@ -1239,7 +1331,7 @@ java -cp target/test-classes:target/classes:$(mvn dependency:build-classpath -Dm
 ### What It Tests
 
 `ManualTest.java` covers these methods. Every call in its `main()` is commented out: uncomment the ones you want to run, then start it with the command above.
-- ✅ `createSignatureReviewLink()` - Document upload for review
+- ✅ `createSignatureReviewLink()` - Review link from a file URL (`FILE_URL`)
 - ✅ `sendSignature()` - Send for signature
 - ✅ `getStatus()` - Check document status
 - ✅ `download()` - Download signed document
@@ -1253,7 +1345,7 @@ Before running, update the hardcoded values in `src/test/java/com/turbodocx/Manu
 - `API_KEY` - Your TurboDocx API key
 - `BASE_URL` - API endpoint (default: `http://localhost:3000`)
 - `ORG_ID` - Your organization UUID
-- `TEST_PDF_PATH` - Path to a test PDF file (required: the class exits at startup if this file is missing)
+- `TEST_PDF_PATH` - Path to a test PDF file (required: the class exits at startup if this file is missing). The PDF must contain the anchor text `{hello}`: the send test places a field on it, and the API rejects the send with 400 `TemplateProcessingFailed` when the anchor is missing
 - `TEST_EMAIL` - Email address for testing
 - `FILE_URL` - A publicly accessible document URL (for the file-URL send)
 - The `senderEmail` / `senderName` set on the client builder in `main()`
@@ -1262,12 +1354,12 @@ Before running, update the hardcoded values in `src/test/java/com/turbodocx/Manu
 
 ### Expected Output
 
-With the calls uncommented, the test class will:
-1. Create a review link from `FILE_URL`
-2. Upload the test PDF and send it for signature
-3. Check the status and download the document
-4. Test resend and void
-5. Fetch the audit trail, printing the result of each step
+With the calls uncommented, the test class prints the result of each step as it:
+1. Creates a review link from `FILE_URL`
+2. Uploads the test PDF and sends it for signature
+3. Checks that document's status, resends to its first recipient, voids it and fetches its audit trail. These steps reuse the document and recipient IDs from step 2, so keep step 2 uncommented.
+
+Test 4 (download) needs the ID of a signed document in place of `completed-document-uuid-here`. Leave it commented otherwise: the API only downloads a completed document (400 for any other), and the first failed step ends the run.
 
 ---
 
