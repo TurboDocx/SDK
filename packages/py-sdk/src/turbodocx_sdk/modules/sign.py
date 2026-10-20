@@ -268,7 +268,8 @@ class TurboSign:
             cc_emails: List of CC email addresses
 
         Returns:
-            Response with documentId, status, previewUrl, and recipients (always present)
+            Response with documentId, status, previewUrl, and recipients (the API always
+            returns recipients on success; this method does not default it)
 
         Example:
             >>> result = await TurboSign.create_signature_review_link(
@@ -461,7 +462,8 @@ class TurboSign:
                 silently drop it and let the backend email everyone).
 
         Returns:
-            Response with success, documentId, status, recipients (always present), and message
+            Response with success, documentId, status, recipients, and message (the API always
+            returns recipients on success; this method does not default it)
 
         Example:
             >>> result = await TurboSign.send_signature(

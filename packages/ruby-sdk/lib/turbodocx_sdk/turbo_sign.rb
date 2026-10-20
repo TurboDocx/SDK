@@ -68,7 +68,8 @@ module TurboDocxSdk
       #   added). A role left out uses the template's saved signer. List a template's roles with
       #   +get_template_signature_setup+. An unknown role raises ValidationError, code
       #   "UnknownSignerRole".
-      # @return [Hash] document info with review URL; "recipients" is always present
+      # @return [Hash] document info with review URL; the API always includes "recipients" on
+      #   success (this method does not default it)
       # @raise [ValidationError] on invalid request data
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
@@ -110,7 +111,8 @@ module TurboDocxSdk
       # +externalId+ counts as absent (stored as null).
       #
       # @param request [Hash] same as create_signature_review_link, plus optional :sendEmail
-      # @return [Hash] document info with confirmation; "recipients" is always present
+      # @return [Hash] document info with confirmation; the API always includes "recipients" on
+      #   success (this method does not default it)
       # @raise [ValidationError] on invalid request data
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
