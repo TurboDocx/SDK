@@ -3,7 +3,7 @@ package com.turbodocx;
 /*
  * Deliverable Java SDK - Manual Test Suite
  *
- * Run: mvn exec:java -Dexec.mainClass="com.turbodocx.ManualTestDeliverable"
+ * Run: mvn test-compile exec:java -Dexec.mainClass="com.turbodocx.ManualTestDeliverable" -Dexec.classpathScope=test
  *
  * Make sure to configure the values below before running.
  */

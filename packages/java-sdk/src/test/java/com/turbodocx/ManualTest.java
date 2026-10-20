@@ -3,7 +3,7 @@ package com.turbodocx;
 /*
  * TurboSign Java SDK - Manual Test Suite
  *
- * Run: mvn exec:java -Dexec.mainClass="com.turbodocx.ManualTest"
+ * Run: mvn test-compile exec:java -Dexec.mainClass="com.turbodocx.ManualTest" -Dexec.classpathScope=test
  *
  * Make sure to configure the values below before running.
  */
@@ -29,7 +29,7 @@ public class ManualTest {
     private static final String BASE_URL = "http://localhost:3000"; // Replace with your API URL
     private static final String ORG_ID = "your-organization-uuid-here"; // Replace with your organization UUID
 
-    private static final String TEST_PDF_PATH = "/path/to/your/test-document.pdf"; // Replace with path to your test PDF/DOCX
+    private static final String TEST_PDF_PATH = "/path/to/your/test-document.pdf"; // Replace with path to your test PDF. It must contain the anchor text {hello} (Test 2 places a field on it)
     private static final String TEST_EMAIL = "test-recipient@example.com"; // Replace with a real email to receive notifications
     private static final String FILE_URL = "https://example.com/sample-document.pdf"; // Replace with publicly accessible PDF URL
 
@@ -63,23 +63,26 @@ public class ManualTest {
             // Test 1: Prepare for Review
             // String reviewDocId = testPrepareForReview();
 
-            // Test 2: Prepare for Signing (creates a new document)
-            // String signDocId = testPrepareForSigningSingle();
+            // Test 2: Prepare for Signing (creates a new document). Tests 3, 5, 6 and 7 reuse its
+            // document and recipient IDs, so uncomment these two lines whenever you run any of them.
+            // SendSignatureResponse sent = testPrepareForSigningSingle();
+            // String signDocId = sent.getDocumentId();
 
-            // Test 3: Get Status (replace with actual document ID)
-            // testGetStatus("document-uuid-here");
+            // Test 3: Get Status
+            // testGetStatus(signDocId);
 
-            // Test 4: Download (replace with actual document ID)
-            // testDownload("document-uuid-here");
+            // Test 4: Download. Only a COMPLETED document downloads (anything else returns 400
+            // "Document is not completed yet"), so pass the ID of a document that has been signed.
+            // testDownload("completed-document-uuid-here");
 
-            // Test 5: Resend (replace with actual document ID and recipient ID)
-            // testResend("document-uuid-here", Arrays.asList("recipient-uuid-here"));
+            // Test 5: Resend to the document's recipients
+            // testResend(signDocId, Arrays.asList(sent.getRecipients().get(0).getId()));
 
-            // Test 6: Void (do this last as it cancels the document)
-            // testVoid("document-uuid-here");
+            // Test 6: Void (run it after the tests that need a live document)
+            // testVoid(signDocId);
 
-            // Test 7: Get Audit Trail (replace with actual document ID)
-            // testGetAuditTrail("document-uuid-here");
+            // Test 7: Get Audit Trail (still readable after the void)
+            // testGetAuditTrail(signDocId);
 
             System.out.println("\n==============================================");
             System.out.println("All tests completed successfully!");
@@ -130,7 +133,7 @@ public class ManualTest {
         return result.getDocumentId();
     }
 
-    private static String testPrepareForSigningSingle() throws IOException {
+    private static SendSignatureResponse testPrepareForSigningSingle() throws IOException {
         System.out.println("\n--- Test 2: sendSignature (using file buffer with template fields) ---");
 
         byte[] pdfBytes = Files.readAllBytes(Paths.get(TEST_PDF_PATH));
@@ -195,7 +198,7 @@ public class ManualTest {
 
         SendSignatureResponse result = client.turboSign().sendSignature(request);
         System.out.println("Result: " + gson.toJson(result));
-        return result.getDocumentId();
+        return result;
     }
 
     private static void testGetStatus(String documentId) throws IOException {

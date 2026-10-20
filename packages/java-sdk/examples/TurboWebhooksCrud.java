@@ -21,8 +21,8 @@
  *   export TURBODOCX_ORG_ID=...
  *   mvn package -DskipTests
  *   mvn dependency:build-classpath -Dmdep.outputFile=classpath.txt -q
- *   javac -cp "target/turbodocx-sdk-0.2.0.jar:$(cat classpath.txt)" examples/TurboWebhooksCrud.java
- *   java -cp "target/turbodocx-sdk-0.2.0.jar:$(cat classpath.txt):examples" examples.TurboWebhooksCrud
+ *   javac -cp "target/turbodocx-sdk-0.8.0.jar:$(cat classpath.txt)" examples/TurboWebhooksCrud.java
+ *   java -cp "target/turbodocx-sdk-0.8.0.jar:$(cat classpath.txt):examples" examples.TurboWebhooksCrud
  *
  * Optionally override the API host with TURBODOCX_BASE_URL, and the
  * delivery target with TURBODOCX_RECEIVER_URL (e.g. a webhook.site or
