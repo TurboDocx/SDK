@@ -87,7 +87,7 @@ final class EmbeddedSigningTypesTest extends TestCase
     {
         $this->assertSame(
             ['auto', 'collapsed', 'hidden'],
-            array_map(static fn (PageNavigation $m): string => $m->value, PageNavigation::cases())
+            array_map(static fn(PageNavigation $m): string => $m->value, PageNavigation::cases())
         );
     }
 
