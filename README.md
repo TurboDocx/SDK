@@ -163,7 +163,7 @@ poetry add turbodocx-sdk
 <summary><strong>Go</strong></summary>
 
 ```bash
-go get github.com/turbodocx/sdk
+go get github.com/TurboDocx/SDK/packages/go-sdk
 ```
 </details>
 
