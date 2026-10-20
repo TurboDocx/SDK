@@ -154,7 +154,7 @@ export async function externalIdv({
     recipients: [{ name, email, signingOrder: 1, identityVerification: { mode: "external_idv", provider: PROVIDER } }],
     fields: [{ type: "signature", recipientEmail: email, template: { anchor: "{signature1}", placement: "replace", size: { width: 100, height: 30 } } }],
   });
-  const recipientId = (sent.recipients ?? []).find((r) => r.email === email)?.id;
+  const recipientId = sent.recipients.find((r) => r.email === email)?.id;
   if (!recipientId) throw new Error("sendSignature did not return the recipient; cannot mint a signing URL.");
   // A real integration passes the real reference the IdP returned. This is fabricated for the demo.
   // Capture the id once so the evidenceUrl points at the same verification record it names.
