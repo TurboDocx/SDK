@@ -470,7 +470,8 @@ export class TurboSign {
     const sent = await this.sendSignature(sendRequest);
 
     // Match the backend's recipients back to the request by email so we can carry `name` and know
-    // the resolved identity mode. The response's `recipients` is optional, so guard it.
+    // the resolved identity mode. A successful send always returns `recipients`; the empty default
+    // only turns a malformed response into EmbeddedRecipientNotReturned instead of a TypeError.
     const sentRecipients = sent.recipients ?? [];
     const recipientIdByEmail = new Map(sentRecipients.map((sr) => [sr.email, sr.id]));
 

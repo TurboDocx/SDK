@@ -66,6 +66,9 @@ func TestTurboSignClient_CreateSignatureReviewLink(t *testing.T) {
 				"status":     "review_ready",
 				"previewUrl": "https://preview.example.com/doc-123",
 				"message":    "Document prepared for review",
+				"recipients": []map[string]interface{}{
+					{"id": "rec-1", "name": "John Doe", "email": "john@example.com"},
+				},
 			})
 		}))
 		defer server.Close()
@@ -92,6 +95,9 @@ func TestTurboSignClient_CreateSignatureReviewLink(t *testing.T) {
 		assert.Equal(t, "doc-123", result.DocumentID)
 		assert.Equal(t, "review_ready", result.Status)
 		assert.Equal(t, "https://preview.example.com/doc-123", result.PreviewURL)
+		require.Len(t, result.Recipients, 1)
+		assert.Equal(t, "rec-1", result.Recipients[0].ID)
+		assert.Equal(t, "john@example.com", result.Recipients[0].Email)
 	})
 
 	t.Run("with deliverable ID", func(t *testing.T) {
@@ -905,4 +911,20 @@ func TestClient_ErrorHandling(t *testing.T) {
 		require.True(t, ok, "expected RateLimitError")
 		assert.Equal(t, 429, rateLimitErr.StatusCode)
 	})
+}
+
+// The API always sends `recipients` on a successful send / review-link response, so re-marshalling
+// a decoded response must keep the key, even when the list is empty (omitempty would drop it).
+func TestSendResponsesKeepRecipientsKeyOnRemarshal(t *testing.T) {
+	for name, target := range map[string]interface{}{
+		"SendSignatureResponse":             &SendSignatureResponse{},
+		"CreateSignatureReviewLinkResponse": &CreateSignatureReviewLinkResponse{},
+	} {
+		t.Run(name, func(t *testing.T) {
+			require.NoError(t, json.Unmarshal([]byte(`{"documentId":"doc-1","recipients":[]}`), target))
+			out, err := json.Marshal(target)
+			require.NoError(t, err)
+			assert.Contains(t, string(out), `"recipients":[]`)
+		})
+	}
 }

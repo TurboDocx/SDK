@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - The decline `reason` is now optional for a draft quote (it is still required once the quote has been sent). The void reason is unchanged and remains required.
+- `SendSignatureResponse::$recipients` and `CreateSignatureReviewLinkResponse::$recipients` are now always an array (`array`, not `?array`): the API always returns `recipients` on a successful send or review link, and a missing key becomes `[]`. The constructors still accept `null` for that argument (coalesced to `[]`), so direct construction is unchanged.
 
 ## [0.1.0] - 2026-01-17
 

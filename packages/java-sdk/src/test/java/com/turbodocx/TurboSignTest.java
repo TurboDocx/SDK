@@ -775,4 +775,73 @@ class TurboSignTest {
         assertFalse(sentFields.get(1).getAsJsonObject().get("required").getAsBoolean());
         assertFalse(sentFields.get(2).getAsJsonObject().has("required"));
     }
+
+    // ---- recipients: always present on a successful send / review-link response (#99) ----
+
+    @Test
+    @DisplayName("createSignatureReviewLink returns the recipients the backend sends")
+    void reviewLinkReturnsRecipients() throws Exception {
+        Map<String, Object> recipient = new HashMap<>();
+        recipient.put("id", "rec-1");
+        recipient.put("name", "John Doe");
+        recipient.put("email", "john@example.com");
+        server.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody(gson.toJson(Map.of(
+                        "success", true,
+                        "documentId", "doc-123",
+                        "status", "review_ready",
+                        "previewUrl", "https://preview.example.com/doc-123",
+                        "recipients", Collections.singletonList(recipient)))));
+
+        CreateSignatureReviewLinkResponse result = client.turboSign().createSignatureReviewLink(
+                new CreateSignatureReviewLinkRequest.Builder()
+                        .fileLink("https://storage.example.com/contract.pdf")
+                        .recipients(Collections.singletonList(new Recipient("John Doe", "john@example.com", 1)))
+                        .fields(Collections.singletonList(
+                                new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
+                        .build());
+
+        assertEquals("rec-1", result.getRecipients().get(0).getId());
+        assertEquals("john@example.com", result.getRecipients().get(0).getEmail());
+    }
+
+    @Test
+    @DisplayName("sendSignature recipients is an empty list, never null, when the key is absent")
+    void sendSignatureRecipientsNeverNull() throws Exception {
+        server.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody(gson.toJson(Map.of("success", true, "documentId", "doc-123", "status", "sent"))));
+
+        SendSignatureResponse result = client.turboSign().sendSignature(new SendSignatureRequest.Builder()
+                .fileLink("https://storage.example.com/contract.pdf")
+                .recipients(Collections.singletonList(new Recipient("John Doe", "john@example.com", 1)))
+                .fields(Collections.singletonList(new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
+                .build());
+
+        assertNotNull(result.getRecipients());
+        assertTrue(result.getRecipients().isEmpty());
+    }
+
+    @Test
+    @DisplayName("createSignatureReviewLink recipients is an empty list, never null, when the key is absent")
+    void reviewLinkRecipientsNeverNull() throws Exception {
+        server.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody(gson.toJson(Map.of("success", true, "documentId", "doc-123", "status", "review_ready"))));
+
+        CreateSignatureReviewLinkResponse result = client.turboSign().createSignatureReviewLink(
+                new CreateSignatureReviewLinkRequest.Builder()
+                        .fileLink("https://storage.example.com/contract.pdf")
+                        .recipients(Collections.singletonList(new Recipient("John Doe", "john@example.com", 1)))
+                        .fields(Collections.singletonList(
+                                new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
+                        .build());
+
+        assertNotNull(result.getRecipients());
+        assertTrue(result.getRecipients().isEmpty());
+    }
 }

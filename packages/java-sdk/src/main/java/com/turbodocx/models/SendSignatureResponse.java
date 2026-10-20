@@ -1,6 +1,7 @@
 package com.turbodocx.models;
 
 import com.google.gson.annotations.SerializedName;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -38,7 +39,8 @@ public class SendSignatureResponse {
         return message;
     }
 
+    /** The recipients, always present on a successful response (an empty list, never null). */
     public List<RecipientResponse> getRecipients() {
-        return recipients;
+        return recipients != null ? recipients : Collections.emptyList();
     }
 }

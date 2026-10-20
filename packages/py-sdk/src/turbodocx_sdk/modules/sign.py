@@ -268,7 +268,8 @@ class TurboSign:
             cc_emails: List of CC email addresses
 
         Returns:
-            Response with documentId, status, previewUrl, and recipients
+            Response with documentId, status, previewUrl, and recipients (the API always
+            returns recipients on success; this method does not default it)
 
         Example:
             >>> result = await TurboSign.create_signature_review_link(
@@ -461,7 +462,8 @@ class TurboSign:
                 silently drop it and let the backend email everyone).
 
         Returns:
-            Response with success, documentId, status, recipients, and message
+            Response with success, documentId, status, recipients, and message (the API always
+            returns recipients on success; this method does not default it)
 
         Example:
             >>> result = await TurboSign.send_signature(
@@ -1182,7 +1184,8 @@ class TurboSign:
         )
 
         # Match the backend's recipients back to the request by email so we can carry `name`
-        # and know the resolved identity mode. The response's `recipients` is optional.
+        # and know the resolved identity mode. A successful send always returns `recipients`;
+        # the empty default only turns a malformed response into EmbeddedRecipientNotReturned.
         sent_recipients = sent.get("recipients") or []
         recipient_id_by_email = {
             sr["email"]: sr["id"] for sr in sent_recipients if sr.get("email") and sr.get("id")

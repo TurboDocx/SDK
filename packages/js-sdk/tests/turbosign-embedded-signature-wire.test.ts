@@ -336,4 +336,22 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
       })
     ).rejects.toThrow();
   });
+
+  // The backend always sends `recipients` on a successful send, but a malformed response without
+  // it must still fail with the typed EmbeddedRecipientNotReturned error (as the Python and Ruby
+  // SDKs do), not a TypeError from mapping over undefined.
+  it("raises EmbeddedRecipientNotReturned when the send response has no recipients", async () => {
+    (global as unknown as { fetch: jest.Mock }).fetch = jest.fn().mockResolvedValueOnce({
+      ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
+      json: async () => ({ data: { success: true, documentId: "doc-x", status: "under_review", message: "ok" } }),
+      text: async () => "",
+    });
+
+    await expect(
+      TurboSign.createEmbeddedSignature({
+        templateId: "tpl-1",
+        recipients: [{ name: "X", email: "x@example.com" }],
+      })
+    ).rejects.toMatchObject({ code: "EmbeddedRecipientNotReturned" });
+  });
 });
