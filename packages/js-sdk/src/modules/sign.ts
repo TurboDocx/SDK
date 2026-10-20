@@ -415,7 +415,7 @@ export class TurboSign {
    * - `signingOrder` defaults to each recipient's array index + 1.
    * - `sendEmail` defaults to `false` (you own the UX; forwarded to the backend).
    * - `returnUrl` is passed through to each embed URL only when provided (https, enforced by
-   *   {@link TurboSign.createSigningUrl}).
+   *   {@link TurboSign.createSigningUrl}). `pageNavigation` is passed through the same way.
    *
    * Turn-aware: with a real (sequential) signing order the backend will only mint a URL for the
    * signer whose turn it is. Rather than throw the whole call away, each result carries a `status`:
@@ -532,6 +532,7 @@ export class TurboSign {
         const link = await this.createSigningUrl(sent.documentId, {
           recipientId,
           ...(request.returnUrl ? { returnUrl: request.returnUrl } : {}),
+          ...(request.pageNavigation ? { pageNavigation: request.pageNavigation } : {}),
         });
         recipients.push({
           recipientId,
@@ -596,7 +597,8 @@ export class TurboSign {
    *
    * @param documentId - the document the recipient belongs to
    * @param request - exactly one of `recipientId` / `externalId`; `identityAssertion` only for
-   *   external_idv recipients; optional https `returnUrl`
+   *   external_idv recipients; optional https `returnUrl`; optional `pageNavigation`
+   *   (`'auto' | 'collapsed' | 'hidden'`) for how the embedded page shows its page navigation
    *
    * @example
    * ```typescript
