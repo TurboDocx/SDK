@@ -26,10 +26,8 @@ final class Deliverable
      *
      * @example
      * ```php
-     * Deliverable::configure(new DeliverableConfig(
-     *     apiKey: getenv('TURBODOCX_API_KEY') ?: null,
-     *     orgId: getenv('TURBODOCX_ORG_ID') ?: null,
-     * ));
+     * // Reads TURBODOCX_API_KEY (or TURBODOCX_ACCESS_TOKEN), TURBODOCX_ORG_ID and TURBODOCX_BASE_URL via getenv()
+     * Deliverable::configure(DeliverableConfig::fromEnvironment());
      * ```
      */
     public static function configure(DeliverableConfig $config): void

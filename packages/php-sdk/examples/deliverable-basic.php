@@ -17,11 +17,8 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use TurboDocx\Config\DeliverableConfig;
 use TurboDocx\Deliverable;
 
-// 1. Configure with your API credentials
-Deliverable::configure(new DeliverableConfig(
-    apiKey: getenv('TURBODOCX_API_KEY') ?: null,
-    orgId: getenv('TURBODOCX_ORG_ID') ?: null,
-));
+// 1. Configure from TURBODOCX_API_KEY and TURBODOCX_ORG_ID (read with getenv())
+Deliverable::configure(DeliverableConfig::fromEnvironment());
 
 // 2. Generate a deliverable from a template
 echo "Generating deliverable...\n";

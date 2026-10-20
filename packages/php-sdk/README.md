@@ -120,7 +120,8 @@ use TurboDocx\Types\Requests\SendSignatureRequest;
 
 // 1. Configure from TURBODOCX_API_KEY, TURBODOCX_ORG_ID, TURBODOCX_SENDER_EMAIL (required)
 //    and TURBODOCX_SENDER_NAME (optional, strongly recommended). fromEnvironment() reads them
-//    with getenv(); $_ENV is empty on a stock php.ini (variables_order = "GPCS").
+//    with getenv(): $_ENV is empty under the shipped php.ini-production / php.ini-development
+//    (variables_order = "GPCS"; PHP's built-in default with no php.ini is "EGPCS").
 TurboSign::configure(HttpClientConfig::fromEnvironment());
 
 // 2. Send a document for signature
@@ -190,10 +191,10 @@ TURBODOCX_SENDER_NAME=Your Company Name
 
 ```php
 TurboSign::configure(new HttpClientConfig(
-    apiKey: getenv('TURBODOCX_API_KEY'),
-    orgId: getenv('TURBODOCX_ORG_ID'),
-    senderEmail: getenv('TURBODOCX_SENDER_EMAIL'),
-    senderName: getenv('TURBODOCX_SENDER_NAME')
+    apiKey: getenv('TURBODOCX_API_KEY') ?: null,   // getenv() returns false when unset; `?: null` keeps it null
+    orgId: getenv('TURBODOCX_ORG_ID') ?: null,
+    senderEmail: getenv('TURBODOCX_SENDER_EMAIL') ?: null,
+    senderName: getenv('TURBODOCX_SENDER_NAME') ?: null
 ));
 
 // Or use auto-configuration from environment
@@ -572,9 +573,13 @@ Recipient signs
 ```php
 use TurboDocx\TurboWebhooks;
 
+// With TURBODOCX_API_KEY and TURBODOCX_ORG_ID set (and optionally TURBODOCX_BASE_URL), no call
+// is needed: TurboWebhooks reads them with getenv() on first use and throws if either is missing.
+
+// Or pass the credentials explicitly (both are required strings):
 TurboWebhooks::configureFromCredentials(
-    apiKey: getenv('TURBODOCX_API_KEY'),
-    orgId: getenv('TURBODOCX_ORG_ID'),
+    apiKey: 'TDX-your-api-key',
+    orgId: 'your-org-id',
     // baseUrl: 'http://localhost:3000', // optional, defaults to https://api.turbodocx.com
 );
 ```
@@ -659,7 +664,7 @@ $rawBody = file_get_contents('php://input');  // CRITICAL: raw bytes only.
                                               // signature is over the exact bytes.
 $signature = $_SERVER['HTTP_X_TURBODOCX_SIGNATURE'] ?? '';
 $timestamp = $_SERVER['HTTP_X_TURBODOCX_TIMESTAMP'] ?? '';
-$secret = getenv('TURBODOCX_WEBHOOK_SECRET');
+$secret = getenv('TURBODOCX_WEBHOOK_SECRET') ?: '';  // unset => '' => every check fails closed
 
 if (!verifyWebhookSignature($rawBody, $signature, $timestamp, $secret)) {
     http_response_code(401);
@@ -1427,8 +1432,8 @@ use TurboDocx\TurboQuote;
 use TurboDocx\Config\QuoteClientConfig;
 
 TurboQuote::configure(new QuoteClientConfig(
-    apiKey: getenv('TURBODOCX_API_KEY'),  // REQUIRED
-    orgId: getenv('TURBODOCX_ORG_ID'),    // REQUIRED
+    apiKey: getenv('TURBODOCX_API_KEY') ?: null,  // REQUIRED
+    orgId: getenv('TURBODOCX_ORG_ID') ?: null,    // REQUIRED
     // baseUrl: 'https://api.turbodocx.com', // Optional
 ));
 
@@ -1523,8 +1528,8 @@ use TurboDocx\Types\Requests\Quote\AddLineItemRequest;
 use TurboDocx\Types\Requests\Quote\SendQuoteRequest;
 
 TurboQuote::configure(new QuoteClientConfig(
-    apiKey: getenv('TURBODOCX_API_KEY'),
-    orgId: getenv('TURBODOCX_ORG_ID'),
+    apiKey: getenv('TURBODOCX_API_KEY') ?: null,
+    orgId: getenv('TURBODOCX_ORG_ID') ?: null,
 ));
 
 // Create company + contact

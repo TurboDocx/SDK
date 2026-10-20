@@ -52,7 +52,7 @@ final class TurboSign
      * // Reads TURBODOCX_API_KEY, TURBODOCX_ORG_ID, TURBODOCX_SENDER_EMAIL, TURBODOCX_SENDER_NAME via getenv()
      * TurboSign::configure(HttpClientConfig::fromEnvironment());
      *
-     * // Or explicitly ($_ENV is empty on a stock php.ini, so use getenv(); `?: null` keeps an unset variable null)
+     * // Or explicitly ($_ENV is empty under php.ini-production/-development, so use getenv(); `?: null` keeps an unset variable null)
      * TurboSign::configure(new HttpClientConfig(
      *     apiKey: getenv('TURBODOCX_API_KEY') ?: null,
      *     orgId: getenv('TURBODOCX_ORG_ID') ?: null,
