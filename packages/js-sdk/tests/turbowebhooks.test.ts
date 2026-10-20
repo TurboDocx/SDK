@@ -599,6 +599,36 @@ describe("verifyWebhookSignature", () => {
     }
   });
 
+  // Plain-JS callers can pass anything: req.body is undefined without a raw body parser, and a
+  // header can be missing or repeated. Each case used to throw TypeError (a 500, not a 401).
+  it.each([
+    ["undefined body", [undefined, validSig, TIMESTAMP, SECRET]],
+    ["null body", [null, validSig, TIMESTAMP, SECRET]],
+    ["object body", [{ event: "x" }, validSig, TIMESTAMP, SECRET]],
+    ["number signature header", [BODY, 12345, TIMESTAMP, SECRET]],
+    ["array signature header", [BODY, [validSig, validSig], TIMESTAMP, SECRET]],
+    ["number timestamp header", [BODY, validSig, NOW_SECONDS, SECRET]],
+    ["number secret", [BODY, validSig, TIMESTAMP, 12345]],
+  ])("should return false on a wrongly-typed argument without throwing (%s)", (_name, args) => {
+    const [body, sig, ts, secret] = args as [string, string, string, string];
+    expect(verifyWebhookSignature(body, sig, ts, secret, { now: () => NOW_SECONDS })).toBe(false);
+  });
+
+  it("should return false when now() or toleranceSeconds is not a finite number", () => {
+    // NaN made the window comparison always false, silently accepting any timestamp
+    const badNow = (() => Number.NaN) as () => number;
+    expect(verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, { now: badNow })).toBe(false);
+    expect(
+      verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, {
+        now: () => NOW_SECONDS,
+        toleranceSeconds: Number.NaN,
+      }),
+    ).toBe(false);
+    expect(
+      verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, null as unknown as undefined),
+    ).toBe(false);
+  });
+
   it("should accept a Buffer body", () => {
     expect(
       verifyWebhookSignature(Buffer.from(BODY, "utf8"), validSig, TIMESTAMP, SECRET, {

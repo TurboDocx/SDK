@@ -45,7 +45,8 @@ export interface VerifyWebhookSignatureOptions {
  *                          `regenerateWebhookSecret`.
  * @param options         - optional tolerance + `now` overrides.
  * @returns               - true iff the signature is valid AND the timestamp
- *                          is within tolerance.
+ *                          is within tolerance. Returns false (never throws)
+ *                          on bad input, including a wrongly-typed argument.
  */
 export function verifyWebhookSignature(
   rawBody: string | Buffer,
@@ -54,11 +55,19 @@ export function verifyWebhookSignature(
   secret: string,
   options: VerifyWebhookSignatureOptions = {},
 ): boolean {
+  // Plain-JS callers can pass anything (an undefined req.body without a raw body parser, a
+  // missing or repeated header). Bad input returns false so the receiver answers 401, not 500.
+  if (typeof rawBody !== 'string' && !Buffer.isBuffer(rawBody)) return false;
+  if (typeof signatureHeader !== 'string' || typeof timestampHeader !== 'string') return false;
+  if (typeof secret !== 'string') return false;
   if (!signatureHeader || !timestampHeader || !secret) return false;
 
-  const toleranceSeconds = options.toleranceSeconds ?? 300;
+  const toleranceSeconds = options?.toleranceSeconds ?? 300;
+  // NaN would make the window comparison below always false, silently accepting any timestamp.
+  if (typeof toleranceSeconds !== 'number' || Number.isNaN(toleranceSeconds)) return false;
   if (toleranceSeconds > 0) {
-    const now = options.now ? options.now() : Math.floor(Date.now() / 1000);
+    const now = options?.now ? options.now() : Math.floor(Date.now() / 1000);
+    if (typeof now !== 'number' || !Number.isFinite(now)) return false;
     const ts = Number.parseInt(timestampHeader, 10);
     if (!Number.isFinite(ts)) return false;
     if (Math.abs(now - ts) > toleranceSeconds) return false;
