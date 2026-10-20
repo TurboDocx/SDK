@@ -216,9 +216,9 @@ export class TurboSign {
       recipients: recipientsJson,
     };
 
-    // Omit `fields` entirely when none are given: a template sent with signer roles takes its
-    // fields from the template, and any other send gets the API's clear FieldsRequired error.
-    if (request.fields && request.fields.length > 0) formData.fields = JSON.stringify(request.fields);
+    // A review link may have no fields (they are placed in the preview), so send [] when none are
+    // given: the API rejects a MISSING key (FieldsRequired) unless a recipient names a role.
+    formData.fields = JSON.stringify(request.fields ?? []);
 
     // Add optional fields
     if (request.documentName) formData.documentName = request.documentName;
@@ -304,8 +304,8 @@ export class TurboSign {
       recipients: recipientsJson,
     };
 
-    // Omit `fields` entirely when none are given: a template sent with signer roles takes its
-    // fields from the template, and any other send gets the API's clear FieldsRequired error.
+    // Leave `fields` out when none are given. A role send then takes the template's saved fields,
+    // and any other send gets the API's 400 FieldsRequired instead of a document with nothing to sign.
     if (request.fields && request.fields.length > 0) formData.fields = JSON.stringify(request.fields);
 
     // Add optional fields
@@ -457,9 +457,12 @@ export class TurboSign {
       return recipient;
     });
 
-    // Full `fields` (when provided) win verbatim; otherwise expand each recipient's shorthand.
+    // Full `fields` (when non-empty) win verbatim; otherwise expand each recipient's shorthand. An
+    // empty list counts as absent, so it can't discard the shorthand and leave the send with no fields.
     const fields: Field[] =
-      request.fields ?? request.recipients.flatMap((r) => this.expandRecipientFields(r));
+      request.fields && request.fields.length > 0
+        ? request.fields
+        : request.recipients.flatMap((r) => this.expandRecipientFields(r));
 
     const sendRequest: SendSignatureRequest = {
       recipients: mappedRecipients,
@@ -752,6 +755,8 @@ export class TurboSign {
    *
    * @param templateId - ID of the template
    * @returns The template's signer roles
+   * @throws {NotFoundError} (404, code `SignatureSetupNotFound`) when the template has no saved
+   *   signature setup, or is not a template in your organization
    *
    * @example
    * ```typescript

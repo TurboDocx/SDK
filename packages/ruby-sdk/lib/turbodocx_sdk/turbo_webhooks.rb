@@ -259,7 +259,8 @@ module TurboDocxSdk
   #   +regenerate_webhook_secret+.
   # @param tolerance_seconds [Integer] max acceptable age of the timestamp,
   #   in seconds. Defaults to 300. Set to 0 to disable the timestamp check
-  #   (NOT recommended in production). A non-numeric or NaN value fails closed.
+  #   (NOT recommended in production). A negative, non-numeric or non-finite
+  #   (NaN, Infinity) value fails closed: every delivery is rejected.
   # @param now [Proc, nil] override the "current time" function for
   #   deterministic testing. Returns Unix epoch seconds. Defaults to
   #   +Time.now.to_i+.
@@ -272,14 +273,20 @@ module TurboDocxSdk
     return false unless signature_header.is_a?(String) && !signature_header.empty?
     return false unless timestamp_header.is_a?(String) && !timestamp_header.empty?
     return false unless secret.is_a?(String) && !secret.empty?
-    # A non-numeric tolerance raised NoMethodError; NaN made the window check always pass.
-    return false unless tolerance_seconds.is_a?(Numeric)
-    return false if tolerance_seconds.respond_to?(:nan?) && tolerance_seconds.nan?
+    # A non-numeric tolerance raised NoMethodError, and so did a Complex one (no negative?).
+    return false unless tolerance_seconds.is_a?(Numeric) && tolerance_seconds.real?
+    # NaN made the window check always pass, and Infinity is a window that never expires.
+    return false if tolerance_seconds.respond_to?(:finite?) && !tolerance_seconds.finite?
 
-    # tolerance_seconds == 0 disables the replay window. Any non-zero value
-    # enforces it; a negative value fails closed (rejects everything) rather
-    # than silently disabling the check.
+    # tolerance_seconds == 0 disables the replay window. A negative value fails
+    # closed (rejects everything) rather than silently disabling the check.
+    return false if tolerance_seconds.negative?
+
     unless tolerance_seconds.zero?
+      # Digits only (an optional leading "-"), as in the JS and PHP helpers: Integer() alone would
+      # also accept surrounding whitespace, underscores and a "+".
+      return false unless timestamp_header.match?(/\A-?\d+\z/)
+
       ts = Integer(timestamp_header, 10)
       # now may return a Time or an Integer; coerce both to epoch seconds.
       current_time = now ? now.call.to_i : Time.now.to_i

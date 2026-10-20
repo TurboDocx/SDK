@@ -106,7 +106,7 @@ class TurboSignTemplateRolesTest {
     }
 
     @Test
-    @DisplayName("fields are still sent when given, and omitted for an empty list")
+    @DisplayName("fields are still sent when given, and an empty list is left out of a send")
     void fieldsSentWhenGiven() throws Exception {
         for (int i = 0; i < 3; i++) {
             enqueue(200, "{\"data\":{\"success\":true,\"documentId\":\"doc-1\",\"status\":\"under_review\"}}");
@@ -130,6 +130,56 @@ class TurboSignTemplateRolesTest {
         assertFalse(third.has("fields"));
     }
 
+    // A review link may have no fields (they are placed in the preview), so it sends "[]": the API
+    // rejects a MISSING key with 400 FieldsRequired unless a recipient names a role.
+    @Test
+    @DisplayName("createSignatureReviewLink without roles sends fields as [] for an empty list and for no fields")
+    void reviewLinkWithoutFieldsSendsEmptyList() throws Exception {
+        enqueue(200, "{\"data\":{\"success\":true,\"documentId\":\"doc-4\",\"status\":\"review_ready\"}}");
+        enqueue(200, "{\"data\":{\"success\":true,\"documentId\":\"doc-5\",\"status\":\"review_ready\"}}");
+        java.util.List<Recipient> recipients = Collections.singletonList(new Recipient("John Doe", "john@example.com", 1));
+
+        client.turboSign().createSignatureReviewLink(new CreateSignatureReviewLinkRequest.Builder()
+                .fileLink("https://example.com/doc.pdf").recipients(recipients).fields(Collections.emptyList()).build());
+        client.turboSign().createSignatureReviewLink(new CreateSignatureReviewLinkRequest.Builder()
+                .fileLink("https://example.com/doc.pdf").recipients(recipients).build());
+
+        RecordedRequest first = server.takeRequest();
+        assertEquals("/turbosign/single/prepare-for-review", first.getPath());
+        assertEquals("[]", bodyOf(first).get("fields").getAsString());
+        assertEquals("[]", bodyOf(server.takeRequest()).get("fields").getAsString());
+    }
+
+    // Without roles the API answers a MISSING fields key with 400 FieldsRequired. A send must leave
+    // the key out so the API rejects a document with nothing to sign.
+    @Test
+    @DisplayName("sendSignature without roles leaves fields out for an empty list and for no fields")
+    void sendWithoutFieldsLeavesKeyOut() throws Exception {
+        enqueue(200, "{\"data\":{\"success\":true,\"documentId\":\"doc-6\",\"status\":\"under_review\"}}");
+        enqueue(200, "{\"data\":{\"success\":true,\"documentId\":\"doc-7\",\"status\":\"under_review\"}}");
+        java.util.List<Recipient> recipients = Collections.singletonList(new Recipient("John Doe", "john@example.com", 1));
+
+        client.turboSign().sendSignature(new SendSignatureRequest.Builder()
+                .fileLink("https://example.com/doc.pdf").recipients(recipients).fields(Collections.emptyList()).build());
+        client.turboSign().sendSignature(new SendSignatureRequest.Builder()
+                .fileLink("https://example.com/doc.pdf").recipients(recipients).build());
+
+        RecordedRequest first = server.takeRequest();
+        assertEquals("/turbosign/single/prepare-for-signing", first.getPath());
+        assertFalse(bodyOf(first).has("fields"));
+        assertFalse(bodyOf(server.takeRequest()).has("fields"));
+    }
+
+    @Test
+    @DisplayName("Recipient.Builder.signingOrder(0) builds (no NPE) and leaves signingOrder off the wire, like the constructor")
+    void builderSigningOrderZero() {
+        Recipient built = new Recipient.Builder().name("A").email("a@x.com").signingOrder(0).build();
+        assertEquals(0, built.getSigningOrder());
+        JsonObject json = new com.google.gson.Gson().toJsonTree(built).getAsJsonObject();
+        assertFalse(json.has("signingOrder"));
+        assertEquals(new com.google.gson.Gson().toJsonTree(new Recipient("A", "a@x.com", 0)), json);
+    }
+
     @Test
     @DisplayName("sendSignature surfaces the API's message and code when a role isn't on the template")
     void unknownRoleError() {
@@ -149,7 +199,7 @@ class TurboSignTemplateRolesTest {
     }
 
     @Test
-    @DisplayName("createSignatureReviewLink sends roles to prepare-for-review without a fields key")
+    @DisplayName("createSignatureReviewLink sends roles to prepare-for-review with fields as []")
     void reviewLinkWithRole() throws Exception {
         enqueue(200, "{\"data\":{\"success\":true,\"documentId\":\"doc-2\",\"status\":\"review_ready\"}}");
 
@@ -163,7 +213,7 @@ class TurboSignTemplateRolesTest {
         assertEquals("/turbosign/single/prepare-for-review", recorded.getPath());
         JsonObject body = bodyOf(recorded);
         assertEquals("client", parseArray(body, "recipients").get(0).getAsJsonObject().get("role").getAsString());
-        assertFalse(body.has("fields"));
+        assertEquals("[]", body.get("fields").getAsString());
     }
 
     @Test

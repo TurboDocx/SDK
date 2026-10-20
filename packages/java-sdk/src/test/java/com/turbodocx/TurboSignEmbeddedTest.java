@@ -441,14 +441,14 @@ class TurboSignEmbeddedTest {
     }
 
     @Test
-    @DisplayName("createEmbeddedSignature honors an explicit fields override, even an empty list, over the shorthand")
-    void createEmbeddedSignatureExplicitEmptyFieldsWins() throws Exception {
+    @DisplayName("createEmbeddedSignature treats an explicitly empty fields list as absent and expands the shorthand")
+    void createEmbeddedSignatureExplicitEmptyFieldsExpandsShorthand() throws Exception {
         enqueueJson(sendEnvelope("doc-4b", new String[][]{{"rec-1", "Alice", "alice@example.com"}}));
         enqueueJson(signingUrlEnvelope("rec-1", "https://app/sign/doc-4b?token=A", null));
 
         client.turboSign().createEmbeddedSignature(new CreateEmbeddedSignatureRequest.Builder()
                 .templateId("tmpl-1")
-                .fields(Collections.emptyList()) // explicit empty overrides the shorthand
+                .fields(Collections.emptyList()) // an empty list must not discard the shorthand
                 .recipients(Collections.singletonList(
                         new EmbeddedSignatureRecipient.Builder()
                                 .name("Alice").email("alice@example.com")
@@ -457,8 +457,10 @@ class TurboSignEmbeddedTest {
                 .build());
 
         JsonObject body = takeBody();
-        // An empty list means no fields: the key is left out rather than sent as "[]".
-        assertFalse(body.has("fields"));
+        // An empty list used to win, so the send had no fields and the API answered 400 FieldsRequired.
+        JsonArray fields = JsonParser.parseString(body.get("fields").getAsString()).getAsJsonArray();
+        assertEquals(1, fields.size());
+        assertEquals("{sig}", fields.get(0).getAsJsonObject().getAsJsonObject("template").get("anchor").getAsString());
     }
 
     @Test

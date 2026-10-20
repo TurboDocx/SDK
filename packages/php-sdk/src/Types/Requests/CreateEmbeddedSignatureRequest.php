@@ -26,7 +26,7 @@ final class CreateEmbeddedSignatureRequest
      * @param string|null $senderEmail Sender email (overrides configured value)
      * @param array<string>|null $ccEmails CC emails
      * @param array<Field>|null $fields Optional full field control; overrides the per-recipient
-     *     `fields` shorthand when provided.
+     *     `fields` shorthand when non-empty (an empty array counts as not set).
      * @param bool|null $sendEmail Defaults to `false` for this flow: your app shows the signing page,
      *     so the signing-link emails (and the initial CC notice) are suppressed. Passcode and
      *     completed-copy emails are still sent.

@@ -19,6 +19,22 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 | createSigningUrl | `createSigningUrl()` | `create_signing_url()` | `CreateSigningURL()` | `createSigningUrl()` | `createSigningUrl()` | `create_signing_url()` |
 | getEmbeddedSigningSettings | `getEmbeddedSigningSettings()` | `get_embedded_signing_settings()` | `GetEmbeddedSigningSettings()` | `getEmbeddedSigningSettings()` | `getEmbeddedSigningSettings()` | `get_embedded_signing_settings()` |
 | createEmbeddedSignature | `createEmbeddedSignature()` | `create_embedded_signature()` | `CreateEmbeddedSignature()` | `createEmbeddedSignature()` | `createEmbeddedSignature()` | `create_embedded_signature()` |
+| getTemplateSignatureSetup | `getTemplateSignatureSetup()` | `get_template_signature_setup()` | `GetTemplateSignatureSetup()` | `getTemplateSignatureSetup()` | `getTemplateSignatureSetup()` | `get_template_signature_setup()` |
+
+**getTemplateSignatureSetup note:** `GET /turbosign/templates/{id}/signature-setup` lists a
+template's signer roles (`key` is the value for `recipients[].role`), in signing order. JS, Go, PHP
+and Java return a typed `TemplateSignatureSetup`; Python and Ruby return the raw `Dict`/`Hash`
+(`templateId`, `roles`), matching how they handle every other TurboSign read. A template with no
+saved signature setup, or one outside the caller's org, is a 404 with code `SignatureSetupNotFound`
+(the not-found error class in each SDK); every SDK's docstring and README say so.
+
+**Send `fields` rule:** without a role the API answers a MISSING `fields` key with 400
+`FieldsRequired`, but an empty list on a send would go out as a document with nothing to sign. So
+`sendSignature` (and embedded signing, which sends through it) leaves the key out when the caller
+passes no fields: a role send then takes the template's saved fields, and any other send gets the
+400. `createSignatureReviewLink` sends `[]` when the caller passes no fields, because a review link
+may have none (they are placed in the preview). Never send `null`. In `createEmbeddedSignature` an empty top-level
+`fields` counts as absent, so the recipients' `fields` shorthand still expands.
 
 **Embedded signing notes:** `createSigningUrl` posts `{ recipientId | externalId (exactly one),
 returnUrl? (https), identityAssertion? }` and unwraps `{ data: { results } }`. The API rejects unknown
@@ -135,7 +151,7 @@ so a freshly-sent document normally reads a non-null `lastRemindedAt` alongside
 - **Java has no free functions.** The webhook signature helper is exposed as `WebhookSignatureVerifier.verify(...)`, a static method on a final utility class. Semantically equivalent to the free-function form used in JS / Py / Go / PHP — just expressed in idiomatic Java.
 - **PHP `TurboWebhooks::configure()` takes a typed config object** (`HttpClientConfig`), matching the SDK-wide PHP convention used by `TurboSign`, `TurboPartner`, and `Deliverable`. For the flat-args form (`$apiKey`, `$orgId`, …) used in the quickstart, call `TurboWebhooks::configureFromCredentials(...)` instead.
 - `testWebhook` and `notifyWebhook` currently route through the same backend handler and return identical shapes. Both are exposed for symmetry with the backend surface; prefer `testWebhook` in new code.
-- The HMAC format the helper must verify: header `X-TurboDocx-Signature: sha256=<hex>`, signed string `${timestamp}.${rawBody}`, HMAC-SHA256, with a configurable timestamp tolerance (default 300s) to prevent replay attacks. Use the language's constant-time comparison primitive (`crypto.timingSafeEqual` / `hmac.compare_digest` / `hmac.Equal` / `hash_equals` / `MessageDigest.isEqual`). The helper **returns false and never throws** on malformed input (a non-ASCII or invalid UTF-8 header, unencodable text, a wrong type), so a receiver answers 401, not 500; every SDK keeps a non-ASCII signature-header test. Python's `hmac.compare_digest` raises on non-ASCII `str`, so Python compares bytes.
+- The HMAC format the helper must verify: header `X-TurboDocx-Signature: sha256=<hex>`, signed string `${timestamp}.${rawBody}`, HMAC-SHA256, with a configurable timestamp tolerance (default 300s) to prevent replay attacks. **Tolerance rules:** a negative tolerance fails closed (returns false for every delivery) in every SDK, never a skipped check. `0` disables the timestamp check in JS, Python, PHP, Java and Ruby; in Go `0` is the struct zero value and means the default 300s (documented public behaviour, kept), so Go has no way to disable the check. A string tolerance (`"300"` included) or a non-finite one (NaN, Infinity) also returns false in the dynamically typed SDKs (JS, Python, PHP, Ruby). `now` is only read when the timestamp check runs. The timestamp header must be digits only (an optional leading `-`) in JS, Python, PHP and Ruby; trailing junk (`"1747000000abc"`, `"1747000000.9"`), whitespace, underscores or a `+` return false. PHP takes `mixed` for `toleranceSeconds`/`now` so a string or float never throws a TypeError under `strict_types`. Every SDK keeps a negative-tolerance test. Use the language's constant-time comparison primitive (`crypto.timingSafeEqual` / `hmac.compare_digest` / `hmac.Equal` / `hash_equals` / `MessageDigest.isEqual`). The helper **returns false and never throws** on malformed input (a non-ASCII or invalid UTF-8 header, unencodable text, a wrong type), so a receiver answers 401, not 500; every SDK keeps a non-ASCII signature-header test. Python's `hmac.compare_digest` raises on non-ASCII `str`, so Python compares bytes.
 
 ## Client Context (Audit-Trail Device/Location Headers)
 

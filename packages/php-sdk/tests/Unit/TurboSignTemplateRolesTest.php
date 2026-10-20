@@ -84,7 +84,7 @@ final class TurboSignTemplateRolesTest extends TestCase
         $this->assertArrayNotHasKey('fields', $body);
     }
 
-    public function testFieldsAreStillSentWhenGivenAndOmittedForAnEmptyList(): void
+    public function testFieldsAreStillSentWhenGivenAndOmittedFromASendForAnEmptyList(): void
     {
         $this->injectTurboSignClient([
             $this->ok(['success' => true, 'documentId' => 'doc-1', 'status' => 'under_review', 'message' => 'ok']),
@@ -137,7 +137,7 @@ final class TurboSignTemplateRolesTest extends TestCase
         }
     }
 
-    public function testCreateSignatureReviewLinkSendsRoleAndNoFieldsKeyWhenOmitted(): void
+    public function testCreateSignatureReviewLinkSendsRoleAndEmptyFieldsWhenOmitted(): void
     {
         $this->injectTurboSignClient([
             $this->ok(['success' => true, 'documentId' => 'doc-2', 'status' => 'review_ready', 'message' => 'ok']),
@@ -152,7 +152,92 @@ final class TurboSignTemplateRolesTest extends TestCase
         $this->assertStringContainsString('/turbosign/single/prepare-for-review', (string) $request->getUri());
         $body = $this->capturedJsonBody(0);
         $this->assertSame('client', json_decode($body['recipients'], true)[0]['role']);
-        $this->assertArrayNotHasKey('fields', $body);
+        $this->assertSame('[]', $body['fields']);
+    }
+
+    /**
+     * A review link may have no fields (they are placed in the preview), so it sends "[]": the API
+     * rejects a MISSING key with 400 FieldsRequired unless a recipient names a role.
+     */
+    public function testCreateSignatureReviewLinkWithoutRolesSendsEmptyFieldsForEmptyListAndForNoFields(): void
+    {
+        $this->injectTurboSignClient([
+            $this->ok(['success' => true, 'documentId' => 'doc-4', 'status' => 'review_ready', 'message' => 'ok']),
+            $this->ok(['success' => true, 'documentId' => 'doc-5', 'status' => 'review_ready', 'message' => 'ok']),
+        ], captureHistory: true);
+        $recipients = [new Recipient(name: 'Jane Doe', email: 'jane@client.com', signingOrder: 1)];
+
+        TurboSign::createSignatureReviewLink(new CreateSignatureReviewLinkRequest(
+            recipients: $recipients,
+            fields: [],
+            fileLink: 'https://example.com/contract.pdf',
+        ));
+        TurboSign::createSignatureReviewLink(new CreateSignatureReviewLinkRequest(
+            recipients: $recipients,
+            fileLink: 'https://example.com/contract.pdf',
+        ));
+
+        $request = $this->requestHistory[0]['request'];
+        $this->assertStringContainsString('/turbosign/single/prepare-for-review', (string) $request->getUri());
+        $this->assertSame('[]', $this->capturedJsonBody(0)['fields']);
+        $this->assertSame('[]', $this->capturedJsonBody(1)['fields']);
+    }
+
+    /**
+     * Without roles the API answers a MISSING fields key with 400 FieldsRequired. A send must leave
+     * the key out so the API rejects a document with nothing to sign.
+     */
+    public function testSendSignatureWithoutRolesLeavesFieldsOutForEmptyListAndForNoFields(): void
+    {
+        $this->injectTurboSignClient([
+            $this->ok(['success' => true, 'documentId' => 'doc-6', 'status' => 'under_review', 'message' => 'ok']),
+            $this->ok(['success' => true, 'documentId' => 'doc-7', 'status' => 'under_review', 'message' => 'ok']),
+        ], captureHistory: true);
+        $recipients = [new Recipient(name: 'Jane Doe', email: 'jane@client.com', signingOrder: 1)];
+
+        TurboSign::sendSignature(new SendSignatureRequest(
+            recipients: $recipients,
+            fields: [],
+            fileLink: 'https://example.com/contract.pdf',
+        ));
+        TurboSign::sendSignature(new SendSignatureRequest(
+            recipients: $recipients,
+            fileLink: 'https://example.com/contract.pdf',
+        ));
+
+        $request = $this->requestHistory[0]['request'];
+        $this->assertStringContainsString('/turbosign/single/prepare-for-signing', (string) $request->getUri());
+        $this->assertArrayNotHasKey('fields', $this->capturedJsonBody(0));
+        $this->assertArrayNotHasKey('fields', $this->capturedJsonBody(1));
+    }
+
+    /** A non-sequential list (e.g. from array_filter) must still encode as a JSON array, not an object. */
+    public function testFieldsWithNonSequentialKeysEncodeAsAJsonArray(): void
+    {
+        $this->injectTurboSignClient([
+            $this->ok(['success' => true, 'documentId' => 'doc-8', 'status' => 'review_ready', 'message' => 'ok']),
+            $this->ok(['success' => true, 'documentId' => 'doc-9', 'status' => 'under_review', 'message' => 'ok']),
+        ], captureHistory: true);
+        $recipients = [new Recipient(name: 'Jane Doe', email: 'jane@client.com', signingOrder: 1)];
+        $field = new Field(SignatureFieldType::SIGNATURE, 'jane@client.com', page: 1, x: 10, y: 20, width: 100, height: 30);
+        $fields = [1 => $field];
+
+        TurboSign::createSignatureReviewLink(new CreateSignatureReviewLinkRequest(
+            recipients: $recipients,
+            fields: $fields,
+            fileLink: 'https://example.com/contract.pdf',
+        ));
+        TurboSign::sendSignature(new SendSignatureRequest(
+            recipients: $recipients,
+            fields: $fields,
+            fileLink: 'https://example.com/contract.pdf',
+        ));
+
+        foreach ([0, 1] as $call) {
+            $sent = $this->capturedJsonBody($call)['fields'];
+            $this->assertStringStartsWith('[', $sent);
+            $this->assertSame('signature', json_decode($sent, true)[0]['type']);
+        }
     }
 
     public function testCreateEmbeddedSignaturePassesRoleThrough(): void

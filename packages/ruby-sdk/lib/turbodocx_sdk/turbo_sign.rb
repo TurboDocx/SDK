@@ -76,7 +76,7 @@ module TurboDocxSdk
       def create_signature_review_link(request)
         client = get_client
         sender = client.sender_config
-        form_data = build_signature_form_data(request, sender)
+        form_data = build_signature_form_data(request, sender, for_review: true)
 
         if request[:file] || request["file"]
           file = request[:file] || request["file"]
@@ -314,9 +314,10 @@ module TurboDocxSdk
           )
         end
 
-        # Full `fields` (when provided) win verbatim; otherwise expand each recipient's shorthand.
+        # Full `fields` (when non-empty) win verbatim; otherwise expand each recipient's shorthand. An
+        # empty list counts as absent, so it can't discard the shorthand and leave the send with no fields.
         fields = req_val(request, :fields)
-        fields ||= recipients.flat_map { |r| expand_recipient_fields(r) }
+        fields = recipients.flat_map { |r| expand_recipient_fields(r) } if fields.nil? || fields.empty?
 
         send_request = {
           "recipients" => mapped_recipients,
@@ -512,7 +513,8 @@ module TurboDocxSdk
       # @param template_id [String]
       # @return [Hash] with "templateId" and "roles" (each "key", "label", "order",
       #   "hasSavedSigner", optional "defaultName"/"defaultEmail", and "fieldCount")
-      # @raise [NotFoundError] if the template does not exist
+      # @raise [NotFoundError] (404, code "SignatureSetupNotFound") when the template has no saved
+      #   signature setup, or is not a template in your organization
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
       def get_template_signature_setup(template_id)
@@ -685,15 +687,16 @@ module TurboDocxSdk
         file_name.nil? || file_name.to_s.empty? ? form_data : form_data.merge("fileName" => file_name)
       end
 
-      def build_signature_form_data(request, sender)
+      def build_signature_form_data(request, sender, for_review: false)
         recipients = request[:recipients] || request["recipients"]
-        # A template sent with signer roles (recipients carrying "role") takes its fields from the
-        # template, so fields may be omitted. Leave the key out when none are given: any other
-        # send then gets the API's FieldsRequired error instead of a document with no fields.
-        fields = request[:fields] || request["fields"]
+        # Without a role the API answers a MISSING "fields" key with 400 FieldsRequired. A review
+        # link may have no fields (they are placed in the preview), so it sends []. A send leaves the
+        # key out: a role send takes the template's saved fields, and any other send gets
+        # FieldsRequired instead of a document with nothing to sign.
+        fields = request[:fields] || request["fields"] || []
 
         form_data = { "recipients" => JSON.generate(recipients) }
-        form_data["fields"] = JSON.generate(fields) if fields && !fields.empty?
+        form_data["fields"] = JSON.generate(fields) if for_review || !fields.empty?
 
         doc_name = request[:documentName] || request["documentName"]
         doc_desc = request[:documentDescription] || request["documentDescription"]

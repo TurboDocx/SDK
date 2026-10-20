@@ -479,6 +479,25 @@ type AuditTrailResponse struct {
 // TurboSign Methods
 // ============================================
 
+// setFieldsFormValue sets "fields" (a JSON string) on a send body. Without a role the API answers a
+// MISSING key with 400 FieldsRequired. A review link may have no fields (they are placed in the
+// preview), so it sends "[]". A send leaves the key out: a role send takes the template's saved
+// fields, and any other send gets FieldsRequired instead of a document with nothing to sign.
+func setFieldsFormValue(formData map[string]string, fields []Field, forReview bool) error {
+	if len(fields) == 0 {
+		if !forReview {
+			return nil
+		}
+		fields = []Field{} // a nil slice would marshal to "null"
+	}
+	fieldsJSON, err := json.Marshal(fields)
+	if err != nil {
+		return fmt.Errorf("marshal fields: %w", err)
+	}
+	formData["fields"] = string(fieldsJSON)
+	return nil
+}
+
 // CreateSignatureReviewLink prepares a document for review without sending emails.
 // Use this to preview field placement before sending.
 func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *CreateSignatureReviewLinkRequest) (*CreateSignatureReviewLinkResponse, error) {
@@ -494,14 +513,8 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 		"recipients": string(recipientsJSON),
 	}
 
-	// Omit "fields" when none are given: a template sent with signer roles takes its fields from
-	// the template, and any other send gets the API's FieldsRequired error.
-	if len(req.Fields) > 0 {
-		fieldsJSON, err := json.Marshal(req.Fields)
-		if err != nil {
-			return nil, fmt.Errorf("marshal fields: %w", err)
-		}
-		formData["fields"] = string(fieldsJSON)
+	if err := setFieldsFormValue(formData, req.Fields, true); err != nil {
+		return nil, err
 	}
 
 	if req.DocumentName != "" {
@@ -578,14 +591,8 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 		"recipients": string(recipientsJSON),
 	}
 
-	// Omit "fields" when none are given: a template sent with signer roles takes its fields from
-	// the template, and any other send gets the API's FieldsRequired error.
-	if len(req.Fields) > 0 {
-		fieldsJSON, err := json.Marshal(req.Fields)
-		if err != nil {
-			return nil, fmt.Errorf("marshal fields: %w", err)
-		}
-		formData["fields"] = string(fieldsJSON)
+	if err := setFieldsFormValue(formData, req.Fields, false); err != nil {
+		return nil, err
 	}
 
 	if req.DocumentName != "" {
@@ -687,6 +694,9 @@ type TemplateSignatureSetup struct {
 // signer, save the signature setup) is sent by naming each recipient's role: the fields saved for
 // that role come with it. This returns each role's Key (the value for Role), in signing order,
 // whether the template has a saved signer used when you leave the role out, and its field count.
+//
+// It returns a *NotFoundError (404, code SignatureSetupNotFound) when the template has no saved
+// signature setup, or is not a template in your organization.
 func (c *TurboSignClient) GetTemplateSignatureSetup(ctx context.Context, templateID string) (*TemplateSignatureSetup, error) {
 	var response TemplateSignatureSetup
 

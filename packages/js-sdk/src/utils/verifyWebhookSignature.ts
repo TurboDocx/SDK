@@ -18,7 +18,10 @@ export interface VerifyWebhookSignatureOptions {
   /**
    * Maximum acceptable age of the timestamp header, in seconds.
    * Defaults to 300 (5 minutes). Set to 0 to disable the timestamp check
-   * (NOT recommended in production).
+   * (NOT recommended in production). A negative or non-finite value (NaN,
+   * Infinity) or a non-number (such as the string "300") fails closed: every
+   * delivery is rejected.
+   * `undefined` or `null` takes the 300s default.
    */
   toleranceSeconds?: number;
 
@@ -64,11 +67,17 @@ export function verifyWebhookSignature(
   if (!signatureHeader || !timestampHeader || !secret) return false;
 
   const toleranceSeconds = options?.toleranceSeconds ?? 300;
-  // NaN would make the window comparison below always false, silently accepting any timestamp.
-  if (typeof toleranceSeconds !== 'number' || Number.isNaN(toleranceSeconds)) return false;
+  // NaN would make the window comparison below always false, and Infinity would never expire,
+  // silently accepting any timestamp.
+  if (typeof toleranceSeconds !== 'number' || !Number.isFinite(toleranceSeconds)) return false;
+  // A negative window would skip the check below and accept any replayed delivery: fail closed.
+  if (toleranceSeconds < 0) return false;
   if (toleranceSeconds > 0) {
     const now = options?.now ? options.now() : Math.floor(Date.now() / 1000);
     if (typeof now !== 'number' || !Number.isFinite(now)) return false;
+    // Digits only (an optional leading "-"), as in the PHP helper: parseInt alone would read the
+    // leading digits of "1747000000abc" or "1747000000.9".
+    if (!/^-?\d+$/.test(timestampHeader)) return false;
     const ts = Number.parseInt(timestampHeader, 10);
     if (!Number.isFinite(ts)) return false;
     if (Math.abs(now - ts) > toleranceSeconds) return false;

@@ -621,3 +621,34 @@ class TestCreateEmbeddedSignature:
 
             sent_fields = json.loads(mock_client.upload_file.call_args[1]["additional_data"]["fields"])
             assert sent_fields == [full_field]
+
+
+class TestCreateEmbeddedSignatureEmptyTopLevelFields:
+    """An explicit empty top-level ``fields`` used to win over the recipients' shorthand, so the send
+    had no fields and the API answered 400 FieldsRequired. An empty list now counts as absent."""
+
+    @pytest.mark.asyncio
+    async def test_empty_top_level_fields_still_expands_the_shorthand(self):
+        client = MagicMock()
+        client.get_sender_config.return_value = {"sender_email": "s@example.com", "sender_name": None}
+        client.post = AsyncMock(
+            side_effect=[
+                {
+                    "success": True,
+                    "documentId": "doc-9",
+                    "status": "under_review",
+                    "recipients": [{"id": "rec-1", "name": "Alice", "email": "alice@example.com"}],
+                },
+                {"results": {"url": "https://app/sign/doc-9?token=A", "expiresAt": None, "recipientId": "rec-1"}},
+            ]
+        )
+        with patch.object(TurboSign, "_get_client", return_value=client):
+            await TurboSign.create_embedded_signature(
+                template_id="tmpl-1",
+                fields=[],
+                recipients=[{"name": "Alice", "email": "alice@example.com", "fields": {"signature": "{sig}"}}],
+            )
+
+        sent_fields = json.loads(client.post.call_args_list[0][1]["data"]["fields"])
+        assert len(sent_fields) == 1
+        assert sent_fields[0]["template"]["anchor"] == "{sig}"

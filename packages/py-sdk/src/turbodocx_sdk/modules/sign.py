@@ -151,6 +151,17 @@ class TurboSign:
 
 
     @staticmethod
+    def _apply_fields(target: Dict[str, Any], fields: Optional[List[Dict[str, Any]]], *, for_review: bool) -> None:
+        """
+        Set ``fields`` (a JSON string) on a send body. Without a role the API answers a MISSING key
+        with 400 FieldsRequired. A review link may have no fields (they are placed in the preview),
+        so it sends ``[]``. A send leaves the key out: a role send takes the template's saved
+        fields, and any other send gets FieldsRequired instead of a document with nothing to sign.
+        """
+        if fields or for_review:
+            target["fields"] = json.dumps(fields or [])
+
+    @staticmethod
     def _with_file_name(form_data: Dict[str, Any], file_name: Optional[str]) -> Dict[str, Any]:
         """
         Add ``fileName`` to an upload's form fields when it is non-empty. It is a form field, not
@@ -253,7 +264,8 @@ class TurboSign:
                 roles with :meth:`get_template_signature_setup`.
             fields: Signature fields configuration. Optional when recipients carry a
                 ``role``: the template's saved fields are used and any fields passed here
-                are added to them. Left out of the request when omitted.
+                are added to them. Sent as ``[]`` when omitted: a review link may have no
+                fields (they are placed in the preview).
                 Each field should have: type, recipientEmail, and positioning info
                 Optional per-field "metadata" drives conditional (IF/THEN) logic:
                   - On a controlling checkbox: {"metadata": {"fieldKey": "request_changes"}}
@@ -301,10 +313,7 @@ class TurboSign:
                 "recipients": json.dumps(recipients),
             }
 
-            # Omit "fields" when none are given: a template sent with signer roles takes its
-            # fields from the template, and any other send gets the API's FieldsRequired error.
-            if fields:
-                form_data["fields"] = json.dumps(fields)
+            cls._apply_fields(form_data, fields, for_review=True)
 
             # Add optional fields
             if document_name:
@@ -343,10 +352,7 @@ class TurboSign:
                 "recipients": json.dumps(recipients),
             }
 
-            # Omit "fields" when none are given: a template sent with signer roles takes its
-            # fields from the template, and any other send gets the API's FieldsRequired error.
-            if fields:
-                json_body["fields"] = json.dumps(fields)
+            cls._apply_fields(json_body, fields, for_review=True)
 
             # Add optional fields
             if document_name:
@@ -496,10 +502,7 @@ class TurboSign:
                 "recipients": json.dumps(recipients),
             }
 
-            # Omit "fields" when none are given: a template sent with signer roles takes its
-            # fields from the template, and any other send gets the API's FieldsRequired error.
-            if fields:
-                form_data["fields"] = json.dumps(fields)
+            cls._apply_fields(form_data, fields, for_review=False)
 
             # Add optional fields
             if document_name:
@@ -543,10 +546,7 @@ class TurboSign:
                 "recipients": json.dumps(recipients),
             }
 
-            # Omit "fields" when none are given: a template sent with signer roles takes its
-            # fields from the template, and any other send gets the API's FieldsRequired error.
-            if fields:
-                json_body["fields"] = json.dumps(fields)
+            cls._apply_fields(json_body, fields, for_review=False)
 
             # Add optional fields
             if document_name:
@@ -608,6 +608,10 @@ class TurboSign:
                 - roles: Roles in signing order, each {key, label, order, hasSavedSigner,
                   fieldCount} plus defaultName/defaultEmail when hasSavedSigner is true.
                   ``key`` is the value to pass as a recipient's ``role``.
+
+        Raises:
+            NotFoundError: (404, code ``SignatureSetupNotFound``) when the template has no saved
+                signature setup, or is not a template in your organization.
 
         Example:
             >>> setup = await TurboSign.get_template_signature_setup("template-id")
@@ -1173,8 +1177,9 @@ class TurboSign:
                     code="PhoneRequiredForSmsOtp",
                 )
 
-        # Full `fields` (when provided) win verbatim; otherwise expand each shorthand.
-        expanded_fields: List[Dict[str, Any]] = fields if fields is not None else [
+        # Full `fields` (when non-empty) win verbatim; otherwise expand each shorthand. An empty list
+        # counts as absent, so it can't discard the shorthand and leave the send with no fields.
+        expanded_fields: List[Dict[str, Any]] = fields if fields else [
             field for r in recipients for field in _expand_recipient_fields(r)
         ]
 

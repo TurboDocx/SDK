@@ -569,6 +569,28 @@ describe("verifyWebhookSignature", () => {
     ).toBe(true);
   });
 
+  // A negative tolerance used to skip the window check (`> 0`), accepting any replayed delivery.
+  it("should fail closed (return false) when toleranceSeconds is negative", () => {
+    for (const toleranceSeconds of [-1, -300]) {
+      expect(
+        verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, { toleranceSeconds, now: () => NOW_SECONDS }),
+      ).toBe(false);
+      expect(
+        verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, { toleranceSeconds, now: () => NOW_SECONDS + 99999 }),
+      ).toBe(false);
+    }
+  });
+
+  // An infinite window never expires, so a replayed delivery would always pass.
+  it("should fail closed (return false) when toleranceSeconds is Infinity", () => {
+    expect(
+      verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, {
+        toleranceSeconds: Number.POSITIVE_INFINITY,
+        now: () => NOW_SECONDS + 99999,
+      }),
+    ).toBe(false);
+  });
+
   it("should reject when signature header is missing", () => {
     expect(verifyWebhookSignature(BODY, "", TIMESTAMP, SECRET)).toBe(false);
   });
@@ -586,6 +608,15 @@ describe("verifyWebhookSignature", () => {
       verifyWebhookSignature(BODY, validSig, "not-a-number", SECRET, { now: () => NOW_SECONDS }),
     ).toBe(false);
   });
+
+  // parseInt read the leading digits of "1747000000abc" and "1747000000.9", so a timestamp header the
+  // other SDKs reject passed here. Each header below is signed exactly as sent.
+  it.each([`${TIMESTAMP}abc`, `${TIMESTAMP}.9`, ` ${TIMESTAMP}`, "", "abc"])(
+    "should reject a timestamp header that is not all digits (%p)",
+    (ts) => {
+      expect(verifyWebhookSignature(BODY, sign(BODY, ts, SECRET), ts, SECRET, { now: () => NOW_SECONDS })).toBe(false);
+    },
+  );
 
   it("should reject a length-mismatched signature without crashing", () => {
     expect(

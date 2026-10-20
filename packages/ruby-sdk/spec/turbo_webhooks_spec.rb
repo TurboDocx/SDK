@@ -680,6 +680,56 @@ RSpec.describe "TurboDocxSdk.verify_webhook_signature" do
     ).to be(true)
   end
 
+  it "returns false (never raises) for a Complex tolerance_seconds" do
+    fixed = 1_747_000_000
+    sig = sign(payload, fixed.to_s, secret)
+
+    expect(
+      TurboDocxSdk.verify_webhook_signature(
+        payload: payload, signature_header: sig, timestamp_header: fixed.to_s, secret: secret,
+        tolerance_seconds: Complex(300, 0), now: -> { fixed }
+      )
+    ).to be(false)
+  end
+
+  # Integer() also accepts surrounding whitespace, underscores and "+"; the JS and PHP helpers don't.
+  ["1747000000abc", "1747000000.9", " 1747000000", "1747000000 ", "1_747_000_000", "+1747000000"].each do |ts|
+    it "rejects a timestamp header that is not all digits (#{ts.inspect})" do
+      expect(
+        TurboDocxSdk.verify_webhook_signature(
+          payload: payload, signature_header: sign(payload, ts, secret), timestamp_header: ts, secret: secret,
+          now: -> { 1_747_000_000 }
+        )
+      ).to be(false)
+    end
+  end
+
+  it "fails closed for an infinite tolerance_seconds (a window that never expires)" do
+    fixed = 1_747_000_000
+    sig = sign(payload, fixed.to_s, secret)
+
+    expect(
+      TurboDocxSdk.verify_webhook_signature(
+        payload: payload, signature_header: sig, timestamp_header: fixed.to_s, secret: secret,
+        tolerance_seconds: Float::INFINITY, now: -> { fixed + 99_999 }
+      )
+    ).to be(false)
+  end
+
+  it "fails closed for a negative tolerance_seconds even when the timestamp is far outside any window" do
+    fixed = 1_747_000_000
+    sig = sign(payload, fixed.to_s, secret)
+
+    [-1, -300, -0.5].each do |tolerance|
+      expect(
+        TurboDocxSdk.verify_webhook_signature(
+          payload: payload, signature_header: sig, timestamp_header: fixed.to_s, secret: secret,
+          tolerance_seconds: tolerance, now: -> { fixed + 99_999 }
+        )
+      ).to be(false)
+    end
+  end
+
   it "fails closed (rejects) when tolerance_seconds is negative" do
     ts = Time.now.to_i.to_s
     sig = sign(payload, ts, secret)

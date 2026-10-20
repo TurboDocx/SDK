@@ -322,7 +322,8 @@ $result = TurboSign::sendSignature(
 - A role left out uses the template's saved signer. If it has none, the API returns a 400 naming the role.
 - An unknown role throws a `ValidationException` listing the template's roles (`$e->errorCode === 'UnknownSignerRole'`).
 - Any `fields` you pass are added to the template's (for example an extra witness signature).
-- Roles work on PDF templates. Without roles, `fields` is required and must not be empty (400 `FieldsRequired`).
+- Roles work on PDF templates. Without roles, `sendSignature` needs `fields`: a send without them gets a 400 `FieldsRequired`. A review link (`createSignatureReviewLink`) can be created with no fields; you place them in the preview.
+- `getTemplateSignatureSetup` throws `NotFoundException` (404, code `SignatureSetupNotFound`) when the template has no saved signature setup, or is not a template in your organization.
 - `role` works the same way on `createSignatureReviewLink()` (`Recipient`) and `createEmbeddedSignature()` (`EmbeddedSignatureRecipient`).
 
 #### Signing in your own app (`sendEmail: false` + `createSigningUrl()`)
@@ -675,7 +676,7 @@ $event = json_decode($rawBody, true);
 // ... process event ...
 ```
 
-By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Pass `toleranceSeconds: N` (0 disables the check — not recommended in production).
+By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Pass `toleranceSeconds: N` (0 disables the check — not recommended in production; a negative value fails closed and rejects every delivery). `toleranceSeconds` and `now` take an int or a finite float; any other value, a numeric string such as `"300"` included, returns `false` rather than throwing.
 
 ---
 
@@ -1795,7 +1796,7 @@ The API also returns more specific codes, passed through unchanged:
 | `OptionalNotSupported` | 400 | A `signature` or `initial` field was sent with `required: false`. The signer must always complete those two types. |
 | `InvalidFieldRequired` | 400 | A field's `required` is not a boolean. Send `true`, `false`, or leave it out (leaving it out means required). |
 | `NoEditableFieldsForRecipient` | 400 | A recipient has no field they must fill in: all of their fields are read-only or optional. Give each recipient at least one required, editable field. |
-| `FieldsRequired` | 400 | `fields` is missing or empty and no recipient names a `role`. Pass fields, or send a template whose recipients name roles. |
+| `FieldsRequired` | 400 | A send has no fields and no recipient names a `role`. Pass fields, or send a template whose recipients name roles. A review link can be created without fields. |
 | `FieldPageOutOfRange` | 400 | A field is placed on a page past the end of the document. |
 | `UnknownSignerRole` | 400 | A recipient's `role` is not one of the template's roles. The message lists them. |
 | `DuplicateSignerRole` | 400 | More than one recipient was given for the same role. |
@@ -1803,6 +1804,10 @@ The API also returns more specific codes, passed through unchanged:
 | `TemplateHasNoSignerRoles` | 400 | `role` was used on a template with no saved signature setup. |
 | `RoleRequiresTemplate` | 400 | `role` was used without a `templateId`. |
 | `TemplateRolesNeedPdfTemplate` | 400 | Roles can only be sent for a PDF signature template. For a Word template, generate a deliverable and send it with `deliverableId`. |
+| `DuplicateRoleEmail` | 400 | Two roles resolve to the same email address (a recipient you passed or a signer saved on the template), or a recipient without a `role` uses a role's email address. Each signer needs their own email address. |
+| `SignerHasNoFields` | 400 | On a role send, a signer has no field to sign: neither the template nor your `fields` assigns one to them. Raised when sending (`sendSignature`, embedded signing), not for a review link, where fields can be placed in the preview. |
+| `InvalidRecipient` | 400 | An entry in `recipients` is not an object (for example `null` or a string). |
+| `SignatureSetupNotFound` | 404 | `getTemplateSignatureSetup` was called for a template with no saved signature setup, or one that is not in your organization. Thrown as `NotFoundException`. |
 | `QuoteHasNoLineItems` | 400 | The quote has no line items. Add at least one before sending. |
 | `QuoteExpired` | 400 | The quote is past its `validUntil` date. |
 | `QuoteValidUntilRequired` | 400 | The quote has no `validUntil` date set. |

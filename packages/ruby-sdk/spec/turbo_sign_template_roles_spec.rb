@@ -61,7 +61,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
     end
 
     describe "an empty fields list" do
-      it "is left out of the body rather than sent as []" do
+      it "is left out of a send rather than sent as []" do
         allow(mock_client).to receive(:post).and_return({ "success" => true, "documentId" => "doc-1" })
 
         described_class.send_signature(
@@ -77,7 +77,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
     end
 
     describe ".create_signature_review_link" do
-      it "sends roles to prepare-for-review without a fields key when fields are omitted" do
+      it "sends roles to prepare-for-review with fields as [] when fields are omitted" do
         allow(mock_client).to receive(:post)
           .and_return({ "success" => true, "documentId" => "doc-2", "status" => "review_ready" })
 
@@ -89,8 +89,80 @@ RSpec.describe TurboDocxSdk::TurboSign do
         expect(mock_client).to have_received(:post) do |path, body|
           expect(path).to eq("/turbosign/single/prepare-for-review")
           expect(JSON.parse(body["recipients"])[0]["role"]).to eq("client")
-          expect(body).not_to have_key("fields")
+          expect(body["fields"]).to eq("[]")
         end
+      end
+    end
+
+    # Without roles the API answers a MISSING fields key with 400 FieldsRequired. A send leaves the key
+    # out so the API rejects a document with nothing to sign.
+    describe ".send_signature without roles" do
+      [["an empty fields list", { fields: [] }], ["no fields argument", {}]].each do |label, extra|
+        it "leaves fields out for #{label}" do
+          allow(mock_client).to receive(:post)
+            .and_return({ "success" => true, "documentId" => "doc-6", "status" => "under_review" })
+
+          described_class.send_signature(
+            fileLink: "https://example.com/contract.pdf",
+            recipients: [{ name: "Jane Doe", email: "jane@client.com", signingOrder: 1 }],
+            **extra
+          )
+
+          expect(mock_client).to have_received(:post) do |path, body|
+            expect(path).to eq("/turbosign/single/prepare-for-signing")
+            expect(body).not_to have_key("fields")
+          end
+        end
+      end
+    end
+
+    # A review link may have no fields (they are placed in the preview), so it sends "[]": the API
+    # rejects a MISSING key with 400 FieldsRequired unless a recipient names a role.
+    describe ".create_signature_review_link without roles" do
+      [["an empty fields list", { fields: [] }], ["no fields argument", {}]].each do |label, extra|
+        it "sends fields as [] for #{label}" do
+          allow(mock_client).to receive(:post)
+            .and_return({ "success" => true, "documentId" => "doc-4", "status" => "review_ready" })
+
+          described_class.create_signature_review_link(
+            fileLink: "https://example.com/contract.pdf",
+            recipients: [{ name: "Jane Doe", email: "jane@client.com", signingOrder: 1 }],
+            **extra
+          )
+
+          expect(mock_client).to have_received(:post) do |path, body|
+            expect(path).to eq("/turbosign/single/prepare-for-review")
+            expect(body["fields"]).to eq("[]")
+          end
+        end
+      end
+    end
+
+    # An explicit empty top-level fields used to win over the shorthand, so the send had no fields and
+    # the API answered 400 FieldsRequired. An empty list now counts as absent.
+    describe ".create_embedded_signature with an empty top-level fields" do
+      it "still expands the recipients' fields shorthand" do
+        send_body = nil
+        allow(mock_client).to receive(:post) do |path, body|
+          if path == "/turbosign/single/prepare-for-signing"
+            send_body = body
+            { "success" => true, "documentId" => "doc-9", "status" => "under_review",
+              "recipients" => [{ "id" => "rec-1", "name" => "Alice", "email" => "alice@example.com" }] }
+          else
+            { "results" => { "url" => "https://app/sign/doc-9?token=A", "expiresAt" => nil,
+                             "recipientId" => "rec-1" } }
+          end
+        end
+
+        described_class.create_embedded_signature(
+          templateId: template_id,
+          fields: [],
+          recipients: [{ name: "Alice", email: "alice@example.com", fields: { signature: "{sig}" } }]
+        )
+
+        sent_fields = JSON.parse(send_body["fields"])
+        expect(sent_fields.length).to eq(1)
+        expect(sent_fields[0]["template"]["anchor"]).to eq("{sig}")
       end
     end
 

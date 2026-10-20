@@ -142,6 +142,33 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
     expect(recipients[0].phone).toBe("+13055551234");
   });
 
+  // An explicit empty top-level `fields` used to win over the shorthand, so the send had no fields and
+  // the API always answered 400 FieldsRequired. An empty list now counts as absent.
+  it("expands the fields shorthand when the top-level fields is an empty list", async () => {
+    (global as unknown as { fetch: jest.Mock }).fetch = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
+        json: async () => sendEnvelope("doc-5", [{ id: "rec-1", name: "Alice", email: "alice@example.com" }]),
+        text: async () => "",
+      })
+      .mockResolvedValueOnce({
+        ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
+        json: async () => signingUrlEnvelope("rec-1", "https://app/sign/doc-5?token=A", null),
+        text: async () => "",
+      });
+
+    await TurboSign.createEmbeddedSignature({
+      templateId: "tmpl-1",
+      fields: [],
+      recipients: [{ name: "Alice", email: "alice@example.com", fields: { signature: "{signature1}" } }],
+    });
+
+    const fields = JSON.parse(bodyOf(0).fields);
+    expect(fields).toHaveLength(1);
+    expect(fields[0].template.anchor).toBe("{signature1}");
+  });
+
   it("expands the fields shorthand into Field objects with placement:'replace' and the default sizes", async () => {
     const fetchMock = jest
       .fn()

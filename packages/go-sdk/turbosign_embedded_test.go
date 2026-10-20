@@ -359,8 +359,8 @@ func TestTurboSignClient_CreateEmbeddedSignature(t *testing.T) {
 	})
 
 	// Cross-language consistency: with no top-level Fields and no recipient shorthand, the
-	// send-signature body leaves the `fields` key out entirely (never "[]" or "null"), so a role
-	// send relies on the template's saved fields and any other send gets the API's FieldsRequired.
+	// send-signature body leaves the fields key out, so a role send uses the template's saved
+	// fields and any other send gets the API's 400 FieldsRequired.
 	t.Run("omits the fields key when no fields provided", func(t *testing.T) {
 		var sentBody map[string]interface{}
 		server := newEmbeddedWrapperServer(t, embeddedServerConfig{
@@ -383,6 +383,33 @@ func TestTurboSignClient_CreateEmbeddedSignature(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, sentBody)
 		assert.NotContains(t, sentBody, "fields", "empty fields must be omitted")
+	})
+
+	// An explicit empty top-level Fields used to win over the shorthand, so the send had no fields
+	// and the API answered 400 FieldsRequired. An empty slice now counts as absent.
+	t.Run("expands the shorthand when the top-level Fields is an empty slice", func(t *testing.T) {
+		var sentBody map[string]interface{}
+		server := newEmbeddedWrapperServer(t, embeddedServerConfig{
+			sentRecipients: []map[string]string{{"id": "rec-1", "email": "a@example.com", "name": "A"}},
+			captureSend:    func(body map[string]interface{}) { sentBody = body },
+			signingResponder: func(recipientID string) (int, map[string]interface{}) {
+				return http.StatusOK, okSigningResults("https://sign.example.com/embed/1")
+			},
+		})
+		defer server.Close()
+
+		client := newEmbeddedTestClient(t, server.URL)
+		_, err := client.TurboSign.CreateEmbeddedSignature(context.Background(), &CreateEmbeddedSignatureRequest{
+			File:   []byte("pdf"),
+			Fields: []Field{},
+			Recipients: []EmbeddedSignatureRecipient{
+				{Name: "A", Email: "a@example.com", Fields: &EmbeddedRecipientFields{Signature: "{sig}"}},
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, sentBody)
+		require.Contains(t, sentBody, "fields")
+		assert.Contains(t, sentBody["fields"], `"anchor":"{sig}"`)
 	})
 
 	// Turn-aware degradation: the two not-in-turn aliases both map to "pending" with empty URL.

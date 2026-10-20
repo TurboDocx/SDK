@@ -12,6 +12,7 @@ import java.lang.reflect.Type;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -48,7 +49,8 @@ public final class TurboSign {
                 request.getSenderName(),
                 request.getSenderEmail(),
                 request.getCcEmails(),
-                request.getSchedule()
+                request.getSchedule(),
+                true
         );
 
         if (request.hasFile()) {
@@ -92,7 +94,8 @@ public final class TurboSign {
                 request.getSenderName(),
                 request.getSenderEmail(),
                 request.getCcEmails(),
-                request.getSchedule()
+                request.getSchedule(),
+                false
         );
 
         // Forward email suppression only from the send path (never the review path). Tested with
@@ -140,6 +143,8 @@ public final class TurboSign {
      *
      * @param templateId ID of the template
      * @return the template's signer roles
+     * @throws TurboDocxException.NotFoundException (404, code {@code SignatureSetupNotFound}) when the
+     *         template has no saved signature setup, or is not a template in your organization
      * @throws IOException on transport failure
      */
     public TemplateSignatureSetup getTemplateSignatureSetup(String templateId) throws IOException {
@@ -439,10 +444,11 @@ public final class TurboSign {
             }
         }
 
-        // Full fields (when provided) win verbatim — even an explicitly empty list; otherwise expand
-        // each recipient's shorthand. Null check, never isEmpty(), mirrors the JS `?? expand`.
+        // Full fields (when non-empty) win verbatim; otherwise expand each recipient's shorthand. An
+        // explicitly empty list counts as absent, so it can't discard the shorthand and leave the send
+        // with no fields (which the API rejects with 400 FieldsRequired).
         List<Field> fields;
-        if (request.getFields() != null) {
+        if (request.getFields() != null && !request.getFields().isEmpty()) {
             fields = request.getFields();
         } else {
             fields = new ArrayList<>();
@@ -719,14 +725,18 @@ public final class TurboSign {
             String senderName,
             String senderEmail,
             List<String> ccEmails,
-            SignatureSchedule schedule
+            SignatureSchedule schedule,
+            boolean forReview
     ) {
         Map<String, String> formData = new HashMap<>();
         formData.put("recipients", gson.toJson(recipients));
-        // Omit "fields" when none are given: a template sent with signer roles takes its fields
-        // from the template, and any other send gets the API's FieldsRequired error.
-        if (fields != null && !fields.isEmpty()) {
-            formData.put("fields", gson.toJson(fields));
+        // Without a role the API answers a MISSING "fields" key with 400 FieldsRequired. A review link
+        // may have no fields (they are placed in the preview), so it sends []. A send leaves the key
+        // out: a role send takes the template's saved fields, and any other send gets FieldsRequired
+        // instead of a document with nothing to sign.
+        boolean hasFields = fields != null && !fields.isEmpty();
+        if (hasFields || forReview) {
+            formData.put("fields", gson.toJson(hasFields ? fields : Collections.emptyList()));
         }
 
         if (documentName != null) {

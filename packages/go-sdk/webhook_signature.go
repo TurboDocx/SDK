@@ -16,8 +16,9 @@ const DefaultWebhookToleranceSeconds = 300
 // VerifyWebhookSignatureOptions configures VerifyWebhookSignature.
 type VerifyWebhookSignatureOptions struct {
 	// ToleranceSeconds is the maximum acceptable age of the timestamp header,
-	// in seconds. 0 means use DefaultWebhookToleranceSeconds. A negative value
-	// disables the timestamp check entirely (NOT recommended in production).
+	// in seconds. 0 (the zero value) means use DefaultWebhookToleranceSeconds,
+	// so the Go helper has no way to turn the timestamp check off. A negative
+	// value fails closed: every delivery is rejected.
 	ToleranceSeconds int
 
 	// Now overrides the "current time" function for deterministic testing.
@@ -54,24 +55,27 @@ func VerifyWebhookSignature(rawBody []byte, signatureHeader, timestampHeader, se
 		nowFunc = opts.Now
 	}
 
-	if tolerance > 0 {
-		ts, err := strconv.ParseInt(timestampHeader, 10, 64)
-		if err != nil {
-			return false
-		}
-		var current int64
-		if nowFunc != nil {
-			current = nowFunc()
-		} else {
-			current = time.Now().Unix()
-		}
-		diff := current - ts
-		if diff < 0 {
-			diff = -diff
-		}
-		if diff > int64(tolerance) {
-			return false
-		}
+	// A negative window would otherwise accept any replayed delivery: fail closed.
+	if tolerance < 0 {
+		return false
+	}
+
+	ts, err := strconv.ParseInt(timestampHeader, 10, 64)
+	if err != nil {
+		return false
+	}
+	var current int64
+	if nowFunc != nil {
+		current = nowFunc()
+	} else {
+		current = time.Now().Unix()
+	}
+	diff := current - ts
+	if diff < 0 {
+		diff = -diff
+	}
+	if diff > int64(tolerance) {
+		return false
 	}
 
 	mac := hmac.New(sha256.New, []byte(secret))

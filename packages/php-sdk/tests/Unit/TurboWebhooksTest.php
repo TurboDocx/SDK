@@ -251,6 +251,84 @@ final class TurboWebhooksTest extends TestCase
         );
     }
 
+    /** A negative tolerance used to skip the window check (`> 0`), accepting any replayed delivery. */
+    public function testVerifyNegativeToleranceFailsClosed(): void
+    {
+        $ts = (string) self::NOW_SECONDS;
+        $sig = self::sign(self::BODY, $ts, self::SECRET);
+        foreach ([-1, -300, -0.5] as $tolerance) {
+            $this->assertFalse(verifyWebhookSignature(self::BODY, $sig, $ts, self::SECRET, $tolerance, self::NOW_SECONDS));
+            $this->assertFalse(
+                verifyWebhookSignature(self::BODY, $sig, $ts, self::SECRET, $tolerance, self::NOW_SECONDS + 99999),
+            );
+        }
+    }
+
+    /**
+     * Under strict_types an `int` parameter threw TypeError on a string or float, breaking the
+     * "never throws" contract. Like the JS, Python and Ruby helpers, a number is accepted and a
+     * string (numeric strings included) returns false; like Python, NaN and INF also return false.
+     *
+     * @return array<string, array{mixed}>
+     */
+    public static function invalidToleranceProvider(): array
+    {
+        return [
+            'numeric string' => ['300'],
+            'non-numeric string' => ['abc'],
+            'null' => [null],
+            'bool' => [true],
+            'array' => [[300]],
+            'NaN' => [NAN],
+            'infinity' => [INF],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidToleranceProvider')]
+    public function testVerifyRejectsNonNumberToleranceWithoutThrowing(mixed $tolerance): void
+    {
+        $ts = (string) self::NOW_SECONDS;
+        $sig = self::sign(self::BODY, $ts, self::SECRET);
+        $this->assertFalse(verifyWebhookSignature(self::BODY, $sig, $ts, self::SECRET, $tolerance, self::NOW_SECONDS));
+    }
+
+    /** @return array<string, array{mixed}> */
+    public static function invalidNowProvider(): array
+    {
+        return [
+            'numeric string' => [(string) self::NOW_SECONDS],
+            'non-numeric string' => ['now'],
+            'bool' => [true],
+            'array' => [[self::NOW_SECONDS]],
+            'NaN' => [NAN],
+            'infinity' => [INF],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidNowProvider')]
+    public function testVerifyRejectsNonNumberNowWithoutThrowing(mixed $now): void
+    {
+        $ts = (string) self::NOW_SECONDS;
+        $sig = self::sign(self::BODY, $ts, self::SECRET);
+        $this->assertFalse(verifyWebhookSignature(self::BODY, $sig, $ts, self::SECRET, 300, $now));
+    }
+
+    /** With the timestamp check disabled (tolerance 0), `now` is never read, as in JS, Python and Ruby. */
+    public function testVerifyIgnoresInvalidNowWhenToleranceIsZero(): void
+    {
+        $ts = (string) self::NOW_SECONDS;
+        $sig = self::sign(self::BODY, $ts, self::SECRET);
+        $this->assertTrue(verifyWebhookSignature(self::BODY, $sig, $ts, self::SECRET, 0, 'not-a-time'));
+    }
+
+    public function testVerifyAcceptsFloatToleranceAndNow(): void
+    {
+        $ts = (string) self::NOW_SECONDS;
+        $sig = self::sign(self::BODY, $ts, self::SECRET);
+        $this->assertTrue(verifyWebhookSignature(self::BODY, $sig, $ts, self::SECRET, 300.0, self::NOW_SECONDS + 0.5));
+        $this->assertFalse(verifyWebhookSignature(self::BODY, $sig, $ts, self::SECRET, 300.0, self::NOW_SECONDS + 300.5));
+    }
+
     public function testVerifyRejectsEmptySignature(): void
     {
         $this->assertFalse(

@@ -71,6 +71,20 @@ class WebhookSignatureVerifierTest {
                 sig, TIMESTAMP, SECRET, 0, () -> NOW_SECONDS + 99999));
     }
 
+    // A negative tolerance used to skip the window check (`> 0`), accepting any replayed delivery.
+    @Test
+    void negativeToleranceFailsClosed() throws Exception {
+        String sig = sign(BODY, TIMESTAMP, SECRET);
+        for (int tolerance : new int[] {-1, -300}) {
+            assertFalse(WebhookSignatureVerifier.verify(
+                    BODY.getBytes(StandardCharsets.UTF_8),
+                    sig, TIMESTAMP, SECRET, tolerance, () -> NOW_SECONDS));
+            assertFalse(WebhookSignatureVerifier.verify(
+                    BODY.getBytes(StandardCharsets.UTF_8),
+                    sig, TIMESTAMP, SECRET, tolerance, () -> NOW_SECONDS + 99999));
+        }
+    }
+
     @Test
     void rejectsMissingSignature() {
         assertFalse(WebhookSignatureVerifier.verify(BODY, "", TIMESTAMP, SECRET));

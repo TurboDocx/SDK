@@ -14,11 +14,13 @@ replay attacks. Uses constant-time comparison via hmac.compare_digest.
 
 import hmac
 import math
+import re
 import time as _time
 from hashlib import sha256
 from typing import Callable, Optional, Union
 
 BytesLike = Union[bytes, bytearray, memoryview]
+_TIMESTAMP_RE = re.compile(rb"-?[0-9]+")
 StrOrBytes = Union[str, bytes, bytearray, memoryview]
 
 
@@ -67,7 +69,8 @@ def verify_webhook_signature(
             `regenerate_webhook_secret`, as str or bytes-like.
         tolerance_seconds: Maximum acceptable age of the timestamp, in seconds.
             Defaults to 300 (5 minutes). Set to 0 to disable the timestamp check
-            (NOT recommended in production). A non-numeric or NaN value fails closed.
+            (NOT recommended in production). A negative, non-numeric or NaN value fails
+            closed: every delivery is rejected.
         now: Override the "current time" function for deterministic testing.
             Returns Unix epoch seconds (int or float). Defaults to `int(time.time())`.
             A non-numeric or NaN result fails closed.
@@ -93,12 +96,16 @@ def verify_webhook_signature(
     if not _is_real_number(tolerance_seconds):
         return False
 
+    # A negative window would skip the check below and accept any replayed delivery: fail closed.
+    if tolerance_seconds < 0:
+        return False
+
     if tolerance_seconds > 0:
-        try:
-            # int() parses ASCII digits from bytes; non-ASCII bytes raise ValueError.
-            ts = int(ts_bytes)
-        except ValueError:
+        # Digits only (an optional leading "-"), as in the JS and PHP helpers: int() alone would
+        # also accept surrounding whitespace, underscores and a "+".
+        if not _TIMESTAMP_RE.fullmatch(ts_bytes):
             return False
+        ts = int(ts_bytes)
         current_time = now() if now is not None else int(_time.time())
         if not _is_real_number(current_time):
             return False
