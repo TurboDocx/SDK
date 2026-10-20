@@ -31,13 +31,19 @@ namespace TurboDocx\Utils;
  *                                 header (Unix epoch seconds), as a string.
  * @param mixed  $secret           Webhook secret returned by createWebhook
  *                                 or regenerateWebhookSecret, as a string.
- * @param int    $toleranceSeconds Maximum acceptable age of the timestamp,
- *                                 in seconds. Defaults to 300 (5 minutes).
- *                                 Set to 0 to disable the timestamp check
- *                                 (NOT recommended in production).
- * @param int|null $now            Override the "current time" (Unix seconds)
- *                                 for deterministic testing. Defaults to
- *                                 time().
+ * @param mixed  $toleranceSeconds Maximum acceptable age of the timestamp,
+ *                                 in seconds, as an int or finite float.
+ *                                 Defaults to 300 (5 minutes). Set to 0 to
+ *                                 disable the timestamp check (NOT
+ *                                 recommended in production). A negative
+ *                                 value, NaN, INF or any non-number (a
+ *                                 numeric string such as "300" included)
+ *                                 fails closed: returns false.
+ * @param mixed  $now              Override the "current time" (Unix seconds,
+ *                                 int or finite float) for deterministic
+ *                                 testing. Defaults to time() when null. Any
+ *                                 other non-number (a numeric string
+ *                                 included), NaN or INF returns false.
  *
  * @return bool true iff the signature is valid AND the timestamp is within
  *              tolerance. Constant-time comparison; returns false (never
@@ -48,14 +54,25 @@ function verifyWebhookSignature(
     mixed $signatureHeader,
     mixed $timestampHeader,
     mixed $secret,
-    int $toleranceSeconds = 300,
-    ?int $now = null,
+    mixed $toleranceSeconds = 300,
+    mixed $now = null,
 ): bool {
     if (!is_string($rawBody) || !is_string($signatureHeader) || !is_string($timestampHeader) || !is_string($secret)) {
         return false;
     }
 
     if ($signatureHeader === '' || $timestampHeader === '' || $secret === '') {
+        return false;
+    }
+
+    // Numbers only, matching the JS, Python and Ruby helpers: a string (even "300") is not coerced.
+    $isFiniteNumber = static fn(mixed $value): bool => is_int($value) || (is_float($value) && is_finite($value));
+    if (!$isFiniteNumber($toleranceSeconds) || ($now !== null && !$isFiniteNumber($now))) {
+        return false;
+    }
+
+    // A negative window would skip the check below and accept any replayed delivery: fail closed.
+    if ($toleranceSeconds < 0) {
         return false;
     }
 

@@ -676,7 +676,7 @@ $event = json_decode($rawBody, true);
 // ... process event ...
 ```
 
-By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Pass `toleranceSeconds: N` (0 disables the check — not recommended in production).
+By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Pass `toleranceSeconds: N` (0 disables the check — not recommended in production; a negative value fails closed and rejects every delivery). `toleranceSeconds` and `now` take an int or a finite float; any other value, a numeric string such as `"300"` included, returns `false` rather than throwing.
 
 ---
 
