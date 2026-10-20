@@ -146,6 +146,7 @@ module TurboDocxSdk
       # Provide EXACTLY ONE of +recipient_id+ / +external_id+ (an empty string counts as absent);
       # supplying both or neither raises before any HTTP call. +identity_assertion+ is only for
       # external_idv recipients; +return_url+, when given, must be an https URL.
+      # +page_navigation+ optionally sets how the embedded page shows its page navigation.
       #
       # The endpoint replies { data: { results } }. The HTTP client strips the outer +data+, so this
       # method peels the remaining +results+ envelope and returns the flat response -- never the
@@ -161,6 +162,12 @@ module TurboDocxSdk
       #   verifiedName, evidenceUrl (https), overrideEmailMatching (true skips the
       #   subjectEmail-equals-recipient check; recorded on the audit trail)). Keys are camelCase.
       # @param return_url [String, nil] where TurboSign returns the signer after completion (https only)
+      # @param page_navigation [String, nil] how the embedded signing page shows its page navigation
+      #   when loaded in an iframe, sent as +pageNavigation+: "auto" (the default: the thumbnail rail
+      #   is open at 1200px and wider, collapsed from 900px to 1199px, and a "Pages" button in the
+      #   bottom bar under 900px), "collapsed" (the rail starts collapsed at any width; the signer can
+      #   still expand it) or "hidden" (no rail and no "Pages" button). Applies to this issuance only:
+      #   a later call without it (or with "auto") resets to "auto".
       # @return [Hash] with "url", "expiresAt", "recipientId", "externalId",
       #   "identityVerificationMode" and "pendingChecks". "expiresAt": single-use links
       #   (external_idv / override) expire 5 minutes after issue; for otp/no-verification recipients
@@ -171,7 +178,7 @@ module TurboDocxSdk
       # @raise [AuthenticationError] on invalid credentials
       # @raise [NetworkError] on connection failure
       def create_signing_url(document_id, recipient_id: nil, external_id: nil,
-                             identity_assertion: nil, return_url: nil)
+                             identity_assertion: nil, return_url: nil, page_navigation: nil)
         # Fail fast with actionable messages; the server still enforces everything.
         selector_count = [recipient_id, external_id].count { |v| !v.nil? && v != "" }
         unless selector_count == 1
@@ -193,6 +200,7 @@ module TurboDocxSdk
         body["externalId"] = external_id unless external_id.nil? || external_id == ""
         body["identityAssertion"] = identity_assertion unless identity_assertion.nil?
         body["returnUrl"] = return_url unless return_url.nil? || return_url == ""
+        body["pageNavigation"] = page_navigation unless page_navigation.nil? || page_navigation == ""
 
         # The client already stripped the outer { data }; peel the inner { results } envelope here
         # (same convention as the quote/deliverable modules).
@@ -249,7 +257,7 @@ module TurboDocxSdk
       # - +sendEmail+ defaults to false: your app shows the signing page, so the signing-link emails
       #   (and the initial CC notice) are suppressed. Passcode and completed-copy emails still go out.
       # - +returnUrl+ is passed through to each embed URL only when provided (https, enforced by
-      #   +create_signing_url+).
+      #   +create_signing_url+). +pageNavigation+ is passed through the same way.
       #
       # Turn-aware: with a real (sequential) signing order the backend only mints a URL for the signer
       # whose turn it is. Rather than throw the whole call away, each result carries a "status":
@@ -263,7 +271,7 @@ module TurboDocxSdk
       #   :auth, :fields, :role -- the template signer role this recipient fills; a role left out
       #   falls back to the template's saved signer, who also gets an embed URL in the result), and any of :file/:fileName/:fileLink/:templateId/:deliverableId,
       #   :documentName, :documentDescription, :senderName, :senderEmail, :ccEmails, :fields (full
-      #   field override), :sendEmail, :returnUrl
+      #   field override), :sendEmail, :returnUrl, :pageNavigation ("auto" | "collapsed" | "hidden")
       # @return [Hash] with "documentId" and "recipients" (each "recipientId", "name", "email",
       #   "embedUrl", "status", "identityVerificationMode"). For a "ready" signer
       #   "identityVerificationMode" is the mode the backend resolved for the URL; for "pending" /
@@ -343,6 +351,7 @@ module TurboDocxSdk
 
         document_id = sent["documentId"]
         return_url = req_val(request, :returnUrl)
+        page_navigation = req_val(request, :pageNavigation)
 
         # 2 + 3. Mint one embed URL per recipient and assemble the result IN SIGNING ORDER. The index
         # is part of the sort key because Ruby's sort_by is not stable: two recipients with a
@@ -383,7 +392,7 @@ module TurboDocxSdk
               code: "EmbeddedRecipientNotReturned"
             )
           end
-          mint_embedded_recipient(r, recipient_id, document_id, return_url)
+          mint_embedded_recipient(r, recipient_id, document_id, return_url, page_navigation)
         end
 
         { "documentId" => document_id, "recipients" => result_recipients }
@@ -655,8 +664,9 @@ module TurboDocxSdk
       # status so the caller can mint the URL later instead of the whole call throwing away. Any
       # OTHER error is a genuine failure and propagates. We rescue the base error class and branch on
       # +code+ alone (never the HTTP status), mirroring the JS surface.
-      def mint_embedded_recipient(recipient, recipient_id, document_id, return_url)
-        link = create_signing_url(document_id, recipient_id: recipient_id, return_url: return_url)
+      def mint_embedded_recipient(recipient, recipient_id, document_id, return_url, page_navigation)
+        link = create_signing_url(document_id, recipient_id: recipient_id, return_url: return_url,
+                                               page_navigation: page_navigation)
         {
           "recipientId" => recipient_id,
           "name" => req_val(recipient, :name),
