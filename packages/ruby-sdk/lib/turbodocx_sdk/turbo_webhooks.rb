@@ -268,7 +268,7 @@ module TurboDocxSdk
   def self.verify_webhook_signature(payload:, signature_header:, timestamp_header:, secret:, tolerance_seconds: 300, now: nil)
     # Non-String / nil / empty headers and secret fail closed here; the rescue
     # below covers what these guards can't see (Integer() parse failures and
-    # encoding clashes).
+    # encoding clashes, a NaN now result).
     return false unless signature_header.is_a?(String) && !signature_header.empty?
     return false unless timestamp_header.is_a?(String) && !timestamp_header.empty?
     return false unless secret.is_a?(String) && !secret.empty?
@@ -291,10 +291,11 @@ module TurboDocxSdk
     expected = "sha256=#{digest}"
 
     secure_compare(expected, signature_header)
-  rescue ArgumentError, TypeError, EncodingError
+  rescue ArgumentError, TypeError, EncodingError, FloatDomainError
     # Integer() raises ArgumentError on a non-numeric timestamp and Encoding::CompatibilityError
     # (an EncodingError) on a UTF-16 one; building "#{timestamp}.#{body}" raises
-    # Encoding::CompatibilityError when the two encodings can't be combined.
+    # Encoding::CompatibilityError when the two encodings can't be combined; a NaN or infinite
+    # now result raises FloatDomainError on to_i.
     false
   end
 

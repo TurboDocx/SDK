@@ -603,6 +603,19 @@ RSpec.describe "TurboDocxSdk.verify_webhook_signature" do
     end
   end
 
+  it "returns false (never raises) when now returns NaN or Infinity" do
+    # Float::NAN.to_i raises FloatDomainError
+    ts = Time.now.to_i.to_s
+    sig = sign(payload, ts, secret)
+    [Float::NAN, Float::INFINITY].each do |clock|
+      expect(
+        TurboDocxSdk.verify_webhook_signature(
+          payload: payload, signature_header: sig, timestamp_header: ts, secret: secret, now: -> { clock }
+        )
+      ).to be(false)
+    end
+  end
+
   it "returns false (never raises) when Integer() can't parse a UTF-16 timestamp" do
     # Integer() does not accept UTF-16 digits: Integer(utf16, 10) raises Encoding::CompatibilityError
     # (an EncodingError, not an ArgumentError), so the rescue must name EncodingError
