@@ -7,6 +7,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Only build/test on a py-sdk-v* release, like the other publish workflows.
+    # Without this the Python build and tests run on every release (js-sdk-v…,
+    # go-sdk-v…, embed-v…).
+    if: startsWith(github.event.release.tag_name, 'py-sdk-v')
     steps:
       - uses: actions/checkout@v4
 
@@ -35,7 +39,7 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref_name, 'py-sdk-v')
+    if: startsWith(github.event.release.tag_name, 'py-sdk-v')
     permissions:
       id-token: write
     steps:
