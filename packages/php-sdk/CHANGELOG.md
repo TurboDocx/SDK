@@ -22,7 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `verifyWebhookSignature()` returns `false` instead of throwing a `TypeError` when a header, the body or the secret is not a string (a missing header is `null`, a repeated one an array). Its parameters are now typed `mixed`.
 
 ### Changed
-- `SendSignatureRequest` / `CreateSignatureReviewLinkRequest` `$fields` defaults to `[]`, and `fields` is left out of the request when empty, so a template sent with signer roles uses its saved fields.
+- `SendSignatureRequest` / `CreateSignatureReviewLinkRequest` `$fields` defaults to `[]`. `sendSignature()` leaves `fields` out of the request when it is empty, so a template sent with signer roles uses its saved fields. `createSignatureReviewLink()` always sends it, as `[]` when empty: a review link may have no fields (they are placed in the preview).
+- **Behaviour change:** `sendSignature()` with no signer roles and an empty `$fields` now gets a 400 `FieldsRequired` (a `ValidationException`). 0.8.0 sent the empty list, and the API created a document with nothing to sign.
+- `createEmbeddedSignature()` treats an empty top-level `$fields` as absent, so the recipients' `fields` shorthand still expands. 0.8.0 sent the empty list and dropped the shorthand.
+- A `fields` array whose keys are not sequential (for example after `array_filter()`) is now sent as a JSON list. It was sent as a JSON object before.
+- **Behaviour change:** `verifyWebhookSignature()` rejects every delivery when `$toleranceSeconds` is negative. 0.8.0 skipped the timestamp check. `0` still turns the check off.
+- `verifyWebhookSignature()` `$toleranceSeconds` and `$now` accept an int or a finite float (they were `int` / `?int`, so a float threw a `TypeError` under `strict_types`). A string (numeric or not), bool, array, NaN or INF returns `false`. `$now` is only read when the timestamp check runs.
 - `createEmbeddedSignature()` returns recipients (and mints their embed URLs) in the order the API returns them. With template roles that is the template's role order, not the order passed. Signers the API returns that you did not pass, such as a role's saved signer, are included too.
 - `SendSignatureResponse::$recipients` and `CreateSignatureReviewLinkResponse::$recipients` are now always an array (`array`, not `?array`): the API always returns `recipients` on a successful send or review link, and a missing key becomes `[]`. The constructors still accept `null` for that argument (coalesced to `[]`), so direct construction is unchanged.
 
