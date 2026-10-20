@@ -313,7 +313,7 @@ SendSignatureResponse result = client.turboSign().sendSignature(
 
 To show the signing page in your own app instead of emailing a link, send with `sendEmail(false)`, then mint each signer's URL with `createSigningUrl()` when they're ready to sign.
 
-Embedded signing must be enabled for your organization, and the send does not check it for you. A send whose recipients don't use an OTP passcode succeeds and reserves a signature credit even when embedded signing is off. Then `createSigningUrl()` throws `TurboDocxException.AuthorizationException` (403, code `EmbeddedSigningNotEnabled`). Check `getEmbeddedSigningSettings().isEnabled()` before you send:
+Embedded signing must be enabled for your organization. The send checks this only for recipients that use an OTP passcode: any other send succeeds and reserves a signature credit even when embedded signing is off. Then `createSigningUrl()` throws `TurboDocxException.AuthorizationException` (403, code `EmbeddedSigningNotEnabled`). Check `getEmbeddedSigningSettings().isEnabled()` before you send:
 
 ```java
 if (!client.turboSign().getEmbeddedSigningSettings().isEnabled()) {
