@@ -1045,8 +1045,10 @@ async function waitForCompletion(documentId: string, maxAttempts = 60) {
       return await TurboSign.download(documentId);
     }
 
-    if (status.status === 'voided' || status.status === 'expired') {
-      throw new Error(`Document was ${status.status}`);
+    // Stop polling: none of these reaches 'completed' on its own. 'finalization_failed' means
+    // every recipient signed but sealing the final PDF failed; contact support to retry it.
+    if (['voided', 'expired', 'finalization_failed'].includes(status.status)) {
+      throw new Error(`Document ended as ${status.status}`);
     }
 
     // Wait 30 seconds between checks
@@ -1064,6 +1066,7 @@ import express from 'express';
 import { TurboSign } from '@turbodocx/sdk';
 
 const app = express();
+app.use(express.json()); // parse JSON bodies so req.body is populated
 
 TurboSign.configure({
   apiKey: process.env.TURBODOCX_API_KEY,
@@ -1101,19 +1104,20 @@ These scripts live in the repository (they are not part of the npm package), so 
 npm install
 
 # Run the manual test script
-npx tsx manual-test.ts
+npx ts-node manual-test.ts
 ```
 
 ### What It Tests
 
-The `manual-test.ts` file tests all SDK methods:
-- ✅ `createSignatureReviewLink()` - Document upload for review
-- ✅ `sendSignature()` - Send for signature
-- ✅ `getStatus()` - Check document status
-- ✅ `getRecipients()` - Per-recipient signing status (who signed, who is pending)
-- ✅ `download()` - Download signed document
-- ✅ `void()` - Cancel signature request
-- ✅ `resend()` - Resend signature emails
+`manual-test.ts` has one test function for each call below. Every call in `runAllTests()` starts
+commented out, so uncomment the ones you want to run:
+- `createSignatureReviewLink()` - Prepare a document for review without sending
+- `sendSignature()` - Send for signature
+- `getStatus()` - Check document status
+- `download()` - Download signed document
+- `resend()` - Resend signature emails
+- `void()` - Cancel signature request
+- `getAuditTrail()` - Fetch the document's audit trail
 
 ### Configuration
 
@@ -1121,18 +1125,17 @@ Before running, update the hardcoded values in `manual-test.ts`:
 - `API_KEY` - Your TurboDocx API key
 - `BASE_URL` - API endpoint (default: `https://api.turbodocx.com`)
 - `ORG_ID` - Your organization UUID
-- `TEST_PDF_PATH` - Path to a test PDF/DOCX file
-- `FILE_URL` - A publicly accessible PDF URL (for the file-URL tests)
+- `TEST_PDF_PATH` - Path to a test PDF/DOCX file (the script exits if it is missing)
+- `FILE_URL` - A publicly accessible PDF URL (declared, but none of the current tests use it yet)
 - `TEST_EMAIL` - Email address for testing
+- `senderEmail` / `senderName` in the `TurboSign.configure()` call - the reply-to address and sender name on the signature emails
+- The `your-template-uuid-here`, `document-uuid-here` and `recipient-uuid-here` placeholders in the tests you uncomment
 
 ### Expected Output
 
-The script will:
-1. Upload a test document
-2. Send it for signature
-3. Check the status
-4. Test void and resend operations
-5. Print results for each operation
+The script runs the tests you uncommented in order and prints each result. It prints
+`All tests completed successfully!` at the end, or `TEST FAILED` with the error message (plus the
+status code and error code when present) and exits with code 1.
 
 ---
 
