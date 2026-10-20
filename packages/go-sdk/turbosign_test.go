@@ -912,3 +912,19 @@ func TestClient_ErrorHandling(t *testing.T) {
 		assert.Equal(t, 429, rateLimitErr.StatusCode)
 	})
 }
+
+// The API always sends `recipients` on a successful send / review-link response, so re-marshalling
+// a decoded response must keep the key, even when the list is empty (omitempty would drop it).
+func TestSendResponsesKeepRecipientsKeyOnRemarshal(t *testing.T) {
+	for name, target := range map[string]interface{}{
+		"SendSignatureResponse":             &SendSignatureResponse{},
+		"CreateSignatureReviewLinkResponse": &CreateSignatureReviewLinkResponse{},
+	} {
+		t.Run(name, func(t *testing.T) {
+			require.NoError(t, json.Unmarshal([]byte(`{"documentId":"doc-1","recipients":[]}`), target))
+			out, err := json.Marshal(target)
+			require.NoError(t, err)
+			assert.Contains(t, string(out), `"recipients":[]`)
+		})
+	}
+}
