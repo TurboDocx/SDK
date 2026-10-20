@@ -266,8 +266,8 @@ final class TurboWebhooksTest extends TestCase
 
     /**
      * Under strict_types an `int` parameter threw TypeError on a string or float, breaking the
-     * "never throws" contract. Like the JS, Python and Ruby helpers, a number (int or finite float)
-     * is accepted and anything else, numeric strings included, returns false.
+     * "never throws" contract. Like the JS, Python and Ruby helpers, a number is accepted and a
+     * string (numeric strings included) returns false; like Python, NaN and INF also return false.
      *
      * @return array<string, array{mixed}>
      */

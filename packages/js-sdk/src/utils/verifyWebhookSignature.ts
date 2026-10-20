@@ -18,8 +18,9 @@ export interface VerifyWebhookSignatureOptions {
   /**
    * Maximum acceptable age of the timestamp header, in seconds.
    * Defaults to 300 (5 minutes). Set to 0 to disable the timestamp check
-   * (NOT recommended in production). A negative, NaN or non-number value
-   * fails closed: every delivery is rejected.
+   * (NOT recommended in production). A negative value, NaN or a non-number
+   * (such as the string "300") fails closed: every delivery is rejected.
+   * `undefined` or `null` takes the 300s default.
    */
   toleranceSeconds?: number;
 
