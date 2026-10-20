@@ -122,6 +122,16 @@ export class TurboSign {
   // ============================================
 
   /**
+   * Add `fileName` to an upload's form fields when it is non-empty. It is sent as a form field:
+   * the API stores it as the document's file name, whatever its extension (the uploaded part
+   * keeps a name the API's extension check accepts). An empty one is left out, so the API falls
+   * back to the part's name.
+   */
+  private static withFileName(formData: Record<string, any>, fileName?: string): Record<string, any> {
+    return fileName ? { ...formData, fileName } : formData;
+  }
+
+  /**
    * Copies any per-document schedule overrides onto an outgoing request body.
    *
    * Durations are JSON-encoded. `multipart/form-data` has no notion of a nested value — every
@@ -236,7 +246,7 @@ export class TurboSign {
         '/turbosign/single/prepare-for-review',
         request.file,
         'file',
-        formData
+        this.withFileName(formData, request.fileName)
       );
       return response;
     } else {
@@ -254,10 +264,11 @@ export class TurboSign {
   }
 
   /**
-   * Send signature request and immediately send emails
+   * Send a document for signature
    *
-   * This method uploads a document with signature fields and recipients,
-   * then immediately sends signature request emails to all recipients.
+   * This method uploads a document with signature fields and recipients and
+   * sends it for signature. Recipients are emailed their signing links unless
+   * `sendEmail` is `false`.
    *
    * @param request - Document, recipients, and fields configuration
    * @returns Document with confirmation message
@@ -328,7 +339,7 @@ export class TurboSign {
         '/turbosign/single/prepare-for-signing',
         request.file,
         'file',
-        formData
+        this.withFileName(formData, request.fileName)
       );
       return response;
     } else {

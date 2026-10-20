@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Quote decline now supports `DRAFT` quotes — previously only quotes that had been sent could be declined.
 
+### Fixed
+- `TurboSign::sendSignature()`, `createSignatureReviewLink()` and `createEmbeddedSignature()` now send `fileName` (as a `fileName` form field, so names without an extension work too). It was ignored before, so every upload was stored as `document.<ext>`.
+- The Packagist package no longer ships tests, config files, manual test scripts or other dev-only files (`.gitattributes` `export-ignore`).
+- README and docblock examples read config with `fromEnvironment()` or `getenv()` instead of `$_ENV`, which is empty under the shipped `php.ini-production` / `php.ini-development` (`variables_order = "GPCS"`). `getenv()` returns `false` when a variable is unset, so the examples add `?: null` for nullable config fields and `?: ''` for the required strings of `PartnerClientConfig`; TurboWebhooks reads its env vars on first use. The `getStatus()` example now treats `status` as the plain string it is.
+
 ### Changed
 - The decline `reason` is now optional for a draft quote (it is still required once the quote has been sent). The void reason is unchanged and remains required.
 - `SendSignatureResponse::$recipients` and `CreateSignatureReviewLinkResponse::$recipients` are now always an array (`array`, not `?array`): the API always returns `recipients` on a successful send or review link, and a missing key becomes `[]`. The constructors still accept `null` for that argument (coalesced to `[]`), so direct construction is unchanged.

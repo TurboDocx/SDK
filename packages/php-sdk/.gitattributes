@@ -1,0 +1,10 @@
+# Keep dev-only files out of the Packagist dist (composer install --prefer-dist)
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/.php-cs-fixer.dist.php export-ignore
+/banner.png export-ignore
+/composer.lock export-ignore
+/manual_test*.php export-ignore
+/phpstan.neon export-ignore
+/phpunit.xml export-ignore
+/tests export-ignore

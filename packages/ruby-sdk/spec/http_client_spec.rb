@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "spec_helper"
+require "tmpdir"
 
 RSpec.describe TurboDocxSdk::HttpClient do
   # Clear all TURBODOCX env vars for every test to prevent leakage
@@ -304,6 +305,53 @@ RSpec.describe TurboDocxSdk::HttpClient do
       expect(TurboDocxSdk::ConflictError.new("x").code).to eq("CONFLICT")
       expect(TurboDocxSdk::RateLimitError.new("x").code).to eq("RATE_LIMIT_EXCEEDED")
       expect(TurboDocxSdk::NetworkError.new("x").code).to eq("NETWORK_ERROR")
+    end
+  end
+  # upload_file names the multipart part so the API's extension check (.pdf/.docx/.pptx) passes:
+  # a file path keeps its basename when that has a supported extension, otherwise the part is
+  # document.<detected ext>, like an IO upload. Only post_form_data (the network send) is stubbed.
+  describe "#upload_file part naming" do
+    let(:client) { described_class.new(api_key: "test-key", skip_sender_validation: true) }
+    let(:captured) { [] }
+    let(:pdf_bytes) { "%PDF-1.4 fake pdf bytes" }
+    let(:pptx_bytes) { "PK\x03\x04 ppt/slides/slide1.xml" }
+    let(:docx_bytes) { "PK\x03\x04 word/document.xml" }
+
+    before do
+      allow(client).to receive(:post_form_data) { |_path, parts| captured << parts }
+    end
+
+    def upload_path(name, bytes)
+      Dir.mktmpdir do |dir|
+        path = File.join(dir, name)
+        File.binwrite(path, bytes)
+        client.upload_file("/upload", path)
+      end
+      captured.last["file"]
+    end
+
+    it "names a path without an extension document.<detected ext>" do
+      expect(upload_path("upload-7f3a", pdf_bytes)[:filename]).to eq("document.pdf")
+    end
+
+    it "names a path with an unsupported extension document.<detected ext>" do
+      expect(upload_path("notes.txt", pdf_bytes)[:filename]).to eq("document.pdf")
+    end
+
+    it "keeps a basename whose extension is supported, whatever its case" do
+      expect(upload_path("SCAN.PDF", pdf_bytes)[:filename]).to eq("SCAN.PDF")
+    end
+
+    it "detects the mime type and extension together for an IO upload" do
+      {
+        pdf_bytes => ["application/pdf", "document.pdf"],
+        pptx_bytes => ["application/vnd.openxmlformats-officedocument.presentationml.presentation", "document.pptx"],
+        docx_bytes => ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "document.docx"],
+        "plain text" => ["application/octet-stream", "document.bin"]
+      }.each do |bytes, (mime, filename)|
+        client.upload_file("/upload", StringIO.new(bytes))
+        expect(captured.last["file"]).to include(content_type: mime, filename: filename)
+      end
     end
   end
 end

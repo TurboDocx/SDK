@@ -72,6 +72,15 @@ def detect_file_type(file_bytes: bytes) -> Tuple[str, str]:
     return ("application/octet-stream", "bin")
 
 
+# Extensions the API accepts on an uploaded part (it checks the part's own name).
+SUPPORTED_UPLOAD_EXTENSIONS = (".pdf", ".docx", ".pptx")
+
+
+def _part_file_name(name: str, ext: str) -> str:
+    """The caller's file name when its extension is one the API accepts, else document.<ext>."""
+    return name if os.path.splitext(name)[1].lower() in SUPPORTED_UPLOAD_EXTENSIONS else f"document.{ext}"
+
+
 def _extract_error(error_data: dict, fallback_message: str) -> tuple:
     """Pull the actionable message and the specific code out of an API error body.
 
@@ -561,7 +570,8 @@ class HttpClient:
         Args:
             path: API endpoint path
             file: File path (str) or file content (bytes)
-            file_name: Name of the file (auto-detected for file paths)
+            file_name: Name of the uploaded part (default: the path's basename when it ends in
+                .pdf/.docx/.pptx, otherwise document.<detected ext>)
             field_name: Form field name for file
             additional_data: Additional form data
 
@@ -576,18 +586,15 @@ class HttpClient:
             # File path - read from disk
             with open(file, 'rb') as f:
                 file_bytes = f.read()
-            if file_name is None:
-                file_name = os.path.basename(file)
         else:
             # Bytes - use directly
             file_bytes = file
-            if file_name is None:
-                # Detect extension from content
-                _, ext = detect_file_type(file_bytes)
-                file_name = f"document.{ext}"
 
-        # Detect MIME type from content
-        mime_type, _ = detect_file_type(file_bytes)
+        # Detect MIME type and extension from content
+        mime_type, ext = detect_file_type(file_bytes)
+        if file_name is None:
+            # The API checks the part's extension; fileName (the stored name) is a form field
+            file_name = _part_file_name(os.path.basename(file), ext) if isinstance(file, str) else f"document.{ext}"
 
         files = {field_name: (file_name, file_bytes, mime_type)}
         data = additional_data or {}

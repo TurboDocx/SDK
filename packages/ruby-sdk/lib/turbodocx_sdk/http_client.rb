@@ -182,21 +182,19 @@ module TurboDocxSdk
       if file.is_a?(String)
         # file path
         content = File.binread(file)
-        filename = File.basename(file)
-        mime = detect_file_type(content)
-        parts[field_name] = { io: StringIO.new(content), filename: filename, content_type: mime }
+        mime, ext = detect_file_type(content)
+        parts[field_name] = { io: StringIO.new(content), filename: part_file_name(File.basename(file), ext), content_type: mime }
       elsif file.respond_to?(:read)
         content = file.read
-        mime = detect_file_type(content)
-        filename = additional_data&.dig("fileName") || "document.bin"
-        parts[field_name] = { io: StringIO.new(content), filename: filename, content_type: mime }
+        mime, ext = detect_file_type(content)
+        # the API checks this extension; fileName is a form field
+        parts[field_name] = { io: StringIO.new(content), filename: "document.#{ext}", content_type: mime }
       else
         raise ValidationError, "Unsupported file input type: #{file.class}"
       end
 
       if additional_data
         additional_data.each do |key, value|
-          next if key == "fileName"
           parts[key.to_s] = value.is_a?(Hash) || value.is_a?(Array) ? JSON.generate(value) : value.to_s
         end
       end
@@ -391,21 +389,30 @@ module TurboDocxSdk
       end
     end
 
+    # Extensions the API accepts on an uploaded part (it checks the part's own name).
+    SUPPORTED_UPLOAD_EXTENSIONS = %w[.pdf .docx .pptx].freeze
+
+    # The caller's file name when its extension is one the API accepts, else document.<ext>.
+    def part_file_name(name, ext)
+      SUPPORTED_UPLOAD_EXTENSIONS.include?(File.extname(name).downcase) ? name : "document.#{ext}"
+    end
+
+    # @return [Array(String, String)] the mime type and file extension
     def detect_file_type(content)
       bytes = content.bytes
       # PDF: %PDF
       if bytes[0] == 0x25 && bytes[1] == 0x50 && bytes[2] == 0x44 && bytes[3] == 0x46
-        return "application/pdf"
+        return ["application/pdf", "pdf"]
       end
       # ZIP-based (DOCX, PPTX): PK
       if bytes[0] == 0x50 && bytes[1] == 0x4B
         snippet = content[0, [content.length, 2000].min]
         if snippet.include?("ppt/")
-          return "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+          return ["application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx"]
         end
-        return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        return ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx"]
       end
-      "application/octet-stream"
+      ["application/octet-stream", "bin"]
     end
   end
 end

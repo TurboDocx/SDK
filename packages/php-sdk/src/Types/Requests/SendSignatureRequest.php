@@ -18,7 +18,7 @@ final class SendSignatureRequest
      *     set up in TurboDocx with signer roles: give each recipient a `role` and the fields saved for
      *     that role are used (any fields you pass here are added to them).
      * @param string|null $file PDF file content as bytes
-     * @param string|null $fileName Original filename (used when file is provided)
+     * @param string|null $fileName Stored file name for an uploaded file (non-empty, max 255 chars; no extension needed)
      * @param string|null $fileLink URL to document file
      * @param string|null $deliverableId TurboDocx deliverable ID
      * @param string|null $templateId TurboDocx template ID

@@ -118,13 +118,11 @@ use TurboDocx\Types\TemplateConfig;
 use TurboDocx\Types\FieldPlacement;
 use TurboDocx\Types\Requests\SendSignatureRequest;
 
-// 1. Configure with your API key and sender information
-TurboSign::configure(new HttpClientConfig(
-    apiKey: $_ENV['TURBODOCX_API_KEY'],
-    orgId: $_ENV['TURBODOCX_ORG_ID'],
-    senderEmail: $_ENV['TURBODOCX_SENDER_EMAIL'],  // REQUIRED
-    senderName: $_ENV['TURBODOCX_SENDER_NAME']     // OPTIONAL (but strongly recommended)
-));
+// 1. Configure from TURBODOCX_API_KEY, TURBODOCX_ORG_ID, TURBODOCX_SENDER_EMAIL (required)
+//    and TURBODOCX_SENDER_NAME (optional, strongly recommended). fromEnvironment() reads them
+//    with getenv(): $_ENV is empty under the shipped php.ini-production / php.ini-development
+//    (variables_order = "GPCS"; PHP's built-in default with no php.ini is "EGPCS").
+TurboSign::configure(HttpClientConfig::fromEnvironment());
 
 // 2. Send a document for signature
 $result = TurboSign::sendSignature(
@@ -193,10 +191,10 @@ TURBODOCX_SENDER_NAME=Your Company Name
 
 ```php
 TurboSign::configure(new HttpClientConfig(
-    apiKey: getenv('TURBODOCX_API_KEY'),
-    orgId: getenv('TURBODOCX_ORG_ID'),
-    senderEmail: getenv('TURBODOCX_SENDER_EMAIL'),
-    senderName: getenv('TURBODOCX_SENDER_NAME')
+    apiKey: getenv('TURBODOCX_API_KEY') ?: null,   // getenv() returns false when unset; `?: null` keeps it null
+    orgId: getenv('TURBODOCX_ORG_ID') ?: null,
+    senderEmail: getenv('TURBODOCX_SENDER_EMAIL') ?: null,
+    senderName: getenv('TURBODOCX_SENDER_NAME') ?: null
 ));
 
 // Or use auto-configuration from environment
@@ -245,7 +243,7 @@ echo "Document ID: {$result->documentId}\n";
 
 #### `sendSignature()`
 
-Upload a document and immediately send signature request emails.
+Upload a document and send it for signature. Recipients are emailed their signing links unless you pass `sendEmail: false` (see [Signing in your own app](#signing-in-your-own-app-sendemail-false--createsigningurl)). Pass `fileName` alongside `file` to name the stored file (otherwise it is saved as `document.<ext>`): any non-empty name up to 255 characters, with or without an extension. The document's display name is `documentName` when given, otherwise `fileName` up to its first `.`.
 
 ```php
 use TurboDocx\Types\Requests\SendSignatureRequest;
@@ -326,6 +324,44 @@ $result = TurboSign::sendSignature(
 - Any `fields` you pass are added to the template's (for example an extra witness signature).
 - Roles work on PDF templates. Without roles, `fields` is required and must not be empty (400 `FieldsRequired`).
 - `role` works the same way on `createSignatureReviewLink()` (`Recipient`) and `createEmbeddedSignature()` (`EmbeddedSignatureRecipient`).
+
+#### Signing in your own app (`sendEmail: false` + `createSigningUrl()`)
+
+Set `sendEmail: false` to create the signature request without emailing anyone, then mint a signing URL for each signer with `createSigningUrl()` when they are ready to sign in your app. For a signer with an email/SMS passcode or no verification, the URL is their reusable signing link for the life of the document, so treat it like a password; `external_idv` and `override` signers get a single-use URL that expires in about 5 minutes. Embedded signing must be enabled for your organization; check with `TurboSign::getEmbeddedSigningSettings()->enabled`.
+
+```php
+use TurboDocx\Types\Requests\CreateSigningUrlRequest;
+
+$result = TurboSign::sendSignature(
+    new SendSignatureRequest(
+        recipients: [new Recipient('Alice', 'alice@example.com', 1)],
+        fields: [
+            new Field(
+                type: SignatureFieldType::SIGNATURE,
+                recipientEmail: 'alice@example.com',
+                page: 1,
+                x: 100,
+                y: 500,
+                width: 200,
+                height: 50
+            )
+        ],
+        file: file_get_contents('contract.pdf'),
+        fileName: 'contract.pdf',
+        sendEmail: false  // no signing emails; you hand out the link yourself
+    )
+);
+
+// Mint the link when the signer is ready. Don't log or store it: it is a bearer link.
+$recipientId = $result->recipients[0]['id'] ?? throw new RuntimeException('No recipient returned');
+$link = TurboSign::createSigningUrl(
+    $result->documentId,
+    new CreateSigningUrlRequest(recipientId: $recipientId)
+);
+echo $link->url;  // open in a new tab or redirect to it
+```
+
+`createEmbeddedSignature()` wraps both calls: it sends with `sendEmail` defaulting to `false` and returns a signing URL per recipient.
 
 #### `sendReminder()`
 
@@ -537,9 +573,13 @@ Recipient signs
 ```php
 use TurboDocx\TurboWebhooks;
 
+// With TURBODOCX_API_KEY and TURBODOCX_ORG_ID set (and optionally TURBODOCX_BASE_URL), no call
+// is needed: TurboWebhooks reads them with getenv() on first use and throws if either is missing.
+
+// Or pass the credentials explicitly (both are required strings):
 TurboWebhooks::configureFromCredentials(
-    apiKey: getenv('TURBODOCX_API_KEY'),
-    orgId: getenv('TURBODOCX_ORG_ID'),
+    apiKey: 'TDX-your-api-key',
+    orgId: 'your-org-id',
     // baseUrl: 'http://localhost:3000', // optional, defaults to https://api.turbodocx.com
 );
 ```
@@ -624,7 +664,7 @@ $rawBody = file_get_contents('php://input');  // CRITICAL: raw bytes only.
                                               // signature is over the exact bytes.
 $signature = $_SERVER['HTTP_X_TURBODOCX_SIGNATURE'] ?? '';
 $timestamp = $_SERVER['HTTP_X_TURBODOCX_TIMESTAMP'] ?? '';
-$secret = getenv('TURBODOCX_WEBHOOK_SECRET');
+$secret = getenv('TURBODOCX_WEBHOOK_SECRET') ?: '';  // unset => '' => every check fails closed
 
 if (!verifyWebhookSignature($rawBody, $signature, $timestamp, $secret)) {
     http_response_code(401);
@@ -914,8 +954,9 @@ use TurboDocx\TurboPartner;
 use TurboDocx\Config\PartnerClientConfig;
 
 TurboPartner::configure(new PartnerClientConfig(
-    partnerApiKey: getenv('TURBODOCX_PARTNER_API_KEY'),  // REQUIRED - must start with TDXP-
-    partnerId: getenv('TURBODOCX_PARTNER_ID'),           // REQUIRED - your partner UUID
+    partnerApiKey: getenv('TURBODOCX_PARTNER_API_KEY') ?: '',  // REQUIRED - must start with TDXP-
+    partnerId: getenv('TURBODOCX_PARTNER_ID') ?: '',           // REQUIRED - your partner UUID
+                                                               // (unset => '' => a clear "is required" error)
     baseUrl: 'https://api.turbodocx.com'                 // Optional
 ));
 
@@ -1392,8 +1433,8 @@ use TurboDocx\TurboQuote;
 use TurboDocx\Config\QuoteClientConfig;
 
 TurboQuote::configure(new QuoteClientConfig(
-    apiKey: getenv('TURBODOCX_API_KEY'),  // REQUIRED
-    orgId: getenv('TURBODOCX_ORG_ID'),    // REQUIRED
+    apiKey: getenv('TURBODOCX_API_KEY') ?: null,  // REQUIRED
+    orgId: getenv('TURBODOCX_ORG_ID') ?: null,    // REQUIRED
     // baseUrl: 'https://api.turbodocx.com', // Optional
 ));
 
@@ -1488,8 +1529,8 @@ use TurboDocx\Types\Requests\Quote\AddLineItemRequest;
 use TurboDocx\Types\Requests\Quote\SendQuoteRequest;
 
 TurboQuote::configure(new QuoteClientConfig(
-    apiKey: getenv('TURBODOCX_API_KEY'),
-    orgId: getenv('TURBODOCX_ORG_ID'),
+    apiKey: getenv('TURBODOCX_API_KEY') ?: null,
+    orgId: getenv('TURBODOCX_ORG_ID') ?: null,
 ));
 
 // Create company + contact

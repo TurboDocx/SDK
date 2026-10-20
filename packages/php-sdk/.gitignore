@@ -29,3 +29,6 @@
 # Environment
 .env
 .env.local
+
+# Playwright MCP browser snapshots
+.playwright-mcp/

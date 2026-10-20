@@ -151,6 +151,16 @@ class TurboSign:
 
 
     @staticmethod
+    def _with_file_name(form_data: Dict[str, Any], file_name: Optional[str]) -> Dict[str, Any]:
+        """
+        Add ``fileName`` to an upload's form fields when it is non-empty. It is a form field, not
+        the part's filename: the API stores it as the document's file name, whatever its extension,
+        and checks the part's own extension. An empty one is left out, so the API falls back to the
+        part's name.
+        """
+        return {**form_data, "fileName": file_name} if file_name else form_data
+
+    @staticmethod
     def _apply_schedule_overrides(
         target: Dict[str, Any],
         *,
@@ -257,7 +267,8 @@ class TurboSign:
                 "required": False on them with a 400.
                 Field dicts are passed through verbatim, so keys stay camelCase.
             file: PDF file content as bytes
-            file_name: Original filename
+            file_name: Stored file name for an uploaded ``file`` (max 255 chars; no extension needed).
+                Empty or omitted: the uploaded part's name is stored.
             file_link: URL to document file
             deliverable_id: TurboDocx deliverable ID
             template_id: TurboDocx template ID
@@ -323,8 +334,7 @@ class TurboSign:
             return await client.upload_file(
                 "/turbosign/single/prepare-for-review",
                 file=file,
-                file_name=file_name or None,
-                additional_data=form_data
+                additional_data=cls._with_file_name(form_data, file_name)
             )
         else:
             # For JSON body (template_id, file_link, deliverable_id)
@@ -403,10 +413,11 @@ class TurboSign:
         expiration_warning_interval: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Send signature request and immediately send emails
+        Send a document for signature
 
-        This method uploads a document with signature fields and recipients,
-        then immediately sends signature request emails to all recipients.
+        This method uploads a document with signature fields and recipients and
+        sends it for signature. Recipients are emailed their signing links unless
+        ``send_email`` is ``False``.
 
         Args:
             recipients: List of recipients who will sign
@@ -444,7 +455,8 @@ class TurboSign:
                 "required": False on them with a 400.
                 Field dicts are passed through verbatim, so keys stay camelCase.
             file: PDF file content as bytes
-            file_name: Original filename
+            file_name: Stored file name for an uploaded ``file`` (max 255 chars; no extension needed).
+                Empty or omitted: the uploaded part's name is stored.
             file_link: URL to document file
             deliverable_id: TurboDocx deliverable ID
             template_id: TurboDocx template ID
@@ -522,8 +534,7 @@ class TurboSign:
             return await client.upload_file(
                 "/turbosign/single/prepare-for-signing",
                 file=file,
-                file_name=file_name or None,
-                additional_data=form_data
+                additional_data=cls._with_file_name(form_data, file_name)
             )
         else:
             # For JSON body (template_id, file_link, deliverable_id)
@@ -1083,7 +1094,8 @@ class TurboSign:
                 left out falls back to the template's saved signer, who also gets an embed
                 URL in the result.
             file: PDF file content as bytes.
-            file_name: Original filename.
+            file_name: Stored file name for an uploaded ``file`` (max 255 chars; no extension needed).
+                Empty or omitted: the uploaded part's name is stored.
             file_link: URL to the document file.
             template_id: TurboDocx template id.
             deliverable_id: TurboDocx deliverable id.

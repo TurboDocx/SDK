@@ -208,7 +208,11 @@ puts "Document ID: #{result['documentId']}"
 
 #### `send_signature(request)`
 
-Upload a document and immediately send signature request emails. The request hash uses **camelCase** keys (`fileLink`, `documentName`, and inner `recipients`/`fields` keys like `signingOrder`/`recipientEmail`) — the SDK forwards them to the API unchanged and does not convert snake_case. Fields bind to a recipient via `recipientEmail`.
+Upload a document and send it for signature. Recipients are emailed their signing links unless you pass `sendEmail: false`.
+
+Pass `fileName:` alongside `file:` to name the stored file: any non-empty name up to 255 characters, with or without an extension. Without it (or with an empty one) the file keeps the uploaded part's name: `document.<ext>` for an IO, or a file path's basename when it ends in `.pdf`, `.docx` or `.pptx` (otherwise `document.<ext>`). The document's display name is `documentName` when given, otherwise the stored file name up to its first `.`.
+
+The request hash uses **camelCase** keys (`fileLink`, `documentName`, and inner `recipients`/`fields` keys like `signingOrder`/`recipientEmail`) — the SDK forwards them to the API unchanged and does not convert snake_case. Fields bind to a recipient via `recipientEmail`.
 
 ```ruby
 result = TurboDocxSdk::TurboSign.send_signature(

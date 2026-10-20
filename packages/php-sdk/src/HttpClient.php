@@ -203,8 +203,8 @@ class HttpClient
     ): mixed {
         // Detect file type using magic bytes
         $fileType = FileTypeDetector::detect($file);
-        $fileName = $additionalData['fileName'] ?? "document.{$fileType['extension']}";
-        unset($additionalData['fileName']);
+        // The API checks the part's extension, so keep it safe; a caller's fileName travels as a form field
+        $fileName = "document.{$fileType['extension']}";
 
         // Build multipart form data
         $multipart = [

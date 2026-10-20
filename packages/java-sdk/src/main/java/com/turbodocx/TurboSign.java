@@ -52,11 +52,11 @@ public final class TurboSign {
         );
 
         if (request.hasFile()) {
-            String fileName = request.getFileName();
+            putFileName(formData, request.getFileName());
             return httpClient.uploadFile(
                     "/turbosign/single/prepare-for-review",
                     request.getFile(),
-                    fileName,
+                    null,
                     formData,
                     CreateSignatureReviewLinkResponse.class
             );
@@ -102,11 +102,11 @@ public final class TurboSign {
         }
 
         if (request.hasFile()) {
-            String fileName = request.getFileName();
+            putFileName(formData, request.getFileName());
             return httpClient.uploadFile(
                     "/turbosign/single/prepare-for-signing",
                     request.getFile(),
-                    fileName,
+                    null,
                     formData,
                     SendSignatureResponse.class
             );
@@ -683,6 +683,18 @@ public final class TurboSign {
 
     private static boolean isPresent(String value) {
         return value != null && !value.isEmpty();
+    }
+
+    /**
+     * Add {@code fileName} to an upload's form fields when it is non-empty. It is a form field,
+     * not the part's filename: the API stores it as the document's file name, whatever its
+     * extension, and checks the uploaded part's own extension. An empty one is left out, so the
+     * API falls back to the part's name.
+     */
+    private static void putFileName(Map<String, String> formData, String fileName) {
+        if (isPresent(fileName)) {
+            formData.put("fileName", fileName);
+        }
     }
 
     /**

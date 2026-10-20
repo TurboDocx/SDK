@@ -130,6 +130,49 @@ class TurboSignTest {
     }
 
     @Test
+    @DisplayName("fileName travels as a form field; the uploaded part keeps document.<ext>, even for a name without an extension")
+    void fileNameIsSentAsFormField() throws Exception {
+        Map<String, Object> responseData = new HashMap<>();
+        responseData.put("success", true);
+        responseData.put("documentId", "doc-123");
+        responseData.put("status", "under_review");
+        for (int i = 0; i < 2; i++) {
+            server.enqueue(new MockResponse().setResponseCode(200)
+                    .setHeader("Content-Type", "application/json").setBody(gson.toJson(responseData)));
+        }
+
+        client.turboSign().sendSignature(new SendSignatureRequest.Builder()
+                .file(new byte[]{0x25, 0x50, 0x44, 0x46})
+                .fileName("Lease Agreement 2026")
+                .recipients(Collections.singletonList(new Recipient("John Doe", "john@example.com", 1)))
+                .fields(Collections.singletonList(new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
+                .build());
+        String sendBody = server.takeRequest().getBody().readUtf8();
+        assertTrue(sendBody.matches("(?s).*name=\"fileName\".*?\r\n\r\nLease Agreement 2026\r\n.*"), sendBody);
+        assertTrue(sendBody.contains("filename=\"document.pdf\""), sendBody);
+
+        client.turboSign().createSignatureReviewLink(new CreateSignatureReviewLinkRequest.Builder()
+                .file(new byte[]{0x25, 0x50, 0x44, 0x46})
+                .fileName("Review-Copy.pdf")
+                .recipients(Collections.singletonList(new Recipient("John Doe", "john@example.com", 1)))
+                .fields(Collections.singletonList(new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
+                .build());
+        String reviewBody = server.takeRequest().getBody().readUtf8();
+        assertTrue(reviewBody.matches("(?s).*name=\"fileName\".*?\r\n\r\nReview-Copy.pdf\r\n.*"), reviewBody);
+        assertTrue(reviewBody.contains("filename=\"document.pdf\""), reviewBody);
+
+        server.enqueue(new MockResponse().setResponseCode(200)
+                .setHeader("Content-Type", "application/json").setBody(gson.toJson(responseData)));
+        client.turboSign().sendSignature(new SendSignatureRequest.Builder()
+                .file(new byte[]{0x25, 0x50, 0x44, 0x46})
+                .fileName("") // the API rejects an empty fileName, so none is sent
+                .recipients(Collections.singletonList(new Recipient("John Doe", "john@example.com", 1)))
+                .fields(Collections.singletonList(new Field("signature", 1, 100, 500, 200, 50, "john@example.com")))
+                .build());
+        assertFalse(server.takeRequest().getBody().readUtf8().contains("name=\"fileName\""));
+    }
+
+    @Test
     @DisplayName("should prepare document for review with file URL")
     void createSignatureReviewLinkWithFileUrl() throws Exception {
         Map<String, Object> responseData = new HashMap<>();

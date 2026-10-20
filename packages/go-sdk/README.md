@@ -240,7 +240,9 @@ fmt.Printf("Document ID: %s\n", result.DocumentID)
 
 #### `SendSignature`
 
-Upload a document and immediately send signature request emails.
+Upload a document and send it for signature. Recipients are emailed their signing links unless you set `SendEmail: turbodocx.BoolPtr(false)`.
+
+Set `FileName` alongside `File` to name the stored file: any non-empty name up to 255 characters, with or without an extension. Without it (or with an empty one) the file is stored as `document.<ext>`. The document's display name is `documentName` when given, otherwise the stored file name up to its first `.`.
 
 ```go
 result, err := client.TurboSign.SendSignature(ctx, &turbodocx.SendSignatureRequest{
