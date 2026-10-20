@@ -7,7 +7,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    if: startsWith(github.ref_name, 'go-sdk-v')
+    if: startsWith(github.event.release.tag_name, 'go-sdk-v')
     steps:
       - uses: actions/checkout@v4
 
@@ -31,16 +31,45 @@ jobs:
   tag:
     needs: test
     runs-on: ubuntu-latest
+    if: startsWith(github.event.release.tag_name, 'go-sdk-v')
+    # Pushing the packages/go-sdk/vX.Y.Z module tag needs write access.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
       - name: Extract version from tag
         id: version
-        run: echo "version=${GITHUB_REF_NAME#go-sdk-v}" >> $GITHUB_OUTPUT
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: echo "version=${RELEASE_TAG#go-sdk-v}" >> "$GITHUB_OUTPUT"
 
       - name: Create Go module tag
+        env:
+          MODULE_TAG: packages/go-sdk/v${{ steps.version.outputs.version }}
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git tag "packages/go-sdk/v${{ steps.version.outputs.version }}" || true
-          git push origin "packages/go-sdk/v${{ steps.version.outputs.version }}" || true
+
+          # Tolerate exactly one case: the module tag already exists on origin
+          # at this same commit (e.g. a re-run). Any other failure fails the job.
+          set +e
+          git ls-remote --exit-code origin "refs/tags/${MODULE_TAG}" > /dev/null
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
+            git fetch --no-tags origin "refs/tags/${MODULE_TAG}:refs/tags/${MODULE_TAG}"
+            existing="$(git rev-parse "${MODULE_TAG}^{commit}")"
+            if [ "$existing" = "$(git rev-parse HEAD)" ]; then
+              echo "${MODULE_TAG} already exists at $(git rev-parse HEAD); nothing to do."
+              exit 0
+            fi
+            echo "::error::${MODULE_TAG} already exists at ${existing}, not at release commit $(git rev-parse HEAD)."
+            exit 1
+          elif [ "$rc" -ne 2 ]; then
+            echo "::error::git ls-remote failed (exit ${rc}) while checking for ${MODULE_TAG}."
+            exit "$rc"
+          fi
+
+          git tag "${MODULE_TAG}"
+          git push origin "refs/tags/${MODULE_TAG}"
