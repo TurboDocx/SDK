@@ -828,17 +828,17 @@ TurboQuote.configure({
 | Group | Methods |
 |---|---|
 | **Configuration** | `configure()` |
-| **Quotes** | `createQuote()`, `getQuote()`, `listQuotes()`, `updateQuote()`, `deleteQuote()` |
+| **Quotes** | `createQuote()`, `getQuote()`, `listQuotes()`, `updateQuote()`, `deleteQuote()`, `getQuoteSummary()`, `listQuoteCreators()`, `getNextQuoteNumber()` |
 | **Quote status transitions** | `sendQuote()`, `sendQuoteWithDeliverable()`, `declineQuote()`, `voidQuote()`, `handleExpiredQuote()`, `duplicateQuote()` |
 | **Quote downloads** | `downloadQuotePdf()` |
-| **Line items** | `addLineItems()`, `addBundleLineItems()`, `listLineItems()`, `updateLineItem()`, `removeLineItem()` |
-| **Products** | `createProduct()`, `getProduct()`, `listProducts()`, `updateProduct()`, `deleteProduct()`, `duplicateProduct()`, `getProductPrimaryImages()` |
+| **Line items** | `addLineItems()`, `addBundleLineItems()`, `listLineItems()`, `updateLineItem()`, `removeLineItem()`, `getQuoteLineItemImages()`, `getLineItemImages()`, `addLineItemImages()`, `reorderLineItemImages()`, `removeLineItemImage()` |
+| **Products** | `createProduct()`, `getProduct()`, `listProducts()`, `updateProduct()`, `deleteProduct()`, `duplicateProduct()`, `getProductPrimaryImages()`, `getProductQuoteImages()` |
 | **Bundles** | `createBundle()`, `getBundle()`, `listBundles()`, `updateBundle()`, `deleteBundle()`, `duplicateBundle()` |
 | **Price books** | `createPriceBook()`, `getPriceBook()`, `listPriceBooks()`, `updatePriceBook()`, `deletePriceBook()`, `duplicatePriceBook()`, `applyPriceBook()`, `removePriceBook()`, `listPriceBookProducts()` |
 | **Quote template** | `getTemplate()`, `getTemplateById()`, `listTemplates()`, `createTemplate()`, `updateTemplate()`, `deleteTemplate()` |
 | **Types / categories** | `createType()`, `listTypes()`, `updateType()`, `deleteType()` |
-| **Companies** | `createCompany()`, `getCompany()`, `listCompanies()`, `updateCompany()`, `deleteCompany()` |
-| **Contacts** | `createContact()`, `listCompanyContacts()`, `updateContact()`, `deleteContact()` |
+| **Companies** | `createCompany()`, `getCompany()`, `listCompanies()`, `updateCompany()`, `deleteCompany()`, `getCompanyOpenQuotes()` |
+| **Contacts** | `createContact()`, `listCompanyContacts()`, `updateContact()`, `deleteContact()`, `getContactOpenQuotes()` |
 
 #### Create a quote, add line items, and send
 
@@ -905,6 +905,64 @@ import { writeFileSync } from 'fs';
 const pdf = await TurboQuote.downloadQuotePdf(quote.id);  // returns ArrayBuffer
 writeFileSync('quote.pdf', Buffer.from(pdf));
 ```
+
+#### Sorting, filters and the list summary
+
+Every list takes `sortBy` / `sortDirection` (`asc` | `desc`); leave them out for the order the
+list always had. Sort columns: quotes `updatedOn` · `createdOn` · `total` · `validUntil` · `quoteNumber`;
+products `name` · `listPrice` · `createdOn`; price books `name` · `discountPercent` · `overrideCount` ·
+`validFrom` · `validTo` · `createdOn`; bundles `name` · `itemCount` · `totalListPrice` · `totalFinalPrice` ·
+`createdOn`; companies `name` · `contactCount` · `lastActivityDate`; contacts `name` · `createdOn`;
+types `name` · `usageCount`.
+
+The quote list also filters by several companies (`companyIds`) and currencies (`currencies`), by
+`expired` in `statuses` (a draft or sent quote past its Valid until day, UTC, or whose signature
+expired), by creator (`createdBy`, ids from the creators call; `createdByApiKeys` for API-key quotes)
+and by Valid until (`validUntilWindow` = `thisWeek` | `thisMonth` | `past`, `validUntilFrom` /
+`validUntilTo`). Each quote carries `isExpired` and `lineItemCount`; the response adds
+`statusCounts` (per tab) and `summary` (pipeline, win rate, monthly recurring, in `summaryCurrency`).
+
+```typescript
+const page = await TurboQuote.listQuotes({
+  statuses: ['sent', 'expired'],
+  currencies: ['USD', 'EUR'],
+  validUntilWindow: 'thisMonth',
+  sortBy: 'validUntil',
+  sortDirection: 'asc',
+  summaryCurrency: 'USD',
+});
+console.log(page.statusCounts?.expired, page.summary?.winRate.percent);
+
+const creators = await TurboQuote.listQuoteCreators();         // ids for createdBy
+const summary = await TurboQuote.getQuoteSummary({ createdBy: [creators[0].id] });
+const { nextNumber } = await TurboQuote.getNextQuoteNumber();   // read only
+
+const products = await TurboQuote.listProducts({ billingFrequency: ['monthly', 'annual'], sortBy: 'listPrice' });
+const copy = await TurboQuote.duplicateQuote(quote.id, { name: 'Q4 renewal' }); // name is optional
+```
+
+`duplicateQuote`, `duplicateProduct`, `duplicatePriceBook` and `duplicateBundle` take an optional
+`{ name }` (otherwise "Copy of …"). Companies take an optional `email`; `updatePriceBook({ resetProductPricing: true })`
+puts every product back on the book's discount.
+
+#### Custom line item images
+
+A custom line item (one with no catalog product) can show up to three images on the quote (PNG or
+JPEG, 2 MB each; draft quotes only). Catalog products use `getProductQuoteImages(productIds)`.
+
+```typescript
+const images = await TurboQuote.addLineItemImages(quote.id, itemId, ['./diagram.png']); // paths, Buffers or Files
+await TurboQuote.reorderLineItemImages(quote.id, itemId, images.map(i => i.id).reverse());
+await TurboQuote.removeLineItemImage(quote.id, itemId, images[0].id);
+const byItem = await TurboQuote.getQuoteLineItemImages(quote.id); // { [lineItemId]: LineItemImage[] }
+```
+
+**Deletes the API refuses.** `deleteQuote` on a **sent** quote is a 409 `ConflictError` with code
+`CANNOT_DELETE_SENT_QUOTE` — void it instead; an accepted quote is a 409 `CANNOT_DELETE_ACCEPTED_QUOTE`.
+`deleteCompany` is a 409 `CompanyHasOpenQuotes` while the company has open quotes (draft, pending approval or
+sent), and `deleteContact` is a 409 `LastContact` (the company's only contact) or `ContactHasOpenQuotes`.
+`deletePriceBook` on the org's default price book is a 400 `ValidationError` `PriceBookIsDefault`. Branch on
+`err.code`; `getCompanyOpenQuotes` / `getContactOpenQuotes` list the open quotes that block a delete.
 
 #### Sender identity — "Prepared by"
 

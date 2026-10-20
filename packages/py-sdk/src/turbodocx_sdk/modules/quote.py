@@ -2,15 +2,15 @@
 TurboQuote Module -- Quoting operations
 
 Provides quote lifecycle management:
-- Quotes CRUD (list, create, get, update, delete, duplicate)
+- Quotes CRUD (list, create, get, update, delete, duplicate, summary, creators)
 - Quote status transitions (send, decline, void, handle expired)
-- Quote number config (get / update org-wide quote numbering format)
-- Line items (list, add product items, add bundle items, update, remove)
-- Products (list, create, get, update, delete, duplicate, primary images)
+- Quote number config (get / update org-wide quote numbering format, next number)
+- Line items (list, add product items, add bundle items, update, remove, custom item images)
+- Products (list, create, get, update, delete, duplicate, primary images, quote images)
 - Price books (list, create, get, update, delete, duplicate, list products)
 - Bundles (list, create, get, update, delete, duplicate)
-- Companies (list, create, get, update, delete, list contacts)
-- Contacts (list, create, update, delete)
+- Companies (list, create, get, update, delete, list contacts, open quotes)
+- Contacts (list, create, update, delete, open quotes)
 - Templates (list, get, get by ID, create, update, delete)
 - Types / categories (list, create, update, delete)
 - Convenience (createAndSend)
@@ -50,6 +50,29 @@ def _to_query_params(request: Optional[Dict[str, Any]] = None) -> Optional[Dict[
     return params if params else None
 
 
+def _image_files(images: List[Any]) -> List[Any]:
+    """
+    One ("images", (name, bytes, mime)) tuple per image: a path is read, bytes get their
+    type from the magic bytes, a file-like object is read.
+    """
+    files: List[Any] = []
+    for image in images:
+        if isinstance(image, str):
+            with open(image, "rb") as f:
+                file_bytes = f.read()
+            file_name = os.path.basename(image)
+            mime_type, _ = detect_file_type(file_bytes)
+            files.append(("images", (file_name, file_bytes, mime_type)))
+        elif isinstance(image, bytes):
+            mime_type, ext = detect_file_type(image)
+            files.append(("images", (f"image.{ext}", image, mime_type)))
+        else:
+            file_bytes = image.read() if hasattr(image, "read") else image
+            mime_type, ext = detect_file_type(file_bytes if isinstance(file_bytes, bytes) else b"")
+            files.append(("images", (getattr(image, "name", f"image.{ext}"), file_bytes, mime_type)))
+    return files
+
+
 def _build_product_form_data(request: Dict[str, Any]):
     """
     Build multipart form data for product create/update with images.
@@ -65,22 +88,7 @@ def _build_product_form_data(request: Dict[str, Any]):
     data_json = json.dumps(data)
     data = {"data": data_json}
 
-    files: List[Any] = []
-    if images:
-        for image in images:
-            if isinstance(image, str):
-                with open(image, "rb") as f:
-                    file_bytes = f.read()
-                file_name = os.path.basename(image)
-                mime_type, _ = detect_file_type(file_bytes)
-                files.append(("images", (file_name, file_bytes, mime_type)))
-            elif isinstance(image, bytes):
-                mime_type, ext = detect_file_type(image)
-                files.append(("images", (f"image.{ext}", image, mime_type)))
-            else:
-                file_bytes = image.read() if hasattr(image, "read") else image
-                mime_type, ext = detect_file_type(file_bytes if isinstance(file_bytes, bytes) else b"")
-                files.append(("images", (getattr(image, "name", f"image.{ext}"), file_bytes, mime_type)))
+    files: List[Any] = _image_files(images) if images else []
 
     return data, files
 
@@ -145,6 +153,17 @@ class TurboQuote:
         return response["result"]
 
     @classmethod
+    async def _post_duplicate(cls, path: str, name: Optional[str]) -> Dict[str, Any]:
+        """
+        Shared duplicate helper: sends the copy's name when given, else no body
+        (the API names the copy "Copy of ...").
+        """
+        client = cls._get_client()
+        if name is not None:
+            return cls._unwrap(await client.post(path, {"name": name}))
+        return cls._unwrap(await client.post(path))
+
+    @classmethod
     async def _bulk_import(cls, path: str, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Shared bulk-create helper.
@@ -195,16 +214,38 @@ class TurboQuote:
         return cls._unwrap(await client.patch(f"/v1/quotes/{id}", request))
 
     @classmethod
+    async def get_quote_summary(cls, options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        The quote list's summary cards (pipeline, win rate, monthly recurring...) for a set of
+        filters, in one currency (``summaryCurrency``). Takes the list's filters; the status
+        filter is ignored.
+        """
+        client = cls._get_client()
+        response = await client.get("/v1/quotes/summary", _to_query_params(options))
+        return response["summary"]
+
+    @classmethod
+    async def list_quote_creators(cls) -> List[Dict[str, Any]]:
+        """The people and API keys who created the org's quotes -- the ids for the ``createdBy`` filter."""
+        client = cls._get_client()
+        response = await client.get("/v1/quotes/creators")
+        return response["results"]
+
+    @classmethod
     async def delete_quote(cls, id: str) -> Dict[str, Any]:
-        """Delete a quote."""
+        """
+        Delete a quote.
+
+        A sent quote is refused with a 409 (``CANNOT_DELETE_SENT_QUOTE``) -- void it instead --
+        and so is an accepted one (``CANNOT_DELETE_ACCEPTED_QUOTE``).
+        """
         client = cls._get_client()
         return await client.delete(f"/v1/quotes/{id}")
 
     @classmethod
-    async def duplicate_quote(cls, id: str) -> Dict[str, Any]:
-        """Duplicate a quote."""
-        client = cls._get_client()
-        return cls._unwrap(await client.post(f"/v1/quotes/{id}/duplicate"))
+    async def duplicate_quote(cls, id: str, name: Optional[str] = None) -> Dict[str, Any]:
+        """Duplicate a quote. ``name`` names the copy; left out, it is "Copy of <name>"."""
+        return await cls._post_duplicate(f"/v1/quotes/{id}/duplicate", name)
 
     @classmethod
     async def apply_price_book(cls, quote_id: str, price_book_id: str) -> Dict[str, Any]:
@@ -268,6 +309,17 @@ class TurboQuote:
         """
         client = cls._get_client()
         response = await client.patch("/v1/quotes/number-config", format)
+        return response["results"]
+
+    @classmethod
+    async def get_next_quote_number(cls) -> Dict[str, Any]:
+        """
+        The number the next new quote will get: ``nextNumber``, ``sequence`` and ``canEdit``
+        (whether the caller can change numbering). Read only -- the counter doesn't move, so a
+        quote created by someone else in between takes it first.
+        """
+        client = cls._get_client()
+        response = await client.get("/v1/quotes/number-config/next")
         return response["results"]
 
     # ============================================
@@ -449,6 +501,53 @@ class TurboQuote:
         return await client.delete(f"/v1/quotes/{quote_id}/items/{item_id}")
 
     # ============================================
+    # CUSTOM LINE ITEM IMAGES
+    # Up to three per custom item (a line with no catalog product), PNG or JPEG,
+    # 2MB each. Changes are allowed on draft quotes only.
+    # ============================================
+
+    @classmethod
+    async def get_quote_line_item_images(cls, quote_id: str) -> Dict[str, Any]:
+        """Every custom line item's images (up to three, in order), keyed by line item id."""
+        client = cls._get_client()
+        response = await client.get(f"/v1/quotes/{quote_id}/items/images")
+        return response["results"]
+
+    @classmethod
+    async def get_line_item_images(cls, quote_id: str, item_id: str) -> List[Dict[str, Any]]:
+        """One custom line item's images, in order."""
+        client = cls._get_client()
+        response = await client.get(f"/v1/quotes/{quote_id}/items/{item_id}/images")
+        return response["results"]
+
+    @classmethod
+    async def add_line_item_images(cls, quote_id: str, item_id: str, images: List[Any]) -> List[Dict[str, Any]]:
+        """
+        Add images to a custom line item (file paths, bytes or file-like objects).
+
+        Returns all of the item's images.
+        """
+        client = cls._get_client()
+        response = await client.post_form_data(
+            f"/v1/quotes/{quote_id}/items/{item_id}/images", {}, _image_files(images)
+        )
+        return response["results"]
+
+    @classmethod
+    async def reorder_line_item_images(cls, quote_id: str, item_id: str, image_ids: List[str]) -> List[Dict[str, Any]]:
+        """Set the order of a custom line item's images, first to last."""
+        client = cls._get_client()
+        response = await client.put(f"/v1/quotes/{quote_id}/items/{item_id}/images/order", {"imageIds": image_ids})
+        return response["results"]
+
+    @classmethod
+    async def remove_line_item_image(cls, quote_id: str, item_id: str, image_id: str) -> List[Dict[str, Any]]:
+        """Remove one image from a custom line item. Returns the images left."""
+        client = cls._get_client()
+        response = await client.delete(f"/v1/quotes/{quote_id}/items/{item_id}/images/{image_id}")
+        return response["results"]
+
+    # ============================================
     # PRODUCTS
     # ============================================
 
@@ -513,10 +612,9 @@ class TurboQuote:
         return await client.delete(f"/v1/products/{id}")
 
     @classmethod
-    async def duplicate_product(cls, id: str) -> Dict[str, Any]:
-        """Duplicate a product."""
-        client = cls._get_client()
-        return cls._unwrap(await client.post(f"/v1/products/{id}/duplicate"))
+    async def duplicate_product(cls, id: str, name: Optional[str] = None) -> Dict[str, Any]:
+        """Duplicate a product. ``name`` names the copy; left out, it is "Copy of <name>"."""
+        return await cls._post_duplicate(f"/v1/products/{id}/duplicate", name)
 
     @classmethod
     async def get_product_primary_images(cls, product_ids: List[str]) -> Dict[str, Any]:
@@ -527,6 +625,17 @@ class TurboQuote:
         """
         client = cls._get_client()
         response = await client.post("/v1/products/primary-images", {"productIds": product_ids})
+        return response["results"]
+
+    @classmethod
+    async def get_product_quote_images(cls, product_ids: List[str]) -> Dict[str, Any]:
+        """
+        The images each product shows on a quote: up to three, in display order.
+
+        Returns a dict mapping product ID -> list of ProductImage (empty when none).
+        """
+        client = cls._get_client()
+        response = await client.post("/v1/products/quote-images", {"productIds": product_ids})
         return response["results"]
 
     # ============================================
@@ -574,15 +683,14 @@ class TurboQuote:
 
     @classmethod
     async def delete_price_book(cls, id: str) -> Dict[str, Any]:
-        """Delete a price book."""
+        """Delete a price book. The org's default price book is refused (400 ``PriceBookIsDefault``)."""
         client = cls._get_client()
         return await client.delete(f"/v1/pricebooks/{id}")
 
     @classmethod
-    async def duplicate_price_book(cls, id: str) -> Dict[str, Any]:
-        """Duplicate a price book."""
-        client = cls._get_client()
-        return cls._unwrap(await client.post(f"/v1/pricebooks/{id}/duplicate"))
+    async def duplicate_price_book(cls, id: str, name: Optional[str] = None) -> Dict[str, Any]:
+        """Duplicate a price book. ``name`` names the copy; left out, it is "Copy of <name>"."""
+        return await cls._post_duplicate(f"/v1/pricebooks/{id}/duplicate", name)
 
     @classmethod
     async def list_price_book_products(cls, id: str, options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -636,10 +744,9 @@ class TurboQuote:
         return await client.delete(f"/v1/bundles/{id}")
 
     @classmethod
-    async def duplicate_bundle(cls, id: str) -> Dict[str, Any]:
-        """Duplicate a bundle."""
-        client = cls._get_client()
-        return cls._unwrap(await client.post(f"/v1/bundles/{id}/duplicate"))
+    async def duplicate_bundle(cls, id: str, name: Optional[str] = None) -> Dict[str, Any]:
+        """Duplicate a bundle. ``name`` names the copy; left out, it is "Copy of <name>"."""
+        return await cls._post_duplicate(f"/v1/bundles/{id}/duplicate", name)
 
     # ============================================
     # COMPANIES
@@ -683,9 +790,20 @@ class TurboQuote:
 
     @classmethod
     async def delete_company(cls, id: str) -> Dict[str, Any]:
-        """Delete a company."""
+        """
+        Delete a company and its contacts.
+
+        Refused with a 409 (``CompanyHasOpenQuotes``) while it has open quotes (draft, pending
+        approval or sent) -- see ``get_company_open_quotes``.
+        """
         client = cls._get_client()
         return await client.delete(f"/v1/companies/{id}")
+
+    @classmethod
+    async def get_company_open_quotes(cls, company_id: str) -> Dict[str, Any]:
+        """The open quotes (draft, pending approval, sent) for a company: what blocks deleting it."""
+        client = cls._get_client()
+        return await client.get(f"/v1/companies/{company_id}/open-quotes")
 
     @classmethod
     async def list_company_contacts(cls, company_id: str, options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -728,9 +846,20 @@ class TurboQuote:
 
     @classmethod
     async def delete_contact(cls, id: str) -> Dict[str, Any]:
-        """Delete a contact."""
+        """
+        Delete a contact.
+
+        Refused with a 409 when they are the company's only contact (``LastContact``) or the
+        contact on open quotes (``ContactHasOpenQuotes``) -- see ``get_contact_open_quotes``.
+        """
         client = cls._get_client()
         return await client.delete(f"/v1/contacts/{id}")
+
+    @classmethod
+    async def get_contact_open_quotes(cls, contact_id: str) -> Dict[str, Any]:
+        """The open quotes (draft, pending approval, sent) made out to a contact: what blocks deleting them."""
+        client = cls._get_client()
+        return await client.get(f"/v1/contacts/{contact_id}/open-quotes")
 
     # ============================================
     # TEMPLATES

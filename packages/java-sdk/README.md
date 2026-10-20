@@ -1105,6 +1105,63 @@ byte[] pdf = tq.downloadQuotePdf(quoteId);
 Files.write(Paths.get("quote.pdf"), pdf);
 ```
 
+### Sorting, filters and the list summary
+
+Every list takes `sortBy` / `sortDirection` (`asc` | `desc`); leave them out for the order the
+list always had. Sort columns: quotes `updatedOn` · `createdOn` · `total` · `validUntil` · `quoteNumber`;
+products `name` · `listPrice` · `createdOn`; price books `name` · `discountPercent` · `overrideCount` ·
+`validFrom` · `validTo` · `createdOn`; bundles `name` · `itemCount` · `totalListPrice` · `totalFinalPrice` ·
+`createdOn`; companies `name` · `contactCount` · `lastActivityDate`; contacts `name` · `createdOn`;
+types `name` · `usageCount`.
+
+The quote list also filters by several companies (`companyIds`) and currencies (`currencies`), by
+`expired` in `statuses` (a draft or sent quote past its Valid until day, UTC, or whose signature
+expired), by creator (`createdBy`, ids from the creators call; `createdByApiKeys` for API-key quotes)
+and by Valid until (`validUntilWindow` = `thisWeek` | `thisMonth` | `past`, `validUntilFrom` /
+`validUntilTo`). Each quote carries `isExpired` and `lineItemCount`; the response adds
+`statusCounts` (per tab) and `summary` (pipeline, win rate, monthly recurring, in `summaryCurrency`).
+
+```java
+ListQuotesOptions options = new ListQuotesOptions();
+options.setStatuses(Arrays.asList("sent", "expired"));
+options.setCurrencies(Arrays.asList("USD", "EUR"));
+options.setValidUntilWindow("thisMonth");
+options.setSortBy("validUntil");
+options.setSortDirection("asc");
+QuoteListResponse page = tq.listQuotes(options);
+System.out.println(page.getStatusCounts().getExpired() + " " + page.getSummary().getWinRate().getPercent());
+
+List<Quote.QuoteCreator> creators = tq.listQuoteCreators();   // ids for createdBy
+NextQuoteNumber next = tq.getNextQuoteNumber();               // read only
+Quote copy = tq.duplicateQuote(quote.getId(), "Q4 renewal");   // name is optional
+```
+
+`duplicateQuote`, `duplicateProduct`, `duplicatePriceBook` and `duplicateBundle` have a `(id, name)`
+overload (otherwise "Copy of …"). `ListProductsOptions` / `ListBundlesOptions` take several values with
+`setBillingFrequencies` / `setCurrencies`; `listCompanyContacts` takes `ListCompanyContactsOptions` for
+the sort. Companies take an optional `email` (`setEmail(null)` clears it on update);
+`UpdatePriceBookRequest.setResetProductPricing(true)` puts every product back on the book's discount.
+
+### Custom line item images
+
+A custom line item (one with no catalog product) can show up to three images on the quote (PNG or
+JPEG, 2 MB each; draft quotes only). Catalog products use `getProductQuoteImages(productIds)`.
+
+```java
+List<LineItemImage> images = tq.addLineItemImages(quote.getId(), itemId,
+        new byte[][]{Files.readAllBytes(Paths.get("diagram.png"))});
+tq.reorderLineItemImages(quote.getId(), itemId, Arrays.asList(images.get(1).getId(), images.get(0).getId()));
+tq.removeLineItemImage(quote.getId(), itemId, images.get(0).getId());
+Map<String, List<LineItemImage>> byItem = tq.getQuoteLineItemImages(quote.getId());
+```
+
+**Deletes the API refuses.** `deleteQuote` on a **sent** quote is a 409 `ConflictException` with code
+`CANNOT_DELETE_SENT_QUOTE` — void it instead; an accepted quote is a 409 `CANNOT_DELETE_ACCEPTED_QUOTE`.
+`deleteCompany` is a 409 `CompanyHasOpenQuotes` while the company has open quotes (draft, pending approval or
+sent), and `deleteContact` is a 409 `LastContact` (the company's only contact) or `ContactHasOpenQuotes`.
+`deletePriceBook` on the org's default price book is a 400 `ValidationException` `PriceBookIsDefault`. Branch on
+`e.getCode()`; `getCompanyOpenQuotes` / `getContactOpenQuotes` list the open quotes that block a delete.
+
 ### Sender identity — "Prepared by"
 
 The quote's **"Prepared by"** name and email are resolved by the server, not by whoever
@@ -1134,14 +1191,14 @@ if (quote.getPreparedBy() != null) {
 
 | Group | Methods |
 |:------|:--------|
-| **Quotes** | `listQuotes`, `createQuote`, `getQuote`, `updateQuote`, `deleteQuote`, `duplicateQuote`, `applyPriceBook`, `removePriceBook`, `downloadQuotePdf` |
+| **Quotes** | `listQuotes`, `createQuote`, `getQuote`, `updateQuote`, `deleteQuote`, `duplicateQuote`, `applyPriceBook`, `removePriceBook`, `downloadQuotePdf`, `getQuoteSummary`, `listQuoteCreators`, `getNextQuoteNumber` |
 | **Quote status** | `sendQuote`, `sendQuoteWithDeliverable`, `declineQuote`, `voidQuote`, `handleExpiredQuote` |
-| **Line items** | `listLineItems`, `addLineItems`, `addBundleLineItems`, `updateLineItem`, `removeLineItem` |
-| **Products** | `listProducts`, `createProduct`, `getProduct`, `updateProduct`, `deleteProduct`, `duplicateProduct`, `getProductPrimaryImages` |
+| **Line items** | `listLineItems`, `addLineItems`, `addBundleLineItems`, `updateLineItem`, `removeLineItem`, `getQuoteLineItemImages`, `getLineItemImages`, `addLineItemImages`, `reorderLineItemImages`, `removeLineItemImage` |
+| **Products** | `listProducts`, `createProduct`, `getProduct`, `updateProduct`, `deleteProduct`, `duplicateProduct`, `getProductPrimaryImages`, `getProductQuoteImages` |
 | **Pricebooks** | `listPriceBooks`, `createPriceBook`, `getPriceBook`, `updatePriceBook`, `deletePriceBook`, `duplicatePriceBook`, `listPriceBookProducts` |
 | **Bundles** | `listBundles`, `createBundle`, `getBundle`, `updateBundle`, `deleteBundle`, `duplicateBundle` |
-| **Companies** | `listCompanies`, `createCompany`, `getCompany`, `updateCompany`, `deleteCompany`, `listCompanyContacts` |
-| **Contacts** | `listContacts`, `createContact`, `updateContact`, `deleteContact` |
+| **Companies** | `listCompanies`, `createCompany`, `getCompany`, `updateCompany`, `deleteCompany`, `listCompanyContacts`, `getCompanyOpenQuotes` |
+| **Contacts** | `listContacts`, `createContact`, `updateContact`, `deleteContact`, `getContactOpenQuotes` |
 | **Templates** | `listTemplates`, `getTemplate`, `getTemplateById`, `createTemplate`, `updateTemplate`, `deleteTemplate` |
 | **Types** | `listTypes`, `createType`, `updateType`, `deleteType` |
 | **Convenience** | `createAndSend` |

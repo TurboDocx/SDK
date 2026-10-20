@@ -16,6 +16,14 @@ export type CategoryType = 'product_category' | 'pricebook_type' | 'company_indu
 
 export type DiscountType = 'percent' | 'amount';
 
+/** Direction for every list's `sortBy`. */
+export type SortDirection = 'asc' | 'desc';
+
+/**
+ * One value, or several (sent as a repeated query param: `?currency=USD&currency=EUR`).
+ */
+export type OneOrMany<T> = T | T[];
+
 export interface PaginationParams {
   limit?: number;
   offset?: number;

@@ -7,6 +7,7 @@ from .quote_shared import (
     Currency,
     CategoryType,
     DiscountType,
+    SortDirection,
     PaginationParams,
     PaginatedResponse,
     SuccessResponse,
@@ -34,6 +35,18 @@ from .quote import (
     QuoteListResponse,
     QuoteNumberFormat,
     QuoteNumberConfig,
+    QuoteListStatusFilter,
+    QuoteSortBy,
+    QuoteValidUntilWindow,
+    QuoteSummaryOptions,
+    QuoteStatusCounts,
+    QuoteSummary,
+    QuoteCreator,
+    NextQuoteNumber,
+    OpenQuoteSummary,
+    OpenQuotesResponse,
+    LineItemImage,
+    QuoteLineItemImagesResponse,
 )
 from .quote_line_item import (
     LineItem,
@@ -51,6 +64,7 @@ from .product import (
     ListProductsOptions,
     ProductListResponse,
     ProductPrimaryImagesResponse,
+    ProductQuoteImagesResponse,
 )
 from .pricebook import (
     PriceBookProductPricing,
@@ -86,6 +100,7 @@ from .contact import (
     CreateContactRequest,
     UpdateContactRequest,
     ListContactsOptions,
+    ListCompanyContactsOptions,
     ContactListResponse,
 )
 from .quote_template import (
@@ -132,6 +147,7 @@ __all__ = [
     "Currency",
     "CategoryType",
     "DiscountType",
+    "SortDirection",
     "PaginationParams",
     "PaginatedResponse",
     "SuccessResponse",
@@ -158,6 +174,18 @@ __all__ = [
     "QuoteListResponse",
     "QuoteNumberFormat",
     "QuoteNumberConfig",
+    "QuoteListStatusFilter",
+    "QuoteSortBy",
+    "QuoteValidUntilWindow",
+    "QuoteSummaryOptions",
+    "QuoteStatusCounts",
+    "QuoteSummary",
+    "QuoteCreator",
+    "NextQuoteNumber",
+    "OpenQuoteSummary",
+    "OpenQuotesResponse",
+    "LineItemImage",
+    "QuoteLineItemImagesResponse",
     # Line Item
     "LineItem",
     "AddLineItemRequest",
@@ -173,6 +201,7 @@ __all__ = [
     "ListProductsOptions",
     "ProductListResponse",
     "ProductPrimaryImagesResponse",
+    "ProductQuoteImagesResponse",
     # PriceBook
     "PriceBookProductPricing",
     "PriceBook",
@@ -204,6 +233,7 @@ __all__ = [
     "CreateContactRequest",
     "UpdateContactRequest",
     "ListContactsOptions",
+    "ListCompanyContactsOptions",
     "ContactListResponse",
     # Template
     "QuoteTemplate",

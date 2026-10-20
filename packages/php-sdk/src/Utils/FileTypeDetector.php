@@ -53,6 +53,22 @@ final class FileTypeDetector
             ];
         }
 
+        // JPEG: FF D8 FF
+        if (str_starts_with($content, "\xFF\xD8\xFF")) {
+            return [
+                'mimetype' => 'image/jpeg',
+                'extension' => 'jpg',
+            ];
+        }
+
+        // PNG: 89 50 4E 47
+        if (str_starts_with($content, "\x89PNG")) {
+            return [
+                'mimetype' => 'image/png',
+                'extension' => 'png',
+            ];
+        }
+
         // Unknown file type
         return [
             'mimetype' => 'application/octet-stream',

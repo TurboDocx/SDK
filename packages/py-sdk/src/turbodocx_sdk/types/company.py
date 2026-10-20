@@ -14,6 +14,7 @@ class Company(TypedDict, total=False):
     id: str
     orgId: str
     name: str
+    email: Optional[str]
     phone: Optional[str]
     city: Optional[str]
     state: Optional[str]
@@ -41,6 +42,7 @@ class _CreateCompanyRequestRequired(TypedDict):
 
 
 class CreateCompanyRequest(_CreateCompanyRequestRequired, total=False):
+    email: Optional[str]  # optional through the API; the TurboDocx app requires it
     phone: Optional[str]
     city: Optional[str]
     state: Optional[str]
@@ -50,6 +52,7 @@ class CreateCompanyRequest(_CreateCompanyRequestRequired, total=False):
 
 class UpdateCompanyRequest(TypedDict, total=False):
     name: str
+    email: Optional[str]
     phone: Optional[str]
     city: Optional[str]
     state: Optional[str]
@@ -62,6 +65,8 @@ class ListCompaniesOptions(TypedDict, total=False):
     offset: int
     query: str
     industryIds: Any  # string | string[]
+    sortBy: str  # "name" | "contactCount" | "lastActivityDate"; default lastActivityDate
+    sortDirection: str  # "asc" | "desc"
 
 
 class CompanyListResponse(TypedDict):

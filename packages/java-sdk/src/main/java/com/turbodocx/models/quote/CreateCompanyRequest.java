@@ -13,6 +13,8 @@ public class CreateCompanyRequest {
     private String state;
     private String country;
     private String industryId;
+    /** The company's own email (optional through the API; the TurboDocx app requires it) */
+    private String email;
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -28,4 +30,6 @@ public class CreateCompanyRequest {
     public void setCountry(String country) { this.country = country; }
     public String getIndustryId() { return industryId; }
     public void setIndustryId(String industryId) { this.industryId = industryId; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 }

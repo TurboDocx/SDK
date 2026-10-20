@@ -24,6 +24,9 @@ CategoryType = Literal["product_category", "pricebook_type", "company_industry",
 
 DiscountType = Literal["percent", "amount"]
 
+# Direction for every list's sortBy
+SortDirection = Literal["asc", "desc"]
+
 
 class PaginationParams(TypedDict, total=False):
     limit: int

@@ -33,6 +33,7 @@ public final class TurboQuote {
     // (explicit nulls = fields the caller cleared). Other nulls are dropped earlier by {@code gson}
     // (no serializeNulls) when the tree is built. Gson is thread-safe, so one shared instance.
     private static final Gson NULL_PRESERVING_GSON = new GsonBuilder().serializeNulls().create();
+    private static final Type LINE_ITEM_IMAGES = new TypeToken<ValueEnvelope<List<LineItemImage>>>(){}.getType();
 
     public TurboQuote(HttpClient httpClient) {
         this.httpClient = httpClient;
@@ -56,6 +57,32 @@ public final class TurboQuote {
      */
     public QuoteListResponse listQuotes() throws IOException {
         return listQuotes(null);
+    }
+
+    /**
+     * The quote list's summary cards (pipeline, win rate, monthly recurring…) for a set of
+     * filters, in one currency ({@code summaryCurrency}). The status filter is ignored.
+     */
+    public QuoteSummary getQuoteSummary(QuoteSummaryOptions options) throws IOException {
+        Map<String, Object> params = options != null ? options.toQueryParams() : null;
+        JsonObject response = httpClient.get("/v1/quotes/summary", params, JsonObject.class);
+        return gson.fromJson(response.get("summary"), QuoteSummary.class);
+    }
+
+    /**
+     * The quote list's summary cards, without filters (USD unless the org's quotes say otherwise).
+     */
+    public QuoteSummary getQuoteSummary() throws IOException {
+        return getQuoteSummary(null);
+    }
+
+    /**
+     * The people and API keys who created the org's quotes — the ids for the {@code createdBy} filter.
+     */
+    public List<Quote.QuoteCreator> listQuoteCreators() throws IOException {
+        Type type = new TypeToken<ValueEnvelope<List<Quote.QuoteCreator>>>(){}.getType();
+        ValueEnvelope<List<Quote.QuoteCreator>> envelope = httpClient.get("/v1/quotes/creators", type);
+        return envelope.getResults();
     }
 
     /**
@@ -98,18 +125,27 @@ public final class TurboQuote {
     }
 
     /**
-     * Delete a quote.
+     * Delete a quote. A sent quote is refused with a 409 ({@code ConflictException}, code
+     * {@code CANNOT_DELETE_SENT_QUOTE}) — void it instead — and so is an accepted one
+     * ({@code CANNOT_DELETE_ACCEPTED_QUOTE}).
      */
     public SuccessResponse deleteQuote(String id) throws IOException {
         return httpClient.delete("/v1/quotes/" + id, SuccessResponse.class);
     }
 
     /**
-     * Duplicate a quote.
+     * Duplicate a quote. The copy is called "Copy of &lt;name&gt;".
      */
     public Quote duplicateQuote(String id) throws IOException {
+        return duplicateQuote(id, null);
+    }
+
+    /**
+     * Duplicate a quote and name the copy (null or blank: "Copy of &lt;name&gt;").
+     */
+    public Quote duplicateQuote(String id, String name) throws IOException {
         Type type = new TypeToken<ResultEnvelope<Quote>>(){}.getType();
-        ResultEnvelope<Quote> envelope = httpClient.post("/v1/quotes/" + id + "/duplicate", null, type);
+        ResultEnvelope<Quote> envelope = httpClient.post("/v1/quotes/" + id + "/duplicate", duplicateBody(name), type);
         return envelope.getResult();
     }
 
@@ -309,6 +345,65 @@ public final class TurboQuote {
     }
 
     // ============================================
+    // CUSTOM LINE ITEM IMAGES
+    // Up to three per custom item (a line with no catalog product), PNG or JPEG, 2MB each.
+    // Changes are allowed on draft quotes only.
+    // ============================================
+
+    /**
+     * Every custom line item's images (up to three, in order), keyed by line item ID.
+     */
+    public Map<String, List<LineItemImage>> getQuoteLineItemImages(String quoteId) throws IOException {
+        Type type = new TypeToken<ValueEnvelope<Map<String, List<LineItemImage>>>>(){}.getType();
+        ValueEnvelope<Map<String, List<LineItemImage>>> envelope =
+                httpClient.get("/v1/quotes/" + quoteId + "/items/images", type);
+        return envelope.getResults();
+    }
+
+    /**
+     * One custom line item's images, in order.
+     */
+    public List<LineItemImage> getLineItemImages(String quoteId, String itemId) throws IOException {
+        ValueEnvelope<List<LineItemImage>> envelope =
+                httpClient.get("/v1/quotes/" + quoteId + "/items/" + itemId + "/images", LINE_ITEM_IMAGES);
+        return envelope.getResults();
+    }
+
+    /**
+     * Add images (PNG or JPEG bytes) to a custom line item. Returns all of its images.
+     */
+    public List<LineItemImage> addLineItemImages(String quoteId, String itemId, byte[][] images) throws IOException {
+        MultipartBody.Builder builder = new MultipartBody.Builder().setType(MultipartBody.FORM);
+        for (byte[] image : images) {
+            String mimeType = detectImageMimeType(image);
+            builder.addFormDataPart("images", getImageFilename(mimeType), RequestBody.create(image, MediaType.parse(mimeType)));
+        }
+        ValueEnvelope<List<LineItemImage>> envelope = httpClient.postFormData(
+                "/v1/quotes/" + quoteId + "/items/" + itemId + "/images", builder.build(), LINE_ITEM_IMAGES);
+        return envelope.getResults();
+    }
+
+    /**
+     * Set the order of a custom line item's images, first to last.
+     */
+    public List<LineItemImage> reorderLineItemImages(String quoteId, String itemId, List<String> imageIds) throws IOException {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("imageIds", imageIds);
+        ValueEnvelope<List<LineItemImage>> envelope =
+                httpClient.put("/v1/quotes/" + quoteId + "/items/" + itemId + "/images/order", body, LINE_ITEM_IMAGES);
+        return envelope.getResults();
+    }
+
+    /**
+     * Remove one image from a custom line item. Returns the images left.
+     */
+    public List<LineItemImage> removeLineItemImage(String quoteId, String itemId, String imageId) throws IOException {
+        ValueEnvelope<List<LineItemImage>> envelope = httpClient.delete(
+                "/v1/quotes/" + quoteId + "/items/" + itemId + "/images/" + imageId, LINE_ITEM_IMAGES);
+        return envelope.getResults();
+    }
+
+    // ============================================
     // PRODUCTS
     // ============================================
 
@@ -382,11 +477,18 @@ public final class TurboQuote {
     }
 
     /**
-     * Duplicate a product.
+     * Duplicate a product. The copy is called "Copy of &lt;name&gt;".
      */
     public Product duplicateProduct(String id) throws IOException {
+        return duplicateProduct(id, null);
+    }
+
+    /**
+     * Duplicate a product and name the copy (null or blank: "Copy of &lt;name&gt;").
+     */
+    public Product duplicateProduct(String id, String name) throws IOException {
         Type type = new TypeToken<ResultEnvelope<Product>>(){}.getType();
-        ResultEnvelope<Product> envelope = httpClient.post("/v1/products/" + id + "/duplicate", null, type);
+        ResultEnvelope<Product> envelope = httpClient.post("/v1/products/" + id + "/duplicate", duplicateBody(name), type);
         return envelope.getResult();
     }
 
@@ -411,6 +513,17 @@ public final class TurboQuote {
             }
         }
         return map;
+    }
+
+    /**
+     * The images each product shows on a quote: up to three, in display order (empty when none).
+     */
+    public Map<String, List<ProductImage>> getProductQuoteImages(List<String> productIds) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("productIds", productIds);
+        Type type = new TypeToken<ValueEnvelope<Map<String, List<ProductImage>>>>(){}.getType();
+        ValueEnvelope<Map<String, List<ProductImage>>> envelope = httpClient.post("/v1/products/quote-images", body, type);
+        return envelope.getResults();
     }
 
     // ============================================
@@ -475,18 +588,26 @@ public final class TurboQuote {
     }
 
     /**
-     * Delete a price book.
+     * Delete a price book. The org's default price book is refused (400 ValidationException,
+     * code {@code PriceBookIsDefault}).
      */
     public SuccessResponse deletePriceBook(String id) throws IOException {
         return httpClient.delete("/v1/pricebooks/" + id, SuccessResponse.class);
     }
 
     /**
-     * Duplicate a price book.
+     * Duplicate a price book. The copy is called "Copy of &lt;name&gt;".
      */
     public PriceBook duplicatePriceBook(String id) throws IOException {
+        return duplicatePriceBook(id, null);
+    }
+
+    /**
+     * Duplicate a price book and name the copy (null or blank: "Copy of &lt;name&gt;").
+     */
+    public PriceBook duplicatePriceBook(String id, String name) throws IOException {
         Type type = new TypeToken<ResultEnvelope<PriceBook>>(){}.getType();
-        ResultEnvelope<PriceBook> envelope = httpClient.post("/v1/pricebooks/" + id + "/duplicate", null, type);
+        ResultEnvelope<PriceBook> envelope = httpClient.post("/v1/pricebooks/" + id + "/duplicate", duplicateBody(name), type);
         return envelope.getResult();
     }
 
@@ -567,11 +688,18 @@ public final class TurboQuote {
     }
 
     /**
-     * Duplicate a bundle.
+     * Duplicate a bundle. The copy is called "Copy of &lt;name&gt;".
      */
     public Bundle duplicateBundle(String id) throws IOException {
+        return duplicateBundle(id, null);
+    }
+
+    /**
+     * Duplicate a bundle and name the copy (null or blank: "Copy of &lt;name&gt;").
+     */
+    public Bundle duplicateBundle(String id, String name) throws IOException {
         Type type = new TypeToken<ResultEnvelope<Bundle>>(){}.getType();
-        ResultEnvelope<Bundle> envelope = httpClient.post("/v1/bundles/" + id + "/duplicate", null, type);
+        ResultEnvelope<Bundle> envelope = httpClient.post("/v1/bundles/" + id + "/duplicate", duplicateBody(name), type);
         return envelope.getResult();
     }
 
@@ -631,10 +759,19 @@ public final class TurboQuote {
     }
 
     /**
-     * Delete a company.
+     * Delete a company and its contacts. Refused with a 409 ({@code ConflictException}, code
+     * {@code CompanyHasOpenQuotes}) while it has open quotes (draft, pending approval or sent) —
+     * see {@link #getCompanyOpenQuotes(String)}.
      */
     public SuccessResponse deleteCompany(String id) throws IOException {
         return httpClient.delete("/v1/companies/" + id, SuccessResponse.class);
+    }
+
+    /**
+     * The open quotes (draft, pending approval, sent) for a company: what blocks deleting it.
+     */
+    public OpenQuotesResponse getCompanyOpenQuotes(String companyId) throws IOException {
+        return httpClient.get("/v1/companies/" + companyId + "/open-quotes", OpenQuotesResponse.class);
     }
 
     /**
@@ -699,10 +836,19 @@ public final class TurboQuote {
     }
 
     /**
-     * Delete a contact.
+     * Delete a contact. Refused with a 409 ({@code ConflictException}) when they are the
+     * company's only contact ({@code LastContact}) or the contact on open quotes
+     * ({@code ContactHasOpenQuotes}) — see {@link #getContactOpenQuotes(String)}.
      */
     public SuccessResponse deleteContact(String id) throws IOException {
         return httpClient.delete("/v1/contacts/" + id, SuccessResponse.class);
+    }
+
+    /**
+     * The open quotes (draft, pending approval, sent) made out to a contact: what blocks deleting them.
+     */
+    public OpenQuotesResponse getContactOpenQuotes(String contactId) throws IOException {
+        return httpClient.get("/v1/contacts/" + contactId + "/open-quotes", OpenQuotesResponse.class);
     }
 
     // ============================================
@@ -885,9 +1031,34 @@ public final class TurboQuote {
         return envelope.getResults();
     }
 
+    /**
+     * The number the next new quote will get. Read only — the counter doesn't move, so a quote
+     * created by someone else in between takes it first.
+     */
+    public NextQuoteNumber getNextQuoteNumber() throws IOException {
+        Type type = new TypeToken<ValueEnvelope<NextQuoteNumber>>(){}.getType();
+        ValueEnvelope<NextQuoteNumber> envelope = httpClient.get("/v1/quotes/number-config/next", type);
+        return envelope.getResults();
+    }
+
     // ============================================
     // PRIVATE HELPERS
     // ============================================
+
+    /** Unwraps { results: T } where results is one value (an object, a map or a list). */
+    private static final class ValueEnvelope<T> {
+        private T results;
+
+        T getResults() { return results; }
+    }
+
+    /** A duplicate's body: the copy's name when given, else none (the API names it "Copy of …"). */
+    private static Map<String, String> duplicateBody(String name) {
+        if (name == null) return null;
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("name", name);
+        return body;
+    }
 
     /**
      * Flattens a {@link SignatureSchedule} onto the send body as eight top-level keys.

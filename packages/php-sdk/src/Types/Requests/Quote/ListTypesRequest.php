@@ -15,6 +15,10 @@ final class ListTypesRequest
         public readonly ?string $query = null,
         public readonly ?string $categoryType = null,
         public readonly ?bool $includeUsage = null,
+        // Sort column: 'name' | 'usageCount' (usage needs a categoryType; default name, A to Z)
+        public readonly ?string $sortBy = null,
+        // 'asc' | 'desc'
+        public readonly ?string $sortDirection = null,
     ) {}
 
     /**
@@ -38,6 +42,13 @@ final class ListTypesRequest
         }
         if ($this->includeUsage !== null) {
             $params['includeUsage'] = $this->includeUsage ? 'true' : 'false';
+        }
+
+        if ($this->sortBy !== null) {
+            $params['sortBy'] = $this->sortBy;
+        }
+        if ($this->sortDirection !== null) {
+            $params['sortDirection'] = $this->sortDirection;
         }
 
         return $params;

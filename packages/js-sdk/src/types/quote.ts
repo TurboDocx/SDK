@@ -9,6 +9,8 @@ import type {
   Currency,
   PaginationParams,
   PaginatedResponse,
+  SortDirection,
+  OneOrMany,
 } from './quote-shared';
 import type { AddLineItemRequest, AddBundleLineItemRequest, LineItem } from './quote-line-item';
 import type { Company } from './company';
@@ -75,10 +77,19 @@ export interface Quote {
   contact?: Contact;
   lineItems?: LineItem[];
   priceBook?: PriceBook;
-  creator?: { id: string; firstName: string; lastName: string };
+  creator?: { id: string; firstName: string; lastName: string; email?: string | null; isAPIKey?: boolean };
   statusInfo?: QuoteStatusInfo;
   // Folded on by getQuote from the response's sibling `preparedBy`. See QuotePreparedBy.
   preparedBy?: QuotePreparedBy;
+  /** listQuotes only: how many line items the quote has. */
+  lineItemCount?: number;
+  /** listQuotes only: the quote's signature request has expired (expiration was on and its deadline passed). */
+  isSignatureExpired?: boolean;
+  /**
+   * listQuotes only: a draft or sent quote whose Valid until day has passed (UTC), or whose
+   * signature has expired. The same rule as the `expired` status filter.
+   */
+  isExpired?: boolean;
 }
 
 // ============================================
@@ -113,12 +124,54 @@ export interface UpdateQuoteRequest {
   priceBookId?: string | null;
 }
 
-export interface ListQuotesOptions extends PaginationParams {
-  statuses?: QuoteStatus | QuoteStatus[];
+/**
+ * A quote list status filter: a stored status, or `expired` — a draft or sent quote whose Valid
+ * until day has passed (UTC) or whose signature has expired. `expired` is not a stored status.
+ */
+export type QuoteListStatusFilter = QuoteStatus | 'expired';
+
+/** `updatedOn` | `createdOn` | `total` (grand total) | `validUntil` | `quoteNumber` */
+export type QuoteSortBy = 'updatedOn' | 'createdOn' | 'total' | 'validUntil' | 'quoteNumber';
+
+/**
+ * Valid until windows, in UTC days: `thisWeek` = today through today + 6, `thisMonth` = the
+ * current calendar month, `past` = before today.
+ */
+export type QuoteValidUntilWindow = 'thisWeek' | 'thisMonth' | 'past';
+
+/** The filters shared by `listQuotes` and `getQuoteSummary`. */
+export interface QuoteListFilters {
+  /** Matches quote number, quote name, company name, contact name and contact email. */
+  query?: string;
+  statuses?: OneOrMany<QuoteListStatusFilter>;
+  /** One company. Merged with `companyIds`. */
   companyId?: string;
+  companyIds?: OneOrMany<string>;
   contactId?: string;
-  currency?: Currency;
+  /** One currency or several. Merged with `currencies`. */
+  currency?: OneOrMany<Currency>;
+  currencies?: OneOrMany<Currency>;
+  /** Ids of the users (or API keys) who created the quotes — see `listQuoteCreators`. */
+  createdBy?: OneOrMany<string>;
+  /** Quotes created by any API key. ORed with `createdBy`. */
+  createdByApiKeys?: boolean;
+  validUntilWindow?: QuoteValidUntilWindow;
+  /** Inclusive YYYY-MM-DD bounds on Valid until, combined with the window. */
+  validUntilFrom?: string;
+  validUntilTo?: string;
+  /** Currency of the returned `summary` (default: the one filtered currency, else USD). */
+  summaryCurrency?: Currency;
 }
+
+export interface ListQuotesOptions extends QuoteListFilters {
+  limit?: number;
+  offset?: number;
+  /** Default `createdOn` newest first. */
+  sortBy?: QuoteSortBy;
+  sortDirection?: SortDirection;
+}
+
+export type QuoteSummaryOptions = QuoteListFilters;
 
 export interface SendQuoteRequest {
   ccEmails?: string[];
@@ -228,8 +281,105 @@ export interface QuoteListStats {
   quotesThisMonth: number;
 }
 
+/**
+ * Quotes per list tab. Every filter applies except `statuses`, so each count is what that tab
+ * would hold. `expired` overlaps `draft` and `sent` (an expired quote keeps its stored status).
+ */
+export interface QuoteStatusCounts {
+  all: number;
+  draft: number;
+  pending_approval: number;
+  sent: number;
+  accepted: number;
+  declined: number;
+  voided: number;
+  expired: number;
+}
+
+/**
+ * The quote list's summary cards, in one currency. Search, company, creator and Valid until
+ * filters apply; the status filter and the currency list don't.
+ */
+export interface QuoteSummary {
+  currency: Currency;
+  /** Draft and sent quotes that aren't expired. */
+  openPipeline: { total: number; count: number };
+  /** Every accepted and every declined quote. */
+  completed: { accepted: number; declined: number };
+  /** Quotes created since the 1st of this month (UTC). */
+  createdThisMonth: { count: number };
+  /** Sent quotes that aren't expired. */
+  waitingToSign: { count: number };
+  /** Quotes accepted since the 1st of this month (UTC). */
+  wonThisMonth: { count: number };
+  /** Every currency the org's quotes are in, A to Z. */
+  currencies: Currency[];
+  /** accepted / (accepted + declined) over the last `windowDays`; `percent` is null when none were decided. */
+  winRate: { percent: number | null; accepted: number; declined: number; windowDays: number };
+  /** Monthly subtotal of accepted quotes; `count` = accepted quotes with a monthly amount. */
+  monthlyRecurring: { total: number; count: number };
+}
+
 export interface QuoteListResponse extends PaginatedResponse<Quote> {
   stats: QuoteListStats;
+  statusCounts?: QuoteStatusCounts;
+  summary?: QuoteSummary;
+}
+
+/** Someone who created quotes in the org: a person, or an API key. */
+export interface QuoteCreator {
+  /** The user id — the value for the `createdBy` filter. */
+  id: string;
+  /** A person's name (else email), or the API key's name. */
+  name: string;
+  /** Null for an API key. */
+  email: string | null;
+  isAPIKey: boolean;
+  /** An API key that has since been deleted (its quotes stay). */
+  apiKeyDeleted: boolean;
+}
+
+/** The number the next new quote will get. Read only: the counter doesn't move. */
+export interface NextQuoteNumber {
+  nextNumber: string;
+  sequence: number;
+  /** Whether the caller can change the numbering (administrators). */
+  canEdit: boolean;
+}
+
+/** Optional settings for a duplicate. */
+export interface DuplicateOptions {
+  /** The copy's name. Left out (or blank), the copy is called "Copy of <name>". */
+  name?: string;
+}
+
+/** An open quote (draft, pending approval or sent) for a company or contact. */
+export interface OpenQuoteSummary {
+  id: string;
+  quoteNumber: string;
+  name: string | null;
+  status: QuoteStatus;
+  updatedOn: string;
+}
+
+/** The open quotes that block deleting a company or contact: the newest 50, and how many in all. */
+export type OpenQuotesResponse = PaginatedResponse<OpenQuoteSummary>;
+
+/** An image on a custom line item (a line with no catalog product). */
+export interface LineItemImage {
+  id: string;
+  lineItemId: string;
+  fileId: string;
+  displayOrder: number;
+  fileName: string;
+  fileType: string;
+  /** Base64 data URL: "data:image/png;base64,..." */
+  imageData?: string;
+}
+
+/** Each custom line item's images (up to three, in order), keyed by line item id. */
+export interface QuoteLineItemImagesResponse {
+  [lineItemId: string]: LineItemImage[];
 }
 
 

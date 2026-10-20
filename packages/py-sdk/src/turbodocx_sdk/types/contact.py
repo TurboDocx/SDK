@@ -43,13 +43,21 @@ class UpdateContactRequest(TypedDict, total=False):
     title: Optional[str]
 
 
-class ListContactsOptions(TypedDict, total=False):
+class ListCompanyContactsOptions(TypedDict, total=False):
     limit: int
     offset: int
     query: str
+    sortBy: str  # "name" | "createdOn"; default createdOn newest first
+    sortDirection: str  # "asc" | "desc"
+
+
+class ListContactsOptions(ListCompanyContactsOptions, total=False):
     companyId: str
+    companyIds: Any  # str | List[str]
 
 
-class ContactListResponse(TypedDict):
+class ContactListResponse(TypedDict, total=False):
     results: List[Contact]
     totalRecords: int
+    # The company, when the list is for one company; contactCount = its active contacts
+    company: Dict[str, Any]

@@ -1,6 +1,7 @@
 package com.turbodocx.models.quote;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Bundle domain entity.
@@ -26,6 +27,10 @@ public class Bundle {
     private String updatedOn;
     private List<BundleItem> items;
     private BundleCategory category;
+    /** listBundles only: the bundle's active items */
+    private Integer itemCount;
+    /** listBundles only: the bundle price per billing frequency */
+    private Map<String, Double> billingTotals;
 
     public String getId() { return id; }
     public String getOrgId() { return orgId; }
@@ -47,6 +52,8 @@ public class Bundle {
     public String getUpdatedOn() { return updatedOn; }
     public List<BundleItem> getItems() { return items; }
     public BundleCategory getCategory() { return category; }
+    public Integer getItemCount() { return itemCount; }
+    public Map<String, Double> getBillingTotals() { return billingTotals; }
 
     /**
      * Nested bundle category reference.

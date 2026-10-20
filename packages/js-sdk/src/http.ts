@@ -475,6 +475,10 @@ export class HttpClient {
     return this.request<T>('PATCH', path, data, options);
   }
 
+  async put<T>(path: string, data?: any, options?: RequestInit): Promise<T> {
+    return this.request<T>('PUT', path, data, options);
+  }
+
   async delete<T>(path: string, options?: RequestInit): Promise<T> {
     return this.request<T>('DELETE', path, undefined, options);
   }

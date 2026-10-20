@@ -929,23 +929,23 @@ TurboDocxSdk::TurboQuote.configure(
 
 `TurboQuote` does **not** require `sender_email` — use `api_key` + `org_id` only.
 
-#### All 68 Methods
+#### All 79 Methods
 
 | Group | Methods |
 |---|---|
 | **Configuration** | `configure` |
-| **Quotes** | `create_quote`, `get_quote`, `list_quotes`, `update_quote`, `delete_quote`, `duplicate_quote` |
+| **Quotes** | `create_quote`, `get_quote`, `list_quotes`, `update_quote`, `delete_quote`, `duplicate_quote`, `get_quote_summary`, `list_quote_creators` |
 | **Quote status transitions** | `send_quote`, `decline_quote`, `void_quote`, `handle_expired_quote` |
 | **Quote extras** | `send_quote_with_deliverable`, `apply_price_book`, `remove_price_book`, `download_quote_pdf` |
-| **Line items** | `add_line_items`, `add_bundle_line_items`, `list_line_items`, `update_line_item`, `remove_line_item` |
-| **Products** | `create_product`, `bulk_create_products`, `get_product`, `list_products`, `update_product`, `delete_product`, `duplicate_product`, `get_product_primary_images` |
+| **Line items** | `add_line_items`, `add_bundle_line_items`, `list_line_items`, `update_line_item`, `remove_line_item`, `get_quote_line_item_images`, `get_line_item_images`, `add_line_item_images`, `reorder_line_item_images`, `remove_line_item_image` |
+| **Products** | `create_product`, `bulk_create_products`, `get_product`, `list_products`, `update_product`, `delete_product`, `duplicate_product`, `get_product_primary_images`, `get_product_quote_images` |
 | **Bundles** | `create_bundle`, `bulk_create_bundles`, `get_bundle`, `list_bundles`, `update_bundle`, `delete_bundle`, `duplicate_bundle` |
 | **Price books** | `create_price_book`, `bulk_create_price_books`, `get_price_book`, `list_price_books`, `update_price_book`, `delete_price_book`, `duplicate_price_book`, `list_price_book_products` |
 | **Quote templates** | `get_template`, `get_template_by_id`, `list_templates`, `create_template`, `update_template`, `delete_template` |
 | **Types / categories** | `create_type`, `bulk_create_types`, `list_types`, `update_type`, `delete_type` |
-| **Companies** | `create_company`, `bulk_create_companies`, `get_company`, `list_companies`, `update_company`, `delete_company`, `list_company_contacts` |
-| **Contacts** | `create_contact`, `bulk_create_contacts`, `list_contacts`, `update_contact`, `delete_contact` |
-| **Quote number config (admin)** | `get_quote_number_config`, `update_quote_number_config` |
+| **Companies** | `create_company`, `bulk_create_companies`, `get_company`, `list_companies`, `update_company`, `delete_company`, `list_company_contacts`, `get_company_open_quotes` |
+| **Contacts** | `create_contact`, `bulk_create_contacts`, `list_contacts`, `update_contact`, `delete_contact`, `get_contact_open_quotes` |
+| **Quote number config (admin)** | `get_quote_number_config`, `update_quote_number_config`, `get_next_quote_number` (any role) |
 | **Convenience** | `create_and_send` |
 
 #### Create a quote, add line items, and send
@@ -1016,6 +1016,63 @@ TurboDocxSdk::TurboQuote.send_quote(quote["id"],
   "expirationWarning" => { "value" => 2, "unit" => "days" }
 )
 ```
+
+#### Sorting, filters and the list summary
+
+Every list takes `sortBy` / `sortDirection` (`asc` | `desc`); leave them out for the order the
+list always had. Sort columns: quotes `updatedOn` · `createdOn` · `total` · `validUntil` · `quoteNumber`;
+products `name` · `listPrice` · `createdOn`; price books `name` · `discountPercent` · `overrideCount` ·
+`validFrom` · `validTo` · `createdOn`; bundles `name` · `itemCount` · `totalListPrice` · `totalFinalPrice` ·
+`createdOn`; companies `name` · `contactCount` · `lastActivityDate`; contacts `name` · `createdOn`;
+types `name` · `usageCount`.
+
+The quote list also filters by several companies (`companyIds`) and currencies (`currencies`), by
+`expired` in `statuses` (a draft or sent quote past its Valid until day, UTC, or whose signature
+expired), by creator (`createdBy`, ids from the creators call; `createdByApiKeys` for API-key quotes)
+and by Valid until (`validUntilWindow` = `thisWeek` | `thisMonth` | `past`, `validUntilFrom` /
+`validUntilTo`). Each quote carries `isExpired` and `lineItemCount`; the response adds
+`statusCounts` (per tab) and `summary` (pipeline, win rate, monthly recurring, in `summaryCurrency`).
+
+```ruby
+page = TurboDocxSdk::TurboQuote.list_quotes(
+  "statuses" => %w[sent expired],
+  "currencies" => %w[USD EUR],
+  "validUntilWindow" => "thisMonth",
+  "sortBy" => "validUntil",
+  "sortDirection" => "asc",
+  "summaryCurrency" => "USD"
+)
+puts page["statusCounts"]["expired"], page["summary"]["winRate"]["percent"]
+
+creators = TurboDocxSdk::TurboQuote.list_quote_creators          # ids for createdBy
+summary = TurboDocxSdk::TurboQuote.get_quote_summary("createdBy" => [creators.first["id"]])
+next_number = TurboDocxSdk::TurboQuote.get_next_quote_number     # read only
+
+copy = TurboDocxSdk::TurboQuote.duplicate_quote(quote["id"], name: "Q4 renewal") # name is optional
+```
+
+`duplicate_quote`, `duplicate_product`, `duplicate_price_book` and `duplicate_bundle` take an optional
+`name:` (otherwise "Copy of …"). Companies take an optional `"email"`; `update_price_book(id, "resetProductPricing" => true)`
+puts every product back on the book's discount.
+
+#### Custom line item images
+
+A custom line item (one with no catalog product) can show up to three images on the quote (PNG or
+JPEG, 2 MB each; draft quotes only). Catalog products use `get_product_quote_images(product_ids)`.
+
+```ruby
+images = TurboDocxSdk::TurboQuote.add_line_item_images(quote["id"], item_id, ["./diagram.png"]) # paths or IO objects
+TurboDocxSdk::TurboQuote.reorder_line_item_images(quote["id"], item_id, images.map { |i| i["id"] }.reverse)
+TurboDocxSdk::TurboQuote.remove_line_item_image(quote["id"], item_id, images.first["id"])
+by_item = TurboDocxSdk::TurboQuote.get_quote_line_item_images(quote["id"]) # { line_item_id => [image, ...] }
+```
+
+**Deletes the API refuses.** `delete_quote` on a **sent** quote is a 409 `ConflictError` with code
+`CANNOT_DELETE_SENT_QUOTE` — void it instead; an accepted quote is a 409 `CANNOT_DELETE_ACCEPTED_QUOTE`.
+`delete_company` is a 409 `CompanyHasOpenQuotes` while the company has open quotes (draft, pending approval or
+sent), and `delete_contact` is a 409 `LastContact` (the company's only contact) or `ContactHasOpenQuotes`.
+`delete_price_book` on the org's default price book is a 400 `ValidationError` `PriceBookIsDefault`. Branch on
+`e.code`; `get_company_open_quotes` / `get_contact_open_quotes` list the open quotes that block a delete.
 
 #### Sender identity — "Prepared by"
 

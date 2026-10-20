@@ -5,16 +5,21 @@ declare(strict_types=1);
 namespace TurboDocx;
 
 use TurboDocx\Config\QuoteClientConfig;
+use TurboDocx\Utils\FileTypeDetector;
 use TurboDocx\Types\Quote\BulkImportResult;
 use TurboDocx\Types\Quote\Bundle;
 use TurboDocx\Types\Quote\Company;
 use TurboDocx\Types\Quote\Contact;
 use TurboDocx\Types\Quote\LineItem;
+use TurboDocx\Types\Quote\LineItemImage;
+use TurboDocx\Types\Quote\NextQuoteNumber;
 use TurboDocx\Types\Quote\PriceBook;
 use TurboDocx\Types\Quote\Product;
 use TurboDocx\Types\Quote\Quote;
 use TurboDocx\Types\Quote\QuoteNumberConfig;
+use TurboDocx\Types\Quote\QuoteCreator;
 use TurboDocx\Types\Quote\QuoteNumberFormat;
+use TurboDocx\Types\Quote\QuoteSummary;
 use TurboDocx\Types\Quote\QuoteTemplate;
 use TurboDocx\Types\Quote\QuoteType;
 use TurboDocx\Types\Requests\Quote\AddBundleLineItemRequest;
@@ -40,6 +45,7 @@ use TurboDocx\Types\Requests\Quote\ListProductsRequest;
 use TurboDocx\Types\Requests\Quote\ListQuotesRequest;
 use TurboDocx\Types\Requests\Quote\ListTemplatesRequest;
 use TurboDocx\Types\Requests\Quote\ListTypesRequest;
+use TurboDocx\Types\Requests\Quote\QuoteSummaryRequest;
 use TurboDocx\Types\Requests\Quote\SendQuoteRequest;
 use TurboDocx\Types\Requests\Quote\SendQuoteWithDeliverableRequest;
 use TurboDocx\Types\Requests\Quote\UpdateBundleRequest;
@@ -59,6 +65,7 @@ use TurboDocx\Types\Responses\Quote\ContactListResponse;
 use TurboDocx\Types\Responses\Quote\CreateAndSendResponse;
 use TurboDocx\Types\Responses\Quote\LineItemListResponse;
 use TurboDocx\Types\Responses\Quote\MessageResponse;
+use TurboDocx\Types\Responses\Quote\OpenQuotesResponse;
 use TurboDocx\Types\Responses\Quote\PriceBookListResponse;
 use TurboDocx\Types\Responses\Quote\PriceBookProductListResponse;
 use TurboDocx\Types\Responses\Quote\ProductListResponse;
@@ -179,6 +186,46 @@ final class TurboQuote
     }
 
     /**
+     * One "images" multipart part per image: a file path is read, raw bytes are sent as they
+     * are. The part's type and file extension come from the bytes (PNG / JPEG).
+     *
+     * @param string[] $images File paths or raw image bytes
+     * @return array<array{name: string, contents: string, filename: string, headers: array<string, string>}>
+     */
+    private static function buildImageParts(array $images): array
+    {
+        $parts = [];
+        foreach ($images as $image) {
+            $isPath = strlen($image) < 4096 && !str_contains($image, "\0") && is_file($image);
+            $contents = $isPath ? file_get_contents($image) : $image;
+            if ($contents === false) {
+                throw new Exceptions\ValidationException("Failed to read image file: {$image}");
+            }
+            $detected = FileTypeDetector::detect($contents);
+            $parts[] = [
+                'name' => 'images',
+                'contents' => $contents,
+                'filename' => $isPath ? basename($image) : "image.{$detected['extension']}",
+                'headers' => ['Content-Type' => $detected['mimetype']],
+            ];
+        }
+        return $parts;
+    }
+
+    /**
+     * POST to a duplicate endpoint: the copy's name when given, else no body (the API names the
+     * copy "Copy of …"). Returns the unwrapped copy.
+     *
+     * @return array<string, mixed>
+     */
+    private static function postDuplicate(string $path, ?string $name): array
+    {
+        $client = self::getClient();
+        $response = $name !== null ? $client->post($path, ['name' => $name]) : $client->post($path);
+        return self::unwrap($response);
+    }
+
+    /**
      * POST rows to a bulk-create endpoint and unwrap the results envelope.
      *
      * Rows are serialized verbatim (camelCase keys) inside a `{ rows: [...] }`
@@ -212,6 +259,32 @@ final class TurboQuote
         $params = $request?->toQueryParams() ?? [];
         $response = $client->get('/v1/quotes', $params);
         return QuoteListResponse::fromArray($response);
+    }
+
+    /**
+     * The quote list's summary cards (pipeline, win rate, monthly recurring…) for a set of
+     * filters, in one currency (`summaryCurrency`). The status filter is ignored.
+     *
+     * @param QuoteSummaryRequest|null $request
+     * @return QuoteSummary
+     */
+    public static function getQuoteSummary(?QuoteSummaryRequest $request = null): QuoteSummary
+    {
+        $client = self::getClient();
+        $response = $client->get('/v1/quotes/summary', $request?->toQueryParams() ?? []);
+        return QuoteSummary::fromArray($response['summary'] ?? []);
+    }
+
+    /**
+     * The people and API keys who created the org's quotes — the ids for the `createdBy` filter.
+     *
+     * @return QuoteCreator[]
+     */
+    public static function listQuoteCreators(): array
+    {
+        $client = self::getClient();
+        $response = $client->get('/v1/quotes/creators');
+        return array_map(fn(array $c) => QuoteCreator::fromArray($c), $response['results'] ?? []);
     }
 
     /**
@@ -267,6 +340,9 @@ final class TurboQuote
     /**
      * Delete a quote.
      *
+     * A sent quote is refused with a 409 (ConflictException, code CANNOT_DELETE_SENT_QUOTE) —
+     * void it instead — and so is an accepted one (CANNOT_DELETE_ACCEPTED_QUOTE).
+     *
      * @param string $id
      * @return MessageResponse
      */
@@ -277,15 +353,15 @@ final class TurboQuote
     }
 
     /**
-     * Duplicate a quote.
+     * Duplicate a quote. Pass $name to name the copy; without it the copy is called "Copy of <name>".
      *
      * @param string $id
+     * @param string|null $name
      * @return Quote
      */
-    public static function duplicateQuote(string $id): Quote
+    public static function duplicateQuote(string $id, ?string $name = null): Quote
     {
-        $client = self::getClient();
-        return Quote::fromArray(self::unwrap($client->post("/v1/quotes/{$id}/duplicate")));
+        return Quote::fromArray(self::postDuplicate("/v1/quotes/{$id}/duplicate", $name));
     }
 
     /**
@@ -477,6 +553,84 @@ final class TurboQuote
     }
 
     // ============================================
+    // CUSTOM LINE ITEM IMAGES
+    // Up to three per custom item (a line with no catalog product), PNG or JPEG, 2MB each.
+    // Changes are allowed on draft quotes only.
+    // ============================================
+
+    /**
+     * Every custom line item's images (up to three, in order), keyed by line item ID.
+     *
+     * @param string $quoteId
+     * @return array<string, LineItemImage[]>
+     */
+    public static function getQuoteLineItemImages(string $quoteId): array
+    {
+        $client = self::getClient();
+        $response = $client->get("/v1/quotes/{$quoteId}/items/images");
+        return array_map(fn(array $images) => LineItemImage::listFromArray($images), $response['results'] ?? []);
+    }
+
+    /**
+     * One custom line item's images, in order.
+     *
+     * @param string $quoteId
+     * @param string $itemId
+     * @return LineItemImage[]
+     */
+    public static function getLineItemImages(string $quoteId, string $itemId): array
+    {
+        $client = self::getClient();
+        $response = $client->get("/v1/quotes/{$quoteId}/items/{$itemId}/images");
+        return LineItemImage::listFromArray($response['results'] ?? []);
+    }
+
+    /**
+     * Add images to a custom line item. Returns all of its images.
+     *
+     * @param string $quoteId
+     * @param string $itemId
+     * @param string[] $images File paths or raw image bytes (PNG or JPEG)
+     * @return LineItemImage[]
+     */
+    public static function addLineItemImages(string $quoteId, string $itemId, array $images): array
+    {
+        $client = self::getClient();
+        $response = $client->postFormData("/v1/quotes/{$quoteId}/items/{$itemId}/images", self::buildImageParts($images));
+        return LineItemImage::listFromArray($response['results'] ?? []);
+    }
+
+    /**
+     * Set the order of a custom line item's images, first to last.
+     *
+     * @param string $quoteId
+     * @param string $itemId
+     * @param string[] $imageIds
+     * @return LineItemImage[]
+     */
+    public static function reorderLineItemImages(string $quoteId, string $itemId, array $imageIds): array
+    {
+        $client = self::getClient();
+        $response = $client->put("/v1/quotes/{$quoteId}/items/{$itemId}/images/order", ['imageIds' => $imageIds]);
+        return LineItemImage::listFromArray($response['results'] ?? []);
+    }
+
+    /**
+     * Remove one image from a custom line item. Returns the images left.
+     *
+     * @param string $quoteId
+     * @param string $itemId
+     * @param string $imageId
+     * @return LineItemImage[]
+     */
+    public static function removeLineItemImage(string $quoteId, string $itemId, string $imageId): array
+    {
+        $client = self::getClient();
+        $response = $client->delete("/v1/quotes/{$quoteId}/items/{$itemId}/images/{$imageId}");
+        return LineItemImage::listFromArray($response['results'] ?? []);
+    }
+
+    // ============================================
     // PRODUCTS
     // ============================================
 
@@ -565,15 +719,15 @@ final class TurboQuote
     }
 
     /**
-     * Duplicate a product.
+     * Duplicate a product. Pass $name to name the copy; without it the copy is called "Copy of <name>".
      *
      * @param string $id
+     * @param string|null $name
      * @return Product
      */
-    public static function duplicateProduct(string $id): Product
+    public static function duplicateProduct(string $id, ?string $name = null): Product
     {
-        $client = self::getClient();
-        return Product::fromArray(self::unwrap($client->post("/v1/products/{$id}/duplicate")));
+        return Product::fromArray(self::postDuplicate("/v1/products/{$id}/duplicate", $name));
     }
 
     /**
@@ -586,6 +740,19 @@ final class TurboQuote
     {
         $client = self::getClient();
         $response = $client->post('/v1/products/primary-images', ['productIds' => $productIds]);
+        return $response['results'];
+    }
+
+    /**
+     * The images each product shows on a quote: up to three, in display order (empty when none).
+     *
+     * @param string[] $productIds 1–100 product IDs
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    public static function getProductQuoteImages(array $productIds): array
+    {
+        $client = self::getClient();
+        $response = $client->post('/v1/products/quote-images', ['productIds' => $productIds]);
         return $response['results'];
     }
 
@@ -659,7 +826,8 @@ final class TurboQuote
     }
 
     /**
-     * Delete a price book.
+     * Delete a price book. The org's default price book is refused (400 ValidationException,
+     * code PriceBookIsDefault).
      *
      * @param string $id
      * @return MessageResponse
@@ -671,15 +839,15 @@ final class TurboQuote
     }
 
     /**
-     * Duplicate a price book.
+     * Duplicate a price book. Pass $name to name the copy; without it the copy is called "Copy of <name>".
      *
      * @param string $id
+     * @param string|null $name
      * @return PriceBook
      */
-    public static function duplicatePriceBook(string $id): PriceBook
+    public static function duplicatePriceBook(string $id, ?string $name = null): PriceBook
     {
-        $client = self::getClient();
-        return PriceBook::fromArray(self::unwrap($client->post("/v1/pricebooks/{$id}/duplicate")));
+        return PriceBook::fromArray(self::postDuplicate("/v1/pricebooks/{$id}/duplicate", $name));
     }
 
     /**
@@ -776,15 +944,15 @@ final class TurboQuote
     }
 
     /**
-     * Duplicate a bundle.
+     * Duplicate a bundle. Pass $name to name the copy; without it the copy is called "Copy of <name>".
      *
      * @param string $id
+     * @param string|null $name
      * @return Bundle
      */
-    public static function duplicateBundle(string $id): Bundle
+    public static function duplicateBundle(string $id, ?string $name = null): Bundle
     {
-        $client = self::getClient();
-        return Bundle::fromArray(self::unwrap($client->post("/v1/bundles/{$id}/duplicate")));
+        return Bundle::fromArray(self::postDuplicate("/v1/bundles/{$id}/duplicate", $name));
     }
 
     // ============================================
@@ -855,7 +1023,9 @@ final class TurboQuote
     }
 
     /**
-     * Delete a company.
+     * Delete a company and its contacts. Refused with a 409 (ConflictException, code
+     * CompanyHasOpenQuotes) while it has open quotes (draft, pending approval or sent) —
+     * see getCompanyOpenQuotes().
      *
      * @param string $id
      * @return MessageResponse
@@ -864,6 +1034,18 @@ final class TurboQuote
     {
         $client = self::getClient();
         return MessageResponse::fromArray($client->delete("/v1/companies/{$id}"));
+    }
+
+    /**
+     * The open quotes (draft, pending approval, sent) for a company: what blocks deleting it.
+     *
+     * @param string $companyId
+     * @return OpenQuotesResponse
+     */
+    public static function getCompanyOpenQuotes(string $companyId): OpenQuotesResponse
+    {
+        $client = self::getClient();
+        return OpenQuotesResponse::fromArray($client->get("/v1/companies/{$companyId}/open-quotes"));
     }
 
     /**
@@ -937,7 +1119,9 @@ final class TurboQuote
     }
 
     /**
-     * Delete a contact.
+     * Delete a contact. Refused with a 409 (ConflictException) when they are the company's only
+     * contact (LastContact) or the contact on open quotes (ContactHasOpenQuotes) — see
+     * getContactOpenQuotes().
      *
      * @param string $id
      * @return MessageResponse
@@ -946,6 +1130,18 @@ final class TurboQuote
     {
         $client = self::getClient();
         return MessageResponse::fromArray($client->delete("/v1/contacts/{$id}"));
+    }
+
+    /**
+     * The open quotes (draft, pending approval, sent) made out to a contact: what blocks deleting them.
+     *
+     * @param string $contactId
+     * @return OpenQuotesResponse
+     */
+    public static function getContactOpenQuotes(string $contactId): OpenQuotesResponse
+    {
+        $client = self::getClient();
+        return OpenQuotesResponse::fromArray($client->get("/v1/contacts/{$contactId}/open-quotes"));
     }
 
     // ============================================
@@ -1119,6 +1315,19 @@ final class TurboQuote
         $client = self::getClient();
         $response = $client->patch('/v1/quotes/number-config', $format->toArray());
         return QuoteNumberConfig::fromArray($response['results']);
+    }
+
+    /**
+     * The number the next new quote will get. Read only — the counter doesn't move, so a quote
+     * created by someone else in between takes it first.
+     *
+     * @return NextQuoteNumber
+     */
+    public static function getNextQuoteNumber(): NextQuoteNumber
+    {
+        $client = self::getClient();
+        $response = $client->get('/v1/quotes/number-config/next');
+        return NextQuoteNumber::fromArray($response['results'] ?? []);
     }
 
     // ============================================

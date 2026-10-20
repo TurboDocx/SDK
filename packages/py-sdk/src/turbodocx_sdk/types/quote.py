@@ -72,6 +72,13 @@ class Quote(TypedDict, total=False):
     statusInfo: QuoteStatusInfo
     # Folded on by get_quote from the response's sibling "preparedBy". See QuotePreparedBy.
     preparedBy: QuotePreparedBy
+    # list_quotes only: how many line items the quote has
+    lineItemCount: int
+    # list_quotes only: the quote's signature request has expired
+    isSignatureExpired: bool
+    # list_quotes only: a draft or sent quote past its Valid until day (UTC), or whose
+    # signature expired. The same rule as the "expired" status filter.
+    isExpired: bool
 
 
 # ============================================
@@ -105,14 +112,39 @@ class UpdateQuoteRequest(TypedDict, total=False):
     priceBookId: Optional[str]
 
 
-class ListQuotesOptions(TypedDict, total=False):
+# A quote list status filter: a stored status, or "expired" (a draft or sent quote past its
+# Valid until day, or whose signature expired). "expired" is not a stored status.
+QuoteListStatusFilter = Literal["draft", "pending_approval", "sent", "accepted", "declined", "voided", "expired"]
+
+QuoteSortBy = Literal["updatedOn", "createdOn", "total", "validUntil", "quoteNumber"]
+
+# thisWeek = today through today + 6, thisMonth = the current calendar month, past = before today (UTC)
+QuoteValidUntilWindow = Literal["thisWeek", "thisMonth", "past"]
+
+
+class QuoteSummaryOptions(TypedDict, total=False):
+    """The filters shared by list_quotes and get_quote_summary. Multi-value keys take a str or a list."""
+
+    query: str
+    statuses: Any  # QuoteListStatusFilter | List[QuoteListStatusFilter]
+    companyId: str
+    companyIds: Any  # str | List[str]
+    contactId: str
+    currency: Any  # Currency | List[Currency]
+    currencies: Any  # Currency | List[Currency]
+    createdBy: Any  # user id(s) -- see list_quote_creators
+    createdByApiKeys: bool
+    validUntilWindow: str  # QuoteValidUntilWindow literal
+    validUntilFrom: str  # YYYY-MM-DD, inclusive
+    validUntilTo: str  # YYYY-MM-DD, inclusive
+    summaryCurrency: str  # Currency literal
+
+
+class ListQuotesOptions(QuoteSummaryOptions, total=False):
     limit: int
     offset: int
-    query: str
-    statuses: Any  # QuoteStatus | List[QuoteStatus]
-    companyId: str
-    contactId: str
-    currency: str
+    sortBy: str  # QuoteSortBy literal; default createdOn newest first
+    sortDirection: str  # SortDirection literal
 
 
 class SendQuoteRequest(TypedDict, total=False):
@@ -208,10 +240,86 @@ class QuoteListStats(TypedDict, total=False):
     quotesThisMonth: int
 
 
+class QuoteStatusCounts(TypedDict):
+    """Quotes per list tab: every filter applies except statuses. expired overlaps draft and sent."""
+
+    all: int
+    draft: int
+    pending_approval: int
+    sent: int
+    accepted: int
+    declined: int
+    voided: int
+    expired: int
+
+
+class QuoteSummary(TypedDict, total=False):
+    """The quote list's summary cards, in one currency."""
+
+    currency: str
+    openPipeline: Dict[str, Any]  # {total, count}: draft + sent quotes that aren't expired
+    completed: Dict[str, Any]  # {accepted, declined}
+    createdThisMonth: Dict[str, Any]  # {count}
+    waitingToSign: Dict[str, Any]  # {count}: sent quotes that aren't expired
+    wonThisMonth: Dict[str, Any]  # {count}
+    currencies: List[str]
+    winRate: Dict[str, Any]  # {percent (None when none decided), accepted, declined, windowDays}
+    monthlyRecurring: Dict[str, Any]  # {total, count}
+
+
+class QuoteCreator(TypedDict):
+    """Someone who created quotes in the org: a person, or an API key."""
+
+    id: str  # the value for the createdBy filter
+    name: str
+    email: Optional[str]  # None for an API key
+    isAPIKey: bool
+    apiKeyDeleted: bool
+
+
+class NextQuoteNumber(TypedDict):
+    nextNumber: str
+    sequence: int
+    canEdit: bool  # whether the caller can change numbering (administrators)
+
+
+class OpenQuoteSummary(TypedDict):
+    id: str
+    quoteNumber: str
+    name: Optional[str]
+    status: str
+    updatedOn: str
+
+
+class OpenQuotesResponse(TypedDict):
+    """The open quotes that block deleting a company or contact: the newest 50, and how many in all."""
+
+    results: List[OpenQuoteSummary]
+    totalRecords: int
+
+
+class LineItemImage(TypedDict, total=False):
+    """An image on a custom line item (a line with no catalog product)."""
+
+    id: str
+    lineItemId: str
+    fileId: str
+    displayOrder: int
+    fileName: str
+    fileType: str
+    imageData: str  # base64 data URL
+
+
+# Dict mapping lineItemId -> List[LineItemImage]
+QuoteLineItemImagesResponse = Dict[str, List[LineItemImage]]
+
+
 class QuoteListResponse(TypedDict, total=False):
     results: List[Quote]
     totalRecords: int
     stats: QuoteListStats
+    statusCounts: QuoteStatusCounts
+    summary: QuoteSummary
 
 
 # ============================================

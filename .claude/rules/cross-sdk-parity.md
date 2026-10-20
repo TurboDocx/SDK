@@ -210,25 +210,30 @@ Canonical (JS) names; every SDK implements all 7 with its idiomatic casing (see 
 
 Canonical (JS) names grouped by sub-resource; every SDK implements ALL of these with its
 idiomatic casing (Python/Ruby snake_case, Go PascalCase with upper-cased initialisms).
-68 operations total.
+79 operations total.
 
-- **Number config (admin only):** `getQuoteNumberConfig`, `updateQuoteNumberConfig`
+- **Number config (admin only):** `getQuoteNumberConfig`, `updateQuoteNumberConfig`;
+  `getNextQuoteNumber` (any role that can create quotes, read only)
 - **Quotes CRUD:** `listQuotes`, `createQuote`, `getQuote`, `updateQuote`, `deleteQuote`,
-  `duplicateQuote`, `applyPriceBook`, `removePriceBook`, `downloadQuotePdf`
+  `duplicateQuote`, `applyPriceBook`, `removePriceBook`, `downloadQuotePdf`,
+  `getQuoteSummary`, `listQuoteCreators`
 - **Quote status transitions:** `sendQuote`, `sendQuoteWithDeliverable`, `declineQuote`,
   `voidQuote`, `handleExpiredQuote`
 - **Line items:** `listLineItems`, `addLineItems`, `addBundleLineItems`, `updateLineItem`,
   `removeLineItem`
+- **Custom line item images:** `getQuoteLineItemImages`, `getLineItemImages`, `addLineItemImages`,
+  `reorderLineItemImages`, `removeLineItemImage`
 - **Products:** `listProducts`, `createProduct`, `bulkCreateProducts`, `getProduct`,
-  `updateProduct`, `deleteProduct`, `duplicateProduct`, `getProductPrimaryImages`
+  `updateProduct`, `deleteProduct`, `duplicateProduct`, `getProductPrimaryImages`,
+  `getProductQuoteImages`
 - **Price books:** `listPriceBooks`, `createPriceBook`, `bulkCreatePriceBooks`, `getPriceBook`,
   `updatePriceBook`, `deletePriceBook`, `duplicatePriceBook`, `listPriceBookProducts`
 - **Bundles:** `listBundles`, `createBundle`, `bulkCreateBundles`, `getBundle`, `updateBundle`,
   `deleteBundle`, `duplicateBundle`
 - **Companies:** `listCompanies`, `createCompany`, `bulkCreateCompanies`, `getCompany`,
-  `updateCompany`, `deleteCompany`, `listCompanyContacts`
+  `updateCompany`, `deleteCompany`, `listCompanyContacts`, `getCompanyOpenQuotes`
 - **Contacts:** `listContacts`, `createContact`, `bulkCreateContacts`, `updateContact`,
-  `deleteContact`
+  `deleteContact`, `getContactOpenQuotes`
 - **Quote templates:** `listTemplates`, `getTemplate` (org default, singular endpoint),
   `getTemplateById`, `createTemplate`, `updateTemplate`, `deleteTemplate`
 - **Types/categories:** `listTypes`, `createType`, `bulkCreateTypes`, `updateType`, `deleteType`
@@ -239,6 +244,30 @@ use the single-create request shape. Response is a partial-success report
 `{ imported, failed: [{row, reason}], adjusted: [{row, reason}] }` (`row` is 1-indexed); a failed
 row does NOT throw and does not roll back earlier rows. Max 500 rows per request (400 above the
 cap). Admin + contributor roles. SDKs do NOT validate rows or the cap client-side.
+
+**List sorting and filters:** every list takes `sortBy` + `sortDirection` (`asc` | `desc`), sent
+only when set, so a caller that leaves them out keeps the list's old order. Multi-value filters go
+out as repeated keys. Where the API uses ONE key for one or several values (`billingFrequency` /
+`currency` on products, `currency` on bundles), the typed SDKs keep the single field and add a list
+field for the same key (Go `BillingFrequencies` / `CurrencyCodes` with a `query:"…"` tag, Java
+`setBillingFrequencies` / `setCurrencies`), so existing code compiles unchanged; JS, Python, PHP and
+Ruby take a string or a list. The quote list's own plural keys (`companyIds`, `currencies`) are
+separate params. `expired` in `statuses` is a filter value, not a stored status.
+
+**Duplicates take an optional name:** the four `duplicate*` calls send `{ name }` only when a name is
+given and otherwise send no body (Java sends `{}` as before), so the API's "Copy of …" default stands.
+Go uses a variadic `DuplicateOptions`, Java a `(id, name)` overload, PHP / Python / Ruby an optional
+argument — all source-compatible.
+
+**Custom line item images** go up as `images` multipart parts only (no `data` part), each with the
+MIME type detected from its bytes. Reorder is the only `PUT` in the SDKs.
+
+**Deletes the API refuses** (409 conflict class unless noted): a sent quote
+(`CANNOT_DELETE_SENT_QUOTE`) or an accepted one (`CANNOT_DELETE_ACCEPTED_QUOTE`); a company with open
+quotes (`CompanyHasOpenQuotes`); a contact who is the company's last (`LastContact`) or on open quotes
+(`ContactHasOpenQuotes`); the default price book (400 `PriceBookIsDefault`). Every SDK documents these
+on the delete methods. The SDKs don't expose the 409's `data.openQuotes`; the `get*OpenQuotes` calls
+return the same list.
 
 ## Deliberate Exclusions (do not re-add without a decision)
 

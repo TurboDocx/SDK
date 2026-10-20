@@ -11,15 +11,22 @@ final class ListProductsRequest
 {
     /**
      * @param string[]|null $categoryIds
+     * @param string|string[]|null $billingFrequency
+     * @param string|string[]|null $currency
      */
     public function __construct(
         public readonly ?int $limit = null,
         public readonly ?int $offset = null,
         public readonly ?string $query = null,
         public readonly ?array $categoryIds = null,
-        public readonly ?string $billingFrequency = null,
-        public readonly ?string $currency = null,
+        // One billing frequency / currency, or several
+        public readonly string|array|null $billingFrequency = null,
+        public readonly string|array|null $currency = null,
         public readonly ?bool $showInCatalog = null,
+        // Sort column: 'name' | 'listPrice' | 'createdOn' (default createdOn, newest first)
+        public readonly ?string $sortBy = null,
+        // 'asc' | 'desc'
+        public readonly ?string $sortDirection = null,
     ) {}
 
     /**
@@ -49,6 +56,13 @@ final class ListProductsRequest
         }
         if ($this->showInCatalog !== null) {
             $params['showInCatalog'] = $this->showInCatalog ? 'true' : 'false';
+        }
+
+        if ($this->sortBy !== null) {
+            $params['sortBy'] = $this->sortBy;
+        }
+        if ($this->sortDirection !== null) {
+            $params['sortDirection'] = $this->sortDirection;
         }
 
         return $params;
