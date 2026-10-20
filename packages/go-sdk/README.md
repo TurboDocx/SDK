@@ -854,7 +854,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Override via `&turbodocx.VerifyWebhookSignatureOptions{ToleranceSeconds: N}` (a negative value disables the check — not recommended in production).
+By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Override via `&turbodocx.VerifyWebhookSignatureOptions{ToleranceSeconds: N}` (`0` means the default 300 seconds, so the Go helper cannot turn the check off; a negative value fails closed and rejects every delivery).
 
 ---
 

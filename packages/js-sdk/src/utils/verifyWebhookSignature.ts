@@ -18,7 +18,8 @@ export interface VerifyWebhookSignatureOptions {
   /**
    * Maximum acceptable age of the timestamp header, in seconds.
    * Defaults to 300 (5 minutes). Set to 0 to disable the timestamp check
-   * (NOT recommended in production).
+   * (NOT recommended in production). A negative, NaN or non-number value
+   * fails closed: every delivery is rejected.
    */
   toleranceSeconds?: number;
 
@@ -66,6 +67,8 @@ export function verifyWebhookSignature(
   const toleranceSeconds = options?.toleranceSeconds ?? 300;
   // NaN would make the window comparison below always false, silently accepting any timestamp.
   if (typeof toleranceSeconds !== 'number' || Number.isNaN(toleranceSeconds)) return false;
+  // A negative window would skip the check below and accept any replayed delivery: fail closed.
+  if (toleranceSeconds < 0) return false;
   if (toleranceSeconds > 0) {
     const now = options?.now ? options.now() : Math.floor(Date.now() / 1000);
     if (typeof now !== 'number' || !Number.isFinite(now)) return false;

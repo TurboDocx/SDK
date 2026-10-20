@@ -741,7 +741,7 @@ async def turbodocx_webhook(
     return {"ok": True}
 ```
 
-By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Override with `tolerance_seconds=N` (0 disables the check — not recommended in production).
+By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Override with `tolerance_seconds=N` (0 disables the check — not recommended in production; a negative value fails closed and rejects every delivery).
 
 ---
 

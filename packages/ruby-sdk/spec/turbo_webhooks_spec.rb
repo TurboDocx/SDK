@@ -680,6 +680,20 @@ RSpec.describe "TurboDocxSdk.verify_webhook_signature" do
     ).to be(true)
   end
 
+  it "fails closed for a negative tolerance_seconds even when the timestamp is far outside any window" do
+    fixed = 1_747_000_000
+    sig = sign(payload, fixed.to_s, secret)
+
+    [-1, -300, -0.5].each do |tolerance|
+      expect(
+        TurboDocxSdk.verify_webhook_signature(
+          payload: payload, signature_header: sig, timestamp_header: fixed.to_s, secret: secret,
+          tolerance_seconds: tolerance, now: -> { fixed + 99_999 }
+        )
+      ).to be(false)
+    end
+  end
+
   it "fails closed (rejects) when tolerance_seconds is negative" do
     ts = Time.now.to_i.to_s
     sig = sign(payload, ts, secret)

@@ -77,6 +77,8 @@ public final class WebhookSignatureVerifier {
      * @param secret           webhook secret
      * @param toleranceSeconds maximum acceptable age of the timestamp.
      *                         Set to 0 to disable the check (NOT recommended).
+     *                         A negative value fails closed: every delivery
+     *                         is rejected.
      * @param now              optional override of "current time" for testing.
      *                         Returns Unix epoch seconds. If null, uses
      *                         {@link Instant#now()}.
@@ -88,6 +90,11 @@ public final class WebhookSignatureVerifier {
         if (rawBody == null || signatureHeader == null || signatureHeader.isEmpty()
                 || timestampHeader == null || timestampHeader.isEmpty()
                 || secret == null || secret.isEmpty()) {
+            return false;
+        }
+
+        // A negative window would skip the check below and accept any replayed delivery: fail closed.
+        if (toleranceSeconds < 0) {
             return false;
         }
 

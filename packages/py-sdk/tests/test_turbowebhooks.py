@@ -518,6 +518,16 @@ class TestVerifyWebhookSignature:
             now=lambda: self.NOW_SECONDS + 99999,
         )
 
+    @pytest.mark.parametrize("tolerance_seconds", [-1, -300, -0.5])
+    @pytest.mark.parametrize("offset", [0, 99999])
+    def test_negative_tolerance_fails_closed(self, tolerance_seconds, offset):
+        # A negative tolerance used to skip the window check (`> 0`), accepting any replayed delivery
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        assert verify_webhook_signature(
+            self.BODY, sig, self.TIMESTAMP, self.SECRET,
+            tolerance_seconds=tolerance_seconds, now=lambda: self.NOW_SECONDS + offset,
+        ) is False
+
     def test_rejects_missing_signature(self):
         assert not verify_webhook_signature(self.BODY, "", self.TIMESTAMP, self.SECRET)
 

@@ -61,14 +61,26 @@ func TestVerifyWebhookSignature(t *testing.T) {
 		))
 	})
 
-	t.Run("negative tolerance disables the timestamp check", func(t *testing.T) {
+	// A negative tolerance used to disable the window check, accepting any replayed delivery.
+	t.Run("negative tolerance fails closed", func(t *testing.T) {
+		sig := sign(testBody, testTimestamp, testSecret)
+		for _, now := range []int64{testNowSeconds, testNowSeconds + 99999} {
+			assert.False(t, VerifyWebhookSignature(
+				[]byte(testBody), sig, testTimestamp, testSecret,
+				&VerifyWebhookSignatureOptions{ToleranceSeconds: -1, Now: nowFn(now)},
+			))
+		}
+	})
+
+	t.Run("zero tolerance means the default 300s window", func(t *testing.T) {
 		sig := sign(testBody, testTimestamp, testSecret)
 		assert.True(t, VerifyWebhookSignature(
 			[]byte(testBody), sig, testTimestamp, testSecret,
-			&VerifyWebhookSignatureOptions{
-				ToleranceSeconds: -1,
-				Now:              nowFn(testNowSeconds + 99999),
-			},
+			&VerifyWebhookSignatureOptions{ToleranceSeconds: 0, Now: nowFn(testNowSeconds + 300)},
+		))
+		assert.False(t, VerifyWebhookSignature(
+			[]byte(testBody), sig, testTimestamp, testSecret,
+			&VerifyWebhookSignatureOptions{ToleranceSeconds: 0, Now: nowFn(testNowSeconds + 301)},
 		))
 	})
 

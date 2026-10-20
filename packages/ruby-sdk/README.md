@@ -896,7 +896,7 @@ event = JSON.parse(raw_body)
 [200, {}, ["ok"]]
 ```
 
-By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Override with `tolerance_seconds: N` (`0` disables the check — not recommended in production). Comparison uses constant-time equality.
+By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Override with `tolerance_seconds: N` (`0` disables the check — not recommended in production; a negative value fails closed and rejects every delivery). Comparison uses constant-time equality.
 
 #### All Methods
 

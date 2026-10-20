@@ -67,7 +67,8 @@ def verify_webhook_signature(
             `regenerate_webhook_secret`, as str or bytes-like.
         tolerance_seconds: Maximum acceptable age of the timestamp, in seconds.
             Defaults to 300 (5 minutes). Set to 0 to disable the timestamp check
-            (NOT recommended in production). A non-numeric or NaN value fails closed.
+            (NOT recommended in production). A negative, non-numeric or NaN value fails
+            closed: every delivery is rejected.
         now: Override the "current time" function for deterministic testing.
             Returns Unix epoch seconds (int or float). Defaults to `int(time.time())`.
             A non-numeric or NaN result fails closed.
@@ -91,6 +92,10 @@ def verify_webhook_signature(
         return False
 
     if not _is_real_number(tolerance_seconds):
+        return False
+
+    # A negative window would skip the check below and accept any replayed delivery: fail closed.
+    if tolerance_seconds < 0:
         return False
 
     if tolerance_seconds > 0:

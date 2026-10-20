@@ -569,6 +569,18 @@ describe("verifyWebhookSignature", () => {
     ).toBe(true);
   });
 
+  // A negative tolerance used to skip the window check (`> 0`), accepting any replayed delivery.
+  it("should fail closed (return false) when toleranceSeconds is negative", () => {
+    for (const toleranceSeconds of [-1, -300]) {
+      expect(
+        verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, { toleranceSeconds, now: () => NOW_SECONDS }),
+      ).toBe(false);
+      expect(
+        verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, { toleranceSeconds, now: () => NOW_SECONDS + 99999 }),
+      ).toBe(false);
+    }
+  });
+
   it("should reject when signature header is missing", () => {
     expect(verifyWebhookSignature(BODY, "", TIMESTAMP, SECRET)).toBe(false);
   });

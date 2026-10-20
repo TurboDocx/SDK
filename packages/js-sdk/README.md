@@ -801,7 +801,7 @@ app.post(
 );
 ```
 
-By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Override with `{ toleranceSeconds: N }` (0 disables the check — not recommended in production).
+By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Override with `{ toleranceSeconds: N }` (0 disables the check — not recommended in production; a negative value fails closed and rejects every delivery).
 
 ---
 

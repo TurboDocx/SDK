@@ -983,7 +983,7 @@ if (!WebhookSignatureVerifier.verify(rawBody, signature, timestamp, secret)) {
 // Now safe to parse and process
 ```
 
-By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Use the full 6-arg overload to override `toleranceSeconds` (0 disables the check — not recommended in production) or to inject a `now` supplier for testing.
+By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Use the full 6-arg overload to override `toleranceSeconds` (0 disables the check — not recommended in production; a negative value fails closed and rejects every delivery) or to inject a `now` supplier for testing.
 
 ---
 
