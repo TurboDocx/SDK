@@ -4,7 +4,9 @@ import com.google.gson.annotations.SerializedName;
 import java.util.List;
 
 /**
- * The single-use embedded signing URL and its metadata.
+ * The embedded signing URL and its metadata: the reusable signing link for {@code otp} /
+ * no-verification recipients, or a single-use link for {@code external_idv} / {@code override}
+ * recipients.
  */
 public class CreateSigningUrlResponse {
     /** The URL to open (new tab / redirect) or embed for the signer. */

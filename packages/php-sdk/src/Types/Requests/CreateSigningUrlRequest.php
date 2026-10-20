@@ -7,7 +7,7 @@ namespace TurboDocx\Types\Requests;
 use TurboDocx\Types\IdentityAssertion;
 
 /**
- * Request a single-use embedded signing URL for one recipient.
+ * Request an embedded signing URL for one recipient.
  *
  * Provide exactly one selector: `recipientId` OR `externalId`. Mirrors the TypeScript SDK's
  * `CreateSigningUrlRequest`.
