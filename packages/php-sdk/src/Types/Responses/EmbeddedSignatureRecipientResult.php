@@ -25,6 +25,7 @@ final class EmbeddedSignatureRecipientResult
      *     'ready' signer, the mode the backend resolved for the URL; for 'pending' / 'completed' no
      *     URL was minted, so it is the mode you requested via `auth` (null when you set none, even
      *     if the org's default channel applies). createSigningUrl() reports the effective mode.
+     *     From createEmbeddedSignature() it is only ever 'otp' or null.
      */
     public function __construct(
         public string $recipientId,

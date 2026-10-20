@@ -2,7 +2,10 @@ package com.turbodocx.models;
 
 /**
  * Per-recipient identity check for embedded signing, in ergonomic shorthand. Expands to the
- * recipient's {@link IdentityVerification}. Leave both unset for no identity verification.
+ * recipient's {@link IdentityVerification}. Leave both unset to take the org's default channel (no
+ * verification when that default is {@code none}). Email and SMS passcodes only: for
+ * {@code external_idv} or {@code override}, use {@code TurboSign.sendSignature} +
+ * {@code TurboSign.createSigningUrl} instead.
  *
  * <p>{@code emailOtp} wins if both are set (matching the JS resolution order).
  */
