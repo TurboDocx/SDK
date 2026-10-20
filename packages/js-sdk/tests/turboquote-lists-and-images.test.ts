@@ -95,7 +95,7 @@ describe("TurboQuote lists, reads and images", () => {
         results: [{ id: "q-1", status: "sent", isExpired: true, isSignatureExpired: false, lineItemCount: 3 }],
         totalRecords: 1,
         stats: { total: 1 },
-        statusCounts: { all: 1, draft: 0, pending_approval: 0, sent: 1, accepted: 0, declined: 0, voided: 0, expired: 1 },
+        statusCounts: { all: 1, draft: 0, sent: 1, accepted: 0, declined: 0, voided: 0, expired: 1 },
         summary: {
           currency: "USD",
           openPipeline: { total: 0, count: 0 },

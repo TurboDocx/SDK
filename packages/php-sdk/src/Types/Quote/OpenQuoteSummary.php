@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace TurboDocx\Types\Quote;
 
 /**
- * An open quote (draft, pending approval or sent) for a company or contact
+ * An open quote (draft or sent) for a company or contact
  */
 final class OpenQuoteSummary implements \JsonSerializable
 {

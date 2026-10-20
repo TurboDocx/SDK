@@ -2608,7 +2608,7 @@ paths:
       - TurboQuote
       operationId: getV1CompaniesByIdOpenQuotes
       summary: GET /v1/companies/{id}/open-quotes
-      description: 'The open quotes (draft, pending approval, sent) for a company, which block deleting it.'
+      description: 'The open quotes (draft or sent) for a company, which block deleting it.'
       parameters:
       - name: id
         in: path
@@ -2792,7 +2792,7 @@ paths:
       - TurboQuote
       operationId: getV1ContactsByIdOpenQuotes
       summary: GET /v1/contacts/{id}/open-quotes
-      description: 'The open quotes (draft, pending approval, sent) made out to a contact, which block deleting them.'
+      description: 'The open quotes (draft or sent) made out to a contact, which block deleting them.'
       parameters:
       - name: id
         in: path

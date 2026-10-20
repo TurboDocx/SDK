@@ -760,7 +760,7 @@ public final class TurboQuote {
 
     /**
      * Delete a company and its contacts. Refused with a 409 ({@code ConflictException}, code
-     * {@code CompanyHasOpenQuotes}) while it has open quotes (draft, pending approval or sent) —
+     * {@code CompanyHasOpenQuotes}) while it has open quotes (draft or sent) —
      * see {@link #getCompanyOpenQuotes(String)}.
      */
     public SuccessResponse deleteCompany(String id) throws IOException {
@@ -768,7 +768,7 @@ public final class TurboQuote {
     }
 
     /**
-     * The open quotes (draft, pending approval, sent) for a company: what blocks deleting it.
+     * The open quotes (draft or sent) for a company: what blocks deleting it.
      */
     public OpenQuotesResponse getCompanyOpenQuotes(String companyId) throws IOException {
         return httpClient.get("/v1/companies/" + companyId + "/open-quotes", OpenQuotesResponse.class);
@@ -845,7 +845,7 @@ public final class TurboQuote {
     }
 
     /**
-     * The open quotes (draft, pending approval, sent) made out to a contact: what blocks deleting them.
+     * The open quotes (draft or sent) made out to a contact: what blocks deleting them.
      */
     public OpenQuotesResponse getContactOpenQuotes(String contactId) throws IOException {
         return httpClient.get("/v1/contacts/" + contactId + "/open-quotes", OpenQuotesResponse.class);

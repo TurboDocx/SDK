@@ -900,8 +900,8 @@ module TurboDocxSdk
         unwrap(client.patch("/v1/companies/#{id}", request))
       end
 
-      # Delete a company and its contacts. Refused while it has open quotes (draft, pending
-      # approval or sent) -- see +get_company_open_quotes+.
+      # Delete a company and its contacts. Refused while it has open quotes (draft or
+      # sent) -- see +get_company_open_quotes+.
       #
       # @param id [String]
       # @return [Hash] { "message" => "..." }
@@ -914,7 +914,7 @@ module TurboDocxSdk
         client.delete("/v1/companies/#{id}")
       end
 
-      # The open quotes (draft, pending approval, sent) for a company: what blocks deleting it.
+      # The open quotes (draft or sent) for a company: what blocks deleting it.
       #
       # @param company_id [String]
       # @return [Hash] { "results" => [{ "id", "quoteNumber", "name", "status", "updatedOn" }], "totalRecords" => N }
@@ -1009,7 +1009,7 @@ module TurboDocxSdk
         client.delete("/v1/contacts/#{id}")
       end
 
-      # The open quotes (draft, pending approval, sent) made out to a contact: what blocks deleting them.
+      # The open quotes (draft or sent) made out to a contact: what blocks deleting them.
       #
       # @param contact_id [String]
       # @return [Hash] { "results" => [...], "totalRecords" => N }

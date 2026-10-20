@@ -959,7 +959,7 @@ const byItem = await TurboQuote.getQuoteLineItemImages(quote.id); // { [lineItem
 
 **Deletes the API refuses.** `deleteQuote` on a **sent** quote is a 409 `ConflictError` with code
 `CANNOT_DELETE_SENT_QUOTE` — void it instead; an accepted quote is a 409 `CANNOT_DELETE_ACCEPTED_QUOTE`.
-`deleteCompany` is a 409 `CompanyHasOpenQuotes` while the company has open quotes (draft, pending approval or
+`deleteCompany` is a 409 `CompanyHasOpenQuotes` while the company has open quotes (draft or
 sent), and `deleteContact` is a 409 `LastContact` (the company's only contact) or `ContactHasOpenQuotes`.
 `deletePriceBook` on the org's default price book is a 400 `ValidationError` `PriceBookIsDefault`. Branch on
 `err.code`; `getCompanyOpenQuotes` / `getContactOpenQuotes` list the open quotes that block a delete.

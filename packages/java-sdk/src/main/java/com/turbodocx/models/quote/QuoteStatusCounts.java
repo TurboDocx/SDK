@@ -1,6 +1,5 @@
 package com.turbodocx.models.quote;
 
-import com.google.gson.annotations.SerializedName;
 
 /**
  * Quotes per quote list tab. Every list filter applies except the status filter, so each count is
@@ -9,8 +8,6 @@ import com.google.gson.annotations.SerializedName;
 public class QuoteStatusCounts {
     private int all;
     private int draft;
-    @SerializedName("pending_approval")
-    private int pendingApproval;
     private int sent;
     private int accepted;
     private int declined;
@@ -19,7 +16,6 @@ public class QuoteStatusCounts {
 
     public int getAll() { return all; }
     public int getDraft() { return draft; }
-    public int getPendingApproval() { return pendingApproval; }
     public int getSent() { return sent; }
     public int getAccepted() { return accepted; }
     public int getDeclined() { return declined; }

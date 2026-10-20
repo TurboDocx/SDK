@@ -793,15 +793,15 @@ class TurboQuote:
         """
         Delete a company and its contacts.
 
-        Refused with a 409 (``CompanyHasOpenQuotes``) while it has open quotes (draft, pending
-        approval or sent) -- see ``get_company_open_quotes``.
+        Refused with a 409 (``CompanyHasOpenQuotes``) while it has open quotes (draft or
+        sent) -- see ``get_company_open_quotes``.
         """
         client = cls._get_client()
         return await client.delete(f"/v1/companies/{id}")
 
     @classmethod
     async def get_company_open_quotes(cls, company_id: str) -> Dict[str, Any]:
-        """The open quotes (draft, pending approval, sent) for a company: what blocks deleting it."""
+        """The open quotes (draft or sent) for a company: what blocks deleting it."""
         client = cls._get_client()
         return await client.get(f"/v1/companies/{company_id}/open-quotes")
 
@@ -857,7 +857,7 @@ class TurboQuote:
 
     @classmethod
     async def get_contact_open_quotes(cls, contact_id: str) -> Dict[str, Any]:
-        """The open quotes (draft, pending approval, sent) made out to a contact: what blocks deleting them."""
+        """The open quotes (draft or sent) made out to a contact: what blocks deleting them."""
         client = cls._get_client()
         return await client.get(f"/v1/contacts/{contact_id}/open-quotes")
 

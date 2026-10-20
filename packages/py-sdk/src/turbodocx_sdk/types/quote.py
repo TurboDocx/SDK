@@ -114,7 +114,7 @@ class UpdateQuoteRequest(TypedDict, total=False):
 
 # A quote list status filter: a stored status, or "expired" (a draft or sent quote past its
 # Valid until day, or whose signature expired). "expired" is not a stored status.
-QuoteListStatusFilter = Literal["draft", "pending_approval", "sent", "accepted", "declined", "voided", "expired"]
+QuoteListStatusFilter = Literal["draft", "sent", "accepted", "declined", "voided", "expired"]
 
 QuoteSortBy = Literal["updatedOn", "createdOn", "total", "validUntil", "quoteNumber"]
 
@@ -245,7 +245,6 @@ class QuoteStatusCounts(TypedDict):
 
     all: int
     draft: int
-    pending_approval: int
     sent: int
     accepted: int
     declined: int

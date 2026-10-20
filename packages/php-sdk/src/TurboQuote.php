@@ -1024,7 +1024,7 @@ final class TurboQuote
 
     /**
      * Delete a company and its contacts. Refused with a 409 (ConflictException, code
-     * CompanyHasOpenQuotes) while it has open quotes (draft, pending approval or sent) —
+     * CompanyHasOpenQuotes) while it has open quotes (draft or sent) —
      * see getCompanyOpenQuotes().
      *
      * @param string $id
@@ -1037,7 +1037,7 @@ final class TurboQuote
     }
 
     /**
-     * The open quotes (draft, pending approval, sent) for a company: what blocks deleting it.
+     * The open quotes (draft or sent) for a company: what blocks deleting it.
      *
      * @param string $companyId
      * @return OpenQuotesResponse
@@ -1133,7 +1133,7 @@ final class TurboQuote
     }
 
     /**
-     * The open quotes (draft, pending approval, sent) made out to a contact: what blocks deleting them.
+     * The open quotes (draft or sent) made out to a contact: what blocks deleting them.
      *
      * @param string $contactId
      * @return OpenQuotesResponse

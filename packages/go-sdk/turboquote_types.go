@@ -479,14 +479,13 @@ type QuoteListResponse struct {
 
 // QuoteStatusCounts holds the quotes per list tab. Expired overlaps Draft and Sent.
 type QuoteStatusCounts struct {
-	All             int `json:"all"`
-	Draft           int `json:"draft"`
-	PendingApproval int `json:"pending_approval"`
-	Sent            int `json:"sent"`
-	Accepted        int `json:"accepted"`
-	Declined        int `json:"declined"`
-	Voided          int `json:"voided"`
-	Expired         int `json:"expired"`
+	All      int `json:"all"`
+	Draft    int `json:"draft"`
+	Sent     int `json:"sent"`
+	Accepted int `json:"accepted"`
+	Declined int `json:"declined"`
+	Voided   int `json:"voided"`
+	Expired  int `json:"expired"`
 }
 
 // QuoteSummaryAmount is a total with how many quotes make it up
@@ -537,7 +536,7 @@ type NextQuoteNumber struct {
 	CanEdit bool `json:"canEdit"`
 }
 
-// OpenQuoteSummary is an open quote (draft, pending approval or sent) for a company or contact
+// OpenQuoteSummary is an open quote (draft or sent) for a company or contact
 type OpenQuoteSummary struct {
 	ID          string      `json:"id"`
 	QuoteNumber string      `json:"quoteNumber"`

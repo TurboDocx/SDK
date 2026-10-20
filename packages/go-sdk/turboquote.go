@@ -881,7 +881,7 @@ func (c *QuoteClient) UpdateCompany(ctx context.Context, id string, request *Upd
 }
 
 // DeleteCompany deletes a company and its contacts. Refused with a 409 ConflictError
-// (CompanyHasOpenQuotes) while it has open quotes (draft, pending approval or sent) — see
+// (CompanyHasOpenQuotes) while it has open quotes (draft or sent) — see
 // GetCompanyOpenQuotes.
 func (c *QuoteClient) DeleteCompany(ctx context.Context, id string) (*QuoteSuccessResponse, error) {
 	var result QuoteSuccessResponse
@@ -891,7 +891,7 @@ func (c *QuoteClient) DeleteCompany(ctx context.Context, id string) (*QuoteSucce
 	return &result, nil
 }
 
-// GetCompanyOpenQuotes retrieves the open quotes (draft, pending approval, sent) for a company:
+// GetCompanyOpenQuotes retrieves the open quotes (draft or sent) for a company:
 // what blocks deleting it
 func (c *QuoteClient) GetCompanyOpenQuotes(ctx context.Context, companyID string) (*OpenQuotesResponse, error) {
 	var result OpenQuotesResponse
@@ -965,7 +965,7 @@ func (c *QuoteClient) DeleteContact(ctx context.Context, id string) (*QuoteSucce
 	return &result, nil
 }
 
-// GetContactOpenQuotes retrieves the open quotes (draft, pending approval, sent) made out to a
+// GetContactOpenQuotes retrieves the open quotes (draft or sent) made out to a
 // contact: what blocks deleting them
 func (c *QuoteClient) GetContactOpenQuotes(ctx context.Context, contactID string) (*OpenQuotesResponse, error) {
 	var result OpenQuotesResponse

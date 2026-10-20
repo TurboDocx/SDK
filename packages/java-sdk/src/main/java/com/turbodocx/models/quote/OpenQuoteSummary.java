@@ -1,7 +1,7 @@
 package com.turbodocx.models.quote;
 
 /**
- * An open quote (draft, pending approval or sent) for a company or contact.
+ * An open quote (draft or sent) for a company or contact.
  */
 public class OpenQuoteSummary {
     private String id;

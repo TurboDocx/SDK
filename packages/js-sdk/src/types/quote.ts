@@ -288,7 +288,6 @@ export interface QuoteListStats {
 export interface QuoteStatusCounts {
   all: number;
   draft: number;
-  pending_approval: number;
   sent: number;
   accepted: number;
   declined: number;
@@ -353,7 +352,7 @@ export interface DuplicateOptions {
   name?: string;
 }
 
-/** An open quote (draft, pending approval or sent) for a company or contact. */
+/** An open quote (draft or sent) for a company or contact. */
 export interface OpenQuoteSummary {
   id: string;
   quoteNumber: string;

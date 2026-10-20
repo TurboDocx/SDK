@@ -1008,7 +1008,7 @@ byItem, err := client.GetQuoteLineItemImages(ctx, quote.ID) // map[lineItemID][]
 
 **Deletes the API refuses.** `DeleteQuote` on a **sent** quote is a 409 `*ConflictError` with code
 `CANNOT_DELETE_SENT_QUOTE` — void it instead; an accepted quote is a 409 `CANNOT_DELETE_ACCEPTED_QUOTE`.
-`DeleteCompany` is a 409 `CompanyHasOpenQuotes` while the company has open quotes (draft, pending approval or
+`DeleteCompany` is a 409 `CompanyHasOpenQuotes` while the company has open quotes (draft or
 sent), and `DeleteContact` is a 409 `LastContact` (the company's only contact) or `ContactHasOpenQuotes`.
 `DeletePriceBook` on the org's default price book is a 400 `*ValidationError` `PriceBookIsDefault`. Branch on
 `err.Code`; `GetCompanyOpenQuotes` / `GetContactOpenQuotes` list the open quotes that block a delete.

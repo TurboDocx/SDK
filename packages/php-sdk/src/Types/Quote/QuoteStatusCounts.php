@@ -13,7 +13,6 @@ final class QuoteStatusCounts implements \JsonSerializable
     public function __construct(
         public readonly int $all = 0,
         public readonly int $draft = 0,
-        public readonly int $pendingApproval = 0,
         public readonly int $sent = 0,
         public readonly int $accepted = 0,
         public readonly int $declined = 0,
@@ -30,7 +29,6 @@ final class QuoteStatusCounts implements \JsonSerializable
         return new self(
             all: (int) ($data['all'] ?? 0),
             draft: (int) ($data['draft'] ?? 0),
-            pendingApproval: (int) ($data['pending_approval'] ?? 0),
             sent: (int) ($data['sent'] ?? 0),
             accepted: (int) ($data['accepted'] ?? 0),
             declined: (int) ($data['declined'] ?? 0),
@@ -47,7 +45,6 @@ final class QuoteStatusCounts implements \JsonSerializable
         return [
             'all' => $this->all,
             'draft' => $this->draft,
-            'pending_approval' => $this->pendingApproval,
             'sent' => $this->sent,
             'accepted' => $this->accepted,
             'declined' => $this->declined,

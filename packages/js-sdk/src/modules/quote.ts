@@ -608,14 +608,14 @@ export class TurboQuote {
 
   /**
    * Delete a company and its contacts. Refused with a 409 (`CompanyHasOpenQuotes`) while it has
-   * open quotes (draft, pending approval or sent) — see `getCompanyOpenQuotes`.
+   * open quotes (draft or sent) — see `getCompanyOpenQuotes`.
    */
   static async deleteCompany(id: string): Promise<SuccessResponse> {
     const client = this.getClient();
     return client.delete<SuccessResponse>(`/v1/companies/${id}`);
   }
 
-  /** The open quotes (draft, pending approval, sent) for a company: what blocks deleting it. */
+  /** The open quotes (draft or sent) for a company: what blocks deleting it. */
   static async getCompanyOpenQuotes(companyId: string): Promise<OpenQuotesResponse> {
     const client = this.getClient();
     return client.get<OpenQuotesResponse>(`/v1/companies/${companyId}/open-quotes`);
@@ -658,7 +658,7 @@ export class TurboQuote {
     return client.delete<SuccessResponse>(`/v1/contacts/${id}`);
   }
 
-  /** The open quotes (draft, pending approval, sent) made out to a contact: what blocks deleting them. */
+  /** The open quotes (draft or sent) made out to a contact: what blocks deleting them. */
   static async getContactOpenQuotes(contactId: string): Promise<OpenQuotesResponse> {
     const client = this.getClient();
     return client.get<OpenQuotesResponse>(`/v1/contacts/${contactId}/open-quotes`);
