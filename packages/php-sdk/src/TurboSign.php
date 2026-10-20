@@ -151,8 +151,7 @@ final class TurboSign
                 '/turbosign/single/prepare-for-review',
                 $request->file,
                 'file',
-                // Sent as a form field: the API stores it as the document's file name, whatever its extension
-                $request->fileName !== null && $request->fileName !== '' ? [...$formData, 'fileName' => $request->fileName] : $formData
+                self::withFileName($formData, $request->fileName)
             );
             return CreateSignatureReviewLinkResponse::fromArray($response);
         } else {
@@ -251,8 +250,7 @@ final class TurboSign
                 '/turbosign/single/prepare-for-signing',
                 $request->file,
                 'file',
-                // Sent as a form field: the API stores it as the document's file name, whatever its extension
-                $request->fileName !== null && $request->fileName !== '' ? [...$formData, 'fileName' => $request->fileName] : $formData
+                self::withFileName($formData, $request->fileName)
             );
             return SendSignatureResponse::fromArray($response);
         } else {
@@ -794,6 +792,20 @@ final class TurboSign
                 }
             }
         }
+    }
+
+    /**
+     * Add `fileName` to an upload's form fields when it is non-empty. It is a form field, not the
+     * part's filename: the API stores it as the document's file name, whatever its extension, and
+     * checks the uploaded part's own extension. An empty one is left out, so the API falls back to
+     * the part's name.
+     *
+     * @param array<string, mixed> $formData
+     * @return array<string, mixed>
+     */
+    private static function withFileName(array $formData, ?string $fileName): array
+    {
+        return $fileName !== null && $fileName !== '' ? [...$formData, 'fileName' => $fileName] : $formData;
     }
 
     /**

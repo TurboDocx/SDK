@@ -533,9 +533,7 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 	var response CreateSignatureReviewLinkResponse
 
 	if len(req.File) > 0 {
-		if req.FileName != "" {
-			formData["fileName"] = req.FileName // a form field: the API checks the uploaded part's extension
-		}
+		setFileName(formData, req.FileName)
 		err := c.http.UploadFile(ctx, "/turbosign/single/prepare-for-review", req.File, "", formData, &response)
 		if err != nil {
 			return nil, err
@@ -626,9 +624,7 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 	var response SendSignatureResponse
 
 	if len(req.File) > 0 {
-		if req.FileName != "" {
-			formData["fileName"] = req.FileName // a form field: the API checks the uploaded part's extension
-		}
+		setFileName(formData, req.FileName)
 		err := c.http.UploadFile(ctx, "/turbosign/single/prepare-for-signing", req.File, "", formData, &response)
 		if err != nil {
 			return nil, err
@@ -784,6 +780,16 @@ func (c *TurboSignClient) ResendEmail(ctx context.Context, documentID string, re
 	}
 
 	return &response, nil
+}
+
+// setFileName adds fileName to an upload's form fields when it is non-empty. It is a form field,
+// not the part's filename: the API stores it as the document's file name, whatever its extension,
+// and checks the uploaded part's own extension. An empty one is left out, so the API falls back to
+// the part's name.
+func setFileName(formData map[string]string, fileName string) {
+	if fileName != "" {
+		formData["fileName"] = fileName
+	}
 }
 
 // applyScheduleOverrides copies per-document reminder/expiration overrides onto an outgoing

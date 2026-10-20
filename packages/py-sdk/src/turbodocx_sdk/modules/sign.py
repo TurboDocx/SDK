@@ -151,6 +151,16 @@ class TurboSign:
 
 
     @staticmethod
+    def _with_file_name(form_data: Dict[str, Any], file_name: Optional[str]) -> Dict[str, Any]:
+        """
+        Add ``fileName`` to an upload's form fields when it is non-empty. It is a form field, not
+        the part's filename: the API stores it as the document's file name, whatever its extension,
+        and checks the part's own extension. An empty one is left out, so the API falls back to the
+        part's name.
+        """
+        return {**form_data, "fileName": file_name} if file_name else form_data
+
+    @staticmethod
     def _apply_schedule_overrides(
         target: Dict[str, Any],
         *,
@@ -320,13 +330,10 @@ class TurboSign:
                 expiration_warning_interval=expiration_warning_interval,
             )
 
-            if file_name:
-                # A form field, not the part's filename: the API checks the part's extension
-                form_data["fileName"] = file_name
             return await client.upload_file(
                 "/turbosign/single/prepare-for-review",
                 file=file,
-                additional_data=form_data
+                additional_data=cls._with_file_name(form_data, file_name)
             )
         else:
             # For JSON body (template_id, file_link, deliverable_id)
@@ -521,13 +528,10 @@ class TurboSign:
                 expiration_warning_interval=expiration_warning_interval,
             )
 
-            if file_name:
-                # A form field, not the part's filename: the API checks the part's extension
-                form_data["fileName"] = file_name
             return await client.upload_file(
                 "/turbosign/single/prepare-for-signing",
                 file=file,
-                additional_data=form_data
+                additional_data=cls._with_file_name(form_data, file_name)
             )
         else:
             # For JSON body (template_id, file_link, deliverable_id)
