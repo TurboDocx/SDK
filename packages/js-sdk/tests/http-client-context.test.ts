@@ -146,8 +146,10 @@ describe('HttpClient client-context headers', () => {
 
   it('applies context headers on the browser File upload branch', async () => {
     const fn = mockOkFetch();
-    // A global File (Node 20+/browser) takes the File branch of uploadFile.
-    const file = new File([Buffer.from('%PDF-1.4 test')], 'test.pdf', { type: 'application/pdf' });
+    // A File (neither a path nor a Buffer) takes the File branch of uploadFile. Node 18 has no
+    // global File, so fall back to buffer.File there; CI runs this suite on Node 18 and 22.
+    const FileCtor: typeof File = globalThis.File ?? (require('buffer') as { File: typeof File }).File;
+    const file = new FileCtor([Buffer.from('%PDF-1.4 test')], 'test.pdf', { type: 'application/pdf' });
     await makeClient({ clientContext: { ipAddress: '203.0.113.7' } })
       .uploadFile('/turbosign/single/prepare-for-review', file as any, 'file', { documentName: 'x' });
     const headers = lastHeaders(fn);
