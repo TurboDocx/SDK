@@ -24,11 +24,13 @@ When bumping, update **all** of these to the identical `MAJOR.MINOR.PATCH` strin
 | java-sdk | `packages/java-sdk/pom.xml` **and** `packages/java-sdk/src/main/java/com/turbodocx/ClientContext.java` | `<version>` + `static final String VERSION` |
 | ruby-sdk | `packages/ruby-sdk/turbodocx-sdk.gemspec` **and** `packages/ruby-sdk/lib/turbodocx_sdk.rb` | `spec.version` + `VERSION =` (Ruby carries the version in two places — keep them in sync) |
 
-**Java README install snippets.** Java has no version-less install, so five README snippets pin it:
-`packages/java-sdk/README.md` (Maven, Gradle Groovy, Gradle Kotlin) and the root `README.md` (the
-language-table Gradle line and the Java Maven snippet). Bump all five with the pom, or the READMEs hand
-users an old SDK (they sat at 0.6.1 / 0.2.0 / 0.1.4 while the SDK was 0.8.0). Check with
-`git grep -nE "turbodocx-sdk:[0-9]|<version>[0-9]" -- README.md packages/java-sdk/README.md` (exactly five lines).
+**Java version pins in docs and examples.** Java has no version-less install, so seven lines pin it:
+five README install snippets (`packages/java-sdk/README.md` Maven, Gradle Groovy, Gradle Kotlin; the root
+`README.md` language-table Gradle line and Java Maven snippet) and the two `target/turbodocx-sdk-X.Y.Z.jar`
+run lines in `packages/java-sdk/examples/TurboWebhooksCrud.java`. Bump all seven with the pom, or the docs
+hand users an old SDK (they sat at 0.6.1 / 0.2.0 / 0.1.4 while the SDK was 0.8.0). Check with
+`git grep -nE "turbodocx-sdk:[0-9]|<version>[0-9]|turbodocx-sdk-[0-9]" -- README.md packages/java-sdk/README.md packages/java-sdk/examples/`
+(exactly seven lines, all on the new version).
 
 **Why py/java/ruby carry the version twice:** the registry manifest (`pyproject.toml`,
 `pom.xml`, `.gemspec`) is not readable at runtime, but the client-context User-Agent must
@@ -42,7 +44,7 @@ drifted this way once: py `__version__` sat at 0.2.0 and java `ClientContext.VER
 ## Checklist for a release bump
 
 1. Pick the new version (semver: breaking → MAJOR, additive → MINOR, fix → PATCH).
-2. Update the field(s) above in all six SDKs to that exact string, plus the five Java README install pins.
+2. Update the field(s) above in all six SDKs to that exact string, plus the seven Java version pins (README snippets and the example jar path).
 3. Grep to confirm none were missed and none still carry the old version:
    ```bash
    git grep -nE '"version"|version *=|const Version|<version>|spec\.version|VERSION *=' packages/*/  # spot every version site
