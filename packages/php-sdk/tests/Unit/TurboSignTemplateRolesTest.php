@@ -61,7 +61,7 @@ final class TurboSignTemplateRolesTest extends TestCase
         new Recipient(name: 'Jane Doe', email: 'jane@client.com');
     }
 
-    public function testSendSignatureSendsRoleAndNoFieldsKeyWhenOmitted(): void
+    public function testSendSignatureSendsRoleAndEmptyFieldsWhenOmitted(): void
     {
         $this->injectTurboSignClient([
             $this->ok(['success' => true, 'documentId' => 'doc-1', 'status' => 'under_review', 'message' => 'ok']),
@@ -81,10 +81,10 @@ final class TurboSignTemplateRolesTest extends TestCase
             [['name' => 'Jane Doe', 'email' => 'jane@client.com', 'role' => 'client']],
             json_decode($body['recipients'], true)
         );
-        $this->assertArrayNotHasKey('fields', $body);
+        $this->assertSame('[]', $body['fields']);
     }
 
-    public function testFieldsAreStillSentWhenGivenAndOmittedForAnEmptyList(): void
+    public function testFieldsAreStillSentWhenGivenAndSentAsEmptyForAnEmptyList(): void
     {
         $this->injectTurboSignClient([
             $this->ok(['success' => true, 'documentId' => 'doc-1', 'status' => 'under_review', 'message' => 'ok']),
@@ -112,7 +112,7 @@ final class TurboSignTemplateRolesTest extends TestCase
 
         $this->assertSame('signature', json_decode($this->capturedJsonBody(0)['fields'], true)[0]['type']);
         $this->assertSame('signature', json_decode($this->capturedJsonBody(1)['fields'], true)[0]['type']);
-        $this->assertArrayNotHasKey('fields', $this->capturedJsonBody(2));
+        $this->assertSame('[]', $this->capturedJsonBody(2)['fields']);
     }
 
     public function testSendSignatureSurfacesUnknownRoleMessageAndCode(): void
@@ -137,7 +137,7 @@ final class TurboSignTemplateRolesTest extends TestCase
         }
     }
 
-    public function testCreateSignatureReviewLinkSendsRoleAndNoFieldsKeyWhenOmitted(): void
+    public function testCreateSignatureReviewLinkSendsRoleAndEmptyFieldsWhenOmitted(): void
     {
         $this->injectTurboSignClient([
             $this->ok(['success' => true, 'documentId' => 'doc-2', 'status' => 'review_ready', 'message' => 'ok']),
@@ -152,7 +152,35 @@ final class TurboSignTemplateRolesTest extends TestCase
         $this->assertStringContainsString('/turbosign/single/prepare-for-review', (string) $request->getUri());
         $body = $this->capturedJsonBody(0);
         $this->assertSame('client', json_decode($body['recipients'], true)[0]['role']);
-        $this->assertArrayNotHasKey('fields', $body);
+        $this->assertSame('[]', $body['fields']);
+    }
+
+    /**
+     * Without roles the API answers a MISSING fields key with 400 FieldsRequired but accepts an empty
+     * list on a review link (fields are placed in the preview). These calls worked in v0.8.0.
+     */
+    public function testCreateSignatureReviewLinkWithoutRolesSendsEmptyFieldsForEmptyListAndForNoFields(): void
+    {
+        $this->injectTurboSignClient([
+            $this->ok(['success' => true, 'documentId' => 'doc-4', 'status' => 'review_ready', 'message' => 'ok']),
+            $this->ok(['success' => true, 'documentId' => 'doc-5', 'status' => 'review_ready', 'message' => 'ok']),
+        ], captureHistory: true);
+        $recipients = [new Recipient(name: 'Jane Doe', email: 'jane@client.com', signingOrder: 1)];
+
+        TurboSign::createSignatureReviewLink(new CreateSignatureReviewLinkRequest(
+            recipients: $recipients,
+            fields: [],
+            fileLink: 'https://example.com/contract.pdf',
+        ));
+        TurboSign::createSignatureReviewLink(new CreateSignatureReviewLinkRequest(
+            recipients: $recipients,
+            fileLink: 'https://example.com/contract.pdf',
+        ));
+
+        $request = $this->requestHistory[0]['request'];
+        $this->assertStringContainsString('/turbosign/single/prepare-for-review', (string) $request->getUri());
+        $this->assertSame('[]', $this->capturedJsonBody(0)['fields']);
+        $this->assertSame('[]', $this->capturedJsonBody(1)['fields']);
     }
 
     public function testCreateEmbeddedSignaturePassesRoleThrough(): void
@@ -182,7 +210,7 @@ final class TurboSignTemplateRolesTest extends TestCase
             [['name' => 'Jane Doe', 'email' => 'jane@client.com', 'signingOrder' => 1, 'role' => 'client']],
             json_decode($body['recipients'], true)
         );
-        $this->assertArrayNotHasKey('fields', $body);
+        $this->assertSame('[]', $body['fields']);
         $this->assertSame('https://app/sign/doc-3?token=J', $result->recipients[0]->embedUrl);
     }
 

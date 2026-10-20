@@ -494,15 +494,18 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 		"recipients": string(recipientsJSON),
 	}
 
-	// Omit "fields" when none are given: a template sent with signer roles takes its fields from
-	// the template, and any other send gets the API's FieldsRequired error.
-	if len(req.Fields) > 0 {
-		fieldsJSON, err := json.Marshal(req.Fields)
-		if err != nil {
-			return nil, fmt.Errorf("marshal fields: %w", err)
-		}
-		formData["fields"] = string(fieldsJSON)
+	// Always send "fields", as [] when none are given (a nil slice would marshal to "null"). The API
+	// rejects a MISSING key (FieldsRequired) unless a recipient names a role, but accepts an empty
+	// list: a review link with no fields is valid, and a role send takes the template's saved fields.
+	fields := req.Fields
+	if fields == nil {
+		fields = []Field{}
 	}
+	fieldsJSON, err := json.Marshal(fields)
+	if err != nil {
+		return nil, fmt.Errorf("marshal fields: %w", err)
+	}
+	formData["fields"] = string(fieldsJSON)
 
 	if req.DocumentName != "" {
 		formData["documentName"] = req.DocumentName
@@ -578,15 +581,18 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 		"recipients": string(recipientsJSON),
 	}
 
-	// Omit "fields" when none are given: a template sent with signer roles takes its fields from
-	// the template, and any other send gets the API's FieldsRequired error.
-	if len(req.Fields) > 0 {
-		fieldsJSON, err := json.Marshal(req.Fields)
-		if err != nil {
-			return nil, fmt.Errorf("marshal fields: %w", err)
-		}
-		formData["fields"] = string(fieldsJSON)
+	// Always send "fields", as [] when none are given (a nil slice would marshal to "null"). The API
+	// rejects a MISSING key (FieldsRequired) unless a recipient names a role, but accepts an empty
+	// list: a review link with no fields is valid, and a role send takes the template's saved fields.
+	fields := req.Fields
+	if fields == nil {
+		fields = []Field{}
 	}
+	fieldsJSON, err := json.Marshal(fields)
+	if err != nil {
+		return nil, fmt.Errorf("marshal fields: %w", err)
+	}
+	formData["fields"] = string(fieldsJSON)
 
 	if req.DocumentName != "" {
 		formData["documentName"] = req.DocumentName

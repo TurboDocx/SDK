@@ -13,6 +13,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -723,11 +724,10 @@ public final class TurboSign {
     ) {
         Map<String, String> formData = new HashMap<>();
         formData.put("recipients", gson.toJson(recipients));
-        // Omit "fields" when none are given: a template sent with signer roles takes its fields
-        // from the template, and any other send gets the API's FieldsRequired error.
-        if (fields != null && !fields.isEmpty()) {
-            formData.put("fields", gson.toJson(fields));
-        }
+        // Always send "fields", as [] when none are given. The API rejects a MISSING key
+        // (FieldsRequired) unless a recipient names a role, but accepts an empty list: a review link
+        // with no fields is valid, and a role send takes the template's saved fields.
+        formData.put("fields", gson.toJson(fields != null ? fields : Collections.emptyList()));
 
         if (documentName != null) {
             formData.put("documentName", documentName);

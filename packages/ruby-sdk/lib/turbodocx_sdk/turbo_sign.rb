@@ -687,13 +687,13 @@ module TurboDocxSdk
 
       def build_signature_form_data(request, sender)
         recipients = request[:recipients] || request["recipients"]
-        # A template sent with signer roles (recipients carrying "role") takes its fields from the
-        # template, so fields may be omitted. Leave the key out when none are given: any other
-        # send then gets the API's FieldsRequired error instead of a document with no fields.
-        fields = request[:fields] || request["fields"]
+        # Always send "fields", as [] when none are given. The API rejects a MISSING key
+        # (FieldsRequired) unless a recipient names a role, but accepts an empty list: a review link
+        # with no fields is valid, and a role send takes the template's saved fields.
+        fields = request[:fields] || request["fields"] || []
 
         form_data = { "recipients" => JSON.generate(recipients) }
-        form_data["fields"] = JSON.generate(fields) if fields && !fields.empty?
+        form_data["fields"] = JSON.generate(fields)
 
         doc_name = request[:documentName] || request["documentName"]
         doc_desc = request[:documentDescription] || request["documentDescription"]

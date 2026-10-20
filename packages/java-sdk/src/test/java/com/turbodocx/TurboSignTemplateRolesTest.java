@@ -61,7 +61,7 @@ class TurboSignTemplateRolesTest {
     }
 
     @Test
-    @DisplayName("sendSignature sends each recipient's role and no fields key when fields are omitted")
+    @DisplayName("sendSignature sends each recipient's role and fields as [] when fields are omitted")
     void sendSignatureWithRole() throws Exception {
         enqueue(200, "{\"data\":{\"success\":true,\"documentId\":\"doc-1\",\"status\":\"under_review\"}}");
 
@@ -85,7 +85,7 @@ class TurboSignTemplateRolesTest {
         expectedRecipients.add(expected);
         // No signingOrder: a role signs in the order saved on the template.
         assertEquals(expectedRecipients, parseArray(body, "recipients"));
-        assertFalse(body.has("fields"));
+        assertEquals("[]", body.get("fields").getAsString());
     }
 
     @Test
@@ -106,7 +106,7 @@ class TurboSignTemplateRolesTest {
     }
 
     @Test
-    @DisplayName("fields are still sent when given, and omitted for an empty list")
+    @DisplayName("fields are still sent when given, and an empty list is sent as []")
     void fieldsSentWhenGiven() throws Exception {
         for (int i = 0; i < 3; i++) {
             enqueue(200, "{\"data\":{\"success\":true,\"documentId\":\"doc-1\",\"status\":\"under_review\"}}");
@@ -127,7 +127,27 @@ class TurboSignTemplateRolesTest {
         JsonObject third = bodyOf(server.takeRequest());
         assertEquals("signature", parseArray(first, "fields").get(0).getAsJsonObject().get("type").getAsString());
         assertEquals("signature", parseArray(second, "fields").get(0).getAsJsonObject().get("type").getAsString());
-        assertFalse(third.has("fields"));
+        assertEquals("[]", third.get("fields").getAsString());
+    }
+
+    // Without roles the API answers a MISSING fields key with 400 FieldsRequired but accepts an empty
+    // list on a review link (fields are placed in the preview). These calls worked in v0.8.0.
+    @Test
+    @DisplayName("createSignatureReviewLink without roles sends fields as [] for an empty list and for no fields")
+    void reviewLinkWithoutFieldsSendsEmptyList() throws Exception {
+        enqueue(200, "{\"data\":{\"success\":true,\"documentId\":\"doc-4\",\"status\":\"review_ready\"}}");
+        enqueue(200, "{\"data\":{\"success\":true,\"documentId\":\"doc-5\",\"status\":\"review_ready\"}}");
+        java.util.List<Recipient> recipients = Collections.singletonList(new Recipient("John Doe", "john@example.com", 1));
+
+        client.turboSign().createSignatureReviewLink(new CreateSignatureReviewLinkRequest.Builder()
+                .fileLink("https://example.com/doc.pdf").recipients(recipients).fields(Collections.emptyList()).build());
+        client.turboSign().createSignatureReviewLink(new CreateSignatureReviewLinkRequest.Builder()
+                .fileLink("https://example.com/doc.pdf").recipients(recipients).build());
+
+        RecordedRequest first = server.takeRequest();
+        assertEquals("/turbosign/single/prepare-for-review", first.getPath());
+        assertEquals("[]", bodyOf(first).get("fields").getAsString());
+        assertEquals("[]", bodyOf(server.takeRequest()).get("fields").getAsString());
     }
 
     @Test
@@ -149,7 +169,7 @@ class TurboSignTemplateRolesTest {
     }
 
     @Test
-    @DisplayName("createSignatureReviewLink sends roles to prepare-for-review without a fields key")
+    @DisplayName("createSignatureReviewLink sends roles to prepare-for-review with fields as []")
     void reviewLinkWithRole() throws Exception {
         enqueue(200, "{\"data\":{\"success\":true,\"documentId\":\"doc-2\",\"status\":\"review_ready\"}}");
 
@@ -163,7 +183,7 @@ class TurboSignTemplateRolesTest {
         assertEquals("/turbosign/single/prepare-for-review", recorded.getPath());
         JsonObject body = bodyOf(recorded);
         assertEquals("client", parseArray(body, "recipients").get(0).getAsJsonObject().get("role").getAsString());
-        assertFalse(body.has("fields"));
+        assertEquals("[]", body.get("fields").getAsString());
     }
 
     @Test
@@ -193,7 +213,7 @@ class TurboSignTemplateRolesTest {
         JsonArray expectedRecipients = new JsonArray();
         expectedRecipients.add(expected);
         assertEquals(expectedRecipients, parseArray(body, "recipients"));
-        assertFalse(body.has("fields"));
+        assertEquals("[]", body.get("fields").getAsString());
         assertEquals("https://app/sign/doc-3?token=J", result.getRecipients().get(0).getEmbedUrl());
     }
 

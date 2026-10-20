@@ -33,7 +33,7 @@ describe("TurboSign template signer roles", () => {
   });
 
   describe("sendSignature", () => {
-    it("sends each recipient's role and no fields key when fields are omitted", async () => {
+    it("sends each recipient's role and fields as [] when fields are omitted (a role send)", async () => {
       (global as unknown as { fetch: jest.Mock }).fetch = jest
         .fn()
         .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-1", status: "under_review" } }));
@@ -48,7 +48,8 @@ describe("TurboSign template signer roles", () => {
       const body = bodyOf(0);
       expect(body.templateId).toBe(TEMPLATE_ID);
       expect(JSON.parse(body.recipients)).toEqual([{ role: "client", name: "Jane Doe", email: "jane@client.com" }]);
-      expect(body).not.toHaveProperty("fields");
+      // The API reads an empty list on a role send exactly like a missing key: the template's fields are used
+      expect(body.fields).toBe("[]");
     });
 
     it("still sends fields when they are given", async () => {
@@ -74,7 +75,7 @@ describe("TurboSign template signer roles", () => {
       expect(JSON.parse(bodyOf(1).fields)).toEqual(fields);
     });
 
-    it("omits fields when an empty list is given", async () => {
+    it("sends fields as [] when an empty list is given", async () => {
       (global as unknown as { fetch: jest.Mock }).fetch = jest
         .fn()
         .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-1", status: "under_review" } }));
@@ -85,7 +86,7 @@ describe("TurboSign template signer roles", () => {
         fields: [],
       });
 
-      expect(bodyOf(0)).not.toHaveProperty("fields");
+      expect(bodyOf(0).fields).toBe("[]");
     });
 
     it("surfaces the API's message when a role isn't on the template", async () => {
@@ -112,7 +113,7 @@ describe("TurboSign template signer roles", () => {
   });
 
   describe("createSignatureReviewLink", () => {
-    it("sends roles to prepare-for-review with an empty fields list when fields are omitted", async () => {
+    it("sends roles to prepare-for-review with fields as [] when fields are omitted", async () => {
       (global as unknown as { fetch: jest.Mock }).fetch = jest
         .fn()
         .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-2", status: "review_ready" } }));
@@ -124,7 +125,37 @@ describe("TurboSign template signer roles", () => {
 
       expect(fetchMock().mock.calls[0][0]).toContain("/turbosign/single/prepare-for-review");
       expect(JSON.parse(bodyOf(0).recipients)[0].role).toBe("client");
-      expect(bodyOf(0)).not.toHaveProperty("fields");
+      expect(bodyOf(0).fields).toBe("[]");
+    });
+
+    // Without roles the API answers a MISSING fields key with 400 FieldsRequired, but accepts an empty
+    // list on a review link (the sender places fields in the preview). These calls worked in v0.8.0.
+    it("sends fields as [] for a review link with fields: [] and no roles", async () => {
+      (global as unknown as { fetch: jest.Mock }).fetch = jest
+        .fn()
+        .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-3", status: "review_ready" } }));
+
+      await TurboSign.createSignatureReviewLink({
+        fileLink: "https://example.com/contract.pdf",
+        recipients: [{ name: "Jane Doe", email: "jane@client.com", signingOrder: 1 }],
+        fields: [],
+      });
+
+      expect(fetchMock().mock.calls[0][0]).toContain("/turbosign/single/prepare-for-review");
+      expect(bodyOf(0).fields).toBe("[]");
+    });
+
+    it("sends fields as [] for a review link with no fields argument and no roles", async () => {
+      (global as unknown as { fetch: jest.Mock }).fetch = jest
+        .fn()
+        .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-4", status: "review_ready" } }));
+
+      await TurboSign.createSignatureReviewLink({
+        fileLink: "https://example.com/contract.pdf",
+        recipients: [{ name: "Jane Doe", email: "jane@client.com", signingOrder: 1 }],
+      });
+
+      expect(bodyOf(0).fields).toBe("[]");
     });
   });
 
@@ -156,7 +187,7 @@ describe("TurboSign template signer roles", () => {
       expect(JSON.parse(bodyOf(0).recipients)).toEqual([
         { name: "Jane Doe", email: "jane@client.com", signingOrder: 1, role: "client" },
       ]);
-      expect(bodyOf(0)).not.toHaveProperty("fields");
+      expect(bodyOf(0).fields).toBe("[]");
       expect(result.recipients[0].embedUrl).toBe("https://app/sign/doc-3?token=J");
     });
   });

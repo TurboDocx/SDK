@@ -301,10 +301,10 @@ class TurboSign:
                 "recipients": json.dumps(recipients),
             }
 
-            # Omit "fields" when none are given: a template sent with signer roles takes its
-            # fields from the template, and any other send gets the API's FieldsRequired error.
-            if fields:
-                form_data["fields"] = json.dumps(fields)
+            # Always send "fields", as [] when none are given. The API rejects a MISSING key
+            # (FieldsRequired) unless a recipient names a role, but accepts an empty list: a review
+            # link with no fields is valid, and a role send takes the template's saved fields.
+            form_data["fields"] = json.dumps(fields or [])
 
             # Add optional fields
             if document_name:
@@ -343,10 +343,10 @@ class TurboSign:
                 "recipients": json.dumps(recipients),
             }
 
-            # Omit "fields" when none are given: a template sent with signer roles takes its
-            # fields from the template, and any other send gets the API's FieldsRequired error.
-            if fields:
-                json_body["fields"] = json.dumps(fields)
+            # Always send "fields", as [] when none are given. The API rejects a MISSING key
+            # (FieldsRequired) unless a recipient names a role, but accepts an empty list: a review
+            # link with no fields is valid, and a role send takes the template's saved fields.
+            json_body["fields"] = json.dumps(fields or [])
 
             # Add optional fields
             if document_name:
@@ -496,10 +496,10 @@ class TurboSign:
                 "recipients": json.dumps(recipients),
             }
 
-            # Omit "fields" when none are given: a template sent with signer roles takes its
-            # fields from the template, and any other send gets the API's FieldsRequired error.
-            if fields:
-                form_data["fields"] = json.dumps(fields)
+            # Always send "fields", as [] when none are given. The API rejects a MISSING key
+            # (FieldsRequired) unless a recipient names a role, but accepts an empty list: a review
+            # link with no fields is valid, and a role send takes the template's saved fields.
+            form_data["fields"] = json.dumps(fields or [])
 
             # Add optional fields
             if document_name:
@@ -543,10 +543,10 @@ class TurboSign:
                 "recipients": json.dumps(recipients),
             }
 
-            # Omit "fields" when none are given: a template sent with signer roles takes its
-            # fields from the template, and any other send gets the API's FieldsRequired error.
-            if fields:
-                json_body["fields"] = json.dumps(fields)
+            # Always send "fields", as [] when none are given. The API rejects a MISSING key
+            # (FieldsRequired) unless a recipient names a role, but accepts an empty list: a review
+            # link with no fields is valid, and a role send takes the template's saved fields.
+            json_body["fields"] = json.dumps(fields or [])
 
             # Add optional fields
             if document_name:
