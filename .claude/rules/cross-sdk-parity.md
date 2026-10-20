@@ -28,11 +28,12 @@ and Java return a typed `TemplateSignatureSetup`; Python and Ruby return the raw
 saved signature setup, or one outside the caller's org, is a 404 with code `SignatureSetupNotFound`
 (the not-found error class in each SDK); every SDK's docstring and README say so.
 
-**Send `fields` rule:** both send paths (and embedded signing, which sends through them) always
-send `fields`, as `[]` when the caller passes none, never a missing key and never `null`. Without
-roles the API rejects a missing key with 400 `FieldsRequired` but accepts an empty list (a review
-link with no fields is valid; fields are placed in the preview). On a role send the API reads `[]`
-exactly like a missing key and uses the template's saved fields.
+**Send `fields` rule:** without a role the API answers a MISSING `fields` key with 400
+`FieldsRequired`, but an empty list on a send would go out as a document with nothing to sign. So
+`sendSignature` (and embedded signing, which sends through it) leaves the key out when the caller
+passes no fields: a role send then takes the template's saved fields, and any other send gets the
+400. `createSignatureReviewLink` sends `[]` when the caller passes no fields, because a review link
+may have none (they are placed in the preview). Never send `null`.
 
 **Embedded signing notes:** `createSigningUrl` posts `{ recipientId | externalId (exactly one),
 returnUrl? (https), identityAssertion? }` and unwraps `{ data: { results } }`. The API rejects unknown
@@ -149,7 +150,7 @@ so a freshly-sent document normally reads a non-null `lastRemindedAt` alongside
 - **Java has no free functions.** The webhook signature helper is exposed as `WebhookSignatureVerifier.verify(...)`, a static method on a final utility class. Semantically equivalent to the free-function form used in JS / Py / Go / PHP — just expressed in idiomatic Java.
 - **PHP `TurboWebhooks::configure()` takes a typed config object** (`HttpClientConfig`), matching the SDK-wide PHP convention used by `TurboSign`, `TurboPartner`, and `Deliverable`. For the flat-args form (`$apiKey`, `$orgId`, …) used in the quickstart, call `TurboWebhooks::configureFromCredentials(...)` instead.
 - `testWebhook` and `notifyWebhook` currently route through the same backend handler and return identical shapes. Both are exposed for symmetry with the backend surface; prefer `testWebhook` in new code.
-- The HMAC format the helper must verify: header `X-TurboDocx-Signature: sha256=<hex>`, signed string `${timestamp}.${rawBody}`, HMAC-SHA256, with a configurable timestamp tolerance (default 300s) to prevent replay attacks. **Tolerance rules:** a negative tolerance fails closed (returns false for every delivery) in every SDK, never a skipped check. `0` disables the timestamp check in JS, Python, PHP, Java and Ruby; in Go `0` is the struct zero value and means the default 300s (documented public behaviour, kept), so Go has no way to disable the check. A string tolerance (`"300"` included) or NaN also returns false in the dynamically typed SDKs (JS, Python, PHP, Ruby); Python and PHP also reject an infinite one, while JS and Ruby treat `Infinity` as an unbounded window. PHP takes `mixed` for `toleranceSeconds`/`now` so a string or float never throws a TypeError under `strict_types`. Every SDK keeps a negative-tolerance test. Use the language's constant-time comparison primitive (`crypto.timingSafeEqual` / `hmac.compare_digest` / `hmac.Equal` / `hash_equals` / `MessageDigest.isEqual`). The helper **returns false and never throws** on malformed input (a non-ASCII or invalid UTF-8 header, unencodable text, a wrong type), so a receiver answers 401, not 500; every SDK keeps a non-ASCII signature-header test. Python's `hmac.compare_digest` raises on non-ASCII `str`, so Python compares bytes.
+- The HMAC format the helper must verify: header `X-TurboDocx-Signature: sha256=<hex>`, signed string `${timestamp}.${rawBody}`, HMAC-SHA256, with a configurable timestamp tolerance (default 300s) to prevent replay attacks. **Tolerance rules:** a negative tolerance fails closed (returns false for every delivery) in every SDK, never a skipped check. `0` disables the timestamp check in JS, Python, PHP, Java and Ruby; in Go `0` is the struct zero value and means the default 300s (documented public behaviour, kept), so Go has no way to disable the check. A string tolerance (`"300"` included) or a non-finite one (NaN, Infinity) also returns false in the dynamically typed SDKs (JS, Python, PHP, Ruby). `now` is only read when the timestamp check runs. PHP takes `mixed` for `toleranceSeconds`/`now` so a string or float never throws a TypeError under `strict_types`. Every SDK keeps a negative-tolerance test. Use the language's constant-time comparison primitive (`crypto.timingSafeEqual` / `hmac.compare_digest` / `hmac.Equal` / `hash_equals` / `MessageDigest.isEqual`). The helper **returns false and never throws** on malformed input (a non-ASCII or invalid UTF-8 header, unencodable text, a wrong type), so a receiver answers 401, not 500; every SDK keeps a non-ASCII signature-header test. Python's `hmac.compare_digest` raises on non-ASCII `str`, so Python compares bytes.
 
 ## Client Context (Audit-Trail Device/Location Headers)
 

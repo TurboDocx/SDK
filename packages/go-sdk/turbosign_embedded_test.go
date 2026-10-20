@@ -359,9 +359,9 @@ func TestTurboSignClient_CreateEmbeddedSignature(t *testing.T) {
 	})
 
 	// Cross-language consistency: with no top-level Fields and no recipient shorthand, the
-	// send-signature body carries fields as "[]" (never "null", never a missing key): the API
-	// rejects a missing key unless a recipient names a role, but accepts an empty list.
-	t.Run("sends fields as [] when no fields provided", func(t *testing.T) {
+	// send-signature body leaves the fields key out, so a role send uses the template's saved
+	// fields and any other send gets the API's 400 FieldsRequired.
+	t.Run("omits the fields key when no fields provided", func(t *testing.T) {
 		var sentBody map[string]interface{}
 		server := newEmbeddedWrapperServer(t, embeddedServerConfig{
 			sentRecipients: []map[string]string{{"id": "rec-1", "email": "a@example.com", "name": "A"}},
@@ -382,7 +382,7 @@ func TestTurboSignClient_CreateEmbeddedSignature(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotNil(t, sentBody)
-		assert.Equal(t, "[]", sentBody["fields"], "empty fields must serialize to [] not null")
+		assert.NotContains(t, sentBody, "fields", "empty fields must be omitted")
 	})
 
 	// Turn-aware degradation: the two not-in-turn aliases both map to "pending" with empty URL.

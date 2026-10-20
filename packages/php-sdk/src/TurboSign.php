@@ -117,9 +117,8 @@ final class TurboSign
             'recipients' => $recipientsJson,
         ];
 
-        // Always send 'fields', as [] when none are given. The API rejects a MISSING key
-        // (FieldsRequired) unless a recipient names a role, but accepts an empty list: a review link
-        // with no fields is valid, and a role send takes the template's saved fields.
+        // A review link may have no fields (they are placed in the preview), so send [] when none
+        // are given: the API rejects a MISSING key (FieldsRequired) unless a recipient names a role.
         $formData['fields'] = json_encode(array_map(fn($f) => $f->toArray(), $request->fields));
 
         // Add optional fields
@@ -208,10 +207,11 @@ final class TurboSign
             'recipients' => $recipientsJson,
         ];
 
-        // Always send 'fields', as [] when none are given. The API rejects a MISSING key
-        // (FieldsRequired) unless a recipient names a role, but accepts an empty list: a review link
-        // with no fields is valid, and a role send takes the template's saved fields.
-        $formData['fields'] = json_encode(array_map(fn($f) => $f->toArray(), $request->fields));
+        // Leave 'fields' out when none are given. A role send then takes the template's saved fields,
+        // and any other send gets the API's 400 FieldsRequired instead of a document with nothing to sign.
+        if ($request->fields !== []) {
+            $formData['fields'] = json_encode(array_map(fn($f) => $f->toArray(), $request->fields));
+        }
 
         // Add optional fields
         if ($request->documentName !== null) {

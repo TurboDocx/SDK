@@ -3,7 +3,7 @@ TurboSign template signer roles
 
 A template set up in the TurboDocx UI (signers + fields dragged onto the PDF) is sent by naming
 each recipient's ``role``. The template's saved fields are used, so ``fields`` may be omitted
-(the SDK then sends ``fields`` as ``[]``, which the API reads like a missing key on a role send). Request bodies carry ``recipients``/``fields`` as JSON strings.
+(a send then leaves the ``fields`` key out; a review link sends ``[]``). Request bodies carry ``recipients``/``fields`` as JSON strings.
 """
 
 import json
@@ -34,7 +34,7 @@ def _mock_client(post_return=None, get_return=None):
 
 class TestSendSignatureWithRoles:
     @pytest.mark.asyncio
-    async def test_sends_role_and_empty_fields_when_fields_omitted(self):
+    async def test_sends_role_and_no_fields_key_when_fields_omitted(self):
         client = _mock_client(post_return={"success": True, "documentId": "doc-1", "status": "under_review"})
         with patch.object(TurboSign, "_get_client", return_value=client):
             result = await TurboSign.send_signature(
@@ -50,10 +50,10 @@ class TestSendSignatureWithRoles:
         assert json.loads(body["recipients"]) == [
             {"role": "client", "name": "Jane Doe", "email": "jane@client.com"}
         ]
-        assert body["fields"] == "[]"
+        assert "fields" not in body
 
     @pytest.mark.asyncio
-    async def test_still_sends_fields_when_given_and_sends_an_empty_list_as_empty(self):
+    async def test_still_sends_fields_when_given_and_omits_an_empty_list_on_a_send(self):
         fields = [{"type": "signature", "page": 1, "x": 10, "y": 20, "width": 100, "height": 30, "recipientEmail": "jane@client.com"}]
         recipients = [{"name": "Jane Doe", "email": "jane@client.com", "signingOrder": 1}]
         client = _mock_client(post_return={"success": True, "documentId": "doc-1", "status": "under_review"})
@@ -65,7 +65,7 @@ class TestSendSignatureWithRoles:
         calls = client.post.call_args_list
         assert json.loads(calls[0][1]["data"]["fields"]) == fields
         assert json.loads(calls[1][1]["data"]["fields"]) == fields
-        assert calls[2][1]["data"]["fields"] == "[]"
+        assert "fields" not in calls[2][1]["data"]
 
     @pytest.mark.asyncio
     async def test_surfaces_api_message_and_code_for_unknown_role(self):
@@ -109,8 +109,9 @@ class TestCreateSignatureReviewLinkWithRoles:
 
 
 class TestCreateSignatureReviewLinkWithoutFields:
-    """Without roles the API answers a MISSING ``fields`` key with 400 FieldsRequired but accepts an
-    empty list on a review link (fields are placed in the preview). These calls worked in v0.8.0."""
+    """Without roles the API answers a MISSING ``fields`` key with 400 FieldsRequired. A review link
+    may have no fields (they are placed in the preview), so it sends ``[]``; a send leaves the key
+    out so the API rejects a document with nothing to sign."""
 
     @pytest.mark.asyncio
     async def test_review_link_with_empty_fields_list_sends_empty_fields(self):
@@ -138,7 +139,19 @@ class TestCreateSignatureReviewLinkWithoutFields:
         assert client.post.call_args[1]["data"]["fields"] == "[]"
 
     @pytest.mark.asyncio
-    async def test_send_signature_upload_without_fields_sends_empty_fields(self):
+    async def test_send_signature_json_without_fields_leaves_fields_out(self):
+        client = _mock_client(post_return={"success": True, "documentId": "doc-8", "status": "under_review"})
+        with patch.object(TurboSign, "_get_client", return_value=client):
+            await TurboSign.send_signature(
+                file_link="https://example.com/contract.pdf",
+                recipients=[{"name": "Jane Doe", "email": "jane@client.com", "signingOrder": 1}],
+                fields=[],
+            )
+
+        assert "fields" not in client.post.call_args[1]["data"]
+
+    @pytest.mark.asyncio
+    async def test_send_signature_upload_without_fields_leaves_fields_out(self):
         client = _mock_client(post_return={"success": True, "documentId": "doc-7", "status": "under_review"})
         client.upload_file = AsyncMock(return_value={"success": True, "documentId": "doc-7"})
         with patch.object(TurboSign, "_get_client", return_value=client):
@@ -148,7 +161,7 @@ class TestCreateSignatureReviewLinkWithoutFields:
             )
 
         assert client.upload_file.call_args[0][0] == "/turbosign/single/prepare-for-signing"
-        assert client.upload_file.call_args[1]["additional_data"]["fields"] == "[]"
+        assert "fields" not in client.upload_file.call_args[1]["additional_data"]
 
 
 class TestCreateEmbeddedSignatureWithRoles:
@@ -176,7 +189,7 @@ class TestCreateEmbeddedSignatureWithRoles:
         assert json.loads(body["recipients"]) == [
             {"name": "Jane Doe", "email": "jane@client.com", "signingOrder": 1, "role": "client"}
         ]
-        assert body["fields"] == "[]"
+        assert "fields" not in body
         assert result["recipients"][0]["embedUrl"] == "https://app/sign/doc-3?token=J"
 
     @pytest.mark.asyncio

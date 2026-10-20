@@ -475,12 +475,6 @@ func (c *TurboSignClient) CreateEmbeddedSignature(ctx context.Context, req *Crea
 			fields = append(fields, expandRecipientFields(r)...)
 		}
 	}
-	// Never hand SendSignature a nil slice: json.Marshal(nil) is "null", but js/python/php/java/ruby
-	// all emit "[]" for an absent/empty fields. A backend that JSON-parses and iterates the fields
-	// string must get an iterable "[]", not a non-iterable "null". Normalize to an empty slice.
-	if fields == nil {
-		fields = []Field{}
-	}
 
 	// Embedded flow default: suppress recipient emails (the host owns the UX).
 	sendEmail := req.SendEmail

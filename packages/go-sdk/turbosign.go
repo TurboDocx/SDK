@@ -479,6 +479,25 @@ type AuditTrailResponse struct {
 // TurboSign Methods
 // ============================================
 
+// setFieldsFormValue sets "fields" (a JSON string) on a send body. Without a role the API answers a
+// MISSING key with 400 FieldsRequired. A review link may have no fields (they are placed in the
+// preview), so it sends "[]". A send leaves the key out: a role send takes the template's saved
+// fields, and any other send gets FieldsRequired instead of a document with nothing to sign.
+func setFieldsFormValue(formData map[string]string, fields []Field, forReview bool) error {
+	if len(fields) == 0 {
+		if !forReview {
+			return nil
+		}
+		fields = []Field{} // a nil slice would marshal to "null"
+	}
+	fieldsJSON, err := json.Marshal(fields)
+	if err != nil {
+		return fmt.Errorf("marshal fields: %w", err)
+	}
+	formData["fields"] = string(fieldsJSON)
+	return nil
+}
+
 // CreateSignatureReviewLink prepares a document for review without sending emails.
 // Use this to preview field placement before sending.
 func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *CreateSignatureReviewLinkRequest) (*CreateSignatureReviewLinkResponse, error) {
@@ -494,18 +513,9 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 		"recipients": string(recipientsJSON),
 	}
 
-	// Always send "fields", as [] when none are given (a nil slice would marshal to "null"). The API
-	// rejects a MISSING key (FieldsRequired) unless a recipient names a role, but accepts an empty
-	// list: a review link with no fields is valid, and a role send takes the template's saved fields.
-	fields := req.Fields
-	if fields == nil {
-		fields = []Field{}
+	if err := setFieldsFormValue(formData, req.Fields, true); err != nil {
+		return nil, err
 	}
-	fieldsJSON, err := json.Marshal(fields)
-	if err != nil {
-		return nil, fmt.Errorf("marshal fields: %w", err)
-	}
-	formData["fields"] = string(fieldsJSON)
 
 	if req.DocumentName != "" {
 		formData["documentName"] = req.DocumentName
@@ -581,18 +591,9 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 		"recipients": string(recipientsJSON),
 	}
 
-	// Always send "fields", as [] when none are given (a nil slice would marshal to "null"). The API
-	// rejects a MISSING key (FieldsRequired) unless a recipient names a role, but accepts an empty
-	// list: a review link with no fields is valid, and a role send takes the template's saved fields.
-	fields := req.Fields
-	if fields == nil {
-		fields = []Field{}
+	if err := setFieldsFormValue(formData, req.Fields, false); err != nil {
+		return nil, err
 	}
-	fieldsJSON, err := json.Marshal(fields)
-	if err != nil {
-		return nil, fmt.Errorf("marshal fields: %w", err)
-	}
-	formData["fields"] = string(fieldsJSON)
 
 	if req.DocumentName != "" {
 		formData["documentName"] = req.DocumentName

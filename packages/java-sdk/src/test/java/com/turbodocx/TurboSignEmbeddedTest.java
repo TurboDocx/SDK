@@ -457,9 +457,8 @@ class TurboSignEmbeddedTest {
                 .build());
 
         JsonObject body = takeBody();
-        // An empty list means no fields: it is sent as "[]" (never a missing key, which the API rejects
-        // unless a recipient names a role).
-        assertEquals("[]", body.get("fields").getAsString());
+        // An empty list means no fields: the key is left out rather than sent as "[]".
+        assertFalse(body.has("fields"));
     }
 
     @Test

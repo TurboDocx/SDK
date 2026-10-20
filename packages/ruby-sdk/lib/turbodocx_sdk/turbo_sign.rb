@@ -76,7 +76,7 @@ module TurboDocxSdk
       def create_signature_review_link(request)
         client = get_client
         sender = client.sender_config
-        form_data = build_signature_form_data(request, sender)
+        form_data = build_signature_form_data(request, sender, for_review: true)
 
         if request[:file] || request["file"]
           file = request[:file] || request["file"]
@@ -686,15 +686,16 @@ module TurboDocxSdk
         file_name.nil? || file_name.to_s.empty? ? form_data : form_data.merge("fileName" => file_name)
       end
 
-      def build_signature_form_data(request, sender)
+      def build_signature_form_data(request, sender, for_review: false)
         recipients = request[:recipients] || request["recipients"]
-        # Always send "fields", as [] when none are given. The API rejects a MISSING key
-        # (FieldsRequired) unless a recipient names a role, but accepts an empty list: a review link
-        # with no fields is valid, and a role send takes the template's saved fields.
+        # Without a role the API answers a MISSING "fields" key with 400 FieldsRequired. A review
+        # link may have no fields (they are placed in the preview), so it sends []. A send leaves the
+        # key out: a role send takes the template's saved fields, and any other send gets
+        # FieldsRequired instead of a document with nothing to sign.
         fields = request[:fields] || request["fields"] || []
 
         form_data = { "recipients" => JSON.generate(recipients) }
-        form_data["fields"] = JSON.generate(fields)
+        form_data["fields"] = JSON.generate(fields) if for_review || !fields.empty?
 
         doc_name = request[:documentName] || request["documentName"]
         doc_desc = request[:documentDescription] || request["documentDescription"]

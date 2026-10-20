@@ -23,7 +23,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
     end
 
     describe ".send_signature" do
-      it "sends each recipient's role and fields as [] when fields are omitted" do
+      it "sends each recipient's role and no fields key when fields are omitted" do
         allow(mock_client).to receive(:post)
           .and_return({ "success" => true, "documentId" => "doc-1", "status" => "under_review" })
 
@@ -39,7 +39,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
           expect(JSON.parse(body["recipients"])).to eq(
             [{ "role" => "client", "name" => "Jane Doe", "email" => "jane@client.com" }]
           )
-          expect(body["fields"]).to eq("[]")
+          expect(body).not_to have_key("fields")
         end
       end
 
@@ -61,7 +61,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
     end
 
     describe "an empty fields list" do
-      it "is sent as [] (never a missing key)" do
+      it "is left out of a send rather than sent as []" do
         allow(mock_client).to receive(:post).and_return({ "success" => true, "documentId" => "doc-1" })
 
         described_class.send_signature(
@@ -71,7 +71,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
         )
 
         expect(mock_client).to have_received(:post) do |_path, body|
-          expect(body["fields"]).to eq("[]")
+          expect(body).not_to have_key("fields")
         end
       end
     end
@@ -94,8 +94,30 @@ RSpec.describe TurboDocxSdk::TurboSign do
       end
     end
 
-    # Without roles the API answers a MISSING fields key with 400 FieldsRequired but accepts an empty
-    # list on a review link (fields are placed in the preview). These calls worked in v0.8.0.
+    # Without roles the API answers a MISSING fields key with 400 FieldsRequired. A send leaves the key
+    # out so the API rejects a document with nothing to sign.
+    describe ".send_signature without roles" do
+      [["an empty fields list", { fields: [] }], ["no fields argument", {}]].each do |label, extra|
+        it "leaves fields out for #{label}" do
+          allow(mock_client).to receive(:post)
+            .and_return({ "success" => true, "documentId" => "doc-6", "status" => "under_review" })
+
+          described_class.send_signature(
+            fileLink: "https://example.com/contract.pdf",
+            recipients: [{ name: "Jane Doe", email: "jane@client.com", signingOrder: 1 }],
+            **extra
+          )
+
+          expect(mock_client).to have_received(:post) do |path, body|
+            expect(path).to eq("/turbosign/single/prepare-for-signing")
+            expect(body).not_to have_key("fields")
+          end
+        end
+      end
+    end
+
+    # A review link may have no fields (they are placed in the preview), so it sends "[]": the API
+    # rejects a MISSING key with 400 FieldsRequired unless a recipient names a role.
     describe ".create_signature_review_link without roles" do
       [["an empty fields list", { fields: [] }], ["no fields argument", {}]].each do |label, extra|
         it "sends fields as [] for #{label}" do
@@ -138,7 +160,7 @@ RSpec.describe TurboDocxSdk::TurboSign do
         expect(JSON.parse(send_body["recipients"])).to eq(
           [{ "name" => "Jane Doe", "email" => "jane@client.com", "signingOrder" => 1, "role" => "client" }]
         )
-        expect(send_body["fields"]).to eq("[]")
+        expect(send_body).not_to have_key("fields")
         expect(send_body["templateId"]).to eq(template_id)
         expect(result["recipients"][0]["embedUrl"]).to eq("https://app/sign/doc-3?token=J")
       end

@@ -12,8 +12,8 @@ import java.lang.reflect.Type;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -49,7 +49,8 @@ public final class TurboSign {
                 request.getSenderName(),
                 request.getSenderEmail(),
                 request.getCcEmails(),
-                request.getSchedule()
+                request.getSchedule(),
+                true
         );
 
         if (request.hasFile()) {
@@ -93,7 +94,8 @@ public final class TurboSign {
                 request.getSenderName(),
                 request.getSenderEmail(),
                 request.getCcEmails(),
-                request.getSchedule()
+                request.getSchedule(),
+                false
         );
 
         // Forward email suppression only from the send path (never the review path). Tested with
@@ -722,14 +724,19 @@ public final class TurboSign {
             String senderName,
             String senderEmail,
             List<String> ccEmails,
-            SignatureSchedule schedule
+            SignatureSchedule schedule,
+            boolean forReview
     ) {
         Map<String, String> formData = new HashMap<>();
         formData.put("recipients", gson.toJson(recipients));
-        // Always send "fields", as [] when none are given. The API rejects a MISSING key
-        // (FieldsRequired) unless a recipient names a role, but accepts an empty list: a review link
-        // with no fields is valid, and a role send takes the template's saved fields.
-        formData.put("fields", gson.toJson(fields != null ? fields : Collections.emptyList()));
+        // Without a role the API answers a MISSING "fields" key with 400 FieldsRequired. A review link
+        // may have no fields (they are placed in the preview), so it sends []. A send leaves the key
+        // out: a role send takes the template's saved fields, and any other send gets FieldsRequired
+        // instead of a document with nothing to sign.
+        boolean hasFields = fields != null && !fields.isEmpty();
+        if (hasFields || forReview) {
+            formData.put("fields", gson.toJson(hasFields ? fields : Collections.emptyList()));
+        }
 
         if (documentName != null) {
             formData.put("documentName", documentName);

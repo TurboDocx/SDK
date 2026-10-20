@@ -33,7 +33,7 @@ describe("TurboSign template signer roles", () => {
   });
 
   describe("sendSignature", () => {
-    it("sends each recipient's role and fields as [] when fields are omitted (a role send)", async () => {
+    it("sends each recipient's role and no fields key when fields are omitted (a role send)", async () => {
       (global as unknown as { fetch: jest.Mock }).fetch = jest
         .fn()
         .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-1", status: "under_review" } }));
@@ -48,8 +48,8 @@ describe("TurboSign template signer roles", () => {
       const body = bodyOf(0);
       expect(body.templateId).toBe(TEMPLATE_ID);
       expect(JSON.parse(body.recipients)).toEqual([{ role: "client", name: "Jane Doe", email: "jane@client.com" }]);
-      // The API reads an empty list on a role send exactly like a missing key: the template's fields are used
-      expect(body.fields).toBe("[]");
+      // A role send may leave fields out: the template's saved fields are used
+      expect(body).not.toHaveProperty("fields");
     });
 
     it("still sends fields when they are given", async () => {
@@ -75,7 +75,7 @@ describe("TurboSign template signer roles", () => {
       expect(JSON.parse(bodyOf(1).fields)).toEqual(fields);
     });
 
-    it("sends fields as [] when an empty list is given", async () => {
+    it("leaves fields out when an empty list is given", async () => {
       (global as unknown as { fetch: jest.Mock }).fetch = jest
         .fn()
         .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-1", status: "under_review" } }));
@@ -86,7 +86,28 @@ describe("TurboSign template signer roles", () => {
         fields: [],
       });
 
-      expect(bodyOf(0).fields).toBe("[]");
+      expect(bodyOf(0)).not.toHaveProperty("fields");
+    });
+
+    // Without roles the API answers a MISSING fields key with 400 FieldsRequired, but would send an
+    // empty list as a document with nothing to sign. A send without fields must leave the key out.
+    it("leaves fields out of a send with no fields and no roles, so the API rejects it", async () => {
+      (global as unknown as { fetch: jest.Mock }).fetch = jest
+        .fn()
+        .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-1", status: "under_review" } }));
+
+      await TurboSign.sendSignature({
+        fileLink: "https://example.com/contract.pdf",
+        recipients: [{ name: "Jane Doe", email: "jane@client.com", signingOrder: 1 }],
+      });
+      await TurboSign.sendSignature({
+        fileLink: "https://example.com/contract.pdf",
+        recipients: [{ name: "Jane Doe", email: "jane@client.com", signingOrder: 1 }],
+        fields: [],
+      });
+
+      expect(bodyOf(0)).not.toHaveProperty("fields");
+      expect(bodyOf(1)).not.toHaveProperty("fields");
     });
 
     it("surfaces the API's message when a role isn't on the template", async () => {
@@ -187,7 +208,7 @@ describe("TurboSign template signer roles", () => {
       expect(JSON.parse(bodyOf(0).recipients)).toEqual([
         { name: "Jane Doe", email: "jane@client.com", signingOrder: 1, role: "client" },
       ]);
-      expect(bodyOf(0).fields).toBe("[]");
+      expect(bodyOf(0)).not.toHaveProperty("fields");
       expect(result.recipients[0].embedUrl).toBe("https://app/sign/doc-3?token=J");
     });
   });

@@ -264,7 +264,7 @@ TurboDocxSdk::TurboSign.send_signature(
 - A role left out uses the template's saved signer. If it has none, the API returns a 400 naming the role.
 - An unknown role raises `TurboDocxSdk::ValidationError` listing the template's roles (`e.code == "UnknownSignerRole"`).
 - Any `fields` you pass are added to the template's (for example an extra witness signature).
-- Roles work on PDF templates. Without roles, pass `fields` to `send_signature`. A review link (`create_signature_review_link`) can be created with no fields: you place them in the preview. The SDK always sends `fields`, as `[]` when you pass none.
+- Roles work on PDF templates. Without roles, `send_signature` needs `fields`: a send without them gets a 400 `FieldsRequired`. A review link (`create_signature_review_link`) can be created with no fields; you place them in the preview.
 - `get_template_signature_setup` throws `TurboDocxSdk::NotFoundError` (404, code `SignatureSetupNotFound`) when the template has no saved signature setup, or is not a template in your organization.
 - `role` works the same way on `create_signature_review_link` and `create_embedded_signature`.
 
@@ -1401,7 +1401,7 @@ The API also returns more specific codes, passed through unchanged:
 | `OptionalNotSupported` | 400 | A `signature` or `initial` field was sent with `required: false`. The signer must always complete those two types. |
 | `InvalidFieldRequired` | 400 | A field's `required` is not a boolean. Send `true`, `false`, or leave it out (leaving it out means required). |
 | `NoEditableFieldsForRecipient` | 400 | A recipient has no field they must fill in: all of their fields are read-only or optional. Give each recipient at least one required, editable field. |
-| `FieldsRequired` | 400 | The request has no `fields` key and no recipient names a `role`. An empty list is not this error. The SDK always sends `fields` (as `[]` when you pass none), so it does not raise this. |
+| `FieldsRequired` | 400 | A send has no fields and no recipient names a `role`. Pass fields, or send a template whose recipients name roles. A review link can be created without fields. |
 | `FieldPageOutOfRange` | 400 | A field is placed on a page past the end of the document. |
 | `UnknownSignerRole` | 400 | A recipient's `role` is not one of the template's roles. The message lists them. |
 | `DuplicateSignerRole` | 400 | More than one recipient was given for the same role. |

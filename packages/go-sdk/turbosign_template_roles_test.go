@@ -24,7 +24,7 @@ func decodeFormBody(t *testing.T, r *http.Request) (map[string]interface{}, []ma
 	require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 	var recipients []map[string]interface{}
 	require.NoError(t, json.Unmarshal([]byte(body["recipients"].(string)), &recipients))
-	// "fields" is always sent as a JSON string array ("[]" when none were given).
+	// "fields" is absent on a send with no fields; when present it must be a JSON string array.
 	var fields []interface{}
 	if raw, present := body["fields"]; present {
 		fieldsStr, ok := raw.(string)
@@ -42,7 +42,7 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 }
 
 func TestTurboSignClient_SendSignatureWithTemplateRoles(t *testing.T) {
-	t.Run("sends each recipient's role and fields as [] when fields are omitted", func(t *testing.T) {
+	t.Run("sends each recipient's role and no fields key when fields are omitted", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "/turbosign/single/prepare-for-signing", r.URL.Path)
 			body, recipients, fields := decodeFormBody(t, r)
@@ -50,7 +50,7 @@ func TestTurboSignClient_SendSignatureWithTemplateRoles(t *testing.T) {
 			assert.Equal(t, []map[string]interface{}{
 				{"role": "client", "name": "Jane Doe", "email": "jane@client.com"},
 			}, recipients, "a role recipient needs no signingOrder")
-			assert.Equal(t, "[]", body["fields"], "a role send carries fields as [] (the API uses the template's)")
+			assert.NotContains(t, body, "fields", "a role send leaves fields out (the API uses the template's)")
 			assert.Empty(t, fields)
 			writeJSON(w, http.StatusOK, map[string]interface{}{
 				"data": map[string]interface{}{"success": true, "documentId": "doc-1", "status": "under_review"},
@@ -67,7 +67,7 @@ func TestTurboSignClient_SendSignatureWithTemplateRoles(t *testing.T) {
 		assert.Equal(t, "doc-1", result.DocumentID)
 	})
 
-	t.Run("still sends fields when they are given and sends an empty slice as []", func(t *testing.T) {
+	t.Run("still sends fields when they are given and leaves an empty slice out of a send", func(t *testing.T) {
 		var seen []map[string]interface{}
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body, _, _ := decodeFormBody(t, r)
@@ -98,7 +98,7 @@ func TestTurboSignClient_SendSignatureWithTemplateRoles(t *testing.T) {
 		require.Len(t, seen, 3)
 		assert.Contains(t, seen[0]["fields"], `"type":"signature"`)
 		assert.Contains(t, seen[1]["fields"], `"type":"signature"`)
-		assert.Equal(t, "[]", seen[2]["fields"])
+		assert.NotContains(t, seen[2], "fields")
 	})
 
 	t.Run("surfaces the API's message and code when a role isn't on the template", func(t *testing.T) {
@@ -143,8 +143,32 @@ func TestTurboSignClient_CreateSignatureReviewLinkWithTemplateRoles(t *testing.T
 	require.NoError(t, err)
 }
 
-// Without roles the API answers a MISSING fields key with 400 FieldsRequired but accepts an empty
-// list on a review link (fields are placed in the preview). These calls worked in v0.8.0.
+// Without roles the API answers a MISSING fields key with 400 FieldsRequired. A send must leave the
+// key out so the API rejects a document with nothing to sign.
+func TestTurboSignClient_SendSignatureWithoutFieldsLeavesKeyOut(t *testing.T) {
+	for _, fields := range [][]Field{nil, {}} {
+		var body map[string]interface{}
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/turbosign/single/prepare-for-signing", r.URL.Path)
+			body, _, _ = decodeFormBody(t, r)
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"data": map[string]interface{}{"success": true, "documentId": "doc-5", "status": "under_review"},
+			})
+		}))
+		client := newEmbeddedTestClient(t, server.URL)
+		_, err := client.TurboSign.SendSignature(context.Background(), &SendSignatureRequest{
+			FileLink:   "https://example.com/contract.pdf",
+			Recipients: []Recipient{{Name: "Jane Doe", Email: "jane@client.com", SigningOrder: 1}},
+			Fields:     fields,
+		})
+		server.Close()
+		require.NoError(t, err)
+		assert.NotContains(t, body, "fields")
+	}
+}
+
+// A review link may have no fields (they are placed in the preview), so it sends "[]": the API
+// rejects a MISSING key with 400 FieldsRequired unless a recipient names a role.
 func TestTurboSignClient_CreateSignatureReviewLinkWithoutFields(t *testing.T) {
 	for _, tc := range []struct {
 		name   string

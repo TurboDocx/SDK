@@ -151,6 +151,17 @@ class TurboSign:
 
 
     @staticmethod
+    def _apply_fields(target: Dict[str, Any], fields: Optional[List[Dict[str, Any]]], *, for_review: bool) -> None:
+        """
+        Set ``fields`` (a JSON string) on a send body. Without a role the API answers a MISSING key
+        with 400 FieldsRequired. A review link may have no fields (they are placed in the preview),
+        so it sends ``[]``. A send leaves the key out: a role send takes the template's saved
+        fields, and any other send gets FieldsRequired instead of a document with nothing to sign.
+        """
+        if fields or for_review:
+            target["fields"] = json.dumps(fields or [])
+
+    @staticmethod
     def _with_file_name(form_data: Dict[str, Any], file_name: Optional[str]) -> Dict[str, Any]:
         """
         Add ``fileName`` to an upload's form fields when it is non-empty. It is a form field, not
@@ -301,10 +312,7 @@ class TurboSign:
                 "recipients": json.dumps(recipients),
             }
 
-            # Always send "fields", as [] when none are given. The API rejects a MISSING key
-            # (FieldsRequired) unless a recipient names a role, but accepts an empty list: a review
-            # link with no fields is valid, and a role send takes the template's saved fields.
-            form_data["fields"] = json.dumps(fields or [])
+            cls._apply_fields(form_data, fields, for_review=True)
 
             # Add optional fields
             if document_name:
@@ -343,10 +351,7 @@ class TurboSign:
                 "recipients": json.dumps(recipients),
             }
 
-            # Always send "fields", as [] when none are given. The API rejects a MISSING key
-            # (FieldsRequired) unless a recipient names a role, but accepts an empty list: a review
-            # link with no fields is valid, and a role send takes the template's saved fields.
-            json_body["fields"] = json.dumps(fields or [])
+            cls._apply_fields(json_body, fields, for_review=True)
 
             # Add optional fields
             if document_name:
@@ -496,10 +501,7 @@ class TurboSign:
                 "recipients": json.dumps(recipients),
             }
 
-            # Always send "fields", as [] when none are given. The API rejects a MISSING key
-            # (FieldsRequired) unless a recipient names a role, but accepts an empty list: a review
-            # link with no fields is valid, and a role send takes the template's saved fields.
-            form_data["fields"] = json.dumps(fields or [])
+            cls._apply_fields(form_data, fields, for_review=False)
 
             # Add optional fields
             if document_name:
@@ -543,10 +545,7 @@ class TurboSign:
                 "recipients": json.dumps(recipients),
             }
 
-            # Always send "fields", as [] when none are given. The API rejects a MISSING key
-            # (FieldsRequired) unless a recipient names a role, but accepts an empty list: a review
-            # link with no fields is valid, and a role send takes the template's saved fields.
-            json_body["fields"] = json.dumps(fields or [])
+            cls._apply_fields(json_body, fields, for_review=False)
 
             # Add optional fields
             if document_name:
