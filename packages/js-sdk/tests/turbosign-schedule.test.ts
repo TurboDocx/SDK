@@ -270,13 +270,20 @@ describe('TurboSign document expiry surface', () => {
     expect(status.expiresAt).toBe('2026-08-02T23:59:59.000Z');
   });
 
-  // Expiration is opt-in, so most documents never expire and the key is simply absent.
-  it('should tolerate a status response with no expiresAt', async () => {
-    getMock.mockResolvedValue({ status: 'under_review' });
+  // Expiration is opt-in, so most documents never expire. The backend still sends the key,
+  // as null (GET /turbosign/documents/:id/status), so the type is `string | null`, not optional.
+  it('should return expiresAt as null when the document never expires', async () => {
+    getMock.mockResolvedValue({ status: 'under_review', expiresAt: null });
 
     const status = await TurboSign.getStatus('doc-1');
 
-    expect(status.expiresAt).toBeUndefined();
+    // Type-level check (ts-jest type-checks this file): expiresAt is exactly `string | null`.
+    const expiresAt: string | null = status.expiresAt;
+    // @ts-expect-error -- a null deadline must be handled before using it as a string
+    const asString: string = status.expiresAt;
+    void asString;
+
+    expect(expiresAt).toBeNull();
     expect(status.status).toBe('under_review');
   });
 
