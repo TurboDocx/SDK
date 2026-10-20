@@ -954,8 +954,9 @@ use TurboDocx\TurboPartner;
 use TurboDocx\Config\PartnerClientConfig;
 
 TurboPartner::configure(new PartnerClientConfig(
-    partnerApiKey: getenv('TURBODOCX_PARTNER_API_KEY'),  // REQUIRED - must start with TDXP-
-    partnerId: getenv('TURBODOCX_PARTNER_ID'),           // REQUIRED - your partner UUID
+    partnerApiKey: getenv('TURBODOCX_PARTNER_API_KEY') ?: '',  // REQUIRED - must start with TDXP-
+    partnerId: getenv('TURBODOCX_PARTNER_ID') ?: '',           // REQUIRED - your partner UUID
+                                                               // (unset => '' => a clear "is required" error)
     baseUrl: 'https://api.turbodocx.com'                 // Optional
 ));
 
