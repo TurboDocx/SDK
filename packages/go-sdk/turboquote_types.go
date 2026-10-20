@@ -10,12 +10,11 @@ import "encoding/json"
 type QuoteStatus string
 
 const (
-	QuoteStatusDraft           QuoteStatus = "draft"
-	QuoteStatusPendingApproval QuoteStatus = "pending_approval"
-	QuoteStatusSent            QuoteStatus = "sent"
-	QuoteStatusAccepted        QuoteStatus = "accepted"
-	QuoteStatusDeclined        QuoteStatus = "declined"
-	QuoteStatusVoided          QuoteStatus = "voided"
+	QuoteStatusDraft    QuoteStatus = "draft"
+	QuoteStatusSent     QuoteStatus = "sent"
+	QuoteStatusAccepted QuoteStatus = "accepted"
+	QuoteStatusDeclined QuoteStatus = "declined"
+	QuoteStatusVoided   QuoteStatus = "voided"
 )
 
 // BillingFrequency represents a billing interval

@@ -130,9 +130,13 @@ func TestNewQuoteClient(t *testing.T) {
 // QuoteStatus Constants Tests
 // =============================================
 
-func TestQuoteStatusPendingApproval(t *testing.T) {
-	t.Run("QuoteStatusPendingApproval constant exists and equals pending_approval", func(t *testing.T) {
-		assert.Equal(t, QuoteStatus("pending_approval"), QuoteStatusPendingApproval)
+func TestQuoteStatusConstants(t *testing.T) {
+	t.Run("defines the five released statuses", func(t *testing.T) {
+		assert.Equal(t, QuoteStatus("draft"), QuoteStatusDraft)
+		assert.Equal(t, QuoteStatus("sent"), QuoteStatusSent)
+		assert.Equal(t, QuoteStatus("accepted"), QuoteStatusAccepted)
+		assert.Equal(t, QuoteStatus("declined"), QuoteStatusDeclined)
+		assert.Equal(t, QuoteStatus("voided"), QuoteStatusVoided)
 	})
 }
 

@@ -276,9 +276,8 @@ Backend endpoints in SDK domains that are intentionally NOT wrapped — the UI-f
 
 - **TurboQuote:** `POST /v1/quotes/number-config/preview-floor` (UI preview);
   `POST /v1/quotes/:id/items/reorder` + `/items/category-order` (drag-and-drop presentation);
-  the **approval workflow** family (`/v1/quotes/workflows*`, `/:id/approve`,
-  `/approval-requests`, `/:id/approval-activity`) — backend feature not yet
-  production-complete; revisit when it ships.
+  **unreleased quote features**: any `/v1/quotes` endpoint, field or status value the product
+  UI doesn't offer yet is not wrapped, documented or listed in a type; revisit when it ships.
 - **TurboSign:** `GET /turbosign/documents/signature-documents` (list) and the
   `/turbosign/bulk/*` mail-merge family — deferred to a future pass, not rejected;
   the two-step prep flow (`upload` / `from-deliverable` / `from-template` /

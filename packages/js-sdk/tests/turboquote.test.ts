@@ -18,6 +18,7 @@
 import { TurboQuote } from "../src/modules/quote";
 import { HttpClient } from "../src/http";
 import { DeclineQuoteRequest, VoidQuoteRequest } from "../src/types/quote";
+import type { QuoteStatus } from "../src/types/quote-shared";
 
 jest.mock("../src/http", () => {
   const actual = jest.requireActual("../src/http");
@@ -185,31 +186,28 @@ describe("TurboQuote Module", () => {
       );
     });
 
-    it("should accept pending_approval as a valid quote status filter", async () => {
-      const mockResponse = {
-        results: [{ id: "q-1", name: "Pending Quote", status: "pending_approval" }],
-        totalRecords: 1,
-      };
-      mockClient.get.mockResolvedValue(mockResponse);
-
-      await TurboQuote.listQuotes({ statuses: "pending_approval" });
-
-      expect(mockClient.get).toHaveBeenCalledWith(
-        "/v1/quotes",
-        expect.objectContaining({ statuses: "pending_approval" })
-      );
-    });
-
-    it("should accept pending_approval in a multi-status array filter", async () => {
+    it("should send a multi-status array filter", async () => {
       const mockResponse = { results: [], totalRecords: 0 };
       mockClient.get.mockResolvedValue(mockResponse);
 
-      await TurboQuote.listQuotes({ statuses: ["draft", "pending_approval", "sent"] });
+      await TurboQuote.listQuotes({ statuses: ["draft", "sent", "accepted"] });
 
       expect(mockClient.get).toHaveBeenCalledWith(
         "/v1/quotes",
-        expect.objectContaining({ statuses: ["draft", "pending_approval", "sent"] })
+        expect.objectContaining({ statuses: ["draft", "sent", "accepted"] })
       );
+    });
+
+    it("should offer exactly the five quote statuses", () => {
+      // A Record over QuoteStatus fails to compile if a status is missing here or added to the type
+      const statuses: Record<QuoteStatus, true> = {
+        draft: true,
+        sent: true,
+        accepted: true,
+        declined: true,
+        voided: true,
+      };
+      expect(Object.keys(statuses)).toEqual(["draft", "sent", "accepted", "declined", "voided"]);
     });
 
     it("should create a quote and unwrap result", async () => {

@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **API behaviour, all SDK versions:** deleting a sent quote is refused with a 409 (`ConflictException`, code `CANNOT_DELETE_SENT_QUOTE`) — void it instead. Deleting a company or contact with open quotes, or a company's last contact, is a 409 (`CompanyHasOpenQuotes`, `ContactHasOpenQuotes`, `LastContact`); deleting the default price book is a 400 `PriceBookIsDefault`.
 
+### Removed
+- `QuoteStatus` lists only the released quote statuses: `DRAFT`, `SENT`, `ACCEPTED`, `DECLINED`, `VOIDED`.
+
 ## [0.9.0] - 2026-10-20
 
 ### Added

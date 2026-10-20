@@ -309,7 +309,7 @@ func (c *QuoteClient) DownloadQuotePdf(ctx context.Context, id string) ([]byte, 
 // QUOTES -- STATUS TRANSITIONS
 // ============================================
 
-// SendQuote sends a quote for approval
+// SendQuote sends a quote to its contact for signature
 func (c *QuoteClient) SendQuote(ctx context.Context, id string, request *SendQuoteRequest) (*SendQuoteResponse, error) {
 	// API returns { result, message } but our public type uses json:"quote".
 	var resp struct {

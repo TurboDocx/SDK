@@ -1693,22 +1693,15 @@ final class TurboQuoteTest extends TestCase
     // ENUMS
     // ============================================
 
-    public function testQuoteStatusPendingApprovalExists(): void
-    {
-        $status = QuoteStatus::PENDING_APPROVAL;
-        $this->assertSame('pending_approval', $status->value);
-    }
-
     public function testQuoteStatusEnumHasAllValues(): void
     {
         $cases = array_map(fn(QuoteStatus $s) => $s->value, QuoteStatus::cases());
         $this->assertContains('draft', $cases);
-        $this->assertContains('pending_approval', $cases);
         $this->assertContains('sent', $cases);
         $this->assertContains('accepted', $cases);
         $this->assertContains('declined', $cases);
         $this->assertContains('voided', $cases);
-        $this->assertCount(6, $cases);
+        $this->assertCount(5, $cases);
     }
 
     public function testBundleItemStatusEnumValues(): void
