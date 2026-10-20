@@ -13,19 +13,43 @@ replay attacks. Uses constant-time comparison via hmac.compare_digest.
 """
 
 import hmac
+import math
 import time as _time
 from hashlib import sha256
 from typing import Callable, Optional, Union
 
+BytesLike = Union[bytes, bytearray, memoryview]
+StrOrBytes = Union[str, bytes, bytearray, memoryview]
+
+
+def _as_bytes(value: object) -> bytes:
+    """Coerce a str (UTF-8 encoded) or bytes-like value to bytes.
+
+    Raises TypeError for any other type and UnicodeEncodeError (a ValueError) for text that
+    can't be UTF-8 encoded, such as a lone surrogate.
+    """
+    if isinstance(value, str):
+        return value.encode("utf-8")
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+    raise TypeError(f"expected str or bytes-like, got {type(value).__name__}")
+
+
+def _is_real_number(value: object) -> bool:
+    """True for a finite int or float (bool excluded). NaN would make every window check pass."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    return math.isfinite(value)
+
 
 def verify_webhook_signature(
-    raw_body: Union[str, bytes],
-    signature_header: Union[str, bytes],
-    timestamp_header: Union[str, bytes],
-    secret: Union[str, bytes],
+    raw_body: StrOrBytes,
+    signature_header: StrOrBytes,
+    timestamp_header: StrOrBytes,
+    secret: StrOrBytes,
     *,
     tolerance_seconds: int = 300,
-    now: Optional[Callable[[], int]] = None,
+    now: Optional[Callable[[], Union[int, float]]] = None,
 ) -> bool:
     """
     Verify a TurboDocx webhook delivery.
@@ -34,62 +58,56 @@ def verify_webhook_signature(
         raw_body: The raw request body, AS RECEIVED. Do NOT json.loads first;
             do NOT re-serialize. Whitespace must match exactly. Use a framework
             primitive that preserves raw bytes (e.g. Flask's `request.get_data()`
-            or FastAPI's `await request.body()`).
+            or FastAPI's `await request.body()`). str or bytes-like.
         signature_header: Value of the `X-TurboDocx-Signature` header
-            (format: "sha256=<hex>"), as str or bytes.
+            (format: "sha256=<hex>"), as str or bytes-like.
         timestamp_header: Value of the `X-TurboDocx-Timestamp` header
-            (Unix epoch seconds), as str or bytes.
+            (Unix epoch seconds), as str or bytes-like.
         secret: Webhook secret returned by `create_webhook` or
-            `regenerate_webhook_secret`, as str or bytes.
+            `regenerate_webhook_secret`, as str or bytes-like.
         tolerance_seconds: Maximum acceptable age of the timestamp, in seconds.
             Defaults to 300 (5 minutes). Set to 0 to disable the timestamp check
-            (NOT recommended in production).
+            (NOT recommended in production). A non-numeric or NaN value fails closed.
         now: Override the "current time" function for deterministic testing.
-            Returns Unix epoch seconds. Defaults to `int(time.time())`.
+            Returns Unix epoch seconds (int or float). Defaults to `int(time.time())`.
+            A non-numeric or NaN result fails closed.
 
     Returns:
         True iff the signature is valid AND the timestamp is within tolerance.
-        Constant-time comparison; never raises on bad input.
+        Constant-time comparison; returns False (never raises) on bad input,
+        so a receiver answers 401, not 500.
     """
-    if not signature_header or not timestamp_header or not secret:
+    # Normalise every input to bytes. Only this step is guarded: a wrong type or unencodable text
+    # is bad input and fails closed, while an error in the HMAC step below is a real bug and surfaces.
+    try:
+        body_bytes = _as_bytes(raw_body)
+        provided = _as_bytes(signature_header)
+        ts_bytes = _as_bytes(timestamp_header)
+        secret_bytes = _as_bytes(secret)
+    except (TypeError, UnicodeEncodeError):
         return False
 
-    # Raw header bytes (e.g. from an ASGI/WSGI receiver): the timestamp is signed as text, so
-    # decode it; a non-ASCII timestamp can't be a valid one.
-    if isinstance(timestamp_header, (bytes, bytearray, memoryview)):
-        try:
-            timestamp_header = bytes(timestamp_header).decode("ascii")
-        except UnicodeDecodeError:
-            return False
+    if not provided or not ts_bytes or not secret_bytes:
+        return False
+
+    if not _is_real_number(tolerance_seconds):
+        return False
 
     if tolerance_seconds > 0:
         try:
-            ts = int(timestamp_header)
-        except (TypeError, ValueError):
+            # int() parses ASCII digits from bytes; non-ASCII bytes raise ValueError.
+            ts = int(ts_bytes)
+        except ValueError:
             return False
         current_time = now() if now is not None else int(_time.time())
+        if not _is_real_number(current_time):
+            return False
         if abs(current_time - ts) > tolerance_seconds:
             return False
 
-    try:
-        body_bytes = raw_body.encode("utf-8") if isinstance(raw_body, str) else raw_body
-        signed_string = f"{timestamp_header}.".encode("utf-8") + body_bytes
-        secret_bytes = bytes(secret) if isinstance(secret, (bytes, bytearray, memoryview)) else secret.encode("utf-8")
-        digest = hmac.new(secret_bytes, signed_string, sha256).hexdigest()
-        expected = ("sha256=" + digest).encode("ascii")
+    digest = hmac.new(secret_bytes, ts_bytes + b"." + body_bytes, sha256).hexdigest()
+    expected = ("sha256=" + digest).encode("ascii")
 
-        # Compare bytes: hmac.compare_digest raises TypeError on non-ASCII str, which would turn a
-        # malformed header into a 500 instead of a rejected delivery.
-        if isinstance(signature_header, str):
-            provided = signature_header.encode("utf-8")
-        elif isinstance(signature_header, (bytes, bytearray, memoryview)):
-            provided = bytes(signature_header)
-        else:
-            return False
-
-        # Constant-time comparison.
-        return hmac.compare_digest(expected, provided)
-    except (TypeError, ValueError, AttributeError):
-        # Unencodable text (e.g. a lone surrogate raises UnicodeEncodeError, a ValueError) or a
-        # wrongly-typed argument: fail closed, as the contract above promises.
-        return False
+    # Compare bytes: hmac.compare_digest raises TypeError on non-ASCII str, which would turn a
+    # malformed header into a 500 instead of a rejected delivery.
+    return hmac.compare_digest(expected, provided)
