@@ -187,6 +187,16 @@ composer require turbodocx/sdk
 ```
 </details>
 
+<details>
+<summary><strong>Ruby</strong></summary>
+
+```bash
+gem install turbodocx-sdk
+# or, with Bundler
+bundle add turbodocx-sdk
+```
+</details>
+
 ### 3. Send your first document for signature
 
 ```typescript
@@ -397,6 +407,7 @@ language-specific form.
 | PHP | PHP 8.1+ |
 | Go | Go 1.21+ |
 | Java | Java 11+ |
+| Ruby | Ruby 2.7+ |
 
 ---
 
