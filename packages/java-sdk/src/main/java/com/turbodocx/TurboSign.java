@@ -444,10 +444,11 @@ public final class TurboSign {
             }
         }
 
-        // Full fields (when provided) win verbatim — even an explicitly empty list; otherwise expand
-        // each recipient's shorthand. Null check, never isEmpty(), mirrors the JS `?? expand`.
+        // Full fields (when non-empty) win verbatim; otherwise expand each recipient's shorthand. An
+        // explicitly empty list counts as absent, so it can't discard the shorthand and leave the send
+        // with no fields (which the API rejects with 400 FieldsRequired).
         List<Field> fields;
-        if (request.getFields() != null) {
+        if (request.getFields() != null && !request.getFields().isEmpty()) {
             fields = request.getFields();
         } else {
             fields = new ArrayList<>();

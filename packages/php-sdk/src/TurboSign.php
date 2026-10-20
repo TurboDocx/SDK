@@ -119,7 +119,7 @@ final class TurboSign
 
         // A review link may have no fields (they are placed in the preview), so send [] when none
         // are given: the API rejects a MISSING key (FieldsRequired) unless a recipient names a role.
-        $formData['fields'] = json_encode(array_map(fn($f) => $f->toArray(), $request->fields));
+        $formData['fields'] = json_encode(array_values(array_map(fn($f) => $f->toArray(), $request->fields)));
 
         // Add optional fields
         if ($request->documentName !== null) {
@@ -210,7 +210,7 @@ final class TurboSign
         // Leave 'fields' out when none are given. A role send then takes the template's saved fields,
         // and any other send gets the API's 400 FieldsRequired instead of a document with nothing to sign.
         if ($request->fields !== []) {
-            $formData['fields'] = json_encode(array_map(fn($f) => $f->toArray(), $request->fields));
+            $formData['fields'] = json_encode(array_values(array_map(fn($f) => $f->toArray(), $request->fields)));
         }
 
         // Add optional fields
@@ -539,9 +539,10 @@ final class TurboSign
         // Fail fast on identity-config mistakes (mirrors the JS validateRecipientsIdentity call).
         self::validateRecipientsIdentity($mappedRecipients);
 
-        // Full `fields` (when provided) win verbatim; otherwise expand each recipient's shorthand.
+        // Full `fields` (when non-empty) win verbatim; otherwise expand each recipient's shorthand. An
+        // empty array counts as absent, so it can't discard the shorthand and leave the send with no fields.
         $fields = $request->fields;
-        if ($fields === null) {
+        if ($fields === null || $fields === []) {
             $fields = [];
             foreach ($request->recipients as $r) {
                 foreach (self::expandRecipientFields($r) as $field) {

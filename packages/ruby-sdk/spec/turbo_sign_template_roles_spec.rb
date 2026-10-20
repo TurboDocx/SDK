@@ -138,6 +138,34 @@ RSpec.describe TurboDocxSdk::TurboSign do
       end
     end
 
+    # An explicit empty top-level fields used to win over the shorthand, so the send had no fields and
+    # the API answered 400 FieldsRequired. An empty list now counts as absent.
+    describe ".create_embedded_signature with an empty top-level fields" do
+      it "still expands the recipients' fields shorthand" do
+        send_body = nil
+        allow(mock_client).to receive(:post) do |path, body|
+          if path == "/turbosign/single/prepare-for-signing"
+            send_body = body
+            { "success" => true, "documentId" => "doc-9", "status" => "under_review",
+              "recipients" => [{ "id" => "rec-1", "name" => "Alice", "email" => "alice@example.com" }] }
+          else
+            { "results" => { "url" => "https://app/sign/doc-9?token=A", "expiresAt" => nil,
+                             "recipientId" => "rec-1" } }
+          end
+        end
+
+        described_class.create_embedded_signature(
+          templateId: template_id,
+          fields: [],
+          recipients: [{ name: "Alice", email: "alice@example.com", fields: { signature: "{sig}" } }]
+        )
+
+        sent_fields = JSON.parse(send_body["fields"])
+        expect(sent_fields.length).to eq(1)
+        expect(sent_fields[0]["template"]["anchor"]).to eq("{sig}")
+      end
+    end
+
     describe ".create_embedded_signature" do
       it "passes each recipient's role through to the send" do
         send_body = nil

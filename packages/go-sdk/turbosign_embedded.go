@@ -207,7 +207,8 @@ type CreateEmbeddedSignatureRequest struct {
 	CCEmails            []string
 
 	Recipients []EmbeddedSignatureRecipient
-	// Fields optionally overrides the per-recipient Fields shorthand with full field control.
+	// Fields optionally overrides the per-recipient Fields shorthand with full field control. An empty
+	// slice counts as not set, so the shorthand still applies.
 	Fields []Field
 	// SendEmail defaults to false for this flow: your app shows the signing page, so the
 	// signing-link emails (and the initial CC notice) are suppressed. Passcode and completed-copy
@@ -468,9 +469,11 @@ func (c *TurboSignClient) CreateEmbeddedSignature(ctx context.Context, req *Crea
 		}
 	}
 
-	// Full Fields (when provided) win verbatim; otherwise expand each recipient's shorthand.
+	// Full Fields (when non-empty) win verbatim; otherwise expand each recipient's shorthand. An empty
+	// slice counts as absent, so it can't discard the shorthand and leave the send with no fields.
 	fields := req.Fields
-	if fields == nil {
+	if len(fields) == 0 {
+		fields = nil
 		for _, r := range req.Recipients {
 			fields = append(fields, expandRecipientFields(r)...)
 		}

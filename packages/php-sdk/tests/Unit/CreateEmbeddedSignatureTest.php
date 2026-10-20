@@ -117,6 +117,36 @@ final class CreateEmbeddedSignatureTest extends TestCase
         $this->assertSame('replace', $fields[0]['template']['placement']);
     }
 
+    /**
+     * An explicit empty top-level `fields` used to win over the shorthand, so the send had no fields
+     * and the API answered 400 FieldsRequired. An empty array now counts as absent.
+     */
+    public function testEmptyTopLevelFieldsStillExpandsTheShorthand(): void
+    {
+        $this->injectTurboSignClient([
+            $this->sendSignatureResponse('doc-2', [
+                ['id' => 'r1', 'email' => 'john@example.com', 'name' => 'John Doe'],
+            ]),
+            $this->signingUrlResponse('https://sign.turbodocx.com/embed/r1', 'r1'),
+        ], captureHistory: true);
+
+        TurboSign::createEmbeddedSignature(new CreateEmbeddedSignatureRequest(
+            recipients: [
+                new EmbeddedSignatureRecipient(
+                    name: 'John Doe',
+                    email: 'john@example.com',
+                    fields: new EmbeddedRecipientFields(signature: '{signature1}'),
+                ),
+            ],
+            fields: [],
+            deliverableId: 'deliv-1',
+        ));
+
+        $fields = json_decode($this->capturedJsonBody(0)['fields'], true);
+        $this->assertCount(1, $fields);
+        $this->assertSame('{signature1}', $fields[0]['template']['anchor']);
+    }
+
     public function testNotSignersTurnDegradesToPendingWithNullUrl(): void
     {
         // Arrange: the backend refuses to mint a URL for a signer whose turn hasn't come.

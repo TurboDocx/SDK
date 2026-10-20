@@ -314,9 +314,10 @@ module TurboDocxSdk
           )
         end
 
-        # Full `fields` (when provided) win verbatim; otherwise expand each recipient's shorthand.
+        # Full `fields` (when non-empty) win verbatim; otherwise expand each recipient's shorthand. An
+        # empty list counts as absent, so it can't discard the shorthand and leave the send with no fields.
         fields = req_val(request, :fields)
-        fields ||= recipients.flat_map { |r| expand_recipient_fields(r) }
+        fields = recipients.flat_map { |r| expand_recipient_fields(r) } if fields.nil? || fields.empty?
 
         send_request = {
           "recipients" => mapped_recipients,

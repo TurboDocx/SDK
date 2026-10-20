@@ -264,7 +264,8 @@ class TurboSign:
                 roles with :meth:`get_template_signature_setup`.
             fields: Signature fields configuration. Optional when recipients carry a
                 ``role``: the template's saved fields are used and any fields passed here
-                are added to them. Left out of the request when omitted.
+                are added to them. Sent as ``[]`` when omitted: a review link may have no
+                fields (they are placed in the preview).
                 Each field should have: type, recipientEmail, and positioning info
                 Optional per-field "metadata" drives conditional (IF/THEN) logic:
                   - On a controlling checkbox: {"metadata": {"fieldKey": "request_changes"}}
@@ -1176,8 +1177,9 @@ class TurboSign:
                     code="PhoneRequiredForSmsOtp",
                 )
 
-        # Full `fields` (when provided) win verbatim; otherwise expand each shorthand.
-        expanded_fields: List[Dict[str, Any]] = fields if fields is not None else [
+        # Full `fields` (when non-empty) win verbatim; otherwise expand each shorthand. An empty list
+        # counts as absent, so it can't discard the shorthand and leave the send with no fields.
+        expanded_fields: List[Dict[str, Any]] = fields if fields else [
             field for r in recipients for field in _expand_recipient_fields(r)
         ]
 

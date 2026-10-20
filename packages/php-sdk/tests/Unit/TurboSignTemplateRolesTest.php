@@ -211,6 +211,35 @@ final class TurboSignTemplateRolesTest extends TestCase
         $this->assertArrayNotHasKey('fields', $this->capturedJsonBody(1));
     }
 
+    /** A non-sequential list (e.g. from array_filter) must still encode as a JSON array, not an object. */
+    public function testFieldsWithNonSequentialKeysEncodeAsAJsonArray(): void
+    {
+        $this->injectTurboSignClient([
+            $this->ok(['success' => true, 'documentId' => 'doc-8', 'status' => 'review_ready', 'message' => 'ok']),
+            $this->ok(['success' => true, 'documentId' => 'doc-9', 'status' => 'under_review', 'message' => 'ok']),
+        ], captureHistory: true);
+        $recipients = [new Recipient(name: 'Jane Doe', email: 'jane@client.com', signingOrder: 1)];
+        $field = new Field(SignatureFieldType::SIGNATURE, 'jane@client.com', page: 1, x: 10, y: 20, width: 100, height: 30);
+        $fields = [1 => $field];
+
+        TurboSign::createSignatureReviewLink(new CreateSignatureReviewLinkRequest(
+            recipients: $recipients,
+            fields: $fields,
+            fileLink: 'https://example.com/contract.pdf',
+        ));
+        TurboSign::sendSignature(new SendSignatureRequest(
+            recipients: $recipients,
+            fields: $fields,
+            fileLink: 'https://example.com/contract.pdf',
+        ));
+
+        foreach ([0, 1] as $call) {
+            $sent = $this->capturedJsonBody($call)['fields'];
+            $this->assertStringStartsWith('[', $sent);
+            $this->assertSame('signature', json_decode($sent, true)[0]['type']);
+        }
+    }
+
     public function testCreateEmbeddedSignaturePassesRoleThrough(): void
     {
         $this->injectTurboSignClient([

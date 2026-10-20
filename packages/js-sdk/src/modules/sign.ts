@@ -457,9 +457,12 @@ export class TurboSign {
       return recipient;
     });
 
-    // Full `fields` (when provided) win verbatim; otherwise expand each recipient's shorthand.
+    // Full `fields` (when non-empty) win verbatim; otherwise expand each recipient's shorthand. An
+    // empty list counts as absent, so it can't discard the shorthand and leave the send with no fields.
     const fields: Field[] =
-      request.fields ?? request.recipients.flatMap((r) => this.expandRecipientFields(r));
+      request.fields && request.fields.length > 0
+        ? request.fields
+        : request.recipients.flatMap((r) => this.expandRecipientFields(r));
 
     const sendRequest: SendSignatureRequest = {
       recipients: mappedRecipients,
