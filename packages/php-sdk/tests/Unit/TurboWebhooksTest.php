@@ -291,8 +291,8 @@ final class TurboWebhooksTest extends TestCase
 
     public function testVerifyReturnsFalseOnNullOrArrayHeadersWithoutThrowing(): void
     {
-        // A missing header arrives as null (e.g. Laravel's $request->header()) and a repeated one
-        // as an array; with string params under strict_types this threw TypeError, a 500 not a 401.
+        // A missing header arrives as null (e.g. Laravel's $request->header()) and PSR-7's
+        // getHeader() returns string[]; with string params this threw TypeError, a 500 not a 401.
         $ts = (string) self::NOW_SECONDS;
         $sig = 'sha256=' . hash_hmac('sha256', "{$ts}." . self::BODY, self::SECRET);
         $cases = [

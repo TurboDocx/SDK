@@ -600,7 +600,8 @@ describe("verifyWebhookSignature", () => {
   });
 
   // Plain-JS callers can pass anything: req.body is undefined without a raw body parser, and a
-  // header can be missing or repeated. Each case used to throw TypeError (a 500, not a 401).
+  // header can be missing or not a string. The undefined/null body, number header and number
+  // secret cases threw TypeError (a 500, not a 401); the others already returned false.
   it.each([
     ["undefined body", [undefined, validSig, TIMESTAMP, SECRET]],
     ["null body", [null, validSig, TIMESTAMP, SECRET]],

@@ -56,7 +56,8 @@ export function verifyWebhookSignature(
   options: VerifyWebhookSignatureOptions = {},
 ): boolean {
   // Plain-JS callers can pass anything (an undefined req.body without a raw body parser, a
-  // missing or repeated header). Bad input returns false so the receiver answers 401, not 500.
+  // missing header or a non-string value). Bad input returns false so the receiver answers 401,
+  // not 500.
   if (typeof rawBody !== 'string' && !Buffer.isBuffer(rawBody)) return false;
   if (typeof signatureHeader !== 'string' || typeof timestampHeader !== 'string') return false;
   if (typeof secret !== 'string') return false;

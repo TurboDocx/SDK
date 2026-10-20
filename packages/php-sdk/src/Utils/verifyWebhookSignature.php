@@ -18,9 +18,9 @@ namespace TurboDocx\Utils;
  * replay attacks. Uses hash_equals for constant-time comparison.
  *
  * Every request-derived argument is typed `mixed` so a missing header (null,
- * e.g. Laravel's `$request->header()`) or a repeated one (array) returns false
- * instead of throwing TypeError under `declare(strict_types=1)`: a receiver
- * answers 401, not 500.
+ * e.g. Laravel's `$request->header()`) or a PSR-7 `getHeader()` value
+ * (string[]) returns false instead of throwing TypeError: a receiver answers
+ * 401, not 500.
  *
  * @param mixed  $rawBody          The raw request body bytes AS RECEIVED, as a
  *                                 string. Do NOT json_decode first; do NOT
