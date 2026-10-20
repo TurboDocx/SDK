@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace TurboDocx\Types\Requests;
 
+use TurboDocx\Exceptions\ValidationException;
 use TurboDocx\Types\IdentityAssertion;
+use TurboDocx\Types\PageNavigation;
 
 /**
  * Request an embedded signing URL for one recipient.
@@ -20,12 +22,16 @@ final class CreateSigningUrlRequest
      * @param IdentityAssertion|null $identityAssertion Required only when the recipient's mode is
      *     external_idv.
      * @param string|null $returnUrl Where TurboSign returns the signer after completion (https only).
+     * @param PageNavigation|null $pageNavigation How the embedded signing page shows its page
+     *     navigation when loaded in an iframe. Applies to this issuance only: a later call without
+     *     it (or with `PageNavigation::AUTO`) resets to auto.
      */
     public function __construct(
         public ?string $recipientId = null,
         public ?string $externalId = null,
         public ?IdentityAssertion $identityAssertion = null,
         public ?string $returnUrl = null,
+        public ?PageNavigation $pageNavigation = null,
     ) {}
 
     /**
@@ -46,7 +52,28 @@ final class CreateSigningUrlRequest
             externalId: isset($data['externalId']) ? (string) $data['externalId'] : null,
             identityAssertion: $assertion instanceof IdentityAssertion ? $assertion : null,
             returnUrl: isset($data['returnUrl']) ? (string) $data['returnUrl'] : null,
+            pageNavigation: self::pageNavigationFrom($data['pageNavigation'] ?? null),
         );
+    }
+
+    /**
+     * Accept a PageNavigation case or its string value ('auto' | 'collapsed' | 'hidden').
+     *
+     * @throws ValidationException For any other value
+     */
+    private static function pageNavigationFrom(mixed $value): ?PageNavigation
+    {
+        if ($value === null || $value instanceof PageNavigation) {
+            return $value;
+        }
+        $mode = is_string($value) ? PageNavigation::tryFrom($value) : null;
+        if ($mode === null) {
+            throw new ValidationException(
+                'pageNavigation must be one of auto, collapsed, hidden.',
+                'InvalidPageNavigation'
+            );
+        }
+        return $mode;
     }
 
     /**
@@ -69,6 +96,9 @@ final class CreateSigningUrlRequest
         // Treat an empty-string returnUrl as ABSENT (omit it from the body), matching js-sdk/Go/Python.
         if ($this->returnUrl !== null && $this->returnUrl !== '') {
             $data['returnUrl'] = $this->returnUrl;
+        }
+        if ($this->pageNavigation !== null) {
+            $data['pageNavigation'] = $this->pageNavigation->value;
         }
         return $data;
     }

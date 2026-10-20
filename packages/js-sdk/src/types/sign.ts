@@ -372,6 +372,11 @@ export interface CreateEmbeddedSignatureRequest {
    * {@link TurboSign.createSigningUrl} when the signing URL is minted. Passed to each embed URL.
    */
   returnUrl?: string;
+  /**
+   * How each embedded signing page shows its page navigation. Passed to each embed URL when set.
+   * See {@link PageNavigationMode}.
+   */
+  pageNavigation?: PageNavigationMode;
 }
 
 /** One resolved signer in a {@link CreateEmbeddedSignatureResponse}. */
@@ -624,6 +629,15 @@ export interface IdentityAssertion {
   overrideEmailMatching?: boolean;
 }
 
+/**
+ * How the embedded signing page shows its page navigation when loaded in an iframe:
+ * - `auto` (default): sized to the iframe width. The thumbnail rail is open at 1200px and wider,
+ *   collapsed from 900px to 1199px, and replaced by a "Pages" button in the bottom bar under 900px.
+ * - `collapsed`: the rail starts collapsed at any width. The signer can still expand it.
+ * - `hidden`: no rail and no "Pages" button.
+ */
+export type PageNavigationMode = 'auto' | 'collapsed' | 'hidden';
+
 /** Request an embedded signing URL for one recipient. Provide exactly one selector. */
 export interface CreateSigningUrlRequest {
   /** Select the recipient by TurboDocx recipient id... */
@@ -634,6 +648,12 @@ export interface CreateSigningUrlRequest {
   identityAssertion?: IdentityAssertion;
   /** Where TurboSign returns the signer after completion (https only). */
   returnUrl?: string;
+  /**
+   * How the embedded signing page shows its page navigation (the page-thumbnail rail and the
+   * "Pages" button) when the URL is loaded in an iframe. Applies to this issuance only: a later
+   * call without it (or with `'auto'`) resets to `'auto'`. See {@link PageNavigationMode}.
+   */
+  pageNavigation?: PageNavigationMode;
 }
 
 /**

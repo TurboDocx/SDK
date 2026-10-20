@@ -362,6 +362,20 @@ $link = TurboSign::createSigningUrl(
 echo $link->url;  // open in a new tab or redirect to it
 ```
 
+`CreateSigningUrlRequest` also takes an optional https `returnUrl` (where the signer goes after completing) and an optional `pageNavigation`, which sets how the signing page shows its page thumbnails in your iframe:
+
+```php
+use TurboDocx\Types\PageNavigation;
+
+new CreateSigningUrlRequest(recipientId: $recipientId, pageNavigation: PageNavigation::COLLAPSED);
+```
+
+- `PageNavigation::AUTO` (the default) sizes the navigation to the iframe width: the thumbnail rail is open at 1200px and wider, collapsed from 900px to 1199px, and a "Pages" button in the bottom bar under 900px.
+- `PageNavigation::COLLAPSED` starts the rail collapsed at any width. The signer can still open it.
+- `PageNavigation::HIDDEN` shows no rail and no Pages button.
+
+It applies to that URL only: a later call without it resets to `AUTO`. `CreateEmbeddedSignatureRequest` takes the same `returnUrl` and `pageNavigation` and passes them to each signing URL.
+
 `createEmbeddedSignature()` wraps both calls: it sends with `sendEmail` defaulting to `false` and returns a signing URL per recipient.
 
 #### `sendReminder()`

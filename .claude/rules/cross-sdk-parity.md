@@ -37,7 +37,7 @@ may have none (they are placed in the preview). Never send `null`. In `createEmb
 `fields` counts as absent, so the recipients' `fields` shorthand still expands.
 
 **Embedded signing notes:** `createSigningUrl` posts `{ recipientId | externalId (exactly one),
-returnUrl? (https), identityAssertion? }` and unwraps `{ data: { results } }`. The API rejects unknown
+returnUrl? (https), pageNavigation? ('auto' | 'collapsed' | 'hidden'), identityAssertion? }` and unwraps `{ data: { results } }`. The API rejects unknown
 keys (no `senderName` here). An identity assertion has four required keys plus six optional ones
 (`method`, `methodDetail` — required when method is `other` — `assuranceLevel`, `verifiedName`,
 `evidenceUrl`, `overrideEmailMatching`); typed SDKs omit unset optional keys from the wire.

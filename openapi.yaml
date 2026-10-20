@@ -576,7 +576,10 @@ paths:
       operationId: postTurbosignDocumentsByDocumentIdSigningUrl
       summary: POST /turbosign/documents/{documentId}/signing-url
       description: 'Mint an embedded signing URL for one recipient (selected by recipientId or externalId),
-        optionally with an identity assertion for external_idv recipients. Responds `{ data: { results } }`.'
+        optionally with an identity assertion for external_idv recipients, an https `returnUrl`, and a
+        `pageNavigation` (`auto` | `collapsed` | `hidden`, default `auto`) that sets how the embedded
+        signing page shows its page navigation in an iframe. Any other `pageNavigation` value is a 400.
+        Responds `{ data: { results } }`.'
       parameters:
       - name: documentId
         in: path

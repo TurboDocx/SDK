@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TurboDocx\Types\Requests;
 
 use TurboDocx\Types\Field;
+use TurboDocx\Types\PageNavigation;
 
 /**
  * Request for {@see \TurboDocx\TurboSign::createEmbeddedSignature()} — create a signature request
@@ -31,6 +32,8 @@ final class CreateEmbeddedSignatureRequest
      *     so the signing-link emails (and the initial CC notice) are suppressed. Passcode and
      *     completed-copy emails are still sent.
      * @param string|null $returnUrl Optional completion fallback (https). Passed to each embed URL.
+     * @param PageNavigation|null $pageNavigation How each embedded signing page shows its page
+     *     navigation. Passed to each embed URL when set.
      */
     public function __construct(
         public array $recipients,
@@ -47,5 +50,6 @@ final class CreateEmbeddedSignatureRequest
         public ?array $fields = null,
         public ?bool $sendEmail = null,
         public ?string $returnUrl = null,
+        public ?PageNavigation $pageNavigation = null,
     ) {}
 }

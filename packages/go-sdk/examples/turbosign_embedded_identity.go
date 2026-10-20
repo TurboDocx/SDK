@@ -156,6 +156,7 @@ func main() {
 		//   EvidenceURL:    "https://capa.example.com/verifications/capa_verif_8f2a91",
 		// },
 		ReturnURL: "https://app.yourcompany.com/signed", // where the signer returns after signing (https)
+		// PageNavigation: turbodocx.PageNavigationCollapsed, // page thumbnails in the iframe: Auto (default) | Collapsed | Hidden
 	})
 	if err != nil {
 		fmt.Printf("Error creating signing URL: %v\n", err)

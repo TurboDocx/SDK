@@ -369,6 +369,7 @@ CreateSigningUrlResponse link = client.turboSign().createSigningUrl(
     new CreateSigningUrlRequest.Builder()
         .recipientId("recipient-uuid-here")     // or .externalId("your_customer_123"): exactly one
         .returnUrl("https://your-app.example.com/signed") // optional, https only
+        .pageNavigation(PageNavigation.COLLAPSED)          // optional: AUTO (default), COLLAPSED or HIDDEN
         .build()
 );
 ```
@@ -379,6 +380,7 @@ CreateSigningUrlResponse link = client.turboSign().createSigningUrl(
 | `externalId` | The `externalId` you set on the recipient when sending. |
 | `identityAssertion` | Required only for `external_idv` recipients (`IdentityAssertion.Builder`: `provider`, `verificationId`, `verifiedAt`, `subjectEmail`, plus optional `method`, `methodDetail` (required when `method` is `"other"`), `assuranceLevel`, `verifiedName`, `evidenceUrl`, `overrideEmailMatching`). |
 | `returnUrl` | Where the signer goes after completing. Must be https. An empty string counts as not set. |
+| `pageNavigation` | How the signing page shows its page thumbnails in your iframe. `PageNavigation.AUTO` (the default) sizes them to the iframe width: the thumbnail rail is open at 1200px and wider, collapsed from 900px to 1199px, and a "Pages" button in the bottom bar under 900px. `COLLAPSED` starts the rail collapsed at any width (the signer can still open it). `HIDDEN` shows no rail and no Pages button. It applies to this URL only: a later call without it resets to `AUTO`. |
 
 `CreateSigningUrlResponse`: `getUrl()`, `getExpiresAt()` (ISO 8601: 5 minutes after issue for a single-use link, otherwise the document's `expiresAt`, or null when the document has no expiry), `getRecipientId()`, `getExternalId()`, `getIdentityVerificationMode()` (`"otp"`, `"external_idv"`, `"override"` or null) and `getPendingChecks()` (passcode steps left on the page, `"email_otp"` / `"sms_otp"`).
 
@@ -436,6 +438,7 @@ for (EmbeddedSignatureRecipientResult r : result.getRecipients()) {
 | `fields` (request) | Optional full `Field` list. When set, it replaces every recipient's shorthand. |
 | `sendEmail` | Defaults to `false`. |
 | `returnUrl` | Optional completion URL passed to each embed URL. https only. |
+| `pageNavigation` | Optional `PageNavigation` passed to each embed URL. See `createSigningUrl()`. |
 
 `CreateEmbeddedSignatureResponse`: `getDocumentId()` and `getRecipients()`, in signing order. Each `EmbeddedSignatureRecipientResult` has `getRecipientId()`, `getName()`, `getEmail()`, `getStatus()` (`"ready"`, `"pending"` or `"completed"`), `getEmbedUrl()` (set only when `"ready"`; mint it later with `createSigningUrl()`) and `getIdentityVerificationMode()`.
 

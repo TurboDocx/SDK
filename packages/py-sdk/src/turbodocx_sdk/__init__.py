@@ -9,7 +9,7 @@ __version__ = "0.9.0"
 
 from typing import Optional
 
-from .modules.sign import TurboSign
+from .modules.sign import PageNavigationMode, TurboSign
 from .modules.partner import TurboPartner
 from .modules.webhooks import TurboWebhooks
 from .modules.deliverable import Deliverable
@@ -96,6 +96,7 @@ class TurboDocxClient:
 
 
 __all__ = [
+    "PageNavigationMode",
     "TurboDocxClient",
     "TurboSign",
     "TurboPartner",

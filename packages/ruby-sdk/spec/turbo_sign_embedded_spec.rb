@@ -106,6 +106,22 @@ RSpec.describe TurboDocxSdk::TurboSign do
       )
     end
 
+    it "sends page_navigation as pageNavigation when given and omits it otherwise" do
+      allow(mock_client).to receive(:post).and_return({ "results" => ok_results })
+
+      described_class.create_signing_url("doc-1", recipient_id: "rec-1", page_navigation: "collapsed")
+      expect(mock_client).to have_received(:post).with(
+        "/turbosign/documents/doc-1/signing-url",
+        { "recipientId" => "rec-1", "pageNavigation" => "collapsed" }
+      )
+
+      described_class.create_signing_url("doc-1", recipient_id: "rec-2")
+      expect(mock_client).to have_received(:post).with(
+        "/turbosign/documents/doc-1/signing-url",
+        { "recipientId" => "rec-2" }
+      )
+    end
+
     it "rejects zero selectors before any HTTP call" do
       allow(mock_client).to receive(:post)
 
@@ -218,6 +234,24 @@ RSpec.describe TurboDocxSdk::TurboSign do
     def signing_results(recipient_id, url, mode)
       { "results" => { "url" => url, "expiresAt" => nil, "recipientId" => recipient_id,
                        "identityVerificationMode" => mode, "pendingChecks" => mode == "otp" ? ["email_otp"] : [] } }
+    end
+
+    it "forwards :pageNavigation and :returnUrl to the signing-url call" do
+      captured = stub_posts(
+        send_response: send_response("doc-9", [{ "id" => "rec-1", "name" => "Alice", "email" => "alice@example.com" }]),
+        signing_url_for: ->(_body) { signing_results("rec-1", "https://app/sign/doc-9?token=A", nil) }
+      )
+
+      described_class.create_embedded_signature(
+        templateId: "tmpl-1",
+        recipients: [{ name: "Alice", email: "alice@example.com" }],
+        returnUrl: "https://app.example.com/done",
+        pageNavigation: "hidden"
+      )
+
+      expect(captured[:signing_bodies]).to eq([
+        { "recipientId" => "rec-1", "returnUrl" => "https://app.example.com/done", "pageNavigation" => "hidden" }
+      ])
     end
 
     it "calls send once then signing-url per recipient, returning results IN SIGNING ORDER" do

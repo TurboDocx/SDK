@@ -7,7 +7,7 @@
 import { TurboSign } from "../src/modules/sign";
 import { HttpClient } from "../src/http";
 import { ValidationError } from "../src/utils/errors";
-import type { Recipient } from "../src/types/sign";
+import type { Recipient, PageNavigationMode } from "../src/types/sign";
 
 jest.mock("../src/http");
 
@@ -78,6 +78,36 @@ describe("TurboSign embedded identity verification", () => {
       await expect(
         TurboSign.createSigningUrl("doc-1", { recipientId: "rec-1", externalId: "cust_1" })
       ).rejects.toMatchObject({ code: "RecipientSelectorInvalid" });
+    });
+
+    it("sends pageNavigation when given", async () => {
+      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({ results: okResponse });
+      TurboSign.configure({ apiKey: "k", orgId: "o", senderEmail: "test@company.com" });
+
+      await TurboSign.createSigningUrl("doc-1", { recipientId: "rec-1", pageNavigation: "collapsed" });
+
+      expect(MockedHttpClient.prototype.post).toHaveBeenCalledWith("/turbosign/documents/doc-1/signing-url", {
+        recipientId: "rec-1",
+        pageNavigation: "collapsed",
+      });
+    });
+
+    it("omits pageNavigation when not given", async () => {
+      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({ results: okResponse });
+      TurboSign.configure({ apiKey: "k", orgId: "o", senderEmail: "test@company.com" });
+
+      await TurboSign.createSigningUrl("doc-1", { recipientId: "rec-1" });
+
+      const body = (MockedHttpClient.prototype.post as jest.Mock).mock.calls[0][1];
+      expect(body).not.toHaveProperty("pageNavigation");
+    });
+
+    it("types pageNavigation to auto | collapsed | hidden", () => {
+      const modes: PageNavigationMode[] = ["auto", "collapsed", "hidden"];
+      expect(modes).toHaveLength(3);
+      // @ts-expect-error: not a page navigation mode
+      const bad: PageNavigationMode = "expanded";
+      expect(bad).toBe("expanded");
     });
 
     it("rejects a non-https returnUrl", async () => {

@@ -304,6 +304,7 @@ public final class TurboSign {
      * <p>Provide exactly one of {@code recipientId} / {@code externalId}. {@code identityAssertion}
      * is only for external_idv recipients; {@code returnUrl}, when supplied, must be https. Both are
      * checked client-side here for a fast, actionable message; the server still enforces everything.
+     * {@code pageNavigation} optionally sets how the embedded page shows its page navigation.
      *
      * @param documentId the document the recipient belongs to
      * @param request    the recipient selector plus optional assertion / return URL
@@ -332,12 +333,13 @@ public final class TurboSign {
         CreateSigningUrlRequest payload = request;
         String returnUrl = request.getReturnUrl();
         if (returnUrl != null && returnUrl.isEmpty()) {
-            // Rebuild copying every field — CreateSigningUrlRequest has exactly four today; a fifth
+            // Rebuild copying every field — CreateSigningUrlRequest has exactly five today; a sixth
             // added later must be copied here too or it would be silently dropped on this path.
             payload = new CreateSigningUrlRequest.Builder()
                     .recipientId(request.getRecipientId())
                     .externalId(request.getExternalId())
                     .identityAssertion(request.getIdentityAssertion())
+                    .pageNavigation(request.getPageNavigation())
                     .build();
             returnUrl = null;
         }
@@ -570,6 +572,9 @@ public final class TurboSign {
                         .recipientId(recipientId);
                 if (request.getReturnUrl() != null) {
                     linkBuilder.returnUrl(request.getReturnUrl());
+                }
+                if (request.getPageNavigation() != null) {
+                    linkBuilder.pageNavigation(request.getPageNavigation());
                 }
                 CreateSigningUrlResponse link = createSigningUrl(sent.getDocumentId(), linkBuilder.build());
                 results.add(new EmbeddedSignatureRecipientResult(

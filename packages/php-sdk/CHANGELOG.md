@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `CreateSigningUrlRequest` takes an optional `pageNavigation` (the new `PageNavigation` enum: `AUTO`, `COLLAPSED`, `HIDDEN`), sent as `pageNavigation`. It sets how the embedded signing page shows its page navigation in an iframe: `auto` (the default) sizes it to the iframe width, `collapsed` starts the thumbnail rail collapsed, `hidden` shows no rail and no Pages button. It applies to that signing URL only. `fromArray()` also accepts the string value, and throws a `ValidationException` (`InvalidPageNavigation`) for any other value.
+- `CreateEmbeddedSignatureRequest` takes the same optional `pageNavigation` and passes it to each `createSigningUrl()` call, like `returnUrl`.
+
 ## [0.9.0] - 2026-10-20
 
 ### Added
