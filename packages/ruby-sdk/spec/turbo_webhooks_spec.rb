@@ -579,14 +579,39 @@ RSpec.describe "TurboDocxSdk.verify_webhook_signature" do
   end
 
   it "returns false (never raises) when the timestamp and body encodings can't be combined" do
-    # Integer() accepts the UTF-16 digits, then building "#{timestamp}.#{body}" raised Encoding::CompatibilityError
-    [["1700000000é", "é".b, 0], ["1700000000".encode("UTF-16LE"), payload, 0], [Time.now.to_i.to_s.encode("UTF-16LE"), payload, 300]].each do |ts, body, tolerance|
+    # With the window disabled Integer() is skipped, and building "#{timestamp}.#{body}" raises
+    # Encoding::CompatibilityError
+    [["1700000000é", "é".b], ["1700000000".encode("UTF-16LE"), payload]].each do |ts, body|
       expect(
         TurboDocxSdk.verify_webhook_signature(
-          payload: body, signature_header: "sha256=00", timestamp_header: ts, secret: secret, tolerance_seconds: tolerance
+          payload: body, signature_header: "sha256=00", timestamp_header: ts, secret: secret, tolerance_seconds: 0
         )
       ).to be(false)
     end
+  end
+
+  it "returns false (never raises) on a non-numeric or NaN tolerance_seconds" do
+    # nil / "300" raised NoMethodError on .zero?; NaN made the window comparison always false
+    ts = Time.now.to_i.to_s
+    sig = sign(payload, ts, secret)
+    [nil, "300", Float::NAN].each do |tolerance|
+      expect(
+        TurboDocxSdk.verify_webhook_signature(
+          payload: payload, signature_header: sig, timestamp_header: ts, secret: secret, tolerance_seconds: tolerance
+        )
+      ).to be(false)
+    end
+  end
+
+  it "returns false (never raises) when Integer() can't parse a UTF-16 timestamp" do
+    # Integer() does not accept UTF-16 digits: Integer(utf16, 10) raises Encoding::CompatibilityError
+    # (an EncodingError, not an ArgumentError), so the rescue must name EncodingError
+    expect(
+      TurboDocxSdk.verify_webhook_signature(
+        payload: payload, signature_header: "sha256=00", timestamp_header: Time.now.to_i.to_s.encode("UTF-16LE"),
+        secret: secret, tolerance_seconds: 300
+      )
+    ).to be(false)
   end
 
   it "returns false on a non-numeric timestamp" do
