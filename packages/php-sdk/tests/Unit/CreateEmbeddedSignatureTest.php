@@ -8,6 +8,7 @@ use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use TurboDocx\Exceptions\ValidationException;
 use TurboDocx\TurboSign;
+use TurboDocx\Types\PageNavigation;
 use TurboDocx\Types\Requests\CreateEmbeddedSignatureRequest;
 use TurboDocx\Types\Requests\EmbeddedRecipientAuth;
 use TurboDocx\Types\Requests\EmbeddedRecipientFields;
@@ -115,6 +116,28 @@ final class CreateEmbeddedSignatureTest extends TestCase
         $this->assertSame('signature', $fields[0]['type']);
         $this->assertSame('{signature1}', $fields[0]['template']['anchor']);
         $this->assertSame('replace', $fields[0]['template']['placement']);
+    }
+
+    public function testForwardsPageNavigationAndReturnUrlToTheSigningUrlCall(): void
+    {
+        $this->injectTurboSignClient([
+            $this->sendSignatureResponse('doc-1', [
+                ['id' => 'r1', 'email' => 'john@example.com', 'name' => 'John Doe'],
+            ]),
+            $this->signingUrlResponse('https://sign.turbodocx.com/embed/r1', 'r1'),
+        ], captureHistory: true);
+
+        TurboSign::createEmbeddedSignature(new CreateEmbeddedSignatureRequest(
+            recipients: [new EmbeddedSignatureRecipient(name: 'John Doe', email: 'john@example.com')],
+            deliverableId: 'deliv-1',
+            returnUrl: 'https://app.example.com/done',
+            pageNavigation: PageNavigation::HIDDEN,
+        ));
+
+        $this->assertSame(
+            ['recipientId' => 'r1', 'returnUrl' => 'https://app.example.com/done', 'pageNavigation' => 'hidden'],
+            $this->capturedJsonBody(1)
+        );
     }
 
     /**

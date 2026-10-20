@@ -411,7 +411,8 @@ final class TurboSign
      *
      * @param string $documentId The document the recipient belongs to
      * @param CreateSigningUrlRequest|array<string, mixed> $request Exactly one of `recipientId` /
-     *     `externalId`; `identityAssertion` only for external_idv recipients; optional https `returnUrl`
+     *     `externalId`; `identityAssertion` only for external_idv recipients; optional https `returnUrl`;
+     *     optional `pageNavigation` (a PageNavigation case, or 'auto' | 'collapsed' | 'hidden' in an array)
      * @return CreateSigningUrlResponse
      * @throws ValidationException If not exactly one selector is provided, or returnUrl is not https
      *
@@ -644,6 +645,7 @@ final class TurboSign
                 $link = self::createSigningUrl($sent->documentId, new CreateSigningUrlRequest(
                     recipientId: $recipientId,
                     returnUrl: $request->returnUrl,
+                    pageNavigation: $request->pageNavigation,
                 ));
                 $results[] = new EmbeddedSignatureRecipientResult(
                     recipientId: $recipientId,

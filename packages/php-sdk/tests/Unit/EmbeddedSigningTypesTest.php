@@ -9,6 +9,7 @@ use ReflectionMethod;
 use TurboDocx\Exceptions\ValidationException;
 use TurboDocx\TurboSign;
 use TurboDocx\Types\IdentityVerification;
+use TurboDocx\Types\PageNavigation;
 use TurboDocx\Types\Recipient;
 use TurboDocx\Types\Requests\CreateSigningUrlRequest;
 use TurboDocx\Types\Requests\EmbeddedRecipientAuth;
@@ -81,6 +82,40 @@ final class EmbeddedSigningTypesTest extends TestCase
     }
 
     // ---- CreateSigningUrlRequest serialization ---------------------------------------------
+
+    public function testPageNavigationEnumHasTheThreeWireValues(): void
+    {
+        $this->assertSame(
+            ['auto', 'collapsed', 'hidden'],
+            array_map(static fn (PageNavigation $m): string => $m->value, PageNavigation::cases())
+        );
+    }
+
+    public function testCreateSigningUrlRequestSendsPageNavigationOnlyWhenSet(): void
+    {
+        $this->assertSame(
+            ['recipientId' => 'r1', 'pageNavigation' => 'collapsed'],
+            (new CreateSigningUrlRequest(recipientId: 'r1', pageNavigation: PageNavigation::COLLAPSED))->toArray()
+        );
+        $this->assertArrayNotHasKey('pageNavigation', (new CreateSigningUrlRequest(recipientId: 'r1'))->toArray());
+    }
+
+    public function testCreateSigningUrlRequestFromArrayAcceptsAPageNavigationString(): void
+    {
+        $request = CreateSigningUrlRequest::fromArray(['recipientId' => 'r1', 'pageNavigation' => 'hidden']);
+        $this->assertSame(PageNavigation::HIDDEN, $request->pageNavigation);
+        $this->assertSame(['recipientId' => 'r1', 'pageNavigation' => 'hidden'], $request->toArray());
+    }
+
+    public function testCreateSigningUrlRequestFromArrayRejectsAnUnknownPageNavigation(): void
+    {
+        try {
+            CreateSigningUrlRequest::fromArray(['recipientId' => 'r1', 'pageNavigation' => 'expanded']);
+            $this->fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $this->assertSame('InvalidPageNavigation', $e->errorCode);
+        }
+    }
 
     public function testCreateSigningUrlRequestOmitsUnsetKeys(): void
     {
