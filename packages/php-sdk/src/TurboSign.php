@@ -582,7 +582,7 @@ final class TurboSign
             }
         }
         $apiOrderByEmail = [];
-        foreach (array_values($sent->recipients ?? []) as $apiIndex => $sr) {
+        foreach (array_values($sent->recipients) as $apiIndex => $sr) {
             if (is_array($sr) && isset($sr['email'])) {
                 $apiOrderByEmail[strtolower((string) $sr['email'])] = $apiIndex;
             }
@@ -600,7 +600,7 @@ final class TurboSign
         foreach ($request->recipients as $r) {
             $requestedEmails[strtolower($r->email)] = true;
         }
-        foreach (array_values($sent->recipients ?? []) as $apiIndex => $sr) {
+        foreach (array_values($sent->recipients) as $apiIndex => $sr) {
             if (!is_array($sr) || !isset($sr['email'], $sr['id'])) {
                 continue;
             }

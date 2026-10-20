@@ -53,4 +53,20 @@ final class SendResponsesRecipientsTest extends TestCase
 
         $this->assertSame([], $response->recipients);
     }
+
+    public function testSendSignatureResponseConstructorStillAcceptsNullRecipients(): void
+    {
+        // Public-API compatibility: the constructor accepted ?array before, so null still works.
+        $response = new SendSignatureResponse(true, 'doc-123', 'UNDER_REVIEW', null, 'sent');
+
+        $this->assertSame([], $response->recipients);
+    }
+
+    public function testReviewLinkResponseConstructorStillAcceptsNullRecipients(): void
+    {
+        // Public-API compatibility: the constructor accepted ?array before, so null still works.
+        $response = new CreateSignatureReviewLinkResponse(true, 'doc-123', 'review_ready', null, null, 'ready');
+
+        $this->assertSame([], $response->recipients);
+    }
 }
