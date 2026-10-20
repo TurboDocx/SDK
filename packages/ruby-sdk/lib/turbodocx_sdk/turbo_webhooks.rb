@@ -273,8 +273,8 @@ module TurboDocxSdk
     return false unless signature_header.is_a?(String) && !signature_header.empty?
     return false unless timestamp_header.is_a?(String) && !timestamp_header.empty?
     return false unless secret.is_a?(String) && !secret.empty?
-    # A non-numeric tolerance raised NoMethodError.
-    return false unless tolerance_seconds.is_a?(Numeric)
+    # A non-numeric tolerance raised NoMethodError, and so did a Complex one (no negative?).
+    return false unless tolerance_seconds.is_a?(Numeric) && tolerance_seconds.real?
     # NaN made the window check always pass, and Infinity is a window that never expires.
     return false if tolerance_seconds.respond_to?(:finite?) && !tolerance_seconds.finite?
 
@@ -283,6 +283,10 @@ module TurboDocxSdk
     return false if tolerance_seconds.negative?
 
     unless tolerance_seconds.zero?
+      # Digits only (an optional leading "-"), as in the JS and PHP helpers: Integer() alone would
+      # also accept surrounding whitespace, underscores and a "+".
+      return false unless timestamp_header.match?(/\A-?\d+\z/)
+
       ts = Integer(timestamp_header, 10)
       # now may return a Time or an Integer; coerce both to epoch seconds.
       current_time = now ? now.call.to_i : Time.now.to_i

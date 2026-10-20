@@ -14,11 +14,13 @@ replay attacks. Uses constant-time comparison via hmac.compare_digest.
 
 import hmac
 import math
+import re
 import time as _time
 from hashlib import sha256
 from typing import Callable, Optional, Union
 
 BytesLike = Union[bytes, bytearray, memoryview]
+_TIMESTAMP_RE = re.compile(rb"-?[0-9]+")
 StrOrBytes = Union[str, bytes, bytearray, memoryview]
 
 
@@ -99,11 +101,11 @@ def verify_webhook_signature(
         return False
 
     if tolerance_seconds > 0:
-        try:
-            # int() parses ASCII digits from bytes; non-ASCII bytes raise ValueError.
-            ts = int(ts_bytes)
-        except ValueError:
+        # Digits only (an optional leading "-"), as in the JS and PHP helpers: int() alone would
+        # also accept surrounding whitespace, underscores and a "+".
+        if not _TIMESTAMP_RE.fullmatch(ts_bytes):
             return False
+        ts = int(ts_bytes)
         current_time = now() if now is not None else int(_time.time())
         if not _is_real_number(current_time):
             return False

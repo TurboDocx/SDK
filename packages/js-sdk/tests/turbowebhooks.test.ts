@@ -609,6 +609,15 @@ describe("verifyWebhookSignature", () => {
     ).toBe(false);
   });
 
+  // parseInt read the leading digits of "1747000000abc" and "1747000000.9", so a timestamp header the
+  // other SDKs reject passed here. Each header below is signed exactly as sent.
+  it.each([`${TIMESTAMP}abc`, `${TIMESTAMP}.9`, ` ${TIMESTAMP}`, "", "abc"])(
+    "should reject a timestamp header that is not all digits (%p)",
+    (ts) => {
+      expect(verifyWebhookSignature(BODY, sign(BODY, ts, SECRET), ts, SECRET, { now: () => NOW_SECONDS })).toBe(false);
+    },
+  );
+
   it("should reject a length-mismatched signature without crashing", () => {
     expect(
       verifyWebhookSignature(BODY, "sha256=short", TIMESTAMP, SECRET, { now: () => NOW_SECONDS }),

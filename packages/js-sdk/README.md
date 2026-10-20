@@ -801,7 +801,7 @@ app.post(
 );
 ```
 
-By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Override with `{ toleranceSeconds: N }` (0 disables the check — not recommended in production; a negative value fails closed and rejects every delivery).
+By default the helper enforces a 300-second timestamp tolerance to prevent replay attacks. Override with `{ toleranceSeconds: N }` (0 disables the check — not recommended in production; a negative value, NaN, `Infinity` or a non-number such as `"300"` fails closed and rejects every delivery; `undefined` takes the 300s default). The `X-TurboDocx-Timestamp` header must be digits only.
 
 ---
 

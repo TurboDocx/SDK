@@ -75,6 +75,9 @@ export function verifyWebhookSignature(
   if (toleranceSeconds > 0) {
     const now = options?.now ? options.now() : Math.floor(Date.now() / 1000);
     if (typeof now !== 'number' || !Number.isFinite(now)) return false;
+    // Digits only (an optional leading "-"), as in the PHP helper: parseInt alone would read the
+    // leading digits of "1747000000abc" or "1747000000.9".
+    if (!/^-?\d+$/.test(timestampHeader)) return false;
     const ts = Number.parseInt(timestampHeader, 10);
     if (!Number.isFinite(ts)) return false;
     if (Math.abs(now - ts) > toleranceSeconds) return false;

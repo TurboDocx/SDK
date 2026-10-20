@@ -528,6 +528,18 @@ class TestVerifyWebhookSignature:
             tolerance_seconds=tolerance_seconds, now=lambda: self.NOW_SECONDS + offset,
         ) is False
 
+    @pytest.mark.parametrize("suffix", ["abc", ".9"])
+    def test_rejects_timestamp_with_trailing_junk(self, suffix):
+        ts = self.TIMESTAMP + suffix
+        sig = self._sign(self.BODY, ts, self.SECRET)
+        assert verify_webhook_signature(self.BODY, sig, ts, self.SECRET, now=lambda: self.NOW_SECONDS) is False
+
+    @pytest.mark.parametrize("ts", [" 1747000000", "1747000000 ", "1_747_000_000", "+1747000000"])
+    def test_rejects_timestamp_that_is_not_all_digits(self, ts):
+        # int() accepts surrounding whitespace, underscores and "+"; the JS and PHP helpers don't
+        sig = self._sign(self.BODY, ts, self.SECRET)
+        assert verify_webhook_signature(self.BODY, sig, ts, self.SECRET, now=lambda: self.NOW_SECONDS) is False
+
     def test_rejects_missing_signature(self):
         assert not verify_webhook_signature(self.BODY, "", self.TIMESTAMP, self.SECRET)
 

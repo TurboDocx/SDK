@@ -680,6 +680,30 @@ RSpec.describe "TurboDocxSdk.verify_webhook_signature" do
     ).to be(true)
   end
 
+  it "returns false (never raises) for a Complex tolerance_seconds" do
+    fixed = 1_747_000_000
+    sig = sign(payload, fixed.to_s, secret)
+
+    expect(
+      TurboDocxSdk.verify_webhook_signature(
+        payload: payload, signature_header: sig, timestamp_header: fixed.to_s, secret: secret,
+        tolerance_seconds: Complex(300, 0), now: -> { fixed }
+      )
+    ).to be(false)
+  end
+
+  # Integer() also accepts surrounding whitespace, underscores and "+"; the JS and PHP helpers don't.
+  ["1747000000abc", "1747000000.9", " 1747000000", "1747000000 ", "1_747_000_000", "+1747000000"].each do |ts|
+    it "rejects a timestamp header that is not all digits (#{ts.inspect})" do
+      expect(
+        TurboDocxSdk.verify_webhook_signature(
+          payload: payload, signature_header: sign(payload, ts, secret), timestamp_header: ts, secret: secret,
+          now: -> { 1_747_000_000 }
+        )
+      ).to be(false)
+    end
+  end
+
   it "fails closed for an infinite tolerance_seconds (a window that never expires)" do
     fixed = 1_747_000_000
     sig = sign(payload, fixed.to_s, secret)
