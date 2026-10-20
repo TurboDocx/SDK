@@ -581,6 +581,16 @@ describe("verifyWebhookSignature", () => {
     }
   });
 
+  // An infinite window never expires, so a replayed delivery would always pass.
+  it("should fail closed (return false) when toleranceSeconds is Infinity", () => {
+    expect(
+      verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, {
+        toleranceSeconds: Number.POSITIVE_INFINITY,
+        now: () => NOW_SECONDS + 99999,
+      }),
+    ).toBe(false);
+  });
+
   it("should reject when signature header is missing", () => {
     expect(verifyWebhookSignature(BODY, "", TIMESTAMP, SECRET)).toBe(false);
   });

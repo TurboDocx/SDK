@@ -43,7 +43,8 @@ namespace TurboDocx\Utils;
  *                                 int or finite float) for deterministic
  *                                 testing. Defaults to time() when null. Any
  *                                 other non-number (a numeric string
- *                                 included), NaN or INF returns false.
+ *                                 included), NaN or INF returns false. Not
+ *                                 read when the timestamp check is off (0).
  *
  * @return bool true iff the signature is valid AND the timestamp is within
  *              tolerance. Constant-time comparison; returns false (never
@@ -67,7 +68,7 @@ function verifyWebhookSignature(
 
     // Numbers only, matching the JS, Python and Ruby helpers: a string (even "300") is not coerced.
     $isFiniteNumber = static fn(mixed $value): bool => is_int($value) || (is_float($value) && is_finite($value));
-    if (!$isFiniteNumber($toleranceSeconds) || ($now !== null && !$isFiniteNumber($now))) {
+    if (!$isFiniteNumber($toleranceSeconds)) {
         return false;
     }
 
@@ -78,6 +79,10 @@ function verifyWebhookSignature(
 
     if ($toleranceSeconds > 0) {
         if (!ctype_digit(ltrim($timestampHeader, '-')) || !is_numeric($timestampHeader)) {
+            return false;
+        }
+        // `now` is only read when the timestamp check runs, as in the JS, Python and Ruby helpers.
+        if ($now !== null && !$isFiniteNumber($now)) {
             return false;
         }
         $ts = (int) $timestampHeader;

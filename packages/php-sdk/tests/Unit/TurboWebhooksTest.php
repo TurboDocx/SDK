@@ -313,6 +313,14 @@ final class TurboWebhooksTest extends TestCase
         $this->assertFalse(verifyWebhookSignature(self::BODY, $sig, $ts, self::SECRET, 300, $now));
     }
 
+    /** With the timestamp check disabled (tolerance 0), `now` is never read, as in JS, Python and Ruby. */
+    public function testVerifyIgnoresInvalidNowWhenToleranceIsZero(): void
+    {
+        $ts = (string) self::NOW_SECONDS;
+        $sig = self::sign(self::BODY, $ts, self::SECRET);
+        $this->assertTrue(verifyWebhookSignature(self::BODY, $sig, $ts, self::SECRET, 0, 'not-a-time'));
+    }
+
     public function testVerifyAcceptsFloatToleranceAndNow(): void
     {
         $ts = (string) self::NOW_SECONDS;
