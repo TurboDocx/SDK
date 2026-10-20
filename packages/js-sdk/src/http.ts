@@ -61,6 +61,16 @@ export interface QuoteClientConfig {
   baseUrl?: string;
 }
 
+/** Extensions the API accepts on an uploaded part (it checks the part's own name). */
+const SUPPORTED_UPLOAD_EXTENSIONS = ['.pdf', '.docx', '.pptx'];
+
+const hasSupportedUploadExtension = (name: string): boolean =>
+  SUPPORTED_UPLOAD_EXTENSIONS.includes(nodePath.extname(name).toLowerCase());
+
+/** The caller's file name when its extension is one the API accepts, else `document.<ext>`. */
+const partFileName = (name: string, extension: string): string =>
+  hasSupportedUploadExtension(name) ? name : `document.${extension}`;
+
 /**
  * Detect file type from buffer content using magic bytes
  * - PDF: starts with %PDF (0x25 0x50 0x44 0x46)
@@ -267,7 +277,7 @@ export class HttpClient {
       // File path: read file and detect type from content
       fileBuffer = fs.readFileSync(file);
       const detected = detectFileType(fileBuffer);
-      fileName = nodePath.basename(file);
+      fileName = partFileName(nodePath.basename(file), detected.extension);
       mimeType = detected.mimetype;
     } else if (file instanceof Buffer) {
       // Buffer: detect type from content
@@ -278,7 +288,13 @@ export class HttpClient {
     } else {
       // Browser File object: use native properties
       const browserFile = file as File;
-      formData.append(fieldName, browserFile, browserFile.name);
+      let partName = browserFile.name;
+      if (!hasSupportedUploadExtension(partName)) {
+        // Detect the type from the first bytes only when the name won't pass the API's check
+        const head = Buffer.from(await browserFile.slice(0, 2000).arrayBuffer());
+        partName = `document.${detectFileType(head).extension}`;
+      }
+      formData.append(fieldName, browserFile, partName);
 
       // Add additional form fields
       if (additionalData) {

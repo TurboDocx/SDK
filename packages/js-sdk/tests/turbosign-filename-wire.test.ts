@@ -67,6 +67,34 @@ describe("TurboSign file uploads forward fileName", () => {
     expect(sentForm(fetchMock)).toEqual({ partName: "upload.pdf", fileNameField: "Lease-2026.pdf" });
   });
 
+  it("a file path without a supported extension uploads a document.<ext> part", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "filename-test-"));
+    const fetchMock = mockFetch();
+    for (const name of ["upload-7f3a", "notes.txt"]) {
+      const filePath = path.join(dir, name);
+      fs.writeFileSync(filePath, pdf);
+      await TurboSign.sendSignature({ recipients: [], fields: [], file: filePath });
+    }
+    const partNames = fetchMock.mock.calls.map((call) => ((call[1].body as FormData).get("file") as File).name);
+    expect(partNames).toEqual(["document.pdf", "document.pdf"]);
+  });
+
+  it("a file path with an upper-case supported extension keeps its basename", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "filename-test-"));
+    const filePath = path.join(dir, "SCAN.PDF");
+    fs.writeFileSync(filePath, pdf);
+    const fetchMock = mockFetch();
+    await TurboSign.sendSignature({ recipients: [], fields: [], file: filePath });
+    expect(sentForm(fetchMock).partName).toBe("SCAN.PDF");
+  });
+
+  it("a browser File without a supported extension uploads a document.<ext> part", async () => {
+    const fetchMock = mockFetch();
+    const file = new File([pdf], "scan", { type: "application/pdf" });
+    await TurboSign.sendSignature({ recipients: [], fields: [], file, fileName: "Lease-2026" });
+    expect(sentForm(fetchMock)).toEqual({ partName: "document.pdf", fileNameField: "Lease-2026" });
+  });
+
   it("createSignatureReviewLink forwards fileName", async () => {
     const fetchMock = mockFetch();
     await TurboSign.createSignatureReviewLink({ recipients: [], fields: [], file: pdf, fileName: "Review-Copy.pdf" });
