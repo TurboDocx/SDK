@@ -239,7 +239,7 @@ module TurboDocxSdk
   # Verify a TurboDocx webhook delivery signature.
   #
   # Verifies the +X-TurboDocx-Signature+ header on an incoming webhook
-  # delivery. Format matches the backend's signature generation:
+  # delivery. Format matches how TurboDocx signs each delivery:
   #   - Header:        X-TurboDocx-Signature: sha256=<hex>
   #   - Timestamp:     X-TurboDocx-Timestamp: <unix-seconds>
   #   - String signed: "<timestamp>.<raw_body>"
@@ -259,19 +259,22 @@ module TurboDocxSdk
   #   +regenerate_webhook_secret+.
   # @param tolerance_seconds [Integer] max acceptable age of the timestamp,
   #   in seconds. Defaults to 300. Set to 0 to disable the timestamp check
-  #   (NOT recommended in production).
+  #   (NOT recommended in production). A non-numeric or NaN value fails closed.
   # @param now [Proc, nil] override the "current time" function for
   #   deterministic testing. Returns Unix epoch seconds. Defaults to
   #   +Time.now.to_i+.
   # @return [Boolean] true iff the signature is valid AND the timestamp is
   #   within tolerance.
   def self.verify_webhook_signature(payload:, signature_header:, timestamp_header:, secret:, tolerance_seconds: 300, now: nil)
-    # Non-String / nil / empty inputs all fail closed -- honoring the
-    # documented "never raises on bad input" contract without relying on the
-    # rescue below (which only covers Integer() parse failures).
+    # Non-String / nil / empty headers and secret fail closed here; the rescue
+    # below covers what these guards can't see (Integer() parse failures and
+    # encoding clashes, a NaN now result).
     return false unless signature_header.is_a?(String) && !signature_header.empty?
     return false unless timestamp_header.is_a?(String) && !timestamp_header.empty?
     return false unless secret.is_a?(String) && !secret.empty?
+    # A non-numeric tolerance raised NoMethodError; NaN made the window check always pass.
+    return false unless tolerance_seconds.is_a?(Numeric)
+    return false if tolerance_seconds.respond_to?(:nan?) && tolerance_seconds.nan?
 
     # tolerance_seconds == 0 disables the replay window. Any non-zero value
     # enforces it; a negative value fails closed (rejects everything) rather
@@ -288,8 +291,11 @@ module TurboDocxSdk
     expected = "sha256=#{digest}"
 
     secure_compare(expected, signature_header)
-  rescue ArgumentError, TypeError
-    # Non-numeric timestamp (Integer() raised) or similar bad input.
+  rescue ArgumentError, TypeError, EncodingError, FloatDomainError
+    # Integer() raises ArgumentError on a non-numeric timestamp and Encoding::CompatibilityError
+    # (an EncodingError) on a UTF-16 one; building "#{timestamp}.#{body}" raises
+    # Encoding::CompatibilityError when the two encodings can't be combined; a NaN or infinite
+    # now result raises FloatDomainError on to_i.
     false
   end
 

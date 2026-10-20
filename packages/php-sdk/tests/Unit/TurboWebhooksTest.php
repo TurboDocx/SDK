@@ -281,6 +281,38 @@ final class TurboWebhooksTest extends TestCase
         );
     }
 
+    public function testVerifyRejectsNonAsciiSignatureWithoutThrowing(): void
+    {
+        $ts = (string) self::NOW_SECONDS;
+        foreach (["sha256=\u{e9}", 'sha256=' . str_repeat("\u{e9}", 32), "sha256=\xFF"] as $header) {
+            $this->assertFalse(verifyWebhookSignature(self::BODY, $header, $ts, self::SECRET, 300, self::NOW_SECONDS));
+        }
+    }
+
+    public function testVerifyReturnsFalseOnNullOrArrayHeadersWithoutThrowing(): void
+    {
+        // A missing header arrives as null (e.g. Laravel's $request->header()) and PSR-7's
+        // getHeader() returns string[]; with string params this threw TypeError, a 500 not a 401.
+        $ts = (string) self::NOW_SECONDS;
+        $sig = 'sha256=' . hash_hmac('sha256', "{$ts}." . self::BODY, self::SECRET);
+        $cases = [
+            'null signature header' => [self::BODY, null, $ts, self::SECRET],
+            'array signature header' => [self::BODY, [$sig, $sig], $ts, self::SECRET],
+            'null timestamp header' => [self::BODY, $sig, null, self::SECRET],
+            'array timestamp header' => [self::BODY, $sig, [$ts], self::SECRET],
+            'int timestamp header' => [self::BODY, $sig, self::NOW_SECONDS, self::SECRET],
+            'null secret' => [self::BODY, $sig, $ts, null],
+            'null body' => [null, $sig, $ts, self::SECRET],
+            'array body' => [[self::BODY], $sig, $ts, self::SECRET],
+        ];
+        foreach ($cases as $name => [$rawBody, $signatureHeader, $timestampHeader, $secret]) {
+            $this->assertFalse(
+                verifyWebhookSignature($rawBody, $signatureHeader, $timestampHeader, $secret, 300, self::NOW_SECONDS),
+                $name
+            );
+        }
+    }
+
     public function testVerifyRejectsLengthMismatchedSignature(): void
     {
         $ts = (string) self::NOW_SECONDS;

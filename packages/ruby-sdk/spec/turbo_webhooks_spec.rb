@@ -569,6 +569,64 @@ RSpec.describe "TurboDocxSdk.verify_webhook_signature" do
     ).to be(false)
   end
 
+  it "returns false (never raises) on a non-ASCII or invalid UTF-8 signature header" do
+    ts = Time.now.to_i.to_s
+    ["sha256=\u00e9", "sha256=" + ("\u00e9" * 32), "sha256=\xFF".dup.force_encoding("UTF-8")].each do |header|
+      expect(
+        TurboDocxSdk.verify_webhook_signature(payload: payload, signature_header: header, timestamp_header: ts, secret: secret)
+      ).to be(false)
+    end
+  end
+
+  it "returns false (never raises) when the timestamp and body encodings can't be combined" do
+    # With the window disabled Integer() is skipped, and building "#{timestamp}.#{body}" raises
+    # Encoding::CompatibilityError
+    [["1700000000é", "é".b], ["1700000000".encode("UTF-16LE"), payload]].each do |ts, body|
+      expect(
+        TurboDocxSdk.verify_webhook_signature(
+          payload: body, signature_header: "sha256=00", timestamp_header: ts, secret: secret, tolerance_seconds: 0
+        )
+      ).to be(false)
+    end
+  end
+
+  it "returns false (never raises) on a non-numeric or NaN tolerance_seconds" do
+    # nil / "300" raised NoMethodError on .zero?; NaN made the window comparison always false
+    ts = Time.now.to_i.to_s
+    sig = sign(payload, ts, secret)
+    [nil, "300", Float::NAN].each do |tolerance|
+      expect(
+        TurboDocxSdk.verify_webhook_signature(
+          payload: payload, signature_header: sig, timestamp_header: ts, secret: secret, tolerance_seconds: tolerance
+        )
+      ).to be(false)
+    end
+  end
+
+  it "returns false (never raises) when now returns NaN or Infinity" do
+    # Float::NAN.to_i raises FloatDomainError
+    ts = Time.now.to_i.to_s
+    sig = sign(payload, ts, secret)
+    [Float::NAN, Float::INFINITY].each do |clock|
+      expect(
+        TurboDocxSdk.verify_webhook_signature(
+          payload: payload, signature_header: sig, timestamp_header: ts, secret: secret, now: -> { clock }
+        )
+      ).to be(false)
+    end
+  end
+
+  it "returns false (never raises) when Integer() can't parse a UTF-16 timestamp" do
+    # Integer() does not accept UTF-16 digits: Integer(utf16, 10) raises Encoding::CompatibilityError
+    # (an EncodingError, not an ArgumentError), so the rescue must name EncodingError
+    expect(
+      TurboDocxSdk.verify_webhook_signature(
+        payload: payload, signature_header: "sha256=00", timestamp_header: Time.now.to_i.to_s.encode("UTF-16LE"),
+        secret: secret, tolerance_seconds: 300
+      )
+    ).to be(false)
+  end
+
   it "returns false on a non-numeric timestamp" do
     expect(
       TurboDocxSdk.verify_webhook_signature(

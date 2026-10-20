@@ -593,6 +593,43 @@ describe("verifyWebhookSignature", () => {
     ).toBe(false);
   });
 
+  it("should reject a non-ASCII signature header without throwing", () => {
+    for (const header of ["sha256=\u00e9", "sha256=" + "\u00e9".repeat(32), "sha256=\ud800"]) {
+      expect(verifyWebhookSignature(BODY, header, TIMESTAMP, SECRET, { now: () => NOW_SECONDS })).toBe(false);
+    }
+  });
+
+  // Plain-JS callers can pass anything: req.body is undefined without a raw body parser, and a
+  // header can be missing or not a string. The undefined/null body, number header and number
+  // secret cases threw TypeError (a 500, not a 401); the others already returned false.
+  it.each([
+    ["undefined body", [undefined, validSig, TIMESTAMP, SECRET]],
+    ["null body", [null, validSig, TIMESTAMP, SECRET]],
+    ["object body", [{ event: "x" }, validSig, TIMESTAMP, SECRET]],
+    ["number signature header", [BODY, 12345, TIMESTAMP, SECRET]],
+    ["array signature header", [BODY, [validSig, validSig], TIMESTAMP, SECRET]],
+    ["number timestamp header", [BODY, validSig, NOW_SECONDS, SECRET]],
+    ["number secret", [BODY, validSig, TIMESTAMP, 12345]],
+  ])("should return false on a wrongly-typed argument without throwing (%s)", (_name, args) => {
+    const [body, sig, ts, secret] = args as [string, string, string, string];
+    expect(verifyWebhookSignature(body, sig, ts, secret, { now: () => NOW_SECONDS })).toBe(false);
+  });
+
+  it("should return false when now() or toleranceSeconds is not a finite number", () => {
+    // NaN made the window comparison always false, silently accepting any timestamp
+    const badNow = (() => Number.NaN) as () => number;
+    expect(verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, { now: badNow })).toBe(false);
+    expect(
+      verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, {
+        now: () => NOW_SECONDS,
+        toleranceSeconds: Number.NaN,
+      }),
+    ).toBe(false);
+    expect(
+      verifyWebhookSignature(BODY, validSig, TIMESTAMP, SECRET, null as unknown as undefined),
+    ).toBe(false);
+  });
+
   it("should accept a Buffer body", () => {
     expect(
       verifyWebhookSignature(Buffer.from(BODY, "utf8"), validSig, TIMESTAMP, SECRET, {

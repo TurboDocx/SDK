@@ -541,6 +541,105 @@ class TestVerifyWebhookSignature:
             now=lambda: self.NOW_SECONDS,
         )
 
+    # Malformed headers must return False, never raise: a receiver should answer 401, not 500.
+    @pytest.mark.parametrize("signature_header", [
+        "sha256=\u00e9",                       # non-ASCII (hmac.compare_digest raised TypeError on str)
+        "sha256=" + "\u00e9" * 32,             # non-ASCII, same UTF-8 byte length as a real signature
+        "sha256=\ud800",                       # lone surrogate (can't be UTF-8 encoded)
+        12345,                                  # not a string at all
+    ])
+    def test_rejects_malformed_signature_header_without_raising(self, signature_header):
+        assert verify_webhook_signature(
+            self.BODY, signature_header, self.TIMESTAMP, self.SECRET, now=lambda: self.NOW_SECONDS,
+        ) is False
+
+    def test_rejects_unencodable_body_or_secret_without_raising(self):
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        assert verify_webhook_signature(
+            self.BODY + "\ud800", sig, self.TIMESTAMP, self.SECRET, now=lambda: self.NOW_SECONDS,
+        ) is False
+        assert verify_webhook_signature(
+            self.BODY, sig, self.TIMESTAMP, "secret\ud800", now=lambda: self.NOW_SECONDS,
+        ) is False
+
+    @pytest.mark.parametrize("as_bytes", [bytes, bytearray, memoryview])
+    def test_accepts_every_header_and_the_secret_as_raw_bytes(self, as_bytes):
+        # A raw ASGI/WSGI receiver hands over header bytes; the timestamp used to be signed as "b'...'"
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        raw = lambda text: as_bytes(text.encode("ascii"))
+        assert verify_webhook_signature(
+            self.BODY, raw(sig), raw(self.TIMESTAMP), raw(self.SECRET), now=lambda: self.NOW_SECONDS,
+        ) is True
+        assert verify_webhook_signature(
+            self.BODY, raw(sig), raw(self.TIMESTAMP), raw(self.SECRET), tolerance_seconds=0,
+        ) is True
+
+    def test_rejects_non_ascii_bytes_timestamp_without_raising(self):
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        assert verify_webhook_signature(
+            self.BODY, sig, "1747000000é".encode("utf-8"), self.SECRET, tolerance_seconds=0,
+        ) is False
+
+    def test_accepts_secret_as_bytes(self):
+        # e.g. a secret read from os.environb or a vault client; used to raise, then silently failed
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        assert verify_webhook_signature(
+            self.BODY, sig, self.TIMESTAMP, self.SECRET.encode("utf-8"), now=lambda: self.NOW_SECONDS,
+        ) is True
+
+    def test_accepts_valid_signature_header_as_bytes(self):
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        assert verify_webhook_signature(
+            self.BODY, sig.encode("ascii"), self.TIMESTAMP, self.SECRET, now=lambda: self.NOW_SECONDS,
+        ) is True
+
+    @pytest.mark.parametrize("tolerance_seconds", [None, "300", float("nan")])
+    def test_rejects_invalid_tolerance_without_raising(self, tolerance_seconds):
+        # None / str raised TypeError on the `> 0` comparison; NaN silently disabled the window
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        assert verify_webhook_signature(
+            self.BODY, sig, self.TIMESTAMP, self.SECRET,
+            tolerance_seconds=tolerance_seconds, now=lambda: self.NOW_SECONDS,
+        ) is False
+
+    @pytest.mark.parametrize("now_value", [None, "1747000000", float("nan")])
+    def test_rejects_invalid_now_result_without_raising(self, now_value):
+        # A str now() raised TypeError on the subtraction; NaN made the window check always pass
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        assert verify_webhook_signature(
+            self.BODY, sig, self.TIMESTAMP, self.SECRET, now=lambda: now_value,
+        ) is False
+
+    def test_accepts_float_now_result(self):
+        # time.time() returns a float; it is a valid clock
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        assert verify_webhook_signature(
+            self.BODY, sig, self.TIMESTAMP, self.SECRET, now=lambda: self.NOW_SECONDS + 0.5,
+        ) is True
+
+    @pytest.mark.parametrize("raw_body", [None, 12345])
+    def test_rejects_non_bytes_like_body_without_raising(self, raw_body):
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+        assert verify_webhook_signature(
+            raw_body, sig, self.TIMESTAMP, self.SECRET, now=lambda: self.NOW_SECONDS,
+        ) is False
+
+    def test_does_not_swallow_errors_from_the_hmac_computation(self, monkeypatch):
+        # Only bad input fails closed; a genuine bug in the HMAC step must surface, not become False
+        import importlib
+
+        # importlib, because the utils package re-exports the function under the module's name
+        module = importlib.import_module("turbodocx_sdk.utils.verify_webhook_signature")
+
+        sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
+
+        def broken_hmac(*_args, **_kwargs):
+            raise TypeError("bug inside the HMAC step")
+
+        monkeypatch.setattr(module.hmac, "new", broken_hmac)
+        with pytest.raises(TypeError, match="bug inside the HMAC step"):
+            verify_webhook_signature(self.BODY, sig, self.TIMESTAMP, self.SECRET, now=lambda: self.NOW_SECONDS)
+
     def test_accepts_bytes_body(self):
         sig = self._sign(self.BODY, self.TIMESTAMP, self.SECRET)
         assert verify_webhook_signature(

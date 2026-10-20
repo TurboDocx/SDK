@@ -97,6 +97,14 @@ class WebhookSignatureVerifierTest {
     }
 
     @Test
+    void rejectsNonAsciiSignatureWithoutThrowing() throws Exception {
+        for (String header : new String[] {"sha256=\u00e9", "sha256=" + "\u00e9".repeat(32), "sha256=\ud800"}) {
+            assertFalse(WebhookSignatureVerifier.verify(
+                    BODY.getBytes(StandardCharsets.UTF_8), header, TIMESTAMP, SECRET, 300, () -> NOW_SECONDS));
+        }
+    }
+
+    @Test
     void rejectsLengthMismatchedSignature() throws Exception {
         assertFalse(WebhookSignatureVerifier.verify(
                 BODY.getBytes(StandardCharsets.UTF_8),
