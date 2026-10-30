@@ -2,7 +2,7 @@
  * TypeScript types for TurboQuote — Company entity and request/response types
  */
 
-import type { PaginationParams, PaginatedResponse } from './quote-shared';
+import type { PaginationParams, PaginatedResponse, SortDirection } from './quote-shared';
 import type { QuoteType } from './quote-type';
 
 // ============================================
@@ -13,6 +13,8 @@ export interface Company {
   id: string;
   orgId: string;
   name: string;
+  /** The company's own email. Null for companies created without one. */
+  email: string | null;
   phone: string | null;
   city: string | null;
   state: string | null;
@@ -41,6 +43,8 @@ export interface CreateCompanyContactInput {
 export interface CreateCompanyRequest {
   name: string;
   contacts: CreateCompanyContactInput[];
+  /** The company's own email (optional through the API; the TurboDocx app requires it). */
+  email?: string | null;
   phone?: string | null;
   city?: string | null;
   state?: string | null;
@@ -50,6 +54,7 @@ export interface CreateCompanyRequest {
 
 export interface UpdateCompanyRequest {
   name?: string;
+  email?: string | null;
   phone?: string | null;
   city?: string | null;
   state?: string | null;
@@ -57,8 +62,14 @@ export interface UpdateCompanyRequest {
   industryId?: string | null;
 }
 
+/** `name` | `contactCount` | `lastActivityDate` */
+export type CompanySortBy = 'name' | 'contactCount' | 'lastActivityDate';
+
 export interface ListCompaniesOptions extends PaginationParams {
   industryIds?: string | string[];
+  /** Default `lastActivityDate` most recent first. */
+  sortBy?: CompanySortBy;
+  sortDirection?: SortDirection;
 }
 
 // ============================================

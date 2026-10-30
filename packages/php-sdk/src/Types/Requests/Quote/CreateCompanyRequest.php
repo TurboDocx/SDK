@@ -20,6 +20,8 @@ final class CreateCompanyRequest
         public readonly ?string $state = null,
         public readonly ?string $country = null,
         public readonly ?string $industryId = null,
+        // The company's own email (optional through the API; the TurboDocx app requires it)
+        public readonly ?string $email = null,
     ) {}
 
     /**
@@ -32,6 +34,9 @@ final class CreateCompanyRequest
             'contacts' => $this->contacts,
         ];
 
+        if ($this->email !== null) {
+            $data['email'] = $this->email;
+        }
         if ($this->phone !== null) {
             $data['phone'] = $this->phone;
         }

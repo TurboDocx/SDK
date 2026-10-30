@@ -57,7 +57,8 @@ jobs:
 
   test-py:
     name: Test Python SDK
-    runs-on: ubuntu-latest
+    # ubuntu-latest is now 26.04, which setup-python has no 3.9 build for; 3.9 is the declared floor
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: packages/py-sdk

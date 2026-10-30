@@ -10,6 +10,7 @@ public class UpdateCompanyRequest extends TrackableRequest {
     private String state;
     private String country;
     private String industryId;
+    private String email;
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; markFieldSet("name"); }
@@ -23,4 +24,7 @@ public class UpdateCompanyRequest extends TrackableRequest {
     public void setCountry(String country) { this.country = country; markFieldSet("country"); }
     public String getIndustryId() { return industryId; }
     public void setIndustryId(String industryId) { this.industryId = industryId; markFieldSet("industryId"); }
+    public String getEmail() { return email; }
+    /** Set to null to clear the company's email. */
+    public void setEmail(String email) { this.email = email; markFieldSet("email"); }
 }

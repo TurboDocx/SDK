@@ -15,6 +15,14 @@ public class ListProductsOptions {
     private String billingFrequency;
     private String currency;
     private Boolean showInCatalog;
+    /** Several billing frequencies, sent as repeated "billingFrequency" params (merged with billingFrequency) */
+    private List<String> billingFrequencies;
+    /** Several currencies, sent as repeated "currency" params (merged with currency) */
+    private List<String> currencies;
+    /** Sort column: "name", "listPrice" or "createdOn" (default createdOn, newest first) */
+    private String sortBy;
+    /** "asc" or "desc" */
+    private String sortDirection;
 
     public Integer getLimit() { return limit; }
     public void setLimit(Integer limit) { this.limit = limit; }
@@ -31,15 +39,28 @@ public class ListProductsOptions {
     public Boolean getShowInCatalog() { return showInCatalog; }
     public void setShowInCatalog(Boolean showInCatalog) { this.showInCatalog = showInCatalog; }
 
+    public List<String> getBillingFrequencies() { return billingFrequencies; }
+    public void setBillingFrequencies(List<String> billingFrequencies) { this.billingFrequencies = billingFrequencies; }
+    public List<String> getCurrencies() { return currencies; }
+    public void setCurrencies(List<String> currencies) { this.currencies = currencies; }
+    public String getSortBy() { return sortBy; }
+    public void setSortBy(String sortBy) { this.sortBy = sortBy; }
+    public String getSortDirection() { return sortDirection; }
+    public void setSortDirection(String sortDirection) { this.sortDirection = sortDirection; }
+
     public Map<String, Object> toQueryParams() {
         Map<String, Object> params = new LinkedHashMap<>();
         if (limit != null) params.put("limit", limit.toString());
         if (offset != null) params.put("offset", offset.toString());
         if (query != null) params.put("query", query);
         if (categoryIds != null) params.put("categoryIds", categoryIds);
-        if (billingFrequency != null) params.put("billingFrequency", billingFrequency);
-        if (currency != null) params.put("currency", currency);
+        List<String> frequencies = QueryParams.oneOrMany(billingFrequency, billingFrequencies);
+        if (frequencies != null) params.put("billingFrequency", frequencies);
+        List<String> currencyList = QueryParams.oneOrMany(currency, currencies);
+        if (currencyList != null) params.put("currency", currencyList);
         if (showInCatalog != null) params.put("showInCatalog", showInCatalog.toString());
+        if (sortBy != null) params.put("sortBy", sortBy);
+        if (sortDirection != null) params.put("sortDirection", sortDirection);
         return params.isEmpty() ? null : params;
     }
 }

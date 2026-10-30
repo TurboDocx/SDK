@@ -152,6 +152,28 @@ class HttpClient
     }
 
     /**
+     * Generic PUT request (JSON body)
+     *
+     * @param string $path
+     * @param array<string, mixed>|null $data
+     * @return mixed
+     */
+    public function put(string $path, ?array $data = null): mixed
+    {
+        try {
+            $response = $this->client->put($path, [
+                'json' => $data,
+            ]);
+
+            return ResponseNormalizer::normalizeResponse(
+                $this->smartUnwrap($this->parseResponse($response))
+            );
+        } catch (GuzzleException $e) {
+            $this->handleException($e);
+        }
+    }
+
+    /**
      * GET request returning raw binary response (for file downloads)
      *
      * @param string $path

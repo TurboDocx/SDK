@@ -2,7 +2,15 @@
  * TypeScript types for TurboQuote — Bundle entity and request/response types
  */
 
-import type { BillingFrequency, Currency, DiscountType, PaginationParams, PaginatedResponse } from './quote-shared';
+import type {
+  BillingFrequency,
+  Currency,
+  DiscountType,
+  OneOrMany,
+  PaginationParams,
+  PaginatedResponse,
+  SortDirection,
+} from './quote-shared';
 import type { Product } from './product';
 
 // ============================================
@@ -55,6 +63,13 @@ export interface Bundle {
   updatedOn: string;
   items?: BundleItem[];
   category?: { id: string; name: string; categoryType: string };
+  /** listBundles only: the bundle's active items. */
+  itemCount?: number;
+  /**
+   * listBundles only: the bundle price per billing frequency, with the bundle discount shared in
+   * proportion. A bundle mixing billing frequencies has one entry per frequency.
+   */
+  billingTotals?: Partial<Record<BillingFrequency, number>>;
 }
 
 // ============================================
@@ -103,10 +118,16 @@ export interface UpdateBundleRequest {
   syncWithProducts?: boolean;
 }
 
+/** `name` | `itemCount` | `totalListPrice` | `totalFinalPrice` | `createdOn` */
+export type BundleSortBy = 'name' | 'itemCount' | 'totalListPrice' | 'totalFinalPrice' | 'createdOn';
+
 export interface ListBundlesOptions extends PaginationParams {
   categoryIds?: string | string[];
-  currency?: Currency;
+  currency?: OneOrMany<Currency>;
   showInCatalog?: boolean;
+  /** Default `createdOn` newest first. */
+  sortBy?: BundleSortBy;
+  sortDirection?: SortDirection;
 }
 
 // ============================================

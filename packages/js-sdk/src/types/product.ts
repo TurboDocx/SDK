@@ -2,7 +2,7 @@
  * TypeScript types for TurboQuote — Product entity and request/response types
  */
 
-import type { BillingFrequency, Currency, PaginationParams, PaginatedResponse } from './quote-shared';
+import type { BillingFrequency, Currency, OneOrMany, PaginationParams, PaginatedResponse, SortDirection } from './quote-shared';
 
 // ============================================
 // DOMAIN TYPES
@@ -79,11 +79,17 @@ export interface UpdateProductRequest {
   imageOrder?: string[];
 }
 
+/** `name` | `listPrice` | `createdOn` */
+export type ProductSortBy = 'name' | 'listPrice' | 'createdOn';
+
 export interface ListProductsOptions extends PaginationParams {
   categoryIds?: string | string[];
-  billingFrequency?: BillingFrequency;
-  currency?: Currency;
+  billingFrequency?: OneOrMany<BillingFrequency>;
+  currency?: OneOrMany<Currency>;
   showInCatalog?: boolean;
+  /** Default `createdOn` newest first. */
+  sortBy?: ProductSortBy;
+  sortDirection?: SortDirection;
 }
 
 // ============================================
@@ -99,4 +105,9 @@ export interface ProductListResponse extends PaginatedResponse<Product> {
 
 export interface ProductPrimaryImagesResponse {
   [productId: string]: ProductImage | null;
+}
+
+/** The images each product shows on a quote: up to three, in display order (empty when none). */
+export interface ProductQuoteImagesResponse {
+  [productId: string]: ProductImage[];
 }

@@ -486,6 +486,38 @@ func (c *HTTPClient) Patch(ctx context.Context, path string, data interface{}, r
 	return c.handleResponse(resp, result)
 }
 
+// Put performs a PUT request with JSON body
+func (c *HTTPClient) Put(ctx context.Context, path string, data interface{}, result interface{}) error {
+	var body io.Reader
+	if data != nil {
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("failed to marshal request body: %w", err)
+		}
+		body = bytes.NewReader(jsonData)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "PUT", c.baseURL+path, body)
+	if err != nil {
+		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
+			Message: fmt.Sprintf("failed to create request: %v", err),
+		}}
+	}
+
+	c.setHeaders(req, "application/json")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return &NetworkError{TurboDocxError: TurboDocxError{
+			Code:    "NETWORK_ERROR",
+			Message: fmt.Sprintf("request failed: %v", err),
+		}}
+	}
+
+	return c.handleResponse(resp, result)
+}
+
 // Delete performs a DELETE request
 func (c *HTTPClient) Delete(ctx context.Context, path string, result interface{}) error {
 	req, err := http.NewRequestWithContext(ctx, "DELETE", c.baseURL+path, nil)
@@ -613,6 +645,11 @@ func (c *HTTPClient) PostProductMultipart(ctx context.Context, path string, data
 	return c.doProductMultipart(ctx, "POST", path, dataJSON, images, result)
 }
 
+// PostImagesMultipart performs a POST multipart request with "images" file parts only (no "data" field)
+func (c *HTTPClient) PostImagesMultipart(ctx context.Context, path string, images []ProductImageFile, result interface{}) error {
+	return c.doProductMultipart(ctx, "POST", path, nil, images, result)
+}
+
 // PatchProductMultipart performs a PATCH multipart request with a "data" JSON field and "images" file parts
 func (c *HTTPClient) PatchProductMultipart(ctx context.Context, path string, dataJSON []byte, images []ProductImageFile, result interface{}) error {
 	return c.doProductMultipart(ctx, "PATCH", path, dataJSON, images, result)
@@ -622,9 +659,11 @@ func (c *HTTPClient) doProductMultipart(ctx context.Context, method, path string
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 
-	// Add the "data" field containing the JSON-encoded product fields
-	if err := writer.WriteField("data", string(dataJSON)); err != nil {
-		return fmt.Errorf("failed to write data field: %w", err)
+	// Add the "data" field containing the JSON-encoded product fields (none for an images-only upload)
+	if dataJSON != nil {
+		if err := writer.WriteField("data", string(dataJSON)); err != nil {
+			return fmt.Errorf("failed to write data field: %w", err)
+		}
 	}
 
 	// Add each image as a multipart file part named "images"

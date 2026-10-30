@@ -7,9 +7,9 @@ namespace TurboDocx\Types\Requests\Quote;
 /**
  * Request for updating a company
  *
- * `industryId` supports null-clear semantics: pass `null` + `includeIndustryId: true`
- * to explicitly clear the field on the server. Omitting `industryId` (or not setting
- * `includeIndustryId`) leaves the server value unchanged.
+ * `industryId` and `email` support null-clear semantics: pass `null` + `includeIndustryId: true`
+ * (or `includeEmail: true`) to explicitly clear the field on the server. Omitting the field (or
+ * not setting its include flag) leaves the server value unchanged.
  */
 final class UpdateCompanyRequest
 {
@@ -23,6 +23,8 @@ final class UpdateCompanyRequest
         // explicitly send null (clears the value on the server).
         public readonly ?string $industryId = null,
         public readonly bool $includeIndustryId = false,
+        public readonly ?string $email = null,
+        public readonly bool $includeEmail = false,
     ) {}
 
     /**
@@ -34,6 +36,9 @@ final class UpdateCompanyRequest
 
         if ($this->name !== null) {
             $data['name'] = $this->name;
+        }
+        if ($this->includeEmail || $this->email !== null) {
+            $data['email'] = $this->email;
         }
         if ($this->phone !== null) {
             $data['phone'] = $this->phone;

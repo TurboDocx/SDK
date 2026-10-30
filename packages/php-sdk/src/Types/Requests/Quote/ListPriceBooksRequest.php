@@ -18,6 +18,10 @@ final class ListPriceBooksRequest
         public readonly ?string $query = null,
         public readonly string|array|null $priceBookTypeIds = null,
         public readonly ?bool $showInQuoteBuilder = null,
+        // Sort column: 'name' | 'discountPercent' | 'overrideCount' | 'validFrom' | 'validTo' | 'createdOn' (default createdOn, newest first)
+        public readonly ?string $sortBy = null,
+        // 'asc' | 'desc'
+        public readonly ?string $sortDirection = null,
     ) {}
 
     /**
@@ -45,6 +49,13 @@ final class ListPriceBooksRequest
         }
         if ($this->showInQuoteBuilder !== null) {
             $params['showInQuoteBuilder'] = $this->showInQuoteBuilder ? 'true' : 'false';
+        }
+
+        if ($this->sortBy !== null) {
+            $params['sortBy'] = $this->sortBy;
+        }
+        if ($this->sortDirection !== null) {
+            $params['sortDirection'] = $this->sortDirection;
         }
 
         return $params;

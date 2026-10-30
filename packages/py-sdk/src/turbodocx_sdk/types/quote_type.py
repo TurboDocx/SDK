@@ -46,6 +46,8 @@ class ListTypesOptions(TypedDict, total=False):
     query: str
     categoryType: str  # CategoryType literal
     includeUsage: bool
+    sortBy: str  # "name" | "usageCount" (usage needs categoryType); default name A to Z
+    sortDirection: str  # "asc" | "desc"
 
 
 class QuoteTypeListResponse(TypedDict):

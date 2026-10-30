@@ -2,7 +2,7 @@
  * TypeScript types for TurboQuote — Type/Category entity and request/response types
  */
 
-import type { CategoryType, PaginationParams, PaginatedResponse } from './quote-shared';
+import type { CategoryType, PaginationParams, PaginatedResponse, SortDirection } from './quote-shared';
 
 // ============================================
 // DOMAIN TYPES
@@ -38,9 +38,15 @@ export interface UpdateQuoteTypeRequest {
   name?: string;
 }
 
+/** `name` | `usageCount` (usage needs a `categoryType`; without one it sorts by name) */
+export type QuoteTypeSortBy = 'name' | 'usageCount';
+
 export interface ListTypesOptions extends PaginationParams {
   categoryType?: CategoryType;
   includeUsage?: boolean;
+  /** Default `name` A to Z. */
+  sortBy?: QuoteTypeSortBy;
+  sortDirection?: SortDirection;
 }
 
 // ============================================

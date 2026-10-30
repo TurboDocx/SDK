@@ -37,6 +37,15 @@ public class Quote {
     private QuoteCreator creator;
     private QuoteStatusInfo statusInfo;
     private QuotePreparedBy preparedBy;
+    /** listQuotes only: how many line items the quote has */
+    private Integer lineItemCount;
+    /** listQuotes only: the quote's signature request has expired */
+    private Boolean isSignatureExpired;
+    /**
+     * listQuotes only: a draft or sent quote past its Valid until day (UTC), or whose signature
+     * expired. The same rule as the "expired" status filter.
+     */
+    private Boolean isExpired;
 
     public String getId() { return id; }
     public String getOrgId() { return orgId; }
@@ -81,17 +90,34 @@ public class Quote {
 
     public void setPreparedBy(QuotePreparedBy preparedBy) { this.preparedBy = preparedBy; }
 
+    public Integer getLineItemCount() { return lineItemCount; }
+    public Boolean getIsSignatureExpired() { return isSignatureExpired; }
+    public Boolean getIsExpired() { return isExpired; }
+
     /**
-     * Nested creator type.
+     * Nested creator type. Also what TurboQuote#listQuoteCreators returns: there {@code name},
+     * {@code email}, {@code isAPIKey} and {@code apiKeyDeleted} are set instead of the first and
+     * last name, and {@code id} is the value for the {@code createdBy} filter.
      */
     public static class QuoteCreator {
         private String id;
         private String firstName;
         private String lastName;
+        /** A person's name (else email), or the API key's name */
+        private String name;
+        /** Null for an API key */
+        private String email;
+        private Boolean isAPIKey;
+        /** An API key that has since been deleted (its quotes stay) */
+        private Boolean apiKeyDeleted;
 
         public String getId() { return id; }
         public String getFirstName() { return firstName; }
         public String getLastName() { return lastName; }
+        public String getName() { return name; }
+        public String getEmail() { return email; }
+        public Boolean getIsAPIKey() { return isAPIKey; }
+        public Boolean getApiKeyDeleted() { return apiKeyDeleted; }
     }
 
     /**

@@ -29,6 +29,8 @@ final class UpdatePriceBookRequest
         public readonly ?bool $showInQuoteBuilder = null,
         public readonly ?array $productPricing = null,
         public readonly bool $includeValidTo = false,
+        // Put every product back on the book's discount (before any productPricing in the request)
+        public readonly ?bool $resetProductPricing = null,
     ) {}
 
     /**
@@ -66,6 +68,9 @@ final class UpdatePriceBookRequest
         }
         if ($this->productPricing !== null) {
             $data['productPricing'] = $this->productPricing;
+        }
+        if ($this->resetProductPricing !== null) {
+            $data['resetProductPricing'] = $this->resetProductPricing;
         }
 
         return $data;

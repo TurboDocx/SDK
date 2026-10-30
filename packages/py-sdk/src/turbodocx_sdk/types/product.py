@@ -83,9 +83,11 @@ class ListProductsOptions(TypedDict, total=False):
     offset: int
     query: str
     categoryIds: List[str]
-    billingFrequency: str  # BillingFrequency literal
-    currency: str  # Currency literal
+    billingFrequency: Any  # BillingFrequency | List[BillingFrequency]
+    currency: Any  # Currency | List[Currency]
     showInCatalog: bool
+    sortBy: str  # "name" | "listPrice" | "createdOn"; default createdOn newest first
+    sortDirection: str  # "asc" | "desc"
 
 
 class ProductListResponse(TypedDict, total=False):
@@ -99,3 +101,6 @@ class ProductListResponse(TypedDict, total=False):
 
 # Dict mapping productId -> ProductImage | None
 ProductPrimaryImagesResponse = Dict[str, Any]
+
+# Dict mapping productId -> List[ProductImage] (up to three, in display order)
+ProductQuoteImagesResponse = Dict[str, List[ProductImage]]

@@ -310,6 +310,30 @@ public class HttpClient {
         return execute(request, responseType);
     }
 
+    public <T> T put(String path, Object body, Type responseType) throws IOException {
+        RequestBody requestBody = body != null
+                ? RequestBody.create(gson.toJson(body), JSON)
+                : RequestBody.create("{}", JSON);
+
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .headers(buildHeaders())
+                .put(requestBody)
+                .build();
+
+        return execute(request, responseType);
+    }
+
+    public <T> T delete(String path, Type responseType) throws IOException {
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .headers(buildHeaders())
+                .delete()
+                .build();
+
+        return execute(request, responseType);
+    }
+
     public <T> T delete(String path, Class<T> responseClass) throws IOException {
         Request request = new Request.Builder()
                 .url(baseUrl + path)

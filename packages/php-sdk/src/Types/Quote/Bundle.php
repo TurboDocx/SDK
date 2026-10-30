@@ -12,6 +12,7 @@ final class Bundle implements \JsonSerializable
     /**
      * @param array<BundleItem>|null $items
      * @param array{id: string, name: string, categoryType: string}|null $category
+     * @param array<string, float>|null $billingTotals
      */
     public function __construct(
         public readonly string $id,
@@ -34,6 +35,10 @@ final class Bundle implements \JsonSerializable
         public readonly ?string $updatedOn = null,
         public readonly ?array $items = null,
         public readonly ?array $category = null,
+        // listBundles only: the bundle's active items
+        public readonly ?int $itemCount = null,
+        // listBundles only: the bundle price per billing frequency
+        public readonly ?array $billingTotals = null,
     ) {}
 
     /**
@@ -66,6 +71,10 @@ final class Bundle implements \JsonSerializable
                 $data['items']
             ) : null,
             category: $data['category'] ?? null,
+            itemCount: isset($data['itemCount']) ? (int) $data['itemCount'] : null,
+            billingTotals: isset($data['billingTotals']) && is_array($data['billingTotals'])
+                ? array_map(fn($total) => (float) $total, $data['billingTotals'])
+                : null,
         );
     }
 
@@ -100,6 +109,12 @@ final class Bundle implements \JsonSerializable
         }
         if ($this->category !== null) {
             $data['category'] = $this->category;
+        }
+        if ($this->itemCount !== null) {
+            $data['itemCount'] = $this->itemCount;
+        }
+        if ($this->billingTotals !== null) {
+            $data['billingTotals'] = $this->billingTotals;
         }
 
         return $data;

@@ -31,6 +31,8 @@ final class PriceBook implements \JsonSerializable
         public readonly ?array $productPricing = null,
         public readonly ?array $priceBookType = null,
         public readonly ?int $productCount = null,
+        // listPriceBooks only: products with their own price in this book
+        public readonly ?int $overrideCount = null,
     ) {}
 
     /**
@@ -60,6 +62,7 @@ final class PriceBook implements \JsonSerializable
             ) : null,
             priceBookType: $data['priceBookType'] ?? null,
             productCount: isset($data['productCount']) ? (int) $data['productCount'] : null,
+            overrideCount: isset($data['overrideCount']) ? (int) $data['overrideCount'] : null,
         );
     }
 
@@ -93,6 +96,9 @@ final class PriceBook implements \JsonSerializable
         }
         if ($this->productCount !== null) {
             $data['productCount'] = $this->productCount;
+        }
+        if ($this->overrideCount !== null) {
+            $data['overrideCount'] = $this->overrideCount;
         }
 
         return $data;

@@ -43,6 +43,8 @@ class PriceBook(TypedDict, total=False):
     productPricing: List[PriceBookProductPricing]
     priceBookType: Dict[str, Any]
     productCount: int
+    # list_price_books only: products with their own price in this book
+    overrideCount: int
 
 
 class PriceBookProductPricingInput(TypedDict, total=False):
@@ -78,6 +80,8 @@ class UpdatePriceBookRequest(TypedDict, total=False):
     isDefault: bool
     showInQuoteBuilder: bool
     productPricing: List[PriceBookProductPricingInput]
+    # Put every product back on the book's discount (before any productPricing in the request)
+    resetProductPricing: bool
 
 
 class ListPriceBooksOptions(TypedDict, total=False):
@@ -86,6 +90,9 @@ class ListPriceBooksOptions(TypedDict, total=False):
     query: str
     priceBookTypeIds: Any  # string | string[]
     showInQuoteBuilder: bool
+    # "name" | "discountPercent" | "overrideCount" | "validFrom" | "validTo" | "createdOn"
+    sortBy: str
+    sortDirection: str  # "asc" | "desc"
 
 
 class ListPriceBookProductsOptions(TypedDict, total=False):

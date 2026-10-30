@@ -127,12 +127,10 @@ class WebhookSignatureVerifierTest {
 
     @Test
     void stringBodyOverloadUsesDefaultTolerance() throws Exception {
-        String sig = sign(BODY, String.valueOf(System.currentTimeMillis() / 1000), SECRET);
-        // Pass current time so the default 300s window is within tolerance.
-        assertTrue(WebhookSignatureVerifier.verify(
-                BODY,
-                sig,
-                String.valueOf(System.currentTimeMillis() / 1000),
-                SECRET));
+        // Read the clock once: signing and verifying with timestamps a second apart would not match.
+        String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
+        String sig = sign(BODY, timestamp, SECRET);
+        // The current time is within the default 300s window.
+        assertTrue(WebhookSignatureVerifier.verify(BODY, sig, timestamp, SECRET));
     }
 }
