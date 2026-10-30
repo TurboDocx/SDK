@@ -843,7 +843,7 @@ The quote list also filters by several companies (`companyIds`) and currencies (
 expired), by creator (`createdBy`, ids from the creators call; `createdByApiKeys` for API-key quotes)
 and by Valid until (`validUntilWindow` = `thisWeek` | `thisMonth` | `past`, `validUntilFrom` /
 `validUntilTo`). Each quote carries `isExpired` and `lineItemCount`; the response adds
-`statusCounts` (per tab) and `summary` (pipeline, win rate, monthly recurring, in `summaryCurrency`).
+`statusCounts` (per tab) and `summary` (pipeline, win rate, monthly recurring; amounts in `summaryCurrency`, counts across every currency).
 
 ```python
 page = await TurboQuote.list_quotes({

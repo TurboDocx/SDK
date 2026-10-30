@@ -34,7 +34,7 @@ public class ListQuotesOptions {
     private String sortBy;
     /** "asc" or "desc" */
     private String sortDirection;
-    /** Currency of the returned summary (default: the one filtered currency, else USD) */
+    /** Currency of the summary amounts (default: the one filtered currency, else USD) */
     private String summaryCurrency;
 
     public Integer getLimit() { return limit; }

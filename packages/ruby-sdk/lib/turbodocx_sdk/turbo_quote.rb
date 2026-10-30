@@ -48,8 +48,8 @@ module TurboDocxSdk
       end
 
       # The quote list's summary cards (pipeline, win rate, monthly recurring...) for a set of
-      # filters, in one currency (+summaryCurrency+). Takes the list_quotes filters; the status
-      # filter is ignored.
+      # filters. Amounts are in +summaryCurrency+; counts and the win rate cover every currency.
+      # Takes the list_quotes filters; the status filter is ignored.
       #
       # @param options [Hash, nil] filters (camelCase keys, as for list_quotes)
       # @return [Hash] the summary ("currency", "openPipeline", "winRate", ...)

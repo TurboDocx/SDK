@@ -3,25 +3,26 @@ package com.turbodocx.models.quote;
 import java.util.List;
 
 /**
- * The quote list's summary cards, in one currency. Search, company, creator and Valid until
- * filters apply; the status filter and the currency list don't.
+ * The quote list's summary cards. The amounts (openPipeline total, monthlyRecurring) are in
+ * {@code currency}; every count and the win rate cover quotes in every currency. Search,
+ * company, creator, currency and Valid until filters apply; the status filter doesn't.
  */
 public class QuoteSummary {
     private String currency;
-    /** Draft and sent quotes that aren't expired */
+    /** Draft and sent quotes that aren't expired: total in currency, count in every currency */
     private Amount openPipeline;
-    /** Every accepted and every declined quote */
+    /** Every accepted and every declined quote, in every currency */
     private Completed completed;
-    /** Quotes created since the 1st of this month (UTC) */
+    /** Quotes created since the 1st of this month (UTC), in every currency */
     private Count createdThisMonth;
-    /** Sent quotes that aren't expired */
+    /** Sent quotes that aren't expired, in every currency */
     private Count waitingToSign;
-    /** Quotes accepted since the 1st of this month (UTC) */
+    /** Quotes accepted since the 1st of this month (UTC), in every currency */
     private Count wonThisMonth;
     /** Every currency the org's quotes are in, A to Z */
     private List<String> currencies;
     private WinRate winRate;
-    /** Monthly subtotal of accepted quotes */
+    /** Monthly subtotal of accepted quotes in currency */
     private Amount monthlyRecurring;
 
     public String getCurrency() { return currency; }
@@ -58,7 +59,7 @@ public class QuoteSummary {
         public int getDeclined() { return declined; }
     }
 
-    /** accepted / (accepted + declined) over the last windowDays; percent is null when none were decided */
+    /** accepted / (accepted + declined) over the last windowDays, in every currency; percent is null when none were decided */
     public static class WinRate {
         private Double percent;
         private int accepted;

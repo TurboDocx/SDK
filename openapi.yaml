@@ -765,7 +765,7 @@ paths:
       - TurboQuote
       operationId: getV1QuotesSummary
       summary: GET /v1/quotes/summary
-      description: 'The quote list''s summary cards for the list filters (the GET /v1/quotes query params), in `summaryCurrency`.'
+      description: 'The quote list''s summary cards for the list filters (the GET /v1/quotes query params). Amounts are in `summaryCurrency`; counts and the win rate cover every currency.'
       responses:
         '200':
           description: Success.

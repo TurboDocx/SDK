@@ -5,21 +5,22 @@ declare(strict_types=1);
 namespace TurboDocx\Types\Quote;
 
 /**
- * The quote list's summary cards, in one currency. Search, company, creator and Valid until
- * filters apply; the status filter and the currency list don't.
+ * The quote list's summary cards. The amounts (openPipeline total, monthlyRecurring) are in
+ * `currency`; every count and the win rate cover quotes in every currency. Search, company,
+ * creator, currency and Valid until filters apply; the status filter doesn't.
  */
 final class QuoteSummary implements \JsonSerializable
 {
     /**
-     * @param array{total: float, count: int} $openPipeline Draft and sent quotes that aren't expired
-     * @param array{accepted: int, declined: int} $completed Every accepted and every declined quote
-     * @param array{count: int} $createdThisMonth Quotes created since the 1st of this month (UTC)
-     * @param array{count: int} $waitingToSign Sent quotes that aren't expired
-     * @param array{count: int} $wonThisMonth Quotes accepted since the 1st of this month (UTC)
+     * @param array{total: float, count: int} $openPipeline Draft and sent quotes that aren't expired (total in currency, count in every currency)
+     * @param array{accepted: int, declined: int} $completed Every accepted and every declined quote, in every currency
+     * @param array{count: int} $createdThisMonth Quotes created since the 1st of this month (UTC), in every currency
+     * @param array{count: int} $waitingToSign Sent quotes that aren't expired, in every currency
+     * @param array{count: int} $wonThisMonth Quotes accepted since the 1st of this month (UTC), in every currency
      * @param string[] $currencies Every currency the org's quotes are in, A to Z
      * @param array{percent: float|null, accepted: int, declined: int, windowDays: int} $winRate
-     *        accepted / (accepted + declined) over the last windowDays; percent is null when none were decided
-     * @param array{total: float, count: int} $monthlyRecurring Monthly subtotal of accepted quotes
+     *        accepted / (accepted + declined) over the last windowDays, in every currency; percent is null when none were decided
+     * @param array{total: float, count: int} $monthlyRecurring Monthly subtotal of accepted quotes in currency
      */
     public function __construct(
         public readonly string $currency,

@@ -357,7 +357,7 @@ type QuoteSummaryOptions struct {
 	ValidUntilWindow *string  `json:"validUntilWindow,omitempty"`
 	ValidUntilFrom   *string  `json:"validUntilFrom,omitempty"`
 	ValidUntilTo     *string  `json:"validUntilTo,omitempty"`
-	// SummaryCurrency is the currency of the summary (default: the one filtered currency, else USD)
+	// SummaryCurrency is the currency of the summary amounts (default: the one filtered currency, else USD)
 	SummaryCurrency *string `json:"summaryCurrency,omitempty"`
 }
 
@@ -472,7 +472,7 @@ type QuoteListResponse struct {
 	Stats        QuoteListStats `json:"stats"`
 	// StatusCounts holds the quotes per list tab (every filter except the status filter)
 	StatusCounts *QuoteStatusCounts `json:"statusCounts,omitempty"`
-	// Summary holds the list's summary cards, in one currency
+	// Summary holds the list's summary cards (amounts in one currency, counts across every currency)
 	Summary *QuoteSummary `json:"summary,omitempty"`
 }
 
@@ -507,10 +507,11 @@ type QuoteWinRate struct {
 	WindowDays int      `json:"windowDays"`
 }
 
-// QuoteSummary holds the quote list's summary cards, in one currency
+// QuoteSummary holds the quote list's summary cards. The amounts (OpenPipeline.Total,
+// MonthlyRecurring) are in Currency; every count and the win rate cover every currency
 type QuoteSummary struct {
 	CurrencyCode string `json:"currency"`
-	// OpenPipeline: draft and sent quotes that aren't expired
+	// OpenPipeline: draft and sent quotes that aren't expired (Total in Currency, Count in every currency)
 	OpenPipeline QuoteSummaryAmount `json:"openPipeline"`
 	Completed    struct {
 		Accepted int `json:"accepted"`
@@ -523,7 +524,7 @@ type QuoteSummary struct {
 	// Currencies lists every currency the org's quotes are in, A to Z
 	Currencies []string     `json:"currencies"`
 	WinRate    QuoteWinRate `json:"winRate"`
-	// MonthlyRecurring: the monthly subtotal of accepted quotes
+	// MonthlyRecurring: the monthly subtotal of accepted quotes in Currency
 	MonthlyRecurring QuoteSummaryAmount `json:"monthlyRecurring"`
 }
 

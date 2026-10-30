@@ -23,7 +23,7 @@ final class QuoteListResponse implements \JsonSerializable
         public readonly ?QuoteListStats $stats = null,
         // Quotes per list tab (every filter except the status filter)
         public readonly ?QuoteStatusCounts $statusCounts = null,
-        // The list's summary cards, in one currency
+        // The list's summary cards (amounts in one currency, counts across every currency)
         public readonly ?QuoteSummary $summary = null,
     ) {}
 

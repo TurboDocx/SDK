@@ -178,7 +178,8 @@ func (c *QuoteClient) ListQuotes(ctx context.Context, options *ListQuotesOptions
 }
 
 // GetQuoteSummary retrieves the quote list's summary cards (pipeline, win rate, monthly
-// recurring…) for a set of filters, in one currency. The status filter is ignored.
+// recurring…) for a set of filters. Amounts are in SummaryCurrency; counts and the win rate
+// cover every currency. The status filter is ignored.
 func (c *QuoteClient) GetQuoteSummary(ctx context.Context, options *QuoteSummaryOptions) (*QuoteSummary, error) {
 	var resp struct {
 		Summary QuoteSummary `json:"summary"`

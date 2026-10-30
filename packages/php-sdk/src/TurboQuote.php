@@ -263,7 +263,8 @@ final class TurboQuote
 
     /**
      * The quote list's summary cards (pipeline, win rate, monthly recurring…) for a set of
-     * filters, in one currency (`summaryCurrency`). The status filter is ignored.
+     * filters. Amounts are in `summaryCurrency`; counts and the win rate cover every currency.
+     * The status filter is ignored.
      *
      * @param QuoteSummaryRequest|null $request
      * @return QuoteSummary

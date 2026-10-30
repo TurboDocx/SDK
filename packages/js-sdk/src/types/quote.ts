@@ -159,7 +159,7 @@ export interface QuoteListFilters {
   /** Inclusive YYYY-MM-DD bounds on Valid until, combined with the window. */
   validUntilFrom?: string;
   validUntilTo?: string;
-  /** Currency of the returned `summary` (default: the one filtered currency, else USD). */
+  /** Currency of the `summary` amounts (default: the one filtered currency, else USD). */
   summaryCurrency?: Currency;
 }
 
@@ -296,26 +296,27 @@ export interface QuoteStatusCounts {
 }
 
 /**
- * The quote list's summary cards, in one currency. Search, company, creator and Valid until
- * filters apply; the status filter and the currency list don't.
+ * The quote list's summary cards. The amounts (`openPipeline.total`, `monthlyRecurring`) are in
+ * `currency`; every count and the win rate cover quotes in every currency. Search, company,
+ * creator, currency and Valid until filters apply; the status filter doesn't.
  */
 export interface QuoteSummary {
   currency: Currency;
-  /** Draft and sent quotes that aren't expired. */
+  /** Draft and sent quotes that aren't expired: `total` in `currency`, `count` in every currency. */
   openPipeline: { total: number; count: number };
-  /** Every accepted and every declined quote. */
+  /** Every accepted and every declined quote, in every currency. */
   completed: { accepted: number; declined: number };
-  /** Quotes created since the 1st of this month (UTC). */
+  /** Quotes created since the 1st of this month (UTC), in every currency. */
   createdThisMonth: { count: number };
-  /** Sent quotes that aren't expired. */
+  /** Sent quotes that aren't expired, in every currency. */
   waitingToSign: { count: number };
-  /** Quotes accepted since the 1st of this month (UTC). */
+  /** Quotes accepted since the 1st of this month (UTC), in every currency. */
   wonThisMonth: { count: number };
   /** Every currency the org's quotes are in, A to Z. */
   currencies: Currency[];
-  /** accepted / (accepted + declined) over the last `windowDays`; `percent` is null when none were decided. */
+  /** accepted / (accepted + declined) over the last `windowDays`, in every currency; `percent` is null when none were decided. */
   winRate: { percent: number | null; accepted: number; declined: number; windowDays: number };
-  /** Monthly subtotal of accepted quotes; `count` = accepted quotes with a monthly amount. */
+  /** Monthly subtotal of accepted quotes in `currency`; `count` = those with a monthly amount. */
   monthlyRecurring: { total: number; count: number };
 }
 

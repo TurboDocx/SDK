@@ -253,7 +253,10 @@ class QuoteStatusCounts(TypedDict):
 
 
 class QuoteSummary(TypedDict, total=False):
-    """The quote list's summary cards, in one currency."""
+    """The quote list's summary cards.
+
+    Amounts are in ``currency``; every count and the win rate cover every currency.
+    """
 
     currency: str
     openPipeline: Dict[str, Any]  # {total, count}: draft + sent quotes that aren't expired
@@ -263,7 +266,7 @@ class QuoteSummary(TypedDict, total=False):
     wonThisMonth: Dict[str, Any]  # {count}
     currencies: List[str]
     winRate: Dict[str, Any]  # {percent (None when none decided), accepted, declined, windowDays}
-    monthlyRecurring: Dict[str, Any]  # {total, count}
+    monthlyRecurring: Dict[str, Any]  # {total, count}: accepted quotes in currency
 
 
 class QuoteCreator(TypedDict):

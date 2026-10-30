@@ -217,8 +217,8 @@ class TurboQuote:
     async def get_quote_summary(cls, options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         The quote list's summary cards (pipeline, win rate, monthly recurring...) for a set of
-        filters, in one currency (``summaryCurrency``). Takes the list's filters; the status
-        filter is ignored.
+        filters. Amounts are in ``summaryCurrency``; counts and the win rate cover every
+        currency. Takes the list's filters; the status filter is ignored.
         """
         client = cls._get_client()
         response = await client.get("/v1/quotes/summary", _to_query_params(options))

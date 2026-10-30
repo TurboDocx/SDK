@@ -44,7 +44,7 @@ final class ListQuotesRequest
         public readonly ?string $sortBy = null,
         // 'asc' | 'desc'
         public readonly ?string $sortDirection = null,
-        // Currency of the returned summary (default: the one filtered currency, else USD)
+        // Currency of the summary amounts (default: the one filtered currency, else USD)
         public readonly ?string $summaryCurrency = null,
     ) {}
 

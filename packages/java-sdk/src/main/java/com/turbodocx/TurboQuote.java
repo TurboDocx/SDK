@@ -61,7 +61,8 @@ public final class TurboQuote {
 
     /**
      * The quote list's summary cards (pipeline, win rate, monthly recurring…) for a set of
-     * filters, in one currency ({@code summaryCurrency}). The status filter is ignored.
+     * filters. Amounts are in {@code summaryCurrency}; counts and the win rate cover every
+     * currency. The status filter is ignored.
      */
     public QuoteSummary getQuoteSummary(QuoteSummaryOptions options) throws IOException {
         Map<String, Object> params = options != null ? options.toQueryParams() : null;
@@ -70,7 +71,7 @@ public final class TurboQuote {
     }
 
     /**
-     * The quote list's summary cards, without filters (USD unless the org's quotes say otherwise).
+     * The quote list's summary cards, without filters (amounts in USD, counts across every currency).
      */
     public QuoteSummary getQuoteSummary() throws IOException {
         return getQuoteSummary(null);
