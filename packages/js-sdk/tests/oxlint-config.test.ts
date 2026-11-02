@@ -55,11 +55,11 @@ const readJson = ({ text }: { text: string }): Record<string, unknown> => {
   return isRecord(parsed) ? parsed : {};
 };
 
-// A throwaway project: the package's lint config, tsconfigs and baseline script, plus the given files.
+// A throwaway project: the package's lint config, tsconfigs, baseline script and package.json, plus the given files.
 const makeProject = ({ files, baseline = {} }: ProjectParams): string => {
   const dir = mkdtempSync(path.join(tmpdir(), 'oxlint-config-'));
   projects.push(dir);
-  for (const entry of ['.oxlintrc.json', 'tsconfig.json', 'tests/tsconfig.json', 'scripts/oxlint-baseline.mjs']) {
+  for (const entry of ['.oxlintrc.json', 'tsconfig.json', 'tests/tsconfig.json', 'scripts/oxlint-baseline.mjs', 'package.json']) {
     mkdirSync(path.dirname(path.join(dir, entry)), { recursive: true });
     cpSync(path.join(PACKAGE_ROOT, entry), path.join(dir, entry));
   }
@@ -187,6 +187,8 @@ describe('baseline ratchet (scripts/oxlint-baseline.mjs)', () => {
   // The tests run in order against one project, each starting from the state the previous one left.
   const LEGACY = 'src/legacy.ts';
   const MOVED = 'src/moved.ts';
+  const STABLE = 'src/stable.ts';
+  const UNRELATED = 'src/unrelated.ts';
   const TWO_ANY = `${ANY_CODE}export const more: any = 2;\n`;
   let dir = '';
   const counts = (): Record<string, unknown> => readJson({ text: readFileSync(path.join(dir, COUNTS), 'utf8') });
@@ -199,7 +201,7 @@ describe('baseline ratchet (scripts/oxlint-baseline.mjs)', () => {
     run({ dir, command: 'git', args: ['-c', 'user.email=t@t', '-c', 'user.name=t', '-c', 'commit.gpgsign=false', ...args] });
 
   beforeAll(() => {
-    dir = makeProject({ files: { [LEGACY]: ANY_CODE } });
+    dir = makeProject({ files: { [LEGACY]: ANY_CODE, [STABLE]: ANY_CODE } });
     const created = ratchet({ dir, args: ['--allow-growth'] });
     if (created.status !== 0) {
       throw new Error(`baseline script failed: ${created.stderr}`);
@@ -215,12 +217,22 @@ describe('baseline ratchet (scripts/oxlint-baseline.mjs)', () => {
   afterAll(removeProjects);
 
   it('records the exact count per rule and file', () => {
-    expect(counts()['typescript/no-explicit-any']).toStrictEqual({ [LEGACY]: 1 });
+    expect(counts()['typescript/no-explicit-any']).toStrictEqual({ [LEGACY]: 1, [STABLE]: 1 });
   });
 
   it('passes the full and the fast check while no count goes up', () => {
     expect(check().status).toBe(0);
     expect(check({ extra: ['--fast'] }).status).toBe(0);
+  });
+
+  it('passes a pull request whose counts and lint rules match the base branch', () => {
+    expect(check({ extra: ['--base', 'HEAD'] }).status).toBe(0);
+  });
+
+  it('rejects unknown flags and a regenerate from a partial run', () => {
+    expect(ratchet({ dir, args: ['--chek'] }).status).not.toBe(0);
+    expect(ratchet({ dir, args: ['--fast'] }).status).not.toBe(0);
+    expect(ratchet({ dir, args: [LEGACY] }).status).not.toBe(0);
   });
 
   it('fails the check, naming the file and marking the new line, when a baselined file gains a violation', () => {
@@ -237,7 +249,7 @@ describe('baseline ratchet (scripts/oxlint-baseline.mjs)', () => {
 
   it('refuses to regenerate a baseline that would grow', () => {
     expect(ratchet({ dir }).status).toBe(1);
-    expect(counts()['typescript/no-explicit-any']).toStrictEqual({ [LEGACY]: 1 });
+    expect(counts()['typescript/no-explicit-any']).toStrictEqual({ [LEGACY]: 1, [STABLE]: 1 });
   });
 
   it('reports a file that does not parse instead of crashing', () => {
@@ -252,8 +264,20 @@ describe('baseline ratchet (scripts/oxlint-baseline.mjs)', () => {
   it("keeps a renamed file's allowance", () => {
     git({ args: ['mv', LEGACY, MOVED] });
     expect(ratchet({ dir }).status).toBe(0);
-    expect(counts()['typescript/no-explicit-any']).toStrictEqual({ [MOVED]: 1 });
+    expect(counts()['typescript/no-explicit-any']).toStrictEqual({ [MOVED]: 1, [STABLE]: 1 });
     expect(check().status).toBe(0);
+  });
+
+  it("does not hand a deleted file's allowance to an unrelated file", () => {
+    git({ args: ['rm', '-q', '-f', MOVED] });
+    write({ file: UNRELATED, code: 'export const other: any = 2;\nexport const plain = 3;\n' });
+    git({ args: ['add', UNRELATED] });
+    const result = ratchet({ dir });
+    git({ args: ['rm', '-q', '-f', UNRELATED] });
+    write({ file: MOVED, code: ANY_CODE });
+    git({ args: ['add', MOVED] });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`${UNRELATED}: typescript/no-explicit-any, 1 violation(s) where 0 existed`);
   });
 
   it('fails when .oxlint-baseline.json is edited by hand', () => {
@@ -268,13 +292,24 @@ describe('baseline ratchet (scripts/oxlint-baseline.mjs)', () => {
     expect(result.stderr).toContain('does not match');
   });
 
-  it('fails until fixed violations are locked in, then shrinks both files', () => {
+  it('only warns about a lower count in a file the change did not touch', () => {
+    const countsPath = path.join(dir, COUNTS);
+    const original = readFileSync(countsPath, 'utf8');
+    const raised = { ...readJson({ text: original }), 'typescript/no-explicit-any': { [MOVED]: 1, [STABLE]: 3 } };
+    writeFileSync(countsPath, JSON.stringify(raised));
+    const result = check();
+    writeFileSync(countsPath, original);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('went down elsewhere');
+  });
+
+  it('fails until fixed violations in a touched file are locked in, then shrinks both files', () => {
     write({ file: MOVED, code: 'export const value = 1;\n' });
     const stale = check();
     expect(stale.status).toBe(1);
     expect(stale.stderr).toContain('went down');
     expect(ratchet({ dir }).status).toBe(0);
-    expect(counts()['typescript/no-explicit-any']).toBeUndefined();
+    expect(counts()['typescript/no-explicit-any']).toStrictEqual({ [STABLE]: 1 });
     expect(readFileSync(path.join(dir, '.oxlint-baseline.json'), 'utf8')).not.toContain(MOVED);
     expect(check().status).toBe(0);
   });
@@ -292,7 +327,7 @@ describe('baseline ratchet (scripts/oxlint-baseline.mjs)', () => {
     expect(ratchet({ dir }).status).toBe(0);
     const configPath = path.join(dir, '.oxlintrc.json');
     writeFileSync(configPath, `${readFileSync(configPath, 'utf8')}\n`);
-    const result = check({ extra: ['--base', 'HEAD'] });
+    const result = check({ extra: ['--base=HEAD'] });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('changed compared to HEAD');
   });
