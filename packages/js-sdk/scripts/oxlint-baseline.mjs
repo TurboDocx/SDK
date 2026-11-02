@@ -145,9 +145,11 @@ const findFixed = ({ current, committed }) =>
       .map(([file, count]) => ({ rule, file, count: current[rule]?.[file] ?? 0, committed: count }))
   );
 
-// Files added, changed, renamed or deleted since `ref`, untracked files included.
+// Files added, changed, renamed or deleted since `ref`, untracked files included. A renamed file lists
+// both paths (--no-renames), so its old path's lower count must be locked in before merge, moving the
+// counts to the new path; otherwise the branch it merges into would see the new path as growth.
 const changedFilesSince = ({ ref }) => {
-  const tracked = git({ gitArgs: ["diff", "--name-only", "--no-color", "--relative", ref] }).stdout;
+  const tracked = git({ gitArgs: ["diff", "--name-only", "--no-renames", "--no-color", "--relative", ref] }).stdout;
   const untracked = git({ gitArgs: ["ls-files", "--others", "--exclude-standard"] }).stdout;
   return new Set(`${tracked}\n${untracked}`.split("\n").filter(Boolean));
 };

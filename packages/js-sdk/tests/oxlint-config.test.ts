@@ -259,8 +259,11 @@ describe('baseline ratchet (scripts/oxlint-baseline.mjs)', () => {
     expect(result.stderr).toContain('cannot be baselined');
   });
 
-  it("keeps a renamed file's allowance", () => {
+  it("keeps a renamed file's allowance once the rename's baseline is regenerated", () => {
     git({ args: ['mv', LEGACY, MOVED] });
+    const stale = check();
+    expect(stale.status).toBe(1);
+    expect(stale.stderr).toContain(`${LEGACY}: typescript/no-explicit-any 1 -> 0`);
     expect(ratchet({ dir }).status).toBe(0);
     expect(counts()['typescript/no-explicit-any']).toStrictEqual({ [MOVED]: 1, [STABLE]: 1 });
     expect(check().status).toBe(0);
