@@ -130,7 +130,7 @@ describe('oxlint config', () => {
         'src/utils/client-context.ts': 'export const ok = 1;\n',
         'src/utils/clientContext.ts': 'export const ok = 1;\n',
         'tests/new-feature.test.ts':
-          "import { b } from '../src/a';\n\ndescribe('a feature', () => {\n  it('works', () => {\n    expect(b).toBe(1);\n  });\n});\n",
+          "import { b } from '../src/a';\n\ndescribe('a feature', () => {\n  it('works', () => {\n    expect(Promise.resolve(b)).resolves.toBe(1);\n  });\n});\n",
         'src/a.ts': 'export type A = number;\nexport const b = 1;\n',
       },
       baseline: { overrides: [{ files: ['src/baselined-file.ts'], rules: { 'typescript/no-explicit-any': 'off' } }] },
@@ -176,10 +176,8 @@ describe('oxlint config', () => {
     expect(rules({ filename: 'src/utils/clientContext.ts' })).toContain('unicorn(filename-case)');
   });
 
-  it('types a new test with Jest, so its describe, it and expect are not unsafe any', () => {
-    const fileRules = rules({ filename: 'tests/new-feature.test.ts' });
-    expect(fileRules).not.toContain('typescript(no-unsafe-call)');
-    expect(fileRules).not.toContain('typescript(no-unsafe-member-access)');
+  it('types a new test with Jest, so an unawaited `resolves` is caught', () => {
+    expect(rules({ filename: 'tests/new-feature.test.ts' })).toContain('typescript(no-floating-promises)');
   });
 });
 
