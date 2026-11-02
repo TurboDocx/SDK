@@ -33,6 +33,47 @@ jobs:
       - name: Run tests
         run: npm test
 
+  lint-js:
+    name: Lint JavaScript SDK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/js-sdk
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Oxlint needs Node 20.19 or later; the SDK itself still supports 18 (see test-js).
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        # Fails on any violation the baseline counts do not cover, on fixes not locked in and, on a pull
+        # request, on counts that grew or lint rules that changed compared to the base branch. A PR that
+        # does either on purpose opts in with the lint-baseline-growth label.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          # The exact commit the PR's merge commit was built on, not the branch tip, which may have moved.
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          base_args=""
+          if [ -n "$BASE_REF" ]; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+            base_args="--base FETCH_HEAD"
+            # Read the label live rather than from the event payload, so adding it and re-running works.
+            if curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/labels" \
+              | grep -q '"name": *"lint-baseline-growth"'; then
+              base_args="$base_args --allow-base-growth"
+            fi
+          fi
+          npm run -s lint:ci -- $base_args
+
   test-embed:
     name: Test Embed Widget
     runs-on: ubuntu-latest
@@ -56,15 +97,21 @@ jobs:
         run: npm test
 
   test-py:
-    name: Test Python SDK
-    runs-on: ubuntu-latest
+    # An explicit name keeps the check names as they were, without the runner in them.
+    name: Test Python SDK (${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
         working-directory: packages/py-sdk
     strategy:
       matrix:
         # 3.9 is the declared floor; 3.10 is what requirements-lock.txt is resolved for.
-        python-version: ['3.9', '3.10']
+        # setup-python has no 3.9 build for Ubuntu 26.04, which ubuntu-latest now is, so 3.9 runs on 24.04.
+        include:
+          - python-version: '3.9'
+            os: ubuntu-24.04
+          - python-version: '3.10'
+            os: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 

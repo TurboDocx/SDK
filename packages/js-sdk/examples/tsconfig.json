@@ -1,0 +1,8 @@
+// Type information for the type-aware lint rules and editors. The examples import the package by
+// name; mapping it to src/ keeps lint independent of whether dist/ has been built.
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "rootDir": "..", "noEmit": true, "paths": { "@turbodocx/sdk": ["../src/index.ts"] } },
+  "include": ["./**/*", "../src/**/*"],
+  "exclude": []
+}

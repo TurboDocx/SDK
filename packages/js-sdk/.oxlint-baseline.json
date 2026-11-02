@@ -1,0 +1,1080 @@
+{
+  "overrides": [
+    {
+      "files": [
+        "src/http.ts"
+      ],
+      "rules": {
+        "class-methods-use-this": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/quote-rename/index.ts",
+        "manual-test-deliverable.ts",
+        "manual-test.ts",
+        "src/modules/deliverable.ts",
+        "src/modules/partner.ts",
+        "src/modules/quote.ts",
+        "src/modules/sign.ts",
+        "src/utils/client-context.ts",
+        "src/utils/response-normalizer.ts",
+        "src/utils/verifyWebhookSignature.ts",
+        "tests/integration/turboquote-live.ts"
+      ],
+      "rules": {
+        "curly": "off"
+      }
+    },
+    {
+      "files": [
+        "jest.config.js"
+      ],
+      "rules": {
+        "import/no-commonjs": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/deliverable-basic.ts",
+        "examples/turboquote-basic.ts",
+        "examples/turbosign-advanced.ts",
+        "examples/turbosign-basic.ts",
+        "examples/turbosign-conditional-fields.ts",
+        "examples/turbosign-embedded-identity.ts",
+        "examples/turbosign-send-simple.ts",
+        "manual-test-deliverable.ts",
+        "manual-test.ts",
+        "src/http.ts",
+        "src/modules/quote.ts",
+        "tests/turbosign-filename-wire.test.ts"
+      ],
+      "rules": {
+        "import/no-namespace": "off"
+      }
+    },
+    {
+      "files": [
+        "jest.config.js"
+      ],
+      "rules": {
+        "import/unambiguous": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/http-error-mapping.test.ts"
+      ],
+      "rules": {
+        "jest/no-conditional-expect": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/http-client-context.test.ts",
+        "tests/integration/turboquote-live.ts",
+        "tests/turbopartner.test.ts"
+      ],
+      "rules": {
+        "jest/no-conditional-in-test": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/http-error-mapping.test.ts"
+      ],
+      "rules": {
+        "jest/no-jasmine-globals": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/blob-part.test.ts"
+      ],
+      "rules": {
+        "jest/prefer-expect-resolves": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/deliverable.test.ts",
+        "tests/turbopartner.test.ts",
+        "tests/turboquote-schedule.test.ts",
+        "tests/turboquote.test.ts",
+        "tests/turbosign-identity.test.ts",
+        "tests/turbosign-schedule.test.ts",
+        "tests/turbosign-sender-config.test.ts",
+        "tests/turbosign.test.ts",
+        "tests/turbowebhooks.test.ts"
+      ],
+      "rules": {
+        "jest/prefer-jest-mocked": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/deliverable.test.ts",
+        "tests/http-error-mapping.test.ts",
+        "tests/turbopartner.test.ts",
+        "tests/turbosign-embedded-signature-wire.test.ts",
+        "tests/turbosign-identity-wire.test.ts",
+        "tests/turbosign-identity.test.ts",
+        "tests/turbosign-schedule.test.ts",
+        "tests/turbosign-sender-config.test.ts",
+        "tests/turbosign-template-roles.test.ts",
+        "tests/turbosign.test.ts",
+        "tests/turbowebhooks.test.ts"
+      ],
+      "rules": {
+        "jest/prefer-spy-on": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/deliverable.test.ts",
+        "tests/http-config.test.ts",
+        "tests/response-normalizer.test.ts",
+        "tests/turbopartner.test.ts",
+        "tests/turboquote-schedule.test.ts",
+        "tests/turboquote.test.ts",
+        "tests/turbosign-embedded-signature-wire.test.ts",
+        "tests/turbosign-filename-wire.test.ts",
+        "tests/turbosign-identity-wire.test.ts",
+        "tests/turbosign-identity.test.ts",
+        "tests/turbosign-template-roles.test.ts",
+        "tests/turbosign.test.ts",
+        "tests/turbowebhooks.test.ts"
+      ],
+      "rules": {
+        "jest/prefer-strict-equal": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/turbowebhooks.test.ts"
+      ],
+      "rules": {
+        "jest/prefer-to-have-length": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/turbosign-embedded-signature-wire.test.ts",
+        "tests/turbosign.test.ts"
+      ],
+      "rules": {
+        "jest/require-to-throw-message": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts"
+      ],
+      "rules": {
+        "jsdoc/require-property-type": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/errors.ts"
+      ],
+      "rules": {
+        "max-classes-per-file": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/quote-rename/index.ts",
+        "src/http.ts",
+        "src/utils/verifyWebhookSignature.ts"
+      ],
+      "rules": {
+        "max-params": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/client-context.ts"
+      ],
+      "rules": {
+        "new-cap": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/quote-rename/index.ts",
+        "src/modules/sign.ts",
+        "tests/turbosign-filename-wire.test.ts"
+      ],
+      "rules": {
+        "no-await-in-loop": "off"
+      }
+    },
+    {
+      "files": [
+        "src/modules/sign.ts"
+      ],
+      "rules": {
+        "no-continue": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/client-context.ts"
+      ],
+      "rules": {
+        "no-control-regex": "off"
+      }
+    },
+    {
+      "files": [
+        "src/modules/sign.ts"
+      ],
+      "rules": {
+        "no-else-return": "off"
+      }
+    },
+    {
+      "files": [
+        "src/modules/sign.ts"
+      ],
+      "rules": {
+        "no-implicit-coercion": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/http-config.test.ts"
+      ],
+      "rules": {
+        "no-new": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/integration/turboquote-live.ts"
+      ],
+      "rules": {
+        "no-plusplus": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/turbosign-conditional-fields.ts",
+        "examples/turbosign-send-simple.ts",
+        "manual-test-deliverable.ts",
+        "manual-test.ts",
+        "src/types/quote.ts"
+      ],
+      "rules": {
+        "no-unused-vars": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/client-context.ts",
+        "tests/client-context-unit.test.ts",
+        "tests/http-client-context.test.ts",
+        "tests/turbosign-filename-wire.test.ts"
+      ],
+      "rules": {
+        "node/global-require": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/deliverable-basic.ts",
+        "examples/turboquote-basic.ts",
+        "examples/turbosign-advanced.ts",
+        "examples/turbosign-basic.ts",
+        "examples/turbosign-conditional-fields.ts",
+        "examples/turbosign-embedded-identity.ts",
+        "examples/turbosign-send-simple.ts",
+        "manual-test-deliverable.ts",
+        "manual-test.ts",
+        "src/http.ts",
+        "src/modules/quote.ts"
+      ],
+      "rules": {
+        "node/no-sync": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/integration/turboquote-live.ts"
+      ],
+      "rules": {
+        "object-shorthand": "off"
+      }
+    },
+    {
+      "files": [
+        "src/modules/sign.ts"
+      ],
+      "rules": {
+        "oxc/branches-sharing-code": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/quote-rename/index.ts",
+        "examples/turbowebhooks-crud.ts",
+        "tests/http-error-mapping.test.ts",
+        "tests/turbopartner.test.ts",
+        "tests/turboquote-schedule.test.ts",
+        "tests/turbosign-schedule.test.ts",
+        "tests/turbosign-sender-config.test.ts",
+        "tests/turbosign.test.ts"
+      ],
+      "rules": {
+        "prefer-destructuring": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts",
+        "src/utils/verifyWebhookSignature.ts",
+        "tests/turbowebhooks.test.ts"
+      ],
+      "rules": {
+        "prefer-template": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/turbowebhooks-crud.ts"
+      ],
+      "rules": {
+        "promise/always-return": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/quote-rename/index.ts",
+        "examples/turbosign-embedded-identity.ts",
+        "examples/turbosign-reminders-expiration.ts",
+        "tests/integration/turboquote-live.ts"
+      ],
+      "rules": {
+        "promise/prefer-await-to-callbacks": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/deliverable-basic.ts",
+        "examples/quote-rename/index.ts",
+        "examples/turbosign-embedded-identity.ts",
+        "examples/turbosign-reminders-expiration.ts",
+        "examples/turbowebhooks-crud.ts",
+        "tests/integration/turboquote-live.ts"
+      ],
+      "rules": {
+        "promise/prefer-await-to-then": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/turboquote-basic.ts",
+        "examples/turbosign-advanced.ts",
+        "examples/turbosign-basic.ts",
+        "examples/turbosign-conditional-fields.ts",
+        "examples/turbosign-embedded-identity.ts",
+        "examples/turbosign-reminders-expiration.ts",
+        "examples/turbosign-send-simple.ts",
+        "examples/turbowebhooks-crud.ts",
+        "manual-test-deliverable.ts",
+        "manual-test.ts",
+        "src/http.ts",
+        "src/modules/deliverable.ts",
+        "src/modules/partner.ts",
+        "src/modules/quote.ts",
+        "src/modules/sign.ts",
+        "src/modules/webhooks.ts",
+        "src/types/bundle.ts",
+        "src/types/company.ts",
+        "src/types/contact.ts",
+        "src/types/pricebook.ts",
+        "src/types/product.ts",
+        "src/types/quote-type.ts",
+        "src/types/quote.ts",
+        "tests/http-config.test.ts",
+        "tests/http-error-mapping.test.ts",
+        "tests/turbopartner.test.ts",
+        "tests/turboquote-schedule.test.ts",
+        "tests/turboquote.test.ts",
+        "tests/turbosign-identity.test.ts",
+        "tests/turbosign-schedule.test.ts",
+        "tests/turbosign-sender-config.test.ts",
+        "tests/turbosign.test.ts",
+        "tests/turbowebhooks.test.ts"
+      ],
+      "rules": {
+        "sort-imports": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts",
+        "src/modules/quote.ts",
+        "src/modules/sign.ts",
+        "src/types/product.ts",
+        "src/types/quote.ts",
+        "src/types/sign.ts",
+        "src/types/webhooks.ts",
+        "tests/turbosign-embedded-signature-wire.test.ts"
+      ],
+      "rules": {
+        "typescript/array-type": "off"
+      }
+    },
+    {
+      "files": [
+        "src/types/webhooks.ts"
+      ],
+      "rules": {
+        "typescript/ban-types": "off"
+      }
+    },
+    {
+      "files": [
+        "src/types/product.ts"
+      ],
+      "rules": {
+        "typescript/consistent-indexed-object-style": "off"
+      }
+    },
+    {
+      "files": [
+        "src/modules/sign.ts"
+      ],
+      "rules": {
+        "typescript/consistent-type-definitions": "off"
+      }
+    },
+    {
+      "files": [
+        "src/index.ts"
+      ],
+      "rules": {
+        "typescript/consistent-type-exports": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts",
+        "src/modules/deliverable.ts",
+        "src/modules/partner.ts",
+        "src/modules/quote.ts",
+        "src/modules/sign.ts",
+        "src/modules/webhooks.ts",
+        "tests/turboquote.test.ts"
+      ],
+      "rules": {
+        "typescript/consistent-type-imports": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts",
+        "tests/http-client-context.test.ts"
+      ],
+      "rules": {
+        "typescript/dot-notation": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/deliverable-basic.ts",
+        "examples/quote-rename/index.ts",
+        "examples/turbosign-advanced.ts",
+        "examples/turbosign-basic.ts",
+        "examples/turbosign-conditional-fields.ts",
+        "examples/turbosign-embedded-identity.ts",
+        "examples/turbosign-reminders-expiration.ts",
+        "examples/turbosign-send-simple.ts",
+        "examples/turbosign-template-roles.ts",
+        "manual-test-deliverable.ts",
+        "manual-test.ts",
+        "tests/integration/turboquote-live.ts",
+        "tests/turbopartner.test.ts",
+        "tests/turbosign-filename-wire.test.ts",
+        "tests/turbosign-identity.test.ts",
+        "tests/turbosign-template-roles.test.ts",
+        "tests/turbowebhooks.test.ts"
+      ],
+      "rules": {
+        "typescript/explicit-function-return-type": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts",
+        "src/modules/deliverable.ts",
+        "src/modules/partner.ts",
+        "src/modules/quote.ts",
+        "src/modules/sign.ts",
+        "src/modules/webhooks.ts",
+        "src/utils/errors.ts"
+      ],
+      "rules": {
+        "typescript/explicit-member-accessibility": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts"
+      ],
+      "rules": {
+        "typescript/explicit-module-boundary-types": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/turbopartner-users.ts"
+      ],
+      "rules": {
+        "typescript/no-base-to-string": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/response-normalizer.test.ts"
+      ],
+      "rules": {
+        "typescript/no-confusing-void-expression": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/turbopartner-api-keys.ts",
+        "examples/turbopartner-organizations.ts",
+        "examples/turbopartner-users.ts",
+        "examples/turboquote-advanced.ts",
+        "examples/turboquote-basic.ts",
+        "examples/turboquote-pricebooks.ts",
+        "examples/turboquote-products.ts",
+        "manual-test-deliverable.ts",
+        "manual-test.ts",
+        "src/http.ts",
+        "src/modules/deliverable.ts",
+        "src/modules/partner.ts",
+        "src/modules/quote.ts",
+        "src/modules/sign.ts",
+        "src/types/partner.ts",
+        "src/types/sign.ts",
+        "src/utils/response-normalizer.ts",
+        "tests/deliverable.test.ts",
+        "tests/http-client-context.test.ts",
+        "tests/integration/turboquote-live.ts",
+        "tests/turbopartner.test.ts",
+        "tests/turboquote-schedule.test.ts",
+        "tests/turboquote.test.ts",
+        "tests/turbosign-embedded-signature-wire.test.ts",
+        "tests/turbosign-identity.test.ts",
+        "tests/turbosign-schedule.test.ts",
+        "tests/turbosign-sender-config.test.ts",
+        "tests/turbosign-template-roles.test.ts",
+        "tests/turbosign.test.ts",
+        "tests/turbowebhooks.test.ts"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/turbopartner-api-keys.ts",
+        "examples/turbopartner-organizations.ts",
+        "examples/turbopartner-users.ts",
+        "examples/turboquote-advanced.ts",
+        "examples/turboquote-basic.ts",
+        "examples/turboquote-pricebooks.ts",
+        "examples/turboquote-products.ts",
+        "examples/turbosign-advanced.ts",
+        "examples/turbosign-basic.ts",
+        "examples/turbosign-conditional-fields.ts",
+        "examples/turbosign-send-simple.ts",
+        "examples/turbosign-template-roles.ts",
+        "manual-test-deliverable.ts",
+        "manual-test.ts"
+      ],
+      "rules": {
+        "typescript/no-floating-promises": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts",
+        "src/utils/errors.ts",
+        "tests/integration/turboquote-live.ts"
+      ],
+      "rules": {
+        "typescript/no-inferrable-types": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts"
+      ],
+      "rules": {
+        "typescript/no-misused-spread": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/deliverable-basic.ts",
+        "examples/turbosign-reminders-expiration.ts"
+      ],
+      "rules": {
+        "typescript/no-non-null-assertion": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/client-context.ts",
+        "tests/client-context-unit.test.ts",
+        "tests/http-client-context.test.ts",
+        "tests/turbosign-filename-wire.test.ts"
+      ],
+      "rules": {
+        "typescript/no-require-imports": "off"
+      }
+    },
+    {
+      "files": [
+        "src/modules/quote.ts",
+        "tests/http-client-context.test.ts",
+        "tests/http-error-mapping.test.ts",
+        "tests/turbowebhooks.test.ts"
+      ],
+      "rules": {
+        "typescript/no-unnecessary-type-assertion": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts",
+        "src/modules/quote.ts"
+      ],
+      "rules": {
+        "typescript/no-unnecessary-type-parameters": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts"
+      ],
+      "rules": {
+        "typescript/no-unsafe-argument": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/client-context.ts",
+        "src/utils/response-normalizer.ts"
+      ],
+      "rules": {
+        "typescript/no-unsafe-assignment": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/client-context.ts"
+      ],
+      "rules": {
+        "typescript/no-unsafe-call": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/turbopartner-api-keys.ts",
+        "examples/turbopartner-organizations.ts",
+        "examples/turbopartner-users.ts",
+        "examples/turboquote-advanced.ts",
+        "examples/turboquote-basic.ts",
+        "examples/turboquote-pricebooks.ts",
+        "examples/turboquote-products.ts",
+        "manual-test-deliverable.ts",
+        "manual-test.ts",
+        "src/http.ts",
+        "src/utils/client-context.ts"
+      ],
+      "rules": {
+        "typescript/no-unsafe-member-access": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts",
+        "src/utils/client-context.ts",
+        "src/utils/response-normalizer.ts"
+      ],
+      "rules": {
+        "typescript/no-unsafe-return": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/quote-rename/index.ts",
+        "examples/turbosign-conditional-fields.ts",
+        "examples/turbosign-reminders-expiration.ts",
+        "src/http.ts",
+        "src/modules/quote.ts",
+        "src/modules/sign.ts",
+        "src/utils/blob-part.ts",
+        "src/utils/response-normalizer.ts"
+      ],
+      "rules": {
+        "typescript/no-unsafe-type-assertion": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/client-context-unit.test.ts",
+        "tests/http-client-context.test.ts",
+        "tests/turbosign-filename-wire.test.ts"
+      ],
+      "rules": {
+        "typescript/no-var-requires": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/quote-rename/index.ts",
+        "examples/turbopartner-api-keys.ts",
+        "examples/turbopartner-organizations.ts",
+        "examples/turbopartner-users.ts",
+        "examples/turboquote-advanced.ts",
+        "examples/turboquote-basic.ts",
+        "examples/turboquote-pricebooks.ts",
+        "examples/turboquote-products.ts",
+        "examples/turbosign-advanced.ts",
+        "examples/turbosign-basic.ts",
+        "examples/turbosign-conditional-fields.ts",
+        "examples/turbosign-embedded-identity.ts",
+        "examples/turbosign-send-simple.ts",
+        "examples/turbosign-template-roles.ts",
+        "manual-test-deliverable.ts",
+        "manual-test.ts",
+        "src/http.ts",
+        "src/modules/sign.ts",
+        "src/utils/client-context.ts",
+        "tests/integration/turboquote-live.ts"
+      ],
+      "rules": {
+        "typescript/prefer-nullish-coalescing": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts"
+      ],
+      "rules": {
+        "typescript/prefer-readonly": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/quote-rename/index.ts",
+        "tests/turbosign-identity.test.ts"
+      ],
+      "rules": {
+        "typescript/promise-function-async": "off"
+      }
+    },
+    {
+      "files": [
+        "manual-test-deliverable.ts",
+        "manual-test.ts",
+        "tests/http-client-context.test.ts",
+        "tests/http-error-mapping.test.ts",
+        "tests/turboquote.test.ts",
+        "tests/turbosign-embedded-signature-wire.test.ts",
+        "tests/turbosign-filename-wire.test.ts",
+        "tests/turbosign-identity-wire.test.ts",
+        "tests/turbosign-template-roles.test.ts"
+      ],
+      "rules": {
+        "typescript/require-await": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/turbopartner-users.ts",
+        "src/http.ts"
+      ],
+      "rules": {
+        "typescript/restrict-template-expressions": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts"
+      ],
+      "rules": {
+        "typescript/return-await": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/quote-rename/index.ts",
+        "examples/turbopartner-api-keys.ts",
+        "examples/turbopartner-organizations.ts",
+        "examples/turbopartner-users.ts",
+        "examples/turboquote-advanced.ts",
+        "examples/turboquote-basic.ts",
+        "examples/turboquote-pricebooks.ts",
+        "examples/turboquote-products.ts",
+        "examples/turbosign-advanced.ts",
+        "examples/turbosign-basic.ts",
+        "examples/turbosign-conditional-fields.ts",
+        "examples/turbosign-embedded-identity.ts",
+        "examples/turbosign-send-simple.ts",
+        "examples/turbosign-template-roles.ts",
+        "manual-test-deliverable.ts",
+        "manual-test.ts",
+        "src/http.ts",
+        "src/modules/deliverable.ts",
+        "src/modules/partner.ts",
+        "src/modules/quote.ts",
+        "src/modules/sign.ts",
+        "src/modules/webhooks.ts",
+        "src/utils/client-context.ts",
+        "tests/integration/turboquote-live.ts"
+      ],
+      "rules": {
+        "typescript/strict-boolean-expressions": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/quote-rename/index.ts",
+        "examples/turbosign-embedded-identity.ts",
+        "examples/turbosign-reminders-expiration.ts",
+        "tests/integration/turboquote-live.ts"
+      ],
+      "rules": {
+        "typescript/use-unknown-in-catch-callback-variable": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/turbosign-embedded-identity.ts",
+        "examples/turbowebhooks-crud.ts",
+        "src/modules/sign.ts",
+        "tests/http-error-mapping.test.ts",
+        "tests/integration/turboquote-live.ts"
+      ],
+      "rules": {
+        "unicorn/catch-error-name": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/client-context.ts",
+        "tests/turbowebhooks.test.ts"
+      ],
+      "rules": {
+        "unicorn/escape-case": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/integration/turboquote-live.ts"
+      ],
+      "rules": {
+        "unicorn/explicit-length-check": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/verifyWebhookSignature.ts"
+      ],
+      "rules": {
+        "unicorn/filename-case": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts",
+        "src/modules/quote.ts",
+        "tests/turbosign-filename-wire.test.ts"
+      ],
+      "rules": {
+        "unicorn/import-style": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/turbosign-advanced.ts",
+        "examples/turbosign-basic.ts",
+        "examples/turbosign-send-simple.ts",
+        "examples/turbosign-template-roles.ts",
+        "examples/turbowebhooks-crud.ts",
+        "src/http.ts"
+      ],
+      "rules": {
+        "unicorn/no-array-for-each": "off"
+      }
+    },
+    {
+      "files": [
+        "src/modules/sign.ts",
+        "tests/turbowebhooks.test.ts"
+      ],
+      "rules": {
+        "unicorn/no-array-sort": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/client-context.ts"
+      ],
+      "rules": {
+        "unicorn/no-hex-escape": "off"
+      }
+    },
+    {
+      "files": [
+        "src/modules/sign.ts",
+        "src/utils/client-context.ts"
+      ],
+      "rules": {
+        "unicorn/no-immediate-mutation": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/quote-rename/index.ts",
+        "examples/turbosign-embedded-identity.ts",
+        "examples/turbosign-reminders-expiration.ts",
+        "examples/turbowebhooks-crud.ts",
+        "manual-test-deliverable.ts",
+        "manual-test.ts",
+        "tests/integration/turboquote-live.ts"
+      ],
+      "rules": {
+        "unicorn/no-process-exit": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/errors.ts"
+      ],
+      "rules": {
+        "unicorn/no-useless-error-capture-stack-trace": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/turboquote-advanced.ts",
+        "examples/turboquote-basic.ts",
+        "examples/turboquote-products.ts"
+      ],
+      "rules": {
+        "unicorn/no-zero-fractions": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/http-client-context.test.ts",
+        "tests/turbowebhooks.test.ts"
+      ],
+      "rules": {
+        "unicorn/prefer-at": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/http-client-context.test.ts",
+        "tests/http-error-mapping.test.ts",
+        "tests/turboquote.test.ts",
+        "tests/turbosign-embedded-signature-wire.test.ts",
+        "tests/turbosign-filename-wire.test.ts",
+        "tests/turbosign-identity-wire.test.ts",
+        "tests/turbosign-template-roles.test.ts",
+        "tests/turbosign.test.ts"
+      ],
+      "rules": {
+        "unicorn/prefer-global-this": "off"
+      }
+    },
+    {
+      "files": [
+        "jest.config.js",
+        "src/utils/client-context.ts",
+        "tests/client-context-unit.test.ts",
+        "tests/http-client-context.test.ts",
+        "tests/turbosign-filename-wire.test.ts"
+      ],
+      "rules": {
+        "unicorn/prefer-module": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/deliverable-basic.ts",
+        "examples/turboquote-basic.ts",
+        "examples/turbosign-advanced.ts",
+        "examples/turbosign-basic.ts",
+        "examples/turbosign-conditional-fields.ts",
+        "examples/turbosign-embedded-identity.ts",
+        "examples/turbosign-send-simple.ts",
+        "manual-test-deliverable.ts",
+        "manual-test.ts",
+        "src/http.ts",
+        "src/modules/quote.ts",
+        "src/utils/client-context.ts",
+        "src/utils/verifyWebhookSignature.ts",
+        "tests/client-context-unit.test.ts",
+        "tests/http-client-context.test.ts",
+        "tests/turbosign-filename-wire.test.ts",
+        "tests/turbowebhooks.test.ts"
+      ],
+      "rules": {
+        "unicorn/prefer-node-protocol": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/response-normalizer.ts",
+        "src/utils/verifyWebhookSignature.ts"
+      ],
+      "rules": {
+        "unicorn/prefer-number-coercion": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/response-normalizer.ts"
+      ],
+      "rules": {
+        "unicorn/prefer-number-properties": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/turbosign-send-simple.ts"
+      ],
+      "rules": {
+        "unicorn/prefer-optional-catch-binding": "off"
+      }
+    },
+    {
+      "files": [
+        "src/http.ts"
+      ],
+      "rules": {
+        "unicorn/prefer-set-has": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/client-context.ts"
+      ],
+      "rules": {
+        "unicorn/prefer-string-replace-all": "off"
+      }
+    }
+  ]
+}

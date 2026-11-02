@@ -1,0 +1,126 @@
+{
+  // Everything is on by default: every category below is an error, for every file, for new code.
+  // A rule is off here only for a stated reason. Existing violations live in .oxlint-baseline.json,
+  // a per-file allowlist that only ever shrinks (see scripts/oxlint-baseline.mjs).
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+  "extends": ["./.oxlint-baseline.json"],
+  "plugins": ["typescript", "unicorn", "oxc", "import", "jest", "promise", "node", "jsdoc"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error",
+    "pedantic": "error",
+    "style": "error",
+    "restriction": "error"
+  },
+  "env": { "node": true, "es2020": true },
+  // Build output; the ratchet script, kept identical to its copies in other repos (lint tooling, not
+  // SDK code); and test-simple.ts, which imports ./dist, so its types would depend on whether a build ran.
+  "ignorePatterns": ["dist/**", "coverage/**", "scripts/oxlint-baseline.mjs", "test-simple.ts"],
+  "rules": {
+    // Stricter than Oxlint's default, which skips `while (true)`.
+    "no-constant-condition": ["error", { "checkLoops": "all" }],
+    // `import type` beside a value import from the same module is what consistent-type-imports asks for.
+    "no-duplicate-imports": ["error", { "allowSeparateTypeImports": true }],
+    // `void promise()` marks a deliberate fire-and-forget, the form no-floating-promises asks for.
+    "no-void": ["error", { "allowAsStatement": true }],
+
+    // Size limits at a level a real module can meet; the defaults flag nearly every function.
+    "max-lines": ["error", { "max": 1000, "skipBlankLines": true, "skipComments": true }],
+    "max-lines-per-function": ["error", { "max": 300, "skipBlankLines": true, "skipComments": true }],
+    "max-statements": ["error", { "max": 100 }],
+    "complexity": ["error", { "max": 30 }],
+    "max-depth": ["error", { "max": 5 }],
+    "import/max-dependencies": ["error", { "max": 40 }],
+
+    // Mutually exclusive, or a duplicate of a rule that stays on.
+    "import/no-default-export": "off", // contradicts import/prefer-default-export and import/no-named-export
+    "import/no-named-export": "off",
+    "import/prefer-default-export": "off",
+    "no-ternary": "off", // contradicts unicorn/prefer-ternary
+    "no-negated-condition": "off", // duplicate of unicorn/no-negated-condition
+    "unicorn/no-nested-ternary": "off", // duplicate of no-nested-ternary
+    "typescript/non-nullable-type-assertion-style": "off", // asks for the ! that no-non-null-assertion bans
+    "require-await": "off", // typescript/require-await replaces it and allows returning a promise
+    "unicorn/no-useless-undefined": "off", // contradicts consistent-return: only `return null` would satisfy both
+
+    // Documented conventions of this SDK (CLAUDE.md, .claude/rules/js-sdk.md).
+    "unicorn/no-static-only-class": "off", // TurboSign, TurboPartner and the other modules are static classes
+    "typescript/no-extraneous-class": "off",
+    "node/no-process-env": "off", // config falls back to environment variables
+    "import/no-nodejs-modules": "off", // native fetch, fs and path instead of runtime dependencies
+    "unicorn/prefer-top-level-await": "off", // compiled to CommonJS, where top-level await does not compile
+    "import/no-relative-parent-imports": "off", // tests and modules reach src/ through ../: there are no path aliases
+
+    // Ban language features the code relies on, or restate what TypeScript already checks.
+    "oxc/no-async-await": "off",
+    "oxc/no-optional-chaining": "off",
+    "oxc/no-rest-spread-properties": "off",
+    "no-undefined": "off",
+    "unicorn/no-null": "off", // API values are null
+    "jsdoc/require-param": "off", // TypeScript owns parameter documentation
+    "jsdoc/require-param-type": "off",
+    "jsdoc/require-param-description": "off",
+    "jsdoc/require-returns": "off",
+    "jsdoc/require-returns-type": "off",
+    "jsdoc/require-returns-description": "off",
+    "jsdoc/require-throws-type": "off",
+
+    // Opinion with no defect signal.
+    "func-style": "off",
+    "import/group-exports": "off",
+    "import/exports-last": "off",
+    "one-var": "off",
+    "sort-keys": "off",
+    "sort-vars": "off",
+    "no-magic-numbers": "off",
+    "capitalized-comments": "off",
+    "id-length": "off",
+    "no-inline-comments": "off",
+    "init-declarations": "off",
+    "require-unicode-regexp": "off",
+    "prefer-named-capture-group": "off",
+    "no-warning-comments": "off", // TODO comments are allowed
+    "unicorn/numeric-separators-style": "off",
+    "typescript/prefer-readonly-parameter-types": "off",
+    "jest/prefer-expect-assertions": "off",
+    "jest/no-hooks": "off",
+    "jest/prefer-lowercase-title": "off",
+    "jest/consistent-test-it": "off",
+    "jest/prefer-called-with": "off",
+    "jest/max-expects": "off",
+    "jest/prefer-ending-with-an-expect": "off",
+    "jest/no-untyped-mock-factory": "off",
+    "jest/prefer-importing-jest-globals": "off", // Jest injects its globals
+    "jest/require-hook": "off"
+  },
+  "overrides": [
+    {
+      // Jest injects its globals into test files, and a test file is a long list of statements.
+      "files": ["tests/**", "**/*.test.*"],
+      "env": { "jest": true },
+      "rules": {
+        // Jest's own types make these fire on ordinary tests: expect.any() and expect.objectContaining()
+        // return any, an untyped jest.fn()'s mock.calls is any, a partial mock is cast with `as`, and
+        // expect(obj.method) passes a method without calling it.
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off",
+        "typescript/no-unsafe-type-assertion": "off",
+        "typescript/unbound-method": "off",
+        "node/no-sync": "off", // a test sets up its fixtures synchronously
+        "max-lines": "off",
+        "max-lines-per-function": "off",
+        "max-statements": "off",
+        "unicorn/consistent-function-scoping": "off"
+      }
+    },
+    {
+      // Examples and manual test scripts print what they do.
+      "files": ["examples/**", "manual-test*.ts", "test-simple.ts", "tests/integration/**"],
+      "rules": { "no-console": "off" }
+    }
+  ]
+}
