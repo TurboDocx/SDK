@@ -15,7 +15,7 @@
     "provenance": true
   },
   "scripts": {
-    "build": "npm run typecheck && tsc -p tsconfig.json --noCheck",
+    "build": "npm run typecheck && tsc -p tsconfig.json",
     "typecheck": "tsrs --noEmit -p tsconfig.json --checkers 4",
     "test": "jest",
     "test:watch": "jest --watch",
