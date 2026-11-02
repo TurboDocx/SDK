@@ -15,7 +15,8 @@
     "provenance": true
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run typecheck && tsc -p tsconfig.json --noCheck",
+    "typecheck": "tsrs --noEmit -p tsconfig.json --checkers 4",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -54,6 +55,7 @@
     "dotenv": "17.4.2",
     "jest": "^30.4.2",
     "ts-jest": "^29.4.12",
+    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
     "typescript": "^6.0.3"
   },
   "overrides": {
