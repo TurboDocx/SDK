@@ -28,7 +28,7 @@ packages/
 
 Root-level shortcuts (JS only): `npm run build:js`, `npm run test:js`
 
-js-sdk lint: `npm run lint:ci` (Oxlint, every rule category on, configured in `packages/js-sdk/.oxlintrc.json`). Code that predates a rule is listed in `.oxlint-baseline.json`; after fixing it, `npm run lint:baseline` shrinks the list, and it refuses to grow it.
+js-sdk lint (Oxlint, every rule category on, configured in `packages/js-sdk/.oxlintrc.json`; needs Node 20.19+): `npm run lint` checks the native rules in seconds, `npm run lint:ci` adds the type-aware rules and is what CI runs. Code that predates a rule is a ratchet: `.oxlint-baseline-counts.json` holds the exact count per rule and file, and any increase fails. After fixing violations run `npm run lint:baseline`, or lint:ci fails until the fixes are locked in; it refuses to grow the counts. Turning a rule on or off, or upgrading oxlint (a new version can add rules), means `npm run lint:baseline -- --allow-growth` plus the `lint-baseline-growth` label on the PR. Never edit `.oxlint-baseline-counts.json` or `.oxlint-baseline.json` by hand.
 
 ## Commit Format
 

@@ -1,0 +1,8 @@
+// Type information for the type-aware lint rules and editors. The build config (../tsconfig.json)
+// covers src/ only; this one adds the tests, which ts-jest compiles on its own.
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "rootDir": "..", "noEmit": true },
+  "include": ["./**/*", "../src/**/*"],
+  "exclude": []
+}
