@@ -18,6 +18,8 @@ export default defineConfig({
     reporters: ['verbose'],
     coverage: {
       provider: 'istanbul',
+      // Jest writes the coverage report even when a test fails; Vitest only does with this set.
+      reportOnFailure: true,
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.d.ts', 'src/types/**'],
       reportsDirectory: 'coverage',
