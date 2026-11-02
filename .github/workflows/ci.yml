@@ -51,19 +51,27 @@ jobs:
         run: npm ci
 
       - name: Lint
-        # Fails on any violation the baseline counts do not cover and, on a pull request, on counts
-        # that grew compared to the base branch. A PR that turns on a new rule and baselines its
-        # violations opts in with the lint-baseline-growth label.
+        # Fails on any violation the baseline counts do not cover, on fixes not locked in and, on a pull
+        # request, on counts that grew or lint rules that changed compared to the base branch. A PR that
+        # does either on purpose opts in with the lint-baseline-growth label.
         env:
           BASE_REF: ${{ github.base_ref }}
-          ALLOW_BASELINE_GROWTH: ${{ contains(github.event.pull_request.labels.*.name, 'lint-baseline-growth') }}
+          # The exact commit the PR's merge commit was built on, not the branch tip, which may have moved.
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           base_args=""
           if [ -n "$BASE_REF" ]; then
-            git fetch --no-tags --depth=1 origin "$BASE_REF"
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
             base_args="--base FETCH_HEAD"
+            # Read the label live rather than from the event payload, so adding it and re-running works.
+            if curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/labels" \
+              | grep -q '"name": *"lint-baseline-growth"'; then
+              base_args="$base_args --allow-base-growth"
+            fi
           fi
-          if [ "$ALLOW_BASELINE_GROWTH" = "true" ]; then base_args="$base_args --allow-base-growth"; fi
           npm run -s lint:ci -- $base_args
 
   test-embed:
