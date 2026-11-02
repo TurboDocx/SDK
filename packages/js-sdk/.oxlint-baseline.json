@@ -47,46 +47,10 @@
         "manual-test.ts",
         "src/http.ts",
         "src/modules/quote.ts",
-        "test-simple.ts",
         "tests/turbosign-filename-wire.test.ts"
       ],
       "rules": {
         "import/no-namespace": "off"
-      }
-    },
-    {
-      "files": [
-        "examples/deliverable-basic.ts",
-        "examples/turbosign-reminders-expiration.ts",
-        "src/modules/deliverable.ts",
-        "src/modules/partner.ts",
-        "src/modules/quote.ts",
-        "src/modules/sign.ts",
-        "src/modules/webhooks.ts",
-        "src/utils/client-context.ts",
-        "tests/blob-part.test.ts",
-        "tests/client-context-unit.test.ts",
-        "tests/deliverable.test.ts",
-        "tests/http-client-context.test.ts",
-        "tests/http-config.test.ts",
-        "tests/http-error-mapping.test.ts",
-        "tests/integration/turboquote-live.ts",
-        "tests/response-normalizer.test.ts",
-        "tests/turbopartner.test.ts",
-        "tests/turboquote-schedule.test.ts",
-        "tests/turboquote.test.ts",
-        "tests/turbosign-embedded-signature-wire.test.ts",
-        "tests/turbosign-filename-wire.test.ts",
-        "tests/turbosign-identity-wire.test.ts",
-        "tests/turbosign-identity.test.ts",
-        "tests/turbosign-schedule.test.ts",
-        "tests/turbosign-sender-config.test.ts",
-        "tests/turbosign-template-roles.test.ts",
-        "tests/turbosign.test.ts",
-        "tests/turbowebhooks.test.ts"
-      ],
-      "rules": {
-        "import/no-relative-parent-imports": "off"
       }
     },
     {
@@ -308,14 +272,6 @@
     },
     {
       "files": [
-        "tests/turbosign-schedule.test.ts"
-      ],
-      "rules": {
-        "no-void": "off"
-      }
-    },
-    {
-      "files": [
         "src/utils/client-context.ts",
         "tests/client-context-unit.test.ts",
         "tests/http-client-context.test.ts",
@@ -337,9 +293,7 @@
         "manual-test-deliverable.ts",
         "manual-test.ts",
         "src/http.ts",
-        "src/modules/quote.ts",
-        "test-simple.ts",
-        "tests/turbosign-filename-wire.test.ts"
+        "src/modules/quote.ts"
       ],
       "rules": {
         "node/no-sync": "off"
@@ -443,7 +397,6 @@
         "src/types/product.ts",
         "src/types/quote-type.ts",
         "src/types/quote.ts",
-        "test-simple.ts",
         "tests/http-config.test.ts",
         "tests/http-error-mapping.test.ts",
         "tests/turbopartner.test.ts",
@@ -542,7 +495,6 @@
         "examples/turbosign-template-roles.ts",
         "manual-test-deliverable.ts",
         "manual-test.ts",
-        "test-simple.ts",
         "tests/integration/turboquote-live.ts",
         "tests/turbopartner.test.ts",
         "tests/turbosign-filename-wire.test.ts",
@@ -574,6 +526,14 @@
       ],
       "rules": {
         "typescript/explicit-module-boundary-types": "off"
+      }
+    },
+    {
+      "files": [
+        "examples/turbopartner-users.ts"
+      ],
+      "rules": {
+        "typescript/no-base-to-string": "off"
       }
     },
     {
@@ -636,8 +596,7 @@
         "examples/turbosign-send-simple.ts",
         "examples/turbosign-template-roles.ts",
         "manual-test-deliverable.ts",
-        "manual-test.ts",
-        "test-simple.ts"
+        "manual-test.ts"
       ],
       "rules": {
         "typescript/no-floating-promises": "off"
@@ -703,8 +662,6 @@
     },
     {
       "files": [
-        "examples/quote-rename/index.ts",
-        "examples/turboquote-products.ts",
         "src/http.ts",
         "tests/http-client-context.test.ts",
         "tests/turbosign-embedded-signature-wire.test.ts",
@@ -718,41 +675,18 @@
     },
     {
       "files": [
-        "examples/quote-rename/index.ts",
-        "examples/turbopartner-api-keys.ts",
-        "examples/turbopartner-organizations.ts",
-        "examples/turbopartner-users.ts",
-        "examples/turboquote-advanced.ts",
-        "examples/turboquote-basic.ts",
-        "examples/turboquote-pricebooks.ts",
-        "examples/turboquote-products.ts",
-        "examples/turbosign-advanced.ts",
-        "examples/turbosign-basic.ts",
-        "examples/turbosign-conditional-fields.ts",
-        "examples/turbosign-embedded-identity.ts",
-        "examples/turbosign-send-simple.ts",
-        "examples/turbosign-template-roles.ts",
-        "examples/turbowebhooks-crud.ts",
         "src/utils/client-context.ts",
         "src/utils/response-normalizer.ts",
-        "test-simple.ts",
         "tests/client-context-unit.test.ts",
-        "tests/deliverable.test.ts",
         "tests/http-client-context.test.ts",
-        "tests/http-error-mapping.test.ts",
         "tests/integration/turboquote-live.ts",
-        "tests/turbopartner.test.ts",
         "tests/turboquote-schedule.test.ts",
         "tests/turboquote.test.ts",
         "tests/turbosign-embedded-signature-wire.test.ts",
-        "tests/turbosign-filename-wire.test.ts",
-        "tests/turbosign-identity-wire.test.ts",
-        "tests/turbosign-identity.test.ts",
         "tests/turbosign-schedule.test.ts",
         "tests/turbosign-sender-config.test.ts",
         "tests/turbosign-template-roles.test.ts",
-        "tests/turbosign.test.ts",
-        "tests/turbowebhooks.test.ts"
+        "tests/turbosign.test.ts"
       ],
       "rules": {
         "typescript/no-unsafe-assignment": "off"
@@ -760,42 +694,9 @@
     },
     {
       "files": [
-        "examples/quote-rename/index.ts",
-        "examples/turbopartner-api-keys.ts",
-        "examples/turbopartner-organizations.ts",
-        "examples/turbopartner-users.ts",
-        "examples/turboquote-advanced.ts",
-        "examples/turboquote-basic.ts",
-        "examples/turboquote-pricebooks.ts",
-        "examples/turboquote-products.ts",
-        "examples/turbosign-advanced.ts",
-        "examples/turbosign-basic.ts",
-        "examples/turbosign-conditional-fields.ts",
-        "examples/turbosign-embedded-identity.ts",
-        "examples/turbosign-send-simple.ts",
-        "examples/turbosign-template-roles.ts",
-        "examples/turbowebhooks-crud.ts",
         "src/utils/client-context.ts",
-        "test-simple.ts",
-        "tests/blob-part.test.ts",
-        "tests/client-context-unit.test.ts",
-        "tests/deliverable.test.ts",
-        "tests/http-client-context.test.ts",
-        "tests/http-config.test.ts",
-        "tests/http-error-mapping.test.ts",
-        "tests/response-normalizer.test.ts",
-        "tests/turbopartner.test.ts",
-        "tests/turboquote-schedule.test.ts",
         "tests/turboquote.test.ts",
-        "tests/turbosign-embedded-signature-wire.test.ts",
-        "tests/turbosign-filename-wire.test.ts",
-        "tests/turbosign-identity-wire.test.ts",
-        "tests/turbosign-identity.test.ts",
-        "tests/turbosign-schedule.test.ts",
-        "tests/turbosign-sender-config.test.ts",
-        "tests/turbosign-template-roles.test.ts",
-        "tests/turbosign.test.ts",
-        "tests/turbowebhooks.test.ts"
+        "tests/turbosign-embedded-signature-wire.test.ts"
       ],
       "rules": {
         "typescript/no-unsafe-call": "off"
@@ -803,7 +704,6 @@
     },
     {
       "files": [
-        "examples/quote-rename/index.ts",
         "examples/turbopartner-api-keys.ts",
         "examples/turbopartner-organizations.ts",
         "examples/turbopartner-users.ts",
@@ -811,32 +711,18 @@
         "examples/turboquote-basic.ts",
         "examples/turboquote-pricebooks.ts",
         "examples/turboquote-products.ts",
-        "examples/turbosign-advanced.ts",
-        "examples/turbosign-basic.ts",
-        "examples/turbosign-conditional-fields.ts",
-        "examples/turbosign-embedded-identity.ts",
-        "examples/turbosign-send-simple.ts",
-        "examples/turbosign-template-roles.ts",
-        "examples/turbowebhooks-crud.ts",
         "manual-test-deliverable.ts",
         "manual-test.ts",
         "src/http.ts",
         "src/utils/client-context.ts",
-        "test-simple.ts",
-        "tests/blob-part.test.ts",
-        "tests/client-context-unit.test.ts",
         "tests/deliverable.test.ts",
         "tests/http-client-context.test.ts",
-        "tests/http-config.test.ts",
-        "tests/http-error-mapping.test.ts",
         "tests/integration/turboquote-live.ts",
-        "tests/response-normalizer.test.ts",
         "tests/turbopartner.test.ts",
         "tests/turboquote-schedule.test.ts",
         "tests/turboquote.test.ts",
         "tests/turbosign-embedded-signature-wire.test.ts",
         "tests/turbosign-filename-wire.test.ts",
-        "tests/turbosign-identity-wire.test.ts",
         "tests/turbosign-identity.test.ts",
         "tests/turbosign-schedule.test.ts",
         "tests/turbosign-sender-config.test.ts",
@@ -850,7 +736,6 @@
     },
     {
       "files": [
-        "examples/quote-rename/index.ts",
         "src/http.ts",
         "src/utils/client-context.ts",
         "src/utils/response-normalizer.ts",
@@ -922,7 +807,6 @@
         "src/http.ts",
         "src/modules/sign.ts",
         "src/utils/client-context.ts",
-        "test-simple.ts",
         "tests/integration/turboquote-live.ts"
       ],
       "rules": {
@@ -939,6 +823,7 @@
     },
     {
       "files": [
+        "examples/quote-rename/index.ts",
         "tests/turbosign-identity.test.ts"
       ],
       "rules": {
@@ -963,6 +848,7 @@
     },
     {
       "files": [
+        "examples/turbopartner-users.ts",
         "src/http.ts"
       ],
       "rules": {
@@ -993,7 +879,6 @@
         "examples/turbosign-embedded-identity.ts",
         "examples/turbosign-send-simple.ts",
         "examples/turbosign-template-roles.ts",
-        "examples/turbowebhooks-crud.ts",
         "manual-test-deliverable.ts",
         "manual-test.ts",
         "src/http.ts",
@@ -1003,11 +888,23 @@
         "src/modules/sign.ts",
         "src/modules/webhooks.ts",
         "src/utils/client-context.ts",
-        "test-simple.ts",
         "tests/integration/turboquote-live.ts"
       ],
       "rules": {
         "typescript/strict-boolean-expressions": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/deliverable.test.ts",
+        "tests/turbopartner.test.ts",
+        "tests/turbosign-identity.test.ts",
+        "tests/turbosign-sender-config.test.ts",
+        "tests/turbosign.test.ts",
+        "tests/turbowebhooks.test.ts"
+      ],
+      "rules": {
+        "typescript/unbound-method": "off"
       }
     },
     {
@@ -1131,15 +1028,6 @@
     },
     {
       "files": [
-        "examples/quote-rename/index.ts",
-        "tests/response-normalizer.test.ts"
-      ],
-      "rules": {
-        "unicorn/no-useless-undefined": "off"
-      }
-    },
-    {
-      "files": [
         "examples/turboquote-advanced.ts",
         "examples/turboquote-basic.ts",
         "examples/turboquote-products.ts"
@@ -1199,7 +1087,6 @@
         "src/modules/quote.ts",
         "src/utils/client-context.ts",
         "src/utils/verifyWebhookSignature.ts",
-        "test-simple.ts",
         "tests/client-context-unit.test.ts",
         "tests/http-client-context.test.ts",
         "tests/turbosign-filename-wire.test.ts",

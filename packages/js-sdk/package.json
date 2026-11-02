@@ -20,8 +20,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "lint": "oxlint .",
-    "lint:types": "oxlint --type-aware .",
+    "lint": "node scripts/oxlint-baseline.mjs --check --fast",
     "lint:ci": "node scripts/oxlint-baseline.mjs --check",
     "lint:baseline": "node scripts/oxlint-baseline.mjs",
     "prepublishOnly": "npm run build"

@@ -2,7 +2,7 @@
   // Everything is on by default: every category below is an error, for every file, for new code.
   // A rule is off here only for a stated reason. Existing violations live in .oxlint-baseline.json,
   // a per-file allowlist that only ever shrinks (see scripts/oxlint-baseline.mjs).
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
   "extends": ["./.oxlint-baseline.json"],
   "plugins": ["typescript", "unicorn", "oxc", "import", "jest", "promise", "node", "jsdoc"],
   "categories": {
@@ -14,9 +14,17 @@
     "restriction": "error"
   },
   "env": { "node": true, "es2020": true },
-  // Build output, and the baseline tool, which is lint tooling rather than SDK code.
-  "ignorePatterns": ["dist/**", "coverage/**", "scripts/oxlint-baseline.mjs"],
+  // Build output; the ratchet script, kept identical to its copies in other repos (lint tooling, not
+  // SDK code); and test-simple.ts, which imports ./dist, so its types would depend on whether a build ran.
+  "ignorePatterns": ["dist/**", "coverage/**", "scripts/oxlint-baseline.mjs", "test-simple.ts"],
   "rules": {
+    // Stricter than Oxlint's default, which skips `while (true)`.
+    "no-constant-condition": ["error", { "checkLoops": "all" }],
+    // `import type` beside a value import from the same module is what consistent-type-imports asks for.
+    "no-duplicate-imports": ["error", { "allowSeparateTypeImports": true }],
+    // `void promise()` marks a deliberate fire-and-forget, the form no-floating-promises asks for.
+    "no-void": ["error", { "allowAsStatement": true }],
+
     // Size limits at a level a real module can meet; the defaults flag nearly every function.
     "max-lines": ["error", { "max": 1000, "skipBlankLines": true, "skipComments": true }],
     "max-lines-per-function": ["error", { "max": 300, "skipBlankLines": true, "skipComments": true }],
@@ -34,6 +42,7 @@
     "unicorn/no-nested-ternary": "off", // duplicate of no-nested-ternary
     "typescript/non-nullable-type-assertion-style": "off", // asks for the ! that no-non-null-assertion bans
     "require-await": "off", // typescript/require-await replaces it and allows returning a promise
+    "unicorn/no-useless-undefined": "off", // contradicts consistent-return: only `return null` would satisfy both
 
     // Documented conventions of this SDK (CLAUDE.md, .claude/rules/js-sdk.md).
     "unicorn/no-static-only-class": "off", // TurboSign, TurboPartner and the other modules are static classes
@@ -41,6 +50,7 @@
     "node/no-process-env": "off", // config falls back to environment variables
     "import/no-nodejs-modules": "off", // native fetch, fs and path instead of runtime dependencies
     "unicorn/prefer-top-level-await": "off", // compiled to CommonJS, where top-level await does not compile
+    "import/no-relative-parent-imports": "off", // tests and modules reach src/ through ../: there are no path aliases
 
     // Ban language features the code relies on, or restate what TypeScript already checks.
     "oxc/no-async-await": "off",
@@ -90,6 +100,7 @@
       "files": ["tests/**", "**/*.test.*"],
       "env": { "jest": true },
       "rules": {
+        "node/no-sync": "off", // a test sets up its fixtures synchronously
         "max-lines": "off",
         "max-lines-per-function": "off",
         "max-statements": "off",
