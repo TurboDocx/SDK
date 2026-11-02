@@ -380,31 +380,14 @@
     "src/modules/quote.ts": 1
   },
   "typescript/no-unsafe-argument": {
-    "src/http.ts": 1,
-    "tests/http-client-context.test.ts": 1,
-    "tests/turbosign-embedded-signature-wire.test.ts": 4,
-    "tests/turbosign-template-roles.test.ts": 6,
-    "tests/turbosign.test.ts": 2,
-    "tests/turbowebhooks.test.ts": 1
+    "src/http.ts": 1
   },
   "typescript/no-unsafe-assignment": {
     "src/utils/client-context.ts": 3,
-    "src/utils/response-normalizer.ts": 2,
-    "tests/client-context-unit.test.ts": 1,
-    "tests/http-client-context.test.ts": 1,
-    "tests/integration/turboquote-live.ts": 4,
-    "tests/turboquote-schedule.test.ts": 6,
-    "tests/turboquote.test.ts": 5,
-    "tests/turbosign-embedded-signature-wire.test.ts": 8,
-    "tests/turbosign-schedule.test.ts": 3,
-    "tests/turbosign-sender-config.test.ts": 1,
-    "tests/turbosign-template-roles.test.ts": 3,
-    "tests/turbosign.test.ts": 7
+    "src/utils/response-normalizer.ts": 2
   },
   "typescript/no-unsafe-call": {
-    "src/utils/client-context.ts": 10,
-    "tests/turboquote.test.ts": 1,
-    "tests/turbosign-embedded-signature-wire.test.ts": 4
+    "src/utils/client-context.ts": 10
   },
   "typescript/no-unsafe-member-access": {
     "examples/turbopartner-api-keys.ts": 5,
@@ -417,28 +400,12 @@
     "manual-test-deliverable.ts": 5,
     "manual-test.ts": 5,
     "src/http.ts": 1,
-    "src/utils/client-context.ts": 11,
-    "tests/deliverable.test.ts": 1,
-    "tests/http-client-context.test.ts": 1,
-    "tests/integration/turboquote-live.ts": 4,
-    "tests/turbopartner.test.ts": 6,
-    "tests/turboquote-schedule.test.ts": 27,
-    "tests/turboquote.test.ts": 19,
-    "tests/turbosign-embedded-signature-wire.test.ts": 23,
-    "tests/turbosign-filename-wire.test.ts": 3,
-    "tests/turbosign-identity.test.ts": 1,
-    "tests/turbosign-schedule.test.ts": 24,
-    "tests/turbosign-sender-config.test.ts": 4,
-    "tests/turbosign-template-roles.test.ts": 18,
-    "tests/turbosign.test.ts": 8,
-    "tests/turbowebhooks.test.ts": 1
+    "src/utils/client-context.ts": 11
   },
   "typescript/no-unsafe-return": {
     "src/http.ts": 1,
     "src/utils/client-context.ts": 2,
-    "src/utils/response-normalizer.ts": 1,
-    "tests/turboquote-schedule.test.ts": 2,
-    "tests/turboquote.test.ts": 3
+    "src/utils/response-normalizer.ts": 1
   },
   "typescript/no-unsafe-type-assertion": {
     "examples/quote-rename/index.ts": 2,
@@ -448,22 +415,7 @@
     "src/modules/quote.ts": 3,
     "src/modules/sign.ts": 2,
     "src/utils/blob-part.ts": 1,
-    "src/utils/response-normalizer.ts": 2,
-    "tests/deliverable.test.ts": 2,
-    "tests/http-client-context.test.ts": 4,
-    "tests/http-error-mapping.test.ts": 11,
-    "tests/turbopartner.test.ts": 7,
-    "tests/turboquote-schedule.test.ts": 3,
-    "tests/turboquote.test.ts": 13,
-    "tests/turbosign-embedded-signature-wire.test.ts": 12,
-    "tests/turbosign-filename-wire.test.ts": 8,
-    "tests/turbosign-identity-wire.test.ts": 3,
-    "tests/turbosign-identity.test.ts": 3,
-    "tests/turbosign-schedule.test.ts": 4,
-    "tests/turbosign-sender-config.test.ts": 3,
-    "tests/turbosign-template-roles.test.ts": 18,
-    "tests/turbosign.test.ts": 4,
-    "tests/turbowebhooks.test.ts": 6
+    "src/utils/response-normalizer.ts": 2
   },
   "typescript/no-var-requires": {
     "tests/client-context-unit.test.ts": 1,
@@ -542,14 +494,6 @@
     "src/modules/webhooks.ts": 3,
     "src/utils/client-context.ts": 6,
     "tests/integration/turboquote-live.ts": 6
-  },
-  "typescript/unbound-method": {
-    "tests/deliverable.test.ts": 9,
-    "tests/turbopartner.test.ts": 38,
-    "tests/turbosign-identity.test.ts": 5,
-    "tests/turbosign-sender-config.test.ts": 7,
-    "tests/turbosign.test.ts": 11,
-    "tests/turbowebhooks.test.ts": 10
   },
   "typescript/use-unknown-in-catch-callback-variable": {
     "examples/quote-rename/index.ts": 1,

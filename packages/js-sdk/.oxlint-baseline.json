@@ -662,12 +662,7 @@
     },
     {
       "files": [
-        "src/http.ts",
-        "tests/http-client-context.test.ts",
-        "tests/turbosign-embedded-signature-wire.test.ts",
-        "tests/turbosign-template-roles.test.ts",
-        "tests/turbosign.test.ts",
-        "tests/turbowebhooks.test.ts"
+        "src/http.ts"
       ],
       "rules": {
         "typescript/no-unsafe-argument": "off"
@@ -676,17 +671,7 @@
     {
       "files": [
         "src/utils/client-context.ts",
-        "src/utils/response-normalizer.ts",
-        "tests/client-context-unit.test.ts",
-        "tests/http-client-context.test.ts",
-        "tests/integration/turboquote-live.ts",
-        "tests/turboquote-schedule.test.ts",
-        "tests/turboquote.test.ts",
-        "tests/turbosign-embedded-signature-wire.test.ts",
-        "tests/turbosign-schedule.test.ts",
-        "tests/turbosign-sender-config.test.ts",
-        "tests/turbosign-template-roles.test.ts",
-        "tests/turbosign.test.ts"
+        "src/utils/response-normalizer.ts"
       ],
       "rules": {
         "typescript/no-unsafe-assignment": "off"
@@ -694,9 +679,7 @@
     },
     {
       "files": [
-        "src/utils/client-context.ts",
-        "tests/turboquote.test.ts",
-        "tests/turbosign-embedded-signature-wire.test.ts"
+        "src/utils/client-context.ts"
       ],
       "rules": {
         "typescript/no-unsafe-call": "off"
@@ -714,21 +697,7 @@
         "manual-test-deliverable.ts",
         "manual-test.ts",
         "src/http.ts",
-        "src/utils/client-context.ts",
-        "tests/deliverable.test.ts",
-        "tests/http-client-context.test.ts",
-        "tests/integration/turboquote-live.ts",
-        "tests/turbopartner.test.ts",
-        "tests/turboquote-schedule.test.ts",
-        "tests/turboquote.test.ts",
-        "tests/turbosign-embedded-signature-wire.test.ts",
-        "tests/turbosign-filename-wire.test.ts",
-        "tests/turbosign-identity.test.ts",
-        "tests/turbosign-schedule.test.ts",
-        "tests/turbosign-sender-config.test.ts",
-        "tests/turbosign-template-roles.test.ts",
-        "tests/turbosign.test.ts",
-        "tests/turbowebhooks.test.ts"
+        "src/utils/client-context.ts"
       ],
       "rules": {
         "typescript/no-unsafe-member-access": "off"
@@ -738,9 +707,7 @@
       "files": [
         "src/http.ts",
         "src/utils/client-context.ts",
-        "src/utils/response-normalizer.ts",
-        "tests/turboquote-schedule.test.ts",
-        "tests/turboquote.test.ts"
+        "src/utils/response-normalizer.ts"
       ],
       "rules": {
         "typescript/no-unsafe-return": "off"
@@ -755,22 +722,7 @@
         "src/modules/quote.ts",
         "src/modules/sign.ts",
         "src/utils/blob-part.ts",
-        "src/utils/response-normalizer.ts",
-        "tests/deliverable.test.ts",
-        "tests/http-client-context.test.ts",
-        "tests/http-error-mapping.test.ts",
-        "tests/turbopartner.test.ts",
-        "tests/turboquote-schedule.test.ts",
-        "tests/turboquote.test.ts",
-        "tests/turbosign-embedded-signature-wire.test.ts",
-        "tests/turbosign-filename-wire.test.ts",
-        "tests/turbosign-identity-wire.test.ts",
-        "tests/turbosign-identity.test.ts",
-        "tests/turbosign-schedule.test.ts",
-        "tests/turbosign-sender-config.test.ts",
-        "tests/turbosign-template-roles.test.ts",
-        "tests/turbosign.test.ts",
-        "tests/turbowebhooks.test.ts"
+        "src/utils/response-normalizer.ts"
       ],
       "rules": {
         "typescript/no-unsafe-type-assertion": "off"
@@ -892,19 +844,6 @@
       ],
       "rules": {
         "typescript/strict-boolean-expressions": "off"
-      }
-    },
-    {
-      "files": [
-        "tests/deliverable.test.ts",
-        "tests/turbopartner.test.ts",
-        "tests/turbosign-identity.test.ts",
-        "tests/turbosign-sender-config.test.ts",
-        "tests/turbosign.test.ts",
-        "tests/turbowebhooks.test.ts"
-      ],
-      "rules": {
-        "typescript/unbound-method": "off"
       }
     },
     {
