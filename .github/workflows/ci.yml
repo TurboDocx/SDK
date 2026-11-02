@@ -30,6 +30,10 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Vitest strips types without checking them (ts-jest used to), so type-check the tests here.
+      - name: Type-check tests
+        run: npm run typecheck:tests
+
       - name: Run tests
         run: npm test
 
@@ -51,6 +55,10 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Vitest strips types without checking them (ts-jest used to), so type-check the tests here.
+      - name: Type-check tests
+        run: npm run typecheck:tests
 
       - name: Run tests
         run: npm test

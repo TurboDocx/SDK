@@ -12,6 +12,7 @@
  * Plus query parameter handling, response parsing, and error handling tests.
  */
 
+import { type MockedClass, vi } from "vitest";
 import { TurboPartner } from "../src/modules/partner";
 import { HttpClient } from "../src/http";
 import { ValidationError } from "../src/utils/errors";
@@ -22,9 +23,9 @@ import type {
 } from "../src/types/partner";
 
 // Mock the HttpClient
-jest.mock("../src/http");
+vi.mock("../src/http");
 
-const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
+const MockedHttpClient = HttpClient as MockedClass<typeof HttpClient>;
 
 const PARTNER_ID = "partner-uuid-123";
 const PARTNER_API_KEY = "TDXP-test-key-123";
@@ -41,7 +42,7 @@ function setup() {
 
 describe("TurboPartner Module", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     (TurboPartner as any).client = undefined;
     (TurboPartner as any).partnerId = undefined;
   });
@@ -90,7 +91,7 @@ describe("TurboPartner Module", () => {
           success: true,
           data: { id: "org-1", name: "Acme Corp" },
         };
-        MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.post = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.createOrganization({ name: "Acme Corp" });
@@ -108,7 +109,7 @@ describe("TurboPartner Module", () => {
           success: true,
           data: { id: "org-2", name: "Tech Corp" },
         };
-        MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.post = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const request: CreateOrganizationRequest = {
@@ -137,7 +138,7 @@ describe("TurboPartner Module", () => {
             offset: 0,
           },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.listOrganizations();
@@ -154,7 +155,7 @@ describe("TurboPartner Module", () => {
           success: true,
           data: { results: [], totalRecords: 0, limit: 10, offset: 20 },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         await TurboPartner.listOrganizations({ limit: 10, offset: 20, search: "acme" });
@@ -177,7 +178,7 @@ describe("TurboPartner Module", () => {
             tracking: { numUsers: 10, storageUsed: 1024 },
           },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.getOrganizationDetails("org-1");
@@ -197,7 +198,7 @@ describe("TurboPartner Module", () => {
           success: true,
           data: { id: "org-1", name: "New Name" },
         };
-        MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.patch = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.updateOrganizationInfo("org-1", { name: "New Name" });
@@ -213,7 +214,7 @@ describe("TurboPartner Module", () => {
     describe("deleteOrganization", () => {
       it("should delete an organization", async () => {
         const mockResponse = { success: true, message: "Organization deleted" };
-        MockedHttpClient.prototype.delete = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.delete = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.deleteOrganization("org-1");
@@ -234,7 +235,7 @@ describe("TurboPartner Module", () => {
             tracking: { numUsers: 10 },
           },
         };
-        MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.patch = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.updateOrganizationEntitlements("org-1", {
@@ -258,7 +259,7 @@ describe("TurboPartner Module", () => {
             preferences: { hideSignatureOutline: false, hideSignatureHash: false, lockedFieldsBackground: true, allowDownloadBeforeSigning: false },
           },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.getOrganizationPreferences("org-1");
@@ -278,7 +279,7 @@ describe("TurboPartner Module", () => {
             preferences: { hideSignatureOutline: false, hideSignatureHash: false, lockedFieldsBackground: false, allowDownloadBeforeSigning: true },
           },
         };
-        MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.patch = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.updateOrganizationPreferences("org-1", { lockedFieldsBackground: false });
@@ -311,7 +312,7 @@ describe("TurboPartner Module", () => {
             offset: 0,
           },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.listOrganizationUsers("org-1");
@@ -328,7 +329,7 @@ describe("TurboPartner Module", () => {
           success: true,
           data: { results: [], totalRecords: 0, limit: 10, offset: 0 },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         await TurboPartner.listOrganizationUsers("org-1", { limit: 10, search: "john" });
@@ -346,7 +347,7 @@ describe("TurboPartner Module", () => {
           success: true,
           data: { id: "user-1", email: "user@example.com", role: "contributor" },
         };
-        MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.post = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.addUserToOrganization("org-1", {
@@ -368,7 +369,7 @@ describe("TurboPartner Module", () => {
           success: true,
           data: { id: "user-1", email: "user@example.com", role: "admin" },
         };
-        MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.patch = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.updateOrganizationUserRole("org-1", "user-1", {
@@ -386,7 +387,7 @@ describe("TurboPartner Module", () => {
     describe("removeUserFromOrganization", () => {
       it("should remove a user from an organization", async () => {
         const mockResponse = { success: true, message: "User removed" };
-        MockedHttpClient.prototype.delete = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.delete = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.removeUserFromOrganization("org-1", "user-1");
@@ -401,7 +402,7 @@ describe("TurboPartner Module", () => {
     describe("resendOrganizationInvitationToUser", () => {
       it("should resend an invitation", async () => {
         const mockResponse = { success: true, message: "Invitation resent" };
-        MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.post = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.resendOrganizationInvitationToUser("org-1", "user-1");
@@ -430,7 +431,7 @@ describe("TurboPartner Module", () => {
             offset: 0,
           },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.listOrganizationApiKeys("org-1");
@@ -447,7 +448,7 @@ describe("TurboPartner Module", () => {
           success: true,
           data: { results: [], totalRecords: 0, limit: 50, offset: 0 },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         await TurboPartner.listOrganizationApiKeys("org-1", { search: "prod" });
@@ -466,7 +467,7 @@ describe("TurboPartner Module", () => {
           data: { id: "key-1", name: "New Key", key: "TDX-full-key-value", role: "admin" },
           message: "API key created",
         };
-        MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.post = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.createOrganizationApiKey("org-1", {
@@ -489,7 +490,7 @@ describe("TurboPartner Module", () => {
           message: "API key updated successfully",
           apiKey: { id: "key-1", name: "Updated Key", role: "admin", updatedOn: "2025-06-01T00:00:00Z" },
         };
-        MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.patch = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.updateOrganizationApiKey("org-1", "key-1", {
@@ -508,7 +509,7 @@ describe("TurboPartner Module", () => {
     describe("revokeOrganizationApiKey", () => {
       it("should revoke an API key", async () => {
         const mockResponse = { success: true, message: "API key revoked" };
-        MockedHttpClient.prototype.delete = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.delete = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.revokeOrganizationApiKey("org-1", "key-1");
@@ -539,7 +540,7 @@ describe("TurboPartner Module", () => {
             offset: 0,
           },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.listPartnerApiKeys();
@@ -556,7 +557,7 @@ describe("TurboPartner Module", () => {
           success: true,
           data: { results: [], totalRecords: 0, limit: 10, offset: 5 },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         await TurboPartner.listPartnerApiKeys({ limit: 10, offset: 5 });
@@ -581,7 +582,7 @@ describe("TurboPartner Module", () => {
           },
           message: "Partner API key created",
         };
-        MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.post = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.createPartnerApiKey({
@@ -605,7 +606,7 @@ describe("TurboPartner Module", () => {
           message: "Partner API key updated successfully",
           apiKey: { id: "pkey-1", name: "Updated Name", description: "Desc", scopes: ["org:create"], updatedOn: "2025-06-01T00:00:00Z" },
         };
-        MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.patch = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.updatePartnerApiKey("pkey-1", {
@@ -625,7 +626,7 @@ describe("TurboPartner Module", () => {
     describe("revokePartnerApiKey", () => {
       it("should revoke a partner API key", async () => {
         const mockResponse = { success: true, message: "Partner API key revoked" };
-        MockedHttpClient.prototype.delete = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.delete = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.revokePartnerApiKey("pkey-1");
@@ -666,7 +667,7 @@ describe("TurboPartner Module", () => {
             offset: 0,
           },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.listPartnerPortalUsers();
@@ -683,7 +684,7 @@ describe("TurboPartner Module", () => {
           success: true,
           data: { results: [], totalRecords: 0, limit: 50, offset: 0 },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         await TurboPartner.listPartnerPortalUsers({ search: "admin" });
@@ -706,7 +707,7 @@ describe("TurboPartner Module", () => {
             permissions: mockPermissions,
           },
         };
-        MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.post = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.addUserToPartnerPortal({
@@ -734,7 +735,7 @@ describe("TurboPartner Module", () => {
             permissions: { ...mockPermissions, canManageOrgs: false },
           },
         };
-        MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.patch = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         // The API requires all 7 permission keys whenever `permissions` is sent — a partial
@@ -758,7 +759,7 @@ describe("TurboPartner Module", () => {
     describe("removeUserFromPartnerPortal", () => {
       it("should remove a partner user", async () => {
         const mockResponse = { success: true, message: "User removed" };
-        MockedHttpClient.prototype.delete = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.delete = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.removeUserFromPartnerPortal("puser-1");
@@ -773,7 +774,7 @@ describe("TurboPartner Module", () => {
     describe("resendPartnerPortalInvitationToUser", () => {
       it("should resend a partner portal invitation", async () => {
         const mockResponse = { success: true, message: "Invitation resent" };
-        MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.post = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.resendPartnerPortalInvitationToUser("puser-1");
@@ -812,7 +813,7 @@ describe("TurboPartner Module", () => {
             offset: 0,
           },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         const result = await TurboPartner.getPartnerAuditLogs();
@@ -830,7 +831,7 @@ describe("TurboPartner Module", () => {
           success: true,
           data: { results: [], totalRecords: 0, limit: 10, offset: 0 },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         await TurboPartner.getPartnerAuditLogs({
@@ -860,7 +861,7 @@ describe("TurboPartner Module", () => {
           success: true,
           data: { results: [], totalRecords: 0, limit: 50, offset: 0 },
         };
-        MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+        MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
         setup();
 
         await TurboPartner.getPartnerAuditLogs({ success: false });
@@ -883,7 +884,7 @@ describe("TurboPartner Module", () => {
         success: true,
         data: { results: [], totalRecords: 0, limit: 50, offset: 0 },
       };
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
       setup();
 
       await TurboPartner.listOrganizations({ limit: 10, offset: undefined, search: undefined });
@@ -899,7 +900,7 @@ describe("TurboPartner Module", () => {
         success: true,
         data: { results: [], totalRecords: 0, limit: 50, offset: 0 },
       };
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
       setup();
 
       await TurboPartner.listOrganizations();
@@ -915,7 +916,7 @@ describe("TurboPartner Module", () => {
         success: true,
         data: { results: [], totalRecords: 0, limit: 25, offset: 50 },
       };
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
       setup();
 
       await TurboPartner.listOrganizationUsers("org-1", { limit: 25, offset: 50 });
@@ -948,7 +949,7 @@ describe("TurboPartner Module", () => {
           metadata: { plan: "enterprise" },
         },
       };
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
       setup();
 
       const result = await TurboPartner.getOrganizationDetails("org-1");
@@ -973,7 +974,7 @@ describe("TurboPartner Module", () => {
           isActive: true,
         },
       };
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue(mockResponse);
       setup();
 
       const result = await TurboPartner.addUserToOrganization("org-1", {
@@ -1010,7 +1011,7 @@ describe("TurboPartner Module", () => {
           offset: 0,
         },
       };
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
       setup();
 
       const result = await TurboPartner.getPartnerAuditLogs();
@@ -1068,7 +1069,7 @@ describe("TurboPartner Module", () => {
           },
         },
       };
-      MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.patch = vi.fn().mockResolvedValue(mockResponse);
       setup();
 
       const result = await TurboPartner.updateOrganizationEntitlements("org-1", {
@@ -1087,7 +1088,7 @@ describe("TurboPartner Module", () => {
         success: true,
         data: { id: "org-1", name: "Minimal Org" },
       };
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue(mockResponse);
       setup();
 
       const result = await TurboPartner.createOrganization({ name: "Minimal Org" });
@@ -1108,7 +1109,7 @@ describe("TurboPartner Module", () => {
         },
         userLimit: { max: 25, current: 2 },
       };
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
       setup();
 
       const result = await TurboPartner.listOrganizationUsers("org-1");
@@ -1124,7 +1125,7 @@ describe("TurboPartner Module", () => {
   describe("Error Handling", () => {
     it("should propagate API errors from GET", async () => {
       const apiError = new Error("Not Found");
-      MockedHttpClient.prototype.get = jest.fn().mockRejectedValue(apiError);
+      MockedHttpClient.prototype.get = vi.fn().mockRejectedValue(apiError);
       setup();
 
       await expect(
@@ -1134,7 +1135,7 @@ describe("TurboPartner Module", () => {
 
     it("should propagate validation errors from POST", async () => {
       const validationError = { statusCode: 400, message: "Name is required" };
-      MockedHttpClient.prototype.post = jest.fn().mockRejectedValue(validationError);
+      MockedHttpClient.prototype.post = vi.fn().mockRejectedValue(validationError);
       setup();
 
       await expect(
@@ -1144,7 +1145,7 @@ describe("TurboPartner Module", () => {
 
     it("should propagate authentication errors", async () => {
       const authError = { statusCode: 401, message: "Invalid API key" };
-      MockedHttpClient.prototype.get = jest.fn().mockRejectedValue(authError);
+      MockedHttpClient.prototype.get = vi.fn().mockRejectedValue(authError);
       setup();
 
       await expect(
@@ -1154,7 +1155,7 @@ describe("TurboPartner Module", () => {
 
     it("should propagate errors from PATCH", async () => {
       const error = { statusCode: 403, message: "Forbidden" };
-      MockedHttpClient.prototype.patch = jest.fn().mockRejectedValue(error);
+      MockedHttpClient.prototype.patch = vi.fn().mockRejectedValue(error);
       setup();
 
       await expect(
@@ -1164,7 +1165,7 @@ describe("TurboPartner Module", () => {
 
     it("should propagate errors from DELETE", async () => {
       const error = { statusCode: 404, message: "Organization not found" };
-      MockedHttpClient.prototype.delete = jest.fn().mockRejectedValue(error);
+      MockedHttpClient.prototype.delete = vi.fn().mockRejectedValue(error);
       setup();
 
       await expect(

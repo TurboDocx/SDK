@@ -10,6 +10,7 @@
  *      VM-resize / cgroup memory-limit changes.
  */
 
+import { vi } from 'vitest';
 import { buildDeviceFingerprint, resolveClientContextHeaders } from '../src/utils/client-context';
 
 describe('resolveClientContextHeaders — value sanitization', () => {
@@ -40,7 +41,7 @@ describe('resolveClientContextHeaders — value sanitization', () => {
 describe('buildDeviceFingerprint — stability contract', () => {
   it('produces a stable SHA-256 hex string that does not depend on total memory', () => {
     const os = require('os');
-    const spy = jest.spyOn(os, 'totalmem');
+    const spy = vi.spyOn(os, 'totalmem');
 
     const first = buildDeviceFingerprint();
     // Simulate a memory-limit / VM resize: totalmem changes but the fingerprint

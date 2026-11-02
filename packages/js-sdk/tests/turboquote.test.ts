@@ -15,43 +15,44 @@
  * - Convenience methods (createAndSend)
  */
 
+import { type Mock, type MockedClass, vi } from "vitest";
 import { TurboQuote } from "../src/modules/quote";
 import { HttpClient } from "../src/http";
 import { DeclineQuoteRequest, VoidQuoteRequest } from "../src/types/quote";
 
-jest.mock("../src/http", () => {
-  const actual = jest.requireActual("../src/http");
+vi.mock("../src/http", async () => {
+  const actual = (await vi.importActual("../src/http"));
   return {
     ...actual,
-    HttpClient: jest.fn(),
+    HttpClient: vi.fn(),
   };
 });
 
-const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
+const MockedHttpClient = HttpClient as MockedClass<typeof HttpClient>;
 
 describe("TurboQuote Module", () => {
   let mockClient: {
-    get: jest.Mock;
-    post: jest.Mock;
-    patch: jest.Mock;
-    delete: jest.Mock;
-    getRaw: jest.Mock;
-    postFormData: jest.Mock;
-    patchFormData: jest.Mock;
+    get: Mock;
+    post: Mock;
+    patch: Mock;
+    delete: Mock;
+    getRaw: Mock;
+    postFormData: Mock;
+    patchFormData: Mock;
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     (TurboQuote as any).client = undefined;
 
     mockClient = {
-      get: jest.fn(),
-      post: jest.fn(),
-      patch: jest.fn(),
-      delete: jest.fn(),
-      getRaw: jest.fn(),
-      postFormData: jest.fn(),
-      patchFormData: jest.fn(),
+      get: vi.fn(),
+      post: vi.fn(),
+      patch: vi.fn(),
+      delete: vi.fn(),
+      getRaw: vi.fn(),
+      postFormData: vi.fn(),
+      patchFormData: vi.fn(),
     };
 
     MockedHttpClient.mockImplementation(() => mockClient as any);
@@ -510,7 +511,7 @@ describe("TurboQuote Module", () => {
       // the key MUST be present even when null (that's how a custom/ad-hoc line item is
       // expressed). If a serializer drops the null key, the backend 400s. This locks the
       // JS SDK's wire format to emit an explicit "productId":null.
-      const mockFetch = jest.fn();
+      const mockFetch = vi.fn();
       global.fetch = mockFetch as any;
       mockFetch.mockResolvedValue({
         ok: true,
@@ -521,9 +522,9 @@ describe("TurboQuote Module", () => {
         }),
       });
 
-      // Use the real HttpClient (the file-level jest.mock otherwise swaps in mockClient,
+      // Use the real HttpClient (the file-level vi.mock otherwise swaps in mockClient,
       // so global.fetch would never be reached) to exercise actual JSON.stringify serialization.
-      const ActualHttpClient = jest.requireActual("../src/http").HttpClient;
+      const ActualHttpClient = (await vi.importActual<any>("../src/http")).HttpClient;
       MockedHttpClient.mockImplementation((...args: any[]) => new ActualHttpClient(...args));
       TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
 

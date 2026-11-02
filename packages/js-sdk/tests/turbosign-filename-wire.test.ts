@@ -3,6 +3,7 @@
  * file name). The uploaded part keeps a safe name, because the API checks its extension.
  * Real HttpClient, mocked fetch, so the FormData is inspected.
  */
+import { type Mock, vi } from "vitest";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -21,8 +22,8 @@ const ok = (data: unknown) => ({
   json: async () => data,
 });
 
-function mockFetch(): jest.Mock {
-  const fetchMock = jest
+function mockFetch(): Mock {
+  const fetchMock = vi
     .fn()
     .mockResolvedValue(
       ok({
@@ -35,11 +36,11 @@ function mockFetch(): jest.Mock {
         },
       }),
     );
-  (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
+  (global as unknown as { fetch: Mock }).fetch = fetchMock;
   return fetchMock;
 }
 
-function sentForm(fetchMock: jest.Mock): {
+function sentForm(fetchMock: Mock): {
   partName: string;
   fileNameField: unknown;
 } {
@@ -200,7 +201,7 @@ describe("TurboSign file uploads forward fileName", () => {
   });
 
   it("createEmbeddedSignature forwards fileName to the upload", async () => {
-    const fetchMock = jest
+    const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
         ok({
@@ -228,7 +229,7 @@ describe("TurboSign file uploads forward fileName", () => {
           },
         }),
       );
-    (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
+    (global as unknown as { fetch: Mock }).fetch = fetchMock;
     await TurboSign.createEmbeddedSignature({
       file: pdf,
       fileName: "Embedded-Contract.pdf",

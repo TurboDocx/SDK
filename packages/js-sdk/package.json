@@ -16,9 +16,10 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck:tests": "tsc -p tsconfig.test.json",
     "lint": "echo 'add eslint here'",
     "prepublishOnly": "npm run build"
   },
@@ -49,12 +50,12 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
-    "@types/jest": "^30.0.0",
     "@types/node": "^26.1.2",
+    "@vitest/coverage-istanbul": "3.2.7",
     "dotenv": "17.4.2",
-    "jest": "^30.4.2",
-    "ts-jest": "^29.4.12",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vite": "6.4.5",
+    "vitest": "3.2.7"
   },
   "overrides": {
     "brace-expansion@1": "^1.1.21",

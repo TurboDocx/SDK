@@ -8,6 +8,7 @@
  * the request body off the fetch mock. Bodies are double-encoded: the whole body is JSON.stringify'd
  * and `recipients`/`fields` are themselves JSON strings inside it.
  */
+import { type Mock, vi } from "vitest";
 import { TurboSign } from "../src/modules/sign";
 
 /** The flat sendSignature envelope: { data: { ...fields... } }. */
@@ -22,7 +23,7 @@ function signingUrlEnvelope(recipientId: string, url: string, mode: string | nul
 
 /** The JSON body that the real client POSTed on the Nth fetch call. */
 function bodyOf(call: number): any {
-  const mock = (global as unknown as { fetch: jest.Mock }).fetch;
+  const mock = (global as unknown as { fetch: Mock }).fetch;
   return JSON.parse(mock.mock.calls[call][1].body as string);
 }
 
@@ -32,7 +33,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
   });
 
   it("calls sendSignature once then createSigningUrl once per recipient, returning per-recipient embedUrl + mode in order", async () => {
-    const fetchMock = jest
+    const fetchMock = vi
       .fn()
       // 1st call: sendSignature
       .mockResolvedValueOnce({
@@ -55,7 +56,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
         json: async () => signingUrlEnvelope("rec-1", "https://app/sign/doc-1?token=ALICE", "otp"),
         text: async () => "",
       });
-    (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
+    (global as unknown as { fetch: Mock }).fetch = fetchMock;
 
     // Deliberately out of array order: Alice is index 0 but signs 2nd, Bob is index 1 but signs 1st.
     const res = await TurboSign.createEmbeddedSignature({
@@ -89,7 +90,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
   });
 
   it("maps auth.emailOtp to identityVerification { mode:'otp', channel:'email' } in the sendSignature payload", async () => {
-    const fetchMock = jest
+    const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
         ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
@@ -101,7 +102,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
         json: async () => signingUrlEnvelope("rec-1", "https://app/sign/doc-2?token=A", "otp"),
         text: async () => "",
       });
-    (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
+    (global as unknown as { fetch: Mock }).fetch = fetchMock;
 
     await TurboSign.createEmbeddedSignature({
       templateId: "tmpl-1",
@@ -118,7 +119,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
   });
 
   it("maps auth.sms to identityVerification { mode:'otp', channel:'sms' } and sets the recipient phone", async () => {
-    const fetchMock = jest
+    const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
         ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
@@ -130,7 +131,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
         json: async () => signingUrlEnvelope("rec-1", "https://app/sign/doc-3?token=A", "otp"),
         text: async () => "",
       });
-    (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
+    (global as unknown as { fetch: Mock }).fetch = fetchMock;
 
     await TurboSign.createEmbeddedSignature({
       templateId: "tmpl-1",
@@ -145,7 +146,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
   // An explicit empty top-level `fields` used to win over the shorthand, so the send had no fields and
   // the API always answered 400 FieldsRequired. An empty list now counts as absent.
   it("expands the fields shorthand when the top-level fields is an empty list", async () => {
-    (global as unknown as { fetch: jest.Mock }).fetch = jest
+    (global as unknown as { fetch: Mock }).fetch = vi
       .fn()
       .mockResolvedValueOnce({
         ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
@@ -170,7 +171,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
   });
 
   it("expands the fields shorthand into Field objects with placement:'replace' and the default sizes", async () => {
-    const fetchMock = jest
+    const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
         ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
@@ -182,7 +183,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
         json: async () => signingUrlEnvelope("rec-1", "https://app/sign/doc-4?token=A", null),
         text: async () => "",
       });
-    (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
+    (global as unknown as { fetch: Mock }).fetch = fetchMock;
 
     await TurboSign.createEmbeddedSignature({
       templateId: "tmpl-1",
@@ -218,7 +219,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
   });
 
   it("returns 2 results in signing order for a 2-recipient request", async () => {
-    const fetchMock = jest
+    const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
         ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
@@ -238,7 +239,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
         json: async () => signingUrlEnvelope("rec-2", "https://app/sign/doc-5?token=2", null),
         text: async () => "",
       });
-    (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
+    (global as unknown as { fetch: Mock }).fetch = fetchMock;
 
     const res = await TurboSign.createEmbeddedSignature({
       templateId: "tmpl-1",
@@ -263,7 +264,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
   // must NOT throw the whole call away: the in-turn signer gets a URL now, the not-yet-turn signer
   // comes back `status: 'pending'` with `embedUrl: null` (mint it later when the first one finishes).
   it("returns pending (null URL) for a recipient the backend says is not in turn, ready for the one who is", async () => {
-    const fetchMock = jest
+    const fetchMock = vi
       .fn()
       // 1st: sendSignature returns both recipients.
       .mockResolvedValueOnce({
@@ -286,7 +287,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
         json: async () => ({ message: "It is not this recipient's turn to sign yet.", code: "RecipientNotInTurn" }),
         text: async () => "",
       });
-    (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
+    (global as unknown as { fetch: Mock }).fetch = fetchMock;
 
     const res = await TurboSign.createEmbeddedSignature({
       templateId: "tmpl-1",
@@ -315,7 +316,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
   // A recipient who has ALREADY signed (backend 409 `RecipientAlreadySigned`) comes back
   // `status: 'completed'` with a null URL — not an error, and distinct from 'pending'.
   it("returns completed (null URL) for a recipient the backend says already signed", async () => {
-    const fetchMock = jest
+    const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
         ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
@@ -327,7 +328,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
         json: async () => ({ message: "This recipient has already signed.", code: "RecipientAlreadySigned" }),
         text: async () => "",
       });
-    (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
+    (global as unknown as { fetch: Mock }).fetch = fetchMock;
 
     const res = await TurboSign.createEmbeddedSignature({
       templateId: "tmpl-1",
@@ -342,7 +343,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
   // A genuine failure (not a turn/already-signed conflict) must still propagate — we don't want to
   // silently swallow a real error as a "pending" recipient.
   it("rethrows a non-turn error from createSigningUrl instead of masking it as pending", async () => {
-    const fetchMock = jest
+    const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
         ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
@@ -354,7 +355,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
         json: async () => ({ message: "boom", code: "InternalError" }),
         text: async () => "",
       });
-    (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
+    (global as unknown as { fetch: Mock }).fetch = fetchMock;
 
     await expect(
       TurboSign.createEmbeddedSignature({
@@ -368,7 +369,7 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
   // it must still fail with the typed EmbeddedRecipientNotReturned error (as the Python and Ruby
   // SDKs do), not a TypeError from mapping over undefined.
   it("raises EmbeddedRecipientNotReturned when the send response has no recipients", async () => {
-    (global as unknown as { fetch: jest.Mock }).fetch = jest.fn().mockResolvedValueOnce({
+    (global as unknown as { fetch: Mock }).fetch = vi.fn().mockResolvedValueOnce({
       ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
       json: async () => ({ data: { success: true, documentId: "doc-x", status: "under_review", message: "ok" } }),
       text: async () => "",

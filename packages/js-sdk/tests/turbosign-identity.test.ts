@@ -4,20 +4,21 @@
  * - client-side recipient identityVerification validation (fail fast)
  */
 
+import { type MockedClass, vi } from "vitest";
 import { TurboSign } from "../src/modules/sign";
 import { HttpClient } from "../src/http";
 import { ValidationError } from "../src/utils/errors";
 import type { Recipient } from "../src/types/sign";
 
-jest.mock("../src/http");
+vi.mock("../src/http");
 
-const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
+const MockedHttpClient = HttpClient as MockedClass<typeof HttpClient>;
 
 describe("TurboSign embedded identity verification", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     (TurboSign as any).client = undefined;
-    MockedHttpClient.prototype.getSenderConfig = jest.fn().mockReturnValue({
+    MockedHttpClient.prototype.getSenderConfig = vi.fn().mockReturnValue({
       senderEmail: "test@company.com",
       senderName: "Test Company",
     });
@@ -35,7 +36,7 @@ describe("TurboSign embedded identity verification", () => {
 
     it("posts to the signing-url endpoint and returns the response", async () => {
       // The real client returns the { results } envelope (the outer { data } is stripped for it).
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({ results: okResponse });
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({ results: okResponse });
       TurboSign.configure({ apiKey: "k", orgId: "o", senderEmail: "test@company.com" });
 
       const res = await TurboSign.createSigningUrl("doc-1", { externalId: "cust_1" });
@@ -48,7 +49,7 @@ describe("TurboSign embedded identity verification", () => {
     });
 
     it("passes an identity assertion through for external_idv", async () => {
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({ results: okResponse });
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({ results: okResponse });
       TurboSign.configure({ apiKey: "k", orgId: "o", senderEmail: "test@company.com" });
 
       const identityAssertion = {
@@ -66,7 +67,7 @@ describe("TurboSign embedded identity verification", () => {
     });
 
     it("rejects zero selectors before any HTTP call", async () => {
-      MockedHttpClient.prototype.post = jest.fn();
+      MockedHttpClient.prototype.post = vi.fn<(...args: any[]) => any>();
       TurboSign.configure({ apiKey: "k", orgId: "o", senderEmail: "test@company.com" });
 
       await expect(TurboSign.createSigningUrl("doc-1", {})).rejects.toThrow(ValidationError);
@@ -98,7 +99,7 @@ describe("TurboSign embedded identity verification", () => {
         allowedFrameAncestors: ["https://app.example.com"],
       };
       // Same envelope the real client yields for a { data: { results } } response.
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({ results: settings });
+      MockedHttpClient.prototype.get = vi.fn().mockResolvedValue({ results: settings });
       TurboSign.configure({ apiKey: "k", orgId: "o", senderEmail: "test@company.com" });
 
       const res = await TurboSign.getEmbeddedSigningSettings();
@@ -111,8 +112,8 @@ describe("TurboSign embedded identity verification", () => {
   describe("recipient identityVerification validation (sendSignature)", () => {
     const baseSend = (recipients: Recipient[]) => {
       TurboSign.configure({ apiKey: "k", orgId: "o", senderEmail: "test@company.com" });
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({ success: true });
-      MockedHttpClient.prototype.uploadFile = jest.fn().mockResolvedValue({ success: true });
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({ success: true });
+      MockedHttpClient.prototype.uploadFile = vi.fn().mockResolvedValue({ success: true });
       return TurboSign.sendSignature({ fileLink: "https://x/f.pdf", recipients, fields: [] });
     };
 

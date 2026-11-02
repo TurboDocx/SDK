@@ -11,7 +11,8 @@ generate-all-pdfs.js
 
 # Configuration
 tsconfig.json
-jest.config.js
+tsconfig.test.json
+vitest.config.mts
 .eslintrc.*
 .prettierrc
 

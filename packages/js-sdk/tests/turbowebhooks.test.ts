@@ -11,6 +11,7 @@
  * bound at construction time and ignore later prototype reassignment.
  */
 
+import { type MockedClass, vi } from "vitest";
 import { TurboWebhooks } from "../src/modules/webhooks";
 import { HttpClient } from "../src/http";
 import { WEBHOOK_EVENTS, WebhookEvents } from "../src/types/webhooks";
@@ -24,9 +25,9 @@ import {
 } from "../src/utils/errors";
 import { createHmac } from "crypto";
 
-jest.mock("../src/http");
+vi.mock("../src/http");
 
-const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
+const MockedHttpClient = HttpClient as MockedClass<typeof HttpClient>;
 
 const API_KEY = "TDX-test-key-abc123";
 const ORG_ID = "org-uuid-test";
@@ -37,7 +38,7 @@ function configure() {
 
 describe("TurboWebhooks Module", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     (TurboWebhooks as any).client = undefined;
     delete process.env.TURBODOCX_API_KEY;
     delete process.env.TURBODOCX_ORG_ID;
@@ -90,7 +91,7 @@ describe("TurboWebhooks Module", () => {
 
   describe("getClient lazy fallback", () => {
     it("should auto-configure from env vars when not configured", async () => {
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({});
+      MockedHttpClient.prototype.get = vi.fn().mockResolvedValue({});
       process.env.TURBODOCX_API_KEY = "TDX-env-key";
       process.env.TURBODOCX_ORG_ID = "env-org-id";
 
@@ -118,7 +119,7 @@ describe("TurboWebhooks Module", () => {
 
   describe("createWebhook", () => {
     it("should POST /api/webhooks with name=signature injected and return id + secret", async () => {
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({
         data: { id: "wh-1", secret: "whsec_abc123" },
         message: "Webhook created successfully.",
       });
@@ -140,7 +141,7 @@ describe("TurboWebhooks Module", () => {
 
   describe("getWebhook", () => {
     it("should GET /api/webhooks/signature and return WebhookWithStats", async () => {
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.get = vi.fn().mockResolvedValue({
         id: "wh-1",
         name: "signature",
         urls: ["https://example.com/sink"],
@@ -168,7 +169,7 @@ describe("TurboWebhooks Module", () => {
 
   describe("updateWebhook", () => {
     it("should PATCH /api/webhooks/signature and unwrap envelope", async () => {
-      MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.patch = vi.fn().mockResolvedValue({
         data: {
           id: "wh-1",
           name: "signature",
@@ -192,7 +193,7 @@ describe("TurboWebhooks Module", () => {
 
   describe("deleteWebhook", () => {
     it("should DELETE /api/webhooks/signature", async () => {
-      MockedHttpClient.prototype.delete = jest
+      MockedHttpClient.prototype.delete = vi
         .fn()
         .mockResolvedValue({ message: "Webhook deleted successfully" });
       configure();
@@ -212,7 +213,7 @@ describe("TurboWebhooks Module", () => {
     it("should POST /api/webhooks/signature/test with eventType + payload and unwrap envelope", async () => {
       // Mock mirrors backend TestWebhookResult.summary shape — including the
       // `errors: string[]` array the SDK type previously omitted.
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({
         data: {
           deliveries: [],
           summary: { total: 1, successful: 1, failed: 0, errors: [] },
@@ -239,7 +240,7 @@ describe("TurboWebhooks Module", () => {
     });
 
     it("should surface per-URL error strings in summary.errors on partial failure", async () => {
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({
         data: {
           deliveries: [],
           summary: {
@@ -265,7 +266,7 @@ describe("TurboWebhooks Module", () => {
 
   describe("notifyWebhook", () => {
     it("should POST /api/webhooks/signature/notify and unwrap envelope", async () => {
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({
         data: {
           deliveries: [],
           summary: { total: 1, successful: 1, failed: 0 },
@@ -295,7 +296,7 @@ describe("TurboWebhooks Module", () => {
 
   describe("listWebhookDeliveries", () => {
     it("should GET /api/webhooks/signature/deliveries with filters", async () => {
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockResolvedValue({ results: [], totalRecords: 0, limit: 10, offset: 0 });
       configure();
@@ -327,7 +328,7 @@ describe("TurboWebhooks Module", () => {
         deliveredAt: "2026-05-13T12:00:00Z",
         createdOn: "2026-05-13T11:59:59Z",
       };
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({
         data: newDelivery,
         message: "Webhook delivery replayed successfully - new delivery attempt created",
       });
@@ -357,7 +358,7 @@ describe("TurboWebhooks Module", () => {
       // Backend envelope is `{ data: { id, secret, regeneratedAt }, message }`
       // — `message` lives at the envelope, not inside `data`. The SDK extracts
       // `data`, so the response shape is { id, secret, regeneratedAt } only.
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({
         data: {
           id: "wh-1",
           secret: "whsec_newRotated",
@@ -382,7 +383,7 @@ describe("TurboWebhooks Module", () => {
 
   describe("getWebhookStats", () => {
     it("should GET /api/webhooks/signature/stats with days query", async () => {
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.get = vi.fn().mockResolvedValue({
         webhook: {
           id: "wh-1",
           name: "signature",
@@ -430,7 +431,7 @@ describe("TurboWebhooks Module", () => {
 
   describe("error propagation", () => {
     it("should propagate AuthenticationError on 401", async () => {
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockRejectedValue(new AuthenticationError("Invalid API key"));
       configure();
@@ -439,7 +440,7 @@ describe("TurboWebhooks Module", () => {
     });
 
     it("should propagate AuthorizationError on 403", async () => {
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockRejectedValue(new AuthorizationError("Forbidden"));
       configure();
@@ -448,7 +449,7 @@ describe("TurboWebhooks Module", () => {
     });
 
     it("should propagate NotFoundError on 404", async () => {
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockRejectedValue(new NotFoundError("Webhook not found"));
       configure();
@@ -457,7 +458,7 @@ describe("TurboWebhooks Module", () => {
     });
 
     it("should propagate ValidationError on 400", async () => {
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockRejectedValue(new ValidationError("All webhook URLs must use HTTPS"));
       configure();
@@ -471,7 +472,7 @@ describe("TurboWebhooks Module", () => {
     });
 
     it("should propagate ConflictError on 409 from createWebhook", async () => {
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockRejectedValue(
           new ConflictError("Webhook with name signature already exists"),
@@ -487,7 +488,7 @@ describe("TurboWebhooks Module", () => {
     });
 
     it("should propagate ConflictError on 409 from updateWebhook", async () => {
-      MockedHttpClient.prototype.patch = jest
+      MockedHttpClient.prototype.patch = vi
         .fn()
         .mockRejectedValue(
           new ConflictError("Webhook name conflict"),
@@ -612,7 +613,7 @@ describe("verifyWebhookSignature", () => {
   // parseInt read the leading digits of "1747000000abc" and "1747000000.9", so a timestamp header the
   // other SDKs reject passed here. Each header below is signed exactly as sent.
   it.each([`${TIMESTAMP}abc`, `${TIMESTAMP}.9`, ` ${TIMESTAMP}`, "", "abc"])(
-    "should reject a timestamp header that is not all digits (%p)",
+    "should reject a timestamp header that is not all digits (%j)",
     (ts) => {
       expect(verifyWebhookSignature(BODY, sign(BODY, ts, SECRET), ts, SECRET, { now: () => NOW_SECONDS })).toBe(false);
     },
@@ -705,7 +706,7 @@ describe("WEBHOOK_EVENTS", () => {
   });
 
   it("should still accept a raw event string on createWebhook (non-breaking)", async () => {
-    const post = jest.fn().mockResolvedValue({ data: { id: "wh_1", secret: "s" } });
+    const post = vi.fn().mockResolvedValue({ data: { id: "wh_1", secret: "s" } });
     MockedHttpClient.prototype.post = post;
     TurboWebhooks.configure({ apiKey: API_KEY, orgId: ORG_ID });
 

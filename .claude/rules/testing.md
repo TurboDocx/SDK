@@ -20,7 +20,7 @@ All SDKs must have equivalent test coverage. When adding a test case in one SDK,
 
 | SDK | Command | Framework |
 |---|---|---|
-| js-sdk | `npm test` | Jest + ts-jest |
+| js-sdk | `npm test` | Vitest (`npm run typecheck:tests` type-checks the tests) |
 | py-sdk | `pytest -v` | pytest |
 | go-sdk | `go test -v ./...` | go test |
 | php-sdk | `composer test` | PHPUnit |

@@ -2,7 +2,7 @@
 
 ## Zero Runtime Dependencies
 
-The JS SDK has **no runtime dependencies** — only devDependencies (TypeScript, Jest, ts-jest, @types).
+The JS SDK has **no runtime dependencies** — only devDependencies (TypeScript, Vitest, @types).
 Use native `fetch` (Node 18+ global) for HTTP. Use native `fs` and `path` for file operations.
 Never add runtime dependencies without explicit approval.
 
@@ -40,7 +40,7 @@ The `smartUnwrap` method strips the `{ data: ... }` wrapper when the response ob
 
 ## Testing
 
-- Framework: Jest + ts-jest
+- Framework: Vitest (Jest-style globals; `npm run typecheck:tests` type-checks the tests)
 - Run: `npm test` (from `packages/js-sdk/`)
 - Mock `global.fetch` — never make real HTTP calls in tests
 - Test files live in `packages/js-sdk/tests/`

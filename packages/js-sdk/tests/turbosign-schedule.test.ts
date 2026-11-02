@@ -11,13 +11,14 @@
  * content type, so one code path serves both.
  */
 
+import { type Mock, type MockedClass, vi } from 'vitest';
 import { TurboSign } from '../src/modules/sign';
 import { HttpClient } from '../src/http';
 import type { Recipient, Field, ReminderStatus } from '../src/types/sign';
 
-jest.mock('../src/http');
+vi.mock('../src/http');
 
-const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
+const MockedHttpClient = HttpClient as MockedClass<typeof HttpClient>;
 
 describe('TurboSign schedule overrides', () => {
   const recipients: Recipient[] = [{ name: 'John Doe', email: 'john@example.com', signingOrder: 1 }];
@@ -25,22 +26,22 @@ describe('TurboSign schedule overrides', () => {
     { type: 'signature', page: 1, x: 100, y: 500, width: 200, height: 50, recipientEmail: 'john@example.com' },
   ];
 
-  let postMock: jest.Mock;
-  let getMock: jest.Mock;
-  let uploadMock: jest.Mock;
+  let postMock: Mock;
+  let getMock: Mock;
+  let uploadMock: Mock;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     (TurboSign as any).client = undefined;
     // Stub the prototype BEFORE configure() — configure() constructs the client, and the
     // auto-mocked instance captures its methods at construction time.
-    postMock = jest.fn().mockResolvedValue({});
-    getMock = jest.fn().mockResolvedValue({});
-    uploadMock = jest.fn().mockResolvedValue({});
+    postMock = vi.fn().mockResolvedValue({});
+    getMock = vi.fn().mockResolvedValue({});
+    uploadMock = vi.fn().mockResolvedValue({});
     MockedHttpClient.prototype.post = postMock;
     MockedHttpClient.prototype.get = getMock;
     MockedHttpClient.prototype.uploadFile = uploadMock;
-    MockedHttpClient.prototype.getSenderConfig = jest
+    MockedHttpClient.prototype.getSenderConfig = vi
       .fn()
       .mockReturnValue({ senderEmail: 'sender@company.com', senderName: 'Sender' });
     TurboSign.configure({ apiKey: 'test-key', orgId: 'org-1', senderEmail: 'sender@company.com' });
@@ -151,22 +152,22 @@ describe('TurboSign schedule overrides', () => {
 });
 
 describe('TurboSign.sendReminder', () => {
-  let postMock: jest.Mock;
-  let getMock: jest.Mock;
-  let uploadMock: jest.Mock;
+  let postMock: Mock;
+  let getMock: Mock;
+  let uploadMock: Mock;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     (TurboSign as any).client = undefined;
     // Stub the prototype BEFORE configure() — configure() constructs the client, and the
     // auto-mocked instance captures its methods at construction time.
-    postMock = jest.fn().mockResolvedValue({});
-    getMock = jest.fn().mockResolvedValue({});
-    uploadMock = jest.fn().mockResolvedValue({});
+    postMock = vi.fn().mockResolvedValue({});
+    getMock = vi.fn().mockResolvedValue({});
+    uploadMock = vi.fn().mockResolvedValue({});
     MockedHttpClient.prototype.post = postMock;
     MockedHttpClient.prototype.get = getMock;
     MockedHttpClient.prototype.uploadFile = uploadMock;
-    MockedHttpClient.prototype.getSenderConfig = jest
+    MockedHttpClient.prototype.getSenderConfig = vi
       .fn()
       .mockReturnValue({ senderEmail: 'sender@company.com', senderName: 'Sender' });
     TurboSign.configure({ apiKey: 'test-key', orgId: 'org-1', senderEmail: 'sender@company.com' });
@@ -241,22 +242,22 @@ describe('TurboSign.sendReminder', () => {
 });
 
 describe('TurboSign document expiry surface', () => {
-  let postMock: jest.Mock;
-  let getMock: jest.Mock;
-  let uploadMock: jest.Mock;
+  let postMock: Mock;
+  let getMock: Mock;
+  let uploadMock: Mock;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     (TurboSign as any).client = undefined;
     // Stub the prototype BEFORE configure() — configure() constructs the client, and the
     // auto-mocked instance captures its methods at construction time.
-    postMock = jest.fn().mockResolvedValue({});
-    getMock = jest.fn().mockResolvedValue({});
-    uploadMock = jest.fn().mockResolvedValue({});
+    postMock = vi.fn().mockResolvedValue({});
+    getMock = vi.fn().mockResolvedValue({});
+    uploadMock = vi.fn().mockResolvedValue({});
     MockedHttpClient.prototype.post = postMock;
     MockedHttpClient.prototype.get = getMock;
     MockedHttpClient.prototype.uploadFile = uploadMock;
-    MockedHttpClient.prototype.getSenderConfig = jest
+    MockedHttpClient.prototype.getSenderConfig = vi
       .fn()
       .mockReturnValue({ senderEmail: 'sender@company.com', senderName: 'Sender' });
     TurboSign.configure({ apiKey: 'test-key', orgId: 'org-1', senderEmail: 'sender@company.com' });
