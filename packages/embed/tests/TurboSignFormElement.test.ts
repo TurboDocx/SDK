@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { TurboSignFormElement, defineTurboSignForm, TURBOSIGN_FORM_TAG } from '../src/TurboSignFormElement.js';
 import { TURBOSIGN_COMPLETED } from '../src/handleTurboSignMessage.js';
 
@@ -29,7 +30,7 @@ describe('<turbosign-form> web component', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('is registered as a custom element on import', () => {
@@ -65,7 +66,7 @@ describe('<turbosign-form> web component', () => {
     el.setAttribute('embed-url', EMBED_URL);
     el.setAttribute('origin', EXPECTED_ORIGIN);
     document.body.appendChild(el);
-    const onCompleted = jest.fn();
+    const onCompleted = vi.fn();
     el.addEventListener(TURBOSIGN_COMPLETED, onCompleted as EventListener);
 
     // Act: simulate the signing page (the element's own iframe) posting completion from the expected origin.
@@ -99,7 +100,7 @@ describe('<turbosign-form> web component', () => {
     el.setAttribute('embed-url', EMBED_URL);
     el.setAttribute('origin', EXPECTED_ORIGIN);
     document.body.appendChild(el);
-    const onCompleted = jest.fn();
+    const onCompleted = vi.fn();
     el.addEventListener(TURBOSIGN_COMPLETED, onCompleted as EventListener);
 
     window.dispatchEvent(
@@ -117,7 +118,7 @@ describe('<turbosign-form> web component', () => {
     el.setAttribute('embed-url', EMBED_URL);
     el.setAttribute('origin', EXPECTED_ORIGIN);
     document.body.appendChild(el);
-    const onCompleted = jest.fn();
+    const onCompleted = vi.fn();
     el.addEventListener(TURBOSIGN_COMPLETED, onCompleted as EventListener);
 
     const frameWindow = el.querySelector('iframe')!.contentWindow;
@@ -135,7 +136,7 @@ describe('<turbosign-form> web component', () => {
 
   it('wrong-origin test uses the real frame source, so only the origin differs', () => {
     const { el, frameWindow } = mount({ 'embed-url': EMBED_URL, origin: EXPECTED_ORIGIN });
-    const onCompleted = jest.fn();
+    const onCompleted = vi.fn();
     el.addEventListener(TURBOSIGN_COMPLETED, onCompleted as EventListener);
     post('https://evil.example.com', frameWindow, { type: TURBOSIGN_COMPLETED });
     expect(onCompleted).not.toHaveBeenCalled();
@@ -143,25 +144,25 @@ describe('<turbosign-form> web component', () => {
 
   describe('fails closed without an origin', () => {
     it('ignores every message when no origin attribute is set', () => {
-      jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const { el, frameWindow } = mount({ 'embed-url': EMBED_URL });
-      const onCompleted = jest.fn();
+      const onCompleted = vi.fn();
       el.addEventListener(TURBOSIGN_COMPLETED, onCompleted as EventListener);
       post(EXPECTED_ORIGIN, frameWindow, { type: TURBOSIGN_COMPLETED });
       expect(onCompleted).not.toHaveBeenCalled();
     });
 
     it('ignores every message when the origin attribute is empty', () => {
-      jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const { el, frameWindow } = mount({ 'embed-url': EMBED_URL, origin: '' });
-      const onCompleted = jest.fn();
+      const onCompleted = vi.fn();
       el.addEventListener(TURBOSIGN_COMPLETED, onCompleted as EventListener);
       post(EXPECTED_ORIGIN, frameWindow, { type: TURBOSIGN_COMPLETED });
       expect(onCompleted).not.toHaveBeenCalled();
     });
 
     it('warns once (not per message) when messages are ignored for a missing origin', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const { frameWindow } = mount({ 'embed-url': EMBED_URL });
       post(EXPECTED_ORIGIN, frameWindow, { type: TURBOSIGN_COMPLETED });
       post(EXPECTED_ORIGIN, frameWindow, { type: TURBOSIGN_COMPLETED });
@@ -170,16 +171,16 @@ describe('<turbosign-form> web component', () => {
     });
 
     it('does not warn when an origin is pinned', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const { frameWindow } = mount({ 'embed-url': EMBED_URL, origin: EXPECTED_ORIGIN });
       post(EXPECTED_ORIGIN, frameWindow, { type: TURBOSIGN_COMPLETED });
       expect(warn).not.toHaveBeenCalled();
     });
 
     it('accepts any origin with the dev-only allow-any-origin attribute', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const { el, frameWindow } = mount({ 'embed-url': EMBED_URL, 'allow-any-origin': '' });
-      const onCompleted = jest.fn();
+      const onCompleted = vi.fn();
       el.addEventListener(TURBOSIGN_COMPLETED, onCompleted as EventListener);
       post('https://anything.example.com', frameWindow, { type: TURBOSIGN_COMPLETED, documentId: 'doc_dev' });
       expect(onCompleted).toHaveBeenCalledTimes(1);
@@ -190,7 +191,7 @@ describe('<turbosign-form> web component', () => {
   describe('message source check', () => {
     it('ignores a pinned-origin message that did not come from its own iframe', () => {
       const { el } = mount({ 'embed-url': EMBED_URL, origin: EXPECTED_ORIGIN });
-      const onCompleted = jest.fn();
+      const onCompleted = vi.fn();
       el.addEventListener(TURBOSIGN_COMPLETED, onCompleted as EventListener);
       // Same origin, but posted by another window (here: the host window itself) and with no source.
       post(EXPECTED_ORIGIN, window, { type: TURBOSIGN_COMPLETED });
@@ -201,7 +202,7 @@ describe('<turbosign-form> web component', () => {
     it("ignores a message from another form's iframe", () => {
       const first = mount({ 'embed-url': EMBED_URL, origin: EXPECTED_ORIGIN });
       const second = mount({ 'embed-url': EMBED_URL, origin: EXPECTED_ORIGIN });
-      const onFirst = jest.fn();
+      const onFirst = vi.fn();
       first.el.addEventListener(TURBOSIGN_COMPLETED, onFirst as EventListener);
       post(EXPECTED_ORIGIN, second.frameWindow, { type: TURBOSIGN_COMPLETED });
       expect(onFirst).not.toHaveBeenCalled();
@@ -209,7 +210,7 @@ describe('<turbosign-form> web component', () => {
 
     it('still checks the source under allow-any-origin', () => {
       const { el } = mount({ 'embed-url': EMBED_URL, 'allow-any-origin': '' });
-      const onCompleted = jest.fn();
+      const onCompleted = vi.fn();
       el.addEventListener(TURBOSIGN_COMPLETED, onCompleted as EventListener);
       post('https://anything.example.com', window, { type: TURBOSIGN_COMPLETED });
       expect(onCompleted).not.toHaveBeenCalled();

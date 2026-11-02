@@ -22,6 +22,9 @@ jobs:
       - name: Build
         run: npm run build -w packages/embed
 
+      - name: Type-check tests
+        run: npm run typecheck:tests -w packages/embed
+
       - name: Run tests
         run: npm test -w packages/embed
 

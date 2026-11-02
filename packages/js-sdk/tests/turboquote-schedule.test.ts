@@ -11,18 +11,19 @@
  * body is the second argument the SDK hands to `HttpClient.post`.
  */
 
+import { type Mock, type MockedClass, vi } from "vitest";
 import { TurboQuote } from "../src/modules/quote";
 import { HttpClient } from "../src/http";
 
-jest.mock("../src/http", () => {
-  const actual = jest.requireActual("../src/http");
+vi.mock("../src/http", async () => {
+  const actual = (await vi.importActual("../src/http"));
   return {
     ...actual,
-    HttpClient: jest.fn(),
+    HttpClient: vi.fn(),
   };
 });
 
-const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
+const MockedHttpClient = HttpClient as MockedClass<typeof HttpClient>;
 
 const SCHEDULE_KEYS = [
   "remindersEnabled",
@@ -36,12 +37,12 @@ const SCHEDULE_KEYS = [
 ] as const;
 
 describe("TurboQuote schedule serialization", () => {
-  let mockClient: { post: jest.Mock };
+  let mockClient: { post: Mock };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     (TurboQuote as any).client = undefined;
-    mockClient = { post: jest.fn() };
+    mockClient = { post: vi.fn() };
     MockedHttpClient.mockImplementation(() => mockClient as any);
     TurboQuote.configure({ apiKey: "test-key", orgId: "org-1" });
   });

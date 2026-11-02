@@ -11,28 +11,29 @@
  * - getAuditTrail
  */
 
+import { type Mock, type MockedClass, vi } from "vitest";
 import { TurboSign } from "../src/modules/sign";
 import { HttpClient } from "../src/http";
 import { NetworkError, NotFoundError } from "../src/utils/errors";
 import type { Recipient, Field } from "../src/types/sign";
 
 // Mock the HttpClient
-jest.mock("../src/http");
+vi.mock("../src/http");
 
 // Mock global fetch for download tests
-const mockFetch = jest.fn();
+const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
+const MockedHttpClient = HttpClient as MockedClass<typeof HttpClient>;
 
 describe("TurboSign Module", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Reset static client
     (TurboSign as any).client = undefined;
 
     // Mock getSenderConfig to return default values
-    MockedHttpClient.prototype.getSenderConfig = jest.fn().mockReturnValue({
+    MockedHttpClient.prototype.getSenderConfig = vi.fn().mockReturnValue({
       senderEmail: "test@company.com",
       senderName: "Test Company"
     });
@@ -115,7 +116,7 @@ describe("TurboSign Module", () => {
         message: "Document prepared for review",
       };
 
-      MockedHttpClient.prototype.uploadFile = jest
+      MockedHttpClient.prototype.uploadFile = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -133,7 +134,7 @@ describe("TurboSign Module", () => {
     });
 
     it("should return the recipients the backend always sends (typed as present)", async () => {
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({
         success: true,
         documentId: "doc-123",
         status: "review_ready",
@@ -162,7 +163,7 @@ describe("TurboSign Module", () => {
         message: "Document prepared for review",
       };
 
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -192,7 +193,7 @@ describe("TurboSign Module", () => {
         message: "Document prepared for review",
       };
 
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -220,7 +221,7 @@ describe("TurboSign Module", () => {
         message: "Document prepared for review",
       };
 
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -241,7 +242,7 @@ describe("TurboSign Module", () => {
         status: "review_ready",
         message: "Document prepared for review",
       };
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -289,7 +290,7 @@ describe("TurboSign Module", () => {
         },
       ];
 
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -331,7 +332,7 @@ describe("TurboSign Module", () => {
         message: "Document sent for signing",
       };
 
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -367,7 +368,7 @@ describe("TurboSign Module", () => {
         message: "Document sent for signing",
       };
 
-      MockedHttpClient.prototype.uploadFile = jest
+      MockedHttpClient.prototype.uploadFile = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -415,7 +416,7 @@ describe("TurboSign Module", () => {
         },
       ];
 
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -470,7 +471,7 @@ describe("TurboSign Module", () => {
         },
       ];
 
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -482,7 +483,7 @@ describe("TurboSign Module", () => {
       });
 
       // fields is JSON-stringified wholesale into the request body — metadata must ride along.
-      const [, formData] = (MockedHttpClient.prototype.post as jest.Mock).mock
+      const [, formData] = (MockedHttpClient.prototype.post as Mock).mock
         .calls[0];
       const sentFields = JSON.parse(formData.fields);
 
@@ -511,7 +512,7 @@ describe("TurboSign Module", () => {
         { type: "date", recipientEmail: "john@example.com", page: 1, x: 100, y: 650, width: 120, height: 30 },
       ];
 
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -522,7 +523,7 @@ describe("TurboSign Module", () => {
         fields,
       });
 
-      const [, formData] = (MockedHttpClient.prototype.post as jest.Mock).mock
+      const [, formData] = (MockedHttpClient.prototype.post as Mock).mock
         .calls[0];
       const sentFields = JSON.parse(formData.fields);
 
@@ -539,7 +540,7 @@ describe("TurboSign Module", () => {
         status: "under_review",
       };
 
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -619,7 +620,7 @@ describe("TurboSign Module", () => {
     };
 
     it("should get every recipient with their signing status", async () => {
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockResolvedValue(mockRecipientsResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -641,7 +642,7 @@ describe("TurboSign Module", () => {
     });
 
     it("should expose who sent the document and the pending/completed roll-up", async () => {
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockResolvedValue(mockRecipientsResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -667,7 +668,7 @@ describe("TurboSign Module", () => {
     });
 
     it("should report each recipient's email history", async () => {
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockResolvedValue(mockRecipientsResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -694,7 +695,7 @@ describe("TurboSign Module", () => {
     });
 
     it("should surface voided as an effective status without revoking a signature", async () => {
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockResolvedValue(mockVoidedRecipientsResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -712,7 +713,7 @@ describe("TurboSign Module", () => {
 
     it("should propagate NotFoundError for an unknown document", async () => {
       const notFound = new NotFoundError("Document not found");
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockRejectedValue(notFound);
       TurboSign.configure({ apiKey: "test-key" });
@@ -733,10 +734,10 @@ describe("TurboSign Module", () => {
       const mockPdfContent = new ArrayBuffer(4);
       const mockFetchResponse = {
         ok: true,
-        arrayBuffer: jest.fn().mockResolvedValue(mockPdfContent),
+        arrayBuffer: vi.fn().mockResolvedValue(mockPdfContent),
       };
 
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockResolvedValue(mockPresignedResponse);
       mockFetch.mockResolvedValue(mockFetchResponse);
@@ -764,7 +765,7 @@ describe("TurboSign Module", () => {
         statusText: "Forbidden",
       };
 
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockResolvedValue(mockPresignedResponse);
       mockFetch.mockResolvedValue(mockFetchResponse);
@@ -787,7 +788,7 @@ describe("TurboSign Module", () => {
         statusText: "Forbidden",
       };
 
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockResolvedValue(mockPresignedResponse);
       mockFetch.mockResolvedValue(mockFetchResponse);
@@ -810,7 +811,7 @@ describe("TurboSign Module", () => {
         voidedAt: "2026-01-26T12:00:00.000Z",
       };
 
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -837,7 +838,7 @@ describe("TurboSign Module", () => {
         recipientCount: 2,
       };
 
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -859,7 +860,7 @@ describe("TurboSign Module", () => {
         recipientCount: 3,
       };
 
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -911,7 +912,7 @@ describe("TurboSign Module", () => {
         ],
       };
 
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -938,7 +939,7 @@ describe("TurboSign Module", () => {
         auditTrail: [],
       };
 
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockResolvedValue(mockResponse);
       TurboSign.configure({ apiKey: "test-key" });
@@ -953,7 +954,7 @@ describe("TurboSign Module", () => {
   describe("Error Handling", () => {
     it("should throw error when API key is not configured", async () => {
       // Don't configure, let it auto-initialize without API key
-      MockedHttpClient.prototype.get = jest
+      MockedHttpClient.prototype.get = vi
         .fn()
         .mockRejectedValue(new Error("API key is required"));
 
@@ -967,7 +968,7 @@ describe("TurboSign Module", () => {
         code: "DOCUMENT_NOT_FOUND",
       };
 
-      MockedHttpClient.prototype.get = jest.fn().mockRejectedValue(apiError);
+      MockedHttpClient.prototype.get = vi.fn().mockRejectedValue(apiError);
       TurboSign.configure({ apiKey: "test-key" });
 
       await expect(TurboSign.getStatus("invalid-doc")).rejects.toEqual(
@@ -984,7 +985,7 @@ describe("TurboSign Module", () => {
         ],
       };
 
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockRejectedValue(validationError);
       TurboSign.configure({ apiKey: "test-key" });
@@ -1007,7 +1008,7 @@ describe("TurboSign Module", () => {
         code: "RATE_LIMIT_EXCEEDED",
       };
 
-      MockedHttpClient.prototype.post = jest
+      MockedHttpClient.prototype.post = vi
         .fn()
         .mockRejectedValue(rateLimitError);
       TurboSign.configure({ apiKey: "test-key" });

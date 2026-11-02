@@ -5,14 +5,15 @@
  * in signature requests, with per-request override capability
  */
 
+import { type Mock, type MockedClass, vi } from 'vitest';
 import { TurboSign } from '../src/modules/sign';
 import { HttpClient } from '../src/http';
 import type { Recipient, Field } from '../src/types/sign';
 
 // Mock the HttpClient
-jest.mock('../src/http');
+vi.mock('../src/http');
 
-const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
+const MockedHttpClient = HttpClient as MockedClass<typeof HttpClient>;
 
 describe('TurboSign Sender Configuration', () => {
   const mockRecipients: Recipient[] = [
@@ -31,7 +32,7 @@ describe('TurboSign Sender Configuration', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     (TurboSign as any).client = undefined;
   });
 
@@ -42,10 +43,10 @@ describe('TurboSign Sender Configuration', () => {
         senderName: 'Configured Support',
       };
 
-      MockedHttpClient.prototype.getSenderConfig = jest
+      MockedHttpClient.prototype.getSenderConfig = vi
         .fn()
         .mockReturnValue(mockSenderConfig);
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({
         success: true,
         documentId: 'doc-123',
         status: 'review_ready',
@@ -81,10 +82,10 @@ describe('TurboSign Sender Configuration', () => {
         senderName: undefined,
       };
 
-      MockedHttpClient.prototype.getSenderConfig = jest
+      MockedHttpClient.prototype.getSenderConfig = vi
         .fn()
         .mockReturnValue(mockSenderConfig);
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({
         success: true,
         documentId: 'doc-123',
         status: 'review_ready',
@@ -103,7 +104,7 @@ describe('TurboSign Sender Configuration', () => {
         fields: mockFields,
       });
 
-      const callArgs = (MockedHttpClient.prototype.post as jest.Mock).mock.calls[0][1];
+      const callArgs = (MockedHttpClient.prototype.post as Mock).mock.calls[0][1];
       expect(callArgs.senderEmail).toBe('configured@company.com');
       expect(callArgs.senderName).toBeUndefined();
     });
@@ -114,10 +115,10 @@ describe('TurboSign Sender Configuration', () => {
         senderName: 'Configured Support',
       };
 
-      MockedHttpClient.prototype.getSenderConfig = jest
+      MockedHttpClient.prototype.getSenderConfig = vi
         .fn()
         .mockReturnValue(mockSenderConfig);
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({
         success: true,
         documentId: 'doc-123',
         status: 'review_ready',
@@ -154,10 +155,10 @@ describe('TurboSign Sender Configuration', () => {
         senderName: 'Configured Support',
       };
 
-      MockedHttpClient.prototype.getSenderConfig = jest
+      MockedHttpClient.prototype.getSenderConfig = vi
         .fn()
         .mockReturnValue(mockSenderConfig);
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({
         success: true,
         documentId: 'doc-123',
         status: 'review_ready',
@@ -196,10 +197,10 @@ describe('TurboSign Sender Configuration', () => {
         senderName: 'Configured Support',
       };
 
-      MockedHttpClient.prototype.getSenderConfig = jest
+      MockedHttpClient.prototype.getSenderConfig = vi
         .fn()
         .mockReturnValue(mockSenderConfig);
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({
         success: true,
         documentId: 'doc-123',
         message: 'Document sent for signing',
@@ -233,10 +234,10 @@ describe('TurboSign Sender Configuration', () => {
         senderName: 'Configured Support',
       };
 
-      MockedHttpClient.prototype.getSenderConfig = jest
+      MockedHttpClient.prototype.getSenderConfig = vi
         .fn()
         .mockReturnValue(mockSenderConfig);
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({
         success: true,
         documentId: 'doc-123',
         message: 'Document sent for signing',
@@ -275,10 +276,10 @@ describe('TurboSign Sender Configuration', () => {
         senderName: 'Configured Support',
       };
 
-      MockedHttpClient.prototype.getSenderConfig = jest
+      MockedHttpClient.prototype.getSenderConfig = vi
         .fn()
         .mockReturnValue(mockSenderConfig);
-      MockedHttpClient.prototype.uploadFile = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.uploadFile = vi.fn().mockResolvedValue({
         success: true,
         documentId: 'doc-upload',
         status: 'review_ready',
@@ -316,10 +317,10 @@ describe('TurboSign Sender Configuration', () => {
         senderName: 'Configured Support',
       };
 
-      MockedHttpClient.prototype.getSenderConfig = jest
+      MockedHttpClient.prototype.getSenderConfig = vi
         .fn()
         .mockReturnValue(mockSenderConfig);
-      MockedHttpClient.prototype.uploadFile = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.uploadFile = vi.fn().mockResolvedValue({
         success: true,
         documentId: 'doc-upload',
         status: 'review_ready',
@@ -360,9 +361,9 @@ describe('TurboSign Sender Configuration', () => {
         senderName: 'Configured Support',
       };
 
-      const getSenderConfigMock = jest.fn().mockReturnValue(mockSenderConfig);
+      const getSenderConfigMock = vi.fn().mockReturnValue(mockSenderConfig);
       MockedHttpClient.prototype.getSenderConfig = getSenderConfigMock;
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue({
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue({
         success: true,
         documentId: 'doc-123',
         status: 'review_ready',

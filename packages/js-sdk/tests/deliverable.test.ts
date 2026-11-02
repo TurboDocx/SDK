@@ -11,17 +11,18 @@
  * - downloadPDF
  */
 
+import { type MockedClass, vi } from "vitest";
 import { Deliverable } from "../src/modules/deliverable";
 import { HttpClient } from "../src/http";
 
 // Mock the HttpClient
-jest.mock("../src/http");
+vi.mock("../src/http");
 
-const MockedHttpClient = HttpClient as jest.MockedClass<typeof HttpClient>;
+const MockedHttpClient = HttpClient as MockedClass<typeof HttpClient>;
 
 describe("Deliverable Module", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Reset static client
     (Deliverable as any).client = undefined;
   });
@@ -89,7 +90,7 @@ describe("Deliverable Module", () => {
         totalRecords: 1,
       };
 
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
       Deliverable.configure({ apiKey: "test-key", orgId: "org-1" });
 
       const result = await Deliverable.listDeliverables();
@@ -104,7 +105,7 @@ describe("Deliverable Module", () => {
 
     it("should pass query parameters", async () => {
       const mockResponse = { results: [], totalRecords: 0 };
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
       Deliverable.configure({ apiKey: "test-key", orgId: "org-1" });
 
       await Deliverable.listDeliverables({
@@ -145,7 +146,7 @@ describe("Deliverable Module", () => {
         },
       };
 
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue(mockResponse);
       Deliverable.configure({ apiKey: "test-key", orgId: "org-1" });
 
       const result = await Deliverable.generateDeliverable({
@@ -189,7 +190,7 @@ describe("Deliverable Module", () => {
         },
       };
 
-      MockedHttpClient.prototype.post = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.post = vi.fn().mockResolvedValue(mockResponse);
       Deliverable.configure({ apiKey: "test-key", orgId: "org-1" });
 
       const result = await Deliverable.generateDeliverable({
@@ -236,7 +237,7 @@ describe("Deliverable Module", () => {
         },
       };
 
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
       Deliverable.configure({ apiKey: "test-key", orgId: "org-1" });
 
       const result = await Deliverable.getDeliverableDetails("del-1");
@@ -263,7 +264,7 @@ describe("Deliverable Module", () => {
         },
       };
 
-      MockedHttpClient.prototype.get = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.get = vi.fn().mockResolvedValue(mockResponse);
       Deliverable.configure({ apiKey: "test-key", orgId: "org-1" });
 
       const result = await Deliverable.getDeliverableDetails("del-1", { showTags: true });
@@ -283,7 +284,7 @@ describe("Deliverable Module", () => {
         deliverableId: "del-1",
       };
 
-      MockedHttpClient.prototype.patch = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.patch = vi.fn().mockResolvedValue(mockResponse);
       Deliverable.configure({ apiKey: "test-key", orgId: "org-1" });
 
       const result = await Deliverable.updateDeliverableInfo("del-1", {
@@ -307,7 +308,7 @@ describe("Deliverable Module", () => {
         deliverableId: "del-1",
       };
 
-      MockedHttpClient.prototype.delete = jest.fn().mockResolvedValue(mockResponse);
+      MockedHttpClient.prototype.delete = vi.fn().mockResolvedValue(mockResponse);
       Deliverable.configure({ apiKey: "test-key", orgId: "org-1" });
 
       const result = await Deliverable.deleteDeliverable("del-1");
@@ -323,7 +324,7 @@ describe("Deliverable Module", () => {
     it("should download source file as ArrayBuffer", async () => {
       const mockArrayBuffer = new ArrayBuffer(1024);
 
-      MockedHttpClient.prototype.getRaw = jest.fn().mockResolvedValue(mockArrayBuffer);
+      MockedHttpClient.prototype.getRaw = vi.fn().mockResolvedValue(mockArrayBuffer);
       Deliverable.configure({ apiKey: "test-key", orgId: "org-1" });
 
       const result = await Deliverable.downloadSourceFile("del-1");
@@ -339,7 +340,7 @@ describe("Deliverable Module", () => {
     it("should download PDF as ArrayBuffer", async () => {
       const mockArrayBuffer = new ArrayBuffer(2048);
 
-      MockedHttpClient.prototype.getRaw = jest.fn().mockResolvedValue(mockArrayBuffer);
+      MockedHttpClient.prototype.getRaw = vi.fn().mockResolvedValue(mockArrayBuffer);
       Deliverable.configure({ apiKey: "test-key", orgId: "org-1" });
 
       const result = await Deliverable.downloadPDF("del-1");
@@ -364,7 +365,7 @@ describe("Deliverable Module", () => {
         message: "Deliverable not found",
       };
 
-      MockedHttpClient.prototype.get = jest.fn().mockRejectedValue(apiError);
+      MockedHttpClient.prototype.get = vi.fn().mockRejectedValue(apiError);
       Deliverable.configure({ apiKey: "test-key", orgId: "org-1" });
 
       await expect(
@@ -378,7 +379,7 @@ describe("Deliverable Module", () => {
         message: '"name" length must be at least 3 characters long',
       };
 
-      MockedHttpClient.prototype.post = jest.fn().mockRejectedValue(validationError);
+      MockedHttpClient.prototype.post = vi.fn().mockRejectedValue(validationError);
       Deliverable.configure({ apiKey: "test-key", orgId: "org-1" });
 
       await expect(

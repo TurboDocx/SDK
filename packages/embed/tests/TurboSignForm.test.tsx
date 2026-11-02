@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { createElement } from 'react';
 import { render, cleanup } from '@testing-library/react';
 
@@ -15,7 +16,7 @@ describe('<TurboSignForm> (React)', () => {
 
   afterEach(() => {
     cleanup();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   /** The rendered iframe's window, which is the only legitimate message source. */
@@ -29,7 +30,7 @@ describe('<TurboSignForm> (React)', () => {
 
   it('renders an iframe with the embedUrl as src', () => {
     const { container } = render(
-      createElement(TurboSignForm, { embedUrl: EMBED_URL, onCompleted: jest.fn() }),
+      createElement(TurboSignForm, { embedUrl: EMBED_URL, onCompleted: vi.fn() }),
     );
     const iframe = container.querySelector('iframe');
     expect(iframe).not.toBeNull();
@@ -38,7 +39,7 @@ describe('<TurboSignForm> (React)', () => {
   });
 
   it('calls onCompleted for a message from the pinned origin', () => {
-    const onCompleted = jest.fn();
+    const onCompleted = vi.fn();
     const { container } = render(
       createElement(TurboSignForm, { embedUrl: EMBED_URL, origin: EXPECTED_ORIGIN, onCompleted }),
     );
@@ -55,7 +56,7 @@ describe('<TurboSignForm> (React)', () => {
   });
 
   it('does NOT call onCompleted for a wrong-origin message (origin pinning)', () => {
-    const onCompleted = jest.fn();
+    const onCompleted = vi.fn();
     render(
       createElement(TurboSignForm, { embedUrl: EMBED_URL, origin: EXPECTED_ORIGIN, onCompleted }),
     );
@@ -71,7 +72,7 @@ describe('<TurboSignForm> (React)', () => {
   });
 
   it('removes its message listener on unmount', () => {
-    const onCompleted = jest.fn();
+    const onCompleted = vi.fn();
     const { container, unmount } = render(
       createElement(TurboSignForm, { embedUrl: EMBED_URL, origin: EXPECTED_ORIGIN, onCompleted }),
     );
@@ -95,16 +96,16 @@ describe('<TurboSignForm> (React)', () => {
       ['null', null],
       ['an empty string', ''],
     ])('ignores every message when origin is %s', (_label, origin) => {
-      jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-      const onCompleted = jest.fn();
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const onCompleted = vi.fn();
       const { container } = render(createElement(TurboSignForm, { embedUrl: EMBED_URL, origin, onCompleted }));
       post(EXPECTED_ORIGIN, frameOf(container), { type: TURBOSIGN_COMPLETED });
       expect(onCompleted).not.toHaveBeenCalled();
     });
 
     it('warns once (not per message) when messages are ignored for a missing origin', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-      const { container } = render(createElement(TurboSignForm, { embedUrl: EMBED_URL, onCompleted: jest.fn() }));
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const { container } = render(createElement(TurboSignForm, { embedUrl: EMBED_URL, onCompleted: vi.fn() }));
       post(EXPECTED_ORIGIN, frameOf(container), { type: TURBOSIGN_COMPLETED });
       post(EXPECTED_ORIGIN, frameOf(container), { type: TURBOSIGN_COMPLETED });
       expect(warn).toHaveBeenCalledTimes(1);
@@ -112,17 +113,17 @@ describe('<TurboSignForm> (React)', () => {
     });
 
     it('does not warn when an origin is pinned', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const { container } = render(
-        createElement(TurboSignForm, { embedUrl: EMBED_URL, origin: EXPECTED_ORIGIN, onCompleted: jest.fn() }),
+        createElement(TurboSignForm, { embedUrl: EMBED_URL, origin: EXPECTED_ORIGIN, onCompleted: vi.fn() }),
       );
       post(EXPECTED_ORIGIN, frameOf(container), { type: TURBOSIGN_COMPLETED });
       expect(warn).not.toHaveBeenCalled();
     });
 
     it('accepts any origin with the dev-only allowAnyOrigin prop', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-      const onCompleted = jest.fn();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const onCompleted = vi.fn();
       const { container } = render(
         createElement(TurboSignForm, { embedUrl: EMBED_URL, allowAnyOrigin: true, onCompleted }),
       );
@@ -134,7 +135,7 @@ describe('<TurboSignForm> (React)', () => {
 
   describe('message source check', () => {
     it('ignores a pinned-origin message that did not come from its own iframe', () => {
-      const onCompleted = jest.fn();
+      const onCompleted = vi.fn();
       render(createElement(TurboSignForm, { embedUrl: EMBED_URL, origin: EXPECTED_ORIGIN, onCompleted }));
       post(EXPECTED_ORIGIN, window, { type: TURBOSIGN_COMPLETED });
       post(EXPECTED_ORIGIN, null, { type: TURBOSIGN_COMPLETED });
@@ -142,7 +143,7 @@ describe('<TurboSignForm> (React)', () => {
     });
 
     it('still checks the source under allowAnyOrigin', () => {
-      const onCompleted = jest.fn();
+      const onCompleted = vi.fn();
       render(createElement(TurboSignForm, { embedUrl: EMBED_URL, allowAnyOrigin: true, onCompleted }));
       post('https://anything.example.com', window, { type: TURBOSIGN_COMPLETED });
       expect(onCompleted).not.toHaveBeenCalled();
@@ -152,7 +153,7 @@ describe('<TurboSignForm> (React)', () => {
   describe('title prop', () => {
     it('defaults the iframe title to "TurboSign signing"', () => {
       const { container } = render(
-        createElement(TurboSignForm, { embedUrl: EMBED_URL, origin: EXPECTED_ORIGIN, onCompleted: jest.fn() }),
+        createElement(TurboSignForm, { embedUrl: EMBED_URL, origin: EXPECTED_ORIGIN, onCompleted: vi.fn() }),
       );
       expect(container.querySelector('iframe')?.getAttribute('title')).toBe('TurboSign signing');
     });
@@ -163,7 +164,7 @@ describe('<TurboSignForm> (React)', () => {
           embedUrl: EMBED_URL,
           origin: EXPECTED_ORIGIN,
           title: 'Sign your lease',
-          onCompleted: jest.fn(),
+          onCompleted: vi.fn(),
         }),
       );
       expect(container.querySelector('iframe')?.getAttribute('title')).toBe('Sign your lease');

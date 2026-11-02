@@ -6,6 +6,7 @@
  * to return responses with various status codes.
  */
 
+import { vi } from 'vitest';
 import { HttpClient } from '../src/http';
 import {
   TurboDocxError,
@@ -29,7 +30,7 @@ function makeClient(): HttpClient {
 }
 
 function mockFetchResponse(status: number, body: Record<string, unknown> = {}): void {
-  global.fetch = jest.fn().mockResolvedValue({
+  global.fetch = vi.fn().mockResolvedValue({
     ok: false,
     status,
     statusText: `HTTP ${status}`,
@@ -47,7 +48,7 @@ describe('HttpClient error mapping', () => {
 
   afterEach(() => {
     global.fetch = ORIGINAL_FETCH;
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('maps 400 to ValidationError', async () => {
@@ -108,7 +109,7 @@ describe('HttpClient error mapping', () => {
     const client = makeClient();
     try {
       await client.post('/api/webhooks', {});
-      fail('expected ConflictError');
+      expect.unreachable('expected ConflictError');
     } catch (err) {
       expect(err).toBeInstanceOf(ConflictError);
       const ce = err as ConflictError;
@@ -150,7 +151,7 @@ describe('HttpClient error mapping', () => {
 
       try {
         await makeClient().post('/turbosign/single/prepare-for-review', {});
-        fail('expected ValidationError');
+        expect.unreachable('expected ValidationError');
       } catch (err) {
         const message = (err as ValidationError).message;
         expect(message).toContain('senderEmail must be a valid email address');
@@ -187,7 +188,7 @@ describe('HttpClient error mapping', () => {
 
       try {
         await makeClient().get('/v1/quotes/missing-id');
-        fail('expected NotFoundError');
+        expect.unreachable('expected NotFoundError');
       } catch (err) {
         const message = (err as NotFoundError).message;
         expect(message).toBe('Quote not found');
@@ -208,7 +209,7 @@ describe('HttpClient error mapping', () => {
 
       try {
         await makeClient().post('/turbosign/bulk/ingest', {});
-        fail('expected ValidationError');
+        expect.unreachable('expected ValidationError');
       } catch (err) {
         const message = (err as ValidationError).message;
         expect(message).toContain('Row 1: recipient email is invalid');
@@ -228,7 +229,7 @@ describe('HttpClient error mapping', () => {
 
       try {
         await makeClient().get('/v1/quotes/missing');
-        fail('expected NotFoundError');
+        expect.unreachable('expected NotFoundError');
       } catch (err) {
         expect((err as NotFoundError).code).toBe('QUOTE_NOT_FOUND');
       }
@@ -239,7 +240,7 @@ describe('HttpClient error mapping', () => {
 
       try {
         await makeClient().post('/turbosign/single/prepare-for-signing', {});
-        fail('expected ValidationError');
+        expect.unreachable('expected ValidationError');
       } catch (err) {
         expect((err as ValidationError).code).toBe('RecipientNameRequired');
       }
@@ -254,7 +255,7 @@ describe('HttpClient error mapping', () => {
 
       try {
         await makeClient().post('/turbosign/single/prepare-for-signing', {});
-        fail('expected ValidationError');
+        expect.unreachable('expected ValidationError');
       } catch (err) {
         const validationError = err as ValidationError;
         expect(validationError.code).toBe('SenderEmailRequired');
@@ -270,7 +271,7 @@ describe('HttpClient error mapping', () => {
 
       try {
         await makeClient().post('/turbosign/single/prepare-for-signing', {});
-        fail('expected ValidationError');
+        expect.unreachable('expected ValidationError');
       } catch (err) {
         const validationError = err as ValidationError;
         expect(validationError.message).toBe('Document could not be prepared');
@@ -283,7 +284,7 @@ describe('HttpClient error mapping', () => {
 
       try {
         await makeClient().get('/v1/anything');
-        fail('expected NotFoundError');
+        expect.unreachable('expected NotFoundError');
       } catch (err) {
         expect((err as NotFoundError).code).toBe('NOT_FOUND');
       }
@@ -295,7 +296,7 @@ describe('HttpClient error mapping', () => {
 
       try {
         await makeClient().get('/v1/anything');
-        fail('expected NotFoundError');
+        expect.unreachable('expected NotFoundError');
       } catch (err) {
         expect((err as NotFoundError).code).toBe('QUOTE_NOT_FOUND');
       }

@@ -8,12 +8,13 @@
  * (recordAuthInfo + getTimezoneInfo).
  */
 
+import { type Mock, vi } from 'vitest';
 import { HttpClient } from '../src/http';
 
 const ORIGINAL_FETCH = global.fetch;
 
-function mockOkFetch(): jest.Mock {
-  const fn = jest.fn().mockResolvedValue({
+function mockOkFetch(): Mock {
+  const fn = vi.fn().mockResolvedValue({
     ok: true,
     status: 200,
     headers: { get: () => 'application/json' },
@@ -24,7 +25,7 @@ function mockOkFetch(): jest.Mock {
   return fn;
 }
 
-function lastHeaders(fn: jest.Mock): Record<string, string> {
+function lastHeaders(fn: Mock): Record<string, string> {
   const call = fn.mock.calls[fn.mock.calls.length - 1];
   return call[1].headers as Record<string, string>;
 }
@@ -48,7 +49,7 @@ describe('HttpClient client-context headers', () => {
 
   afterEach(() => {
     global.fetch = ORIGINAL_FETCH;
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('sends a descriptive TurboDocx SDK User-Agent by default', async () => {

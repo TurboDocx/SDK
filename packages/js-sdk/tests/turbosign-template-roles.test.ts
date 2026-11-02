@@ -4,6 +4,7 @@
  * request body asserted here is exactly what goes over the wire. Bodies are double-encoded: the
  * whole body is JSON and `recipients`/`fields` are JSON strings inside it.
  */
+import { type Mock, vi } from "vitest";
 import { TurboSign } from "../src/modules/sign";
 
 const TEMPLATE_ID = "84759112-d9d6-443a-bb78-87c427bd7948";
@@ -19,8 +20,8 @@ function jsonResponse(body: unknown, status = 200) {
   };
 }
 
-function fetchMock(): jest.Mock {
-  return (global as unknown as { fetch: jest.Mock }).fetch;
+function fetchMock(): Mock {
+  return (global as unknown as { fetch: Mock }).fetch;
 }
 
 function bodyOf(call: number): any {
@@ -34,7 +35,7 @@ describe("TurboSign template signer roles", () => {
 
   describe("sendSignature", () => {
     it("sends each recipient's role and no fields key when fields are omitted (a role send)", async () => {
-      (global as unknown as { fetch: jest.Mock }).fetch = jest
+      (global as unknown as { fetch: Mock }).fetch = vi
         .fn()
         .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-1", status: "under_review" } }));
 
@@ -53,7 +54,7 @@ describe("TurboSign template signer roles", () => {
     });
 
     it("still sends fields when they are given", async () => {
-      (global as unknown as { fetch: jest.Mock }).fetch = jest
+      (global as unknown as { fetch: Mock }).fetch = vi
         .fn()
         .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-1", status: "under_review" } }));
       const fields = [
@@ -76,7 +77,7 @@ describe("TurboSign template signer roles", () => {
     });
 
     it("leaves fields out when an empty list is given", async () => {
-      (global as unknown as { fetch: jest.Mock }).fetch = jest
+      (global as unknown as { fetch: Mock }).fetch = vi
         .fn()
         .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-1", status: "under_review" } }));
 
@@ -92,7 +93,7 @@ describe("TurboSign template signer roles", () => {
     // Without roles the API answers a MISSING fields key with 400 FieldsRequired, but would send an
     // empty list as a document with nothing to sign. A send without fields must leave the key out.
     it("leaves fields out of a send with no fields and no roles, so the API rejects it", async () => {
-      (global as unknown as { fetch: jest.Mock }).fetch = jest
+      (global as unknown as { fetch: Mock }).fetch = vi
         .fn()
         .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-1", status: "under_review" } }));
 
@@ -111,7 +112,7 @@ describe("TurboSign template signer roles", () => {
     });
 
     it("surfaces the API's message when a role isn't on the template", async () => {
-      (global as unknown as { fetch: jest.Mock }).fetch = jest.fn().mockResolvedValue(
+      (global as unknown as { fetch: Mock }).fetch = vi.fn().mockResolvedValue(
         jsonResponse(
           {
             message: 'Unknown role "clinet". This template\'s roles are: client, countersigner',
@@ -135,7 +136,7 @@ describe("TurboSign template signer roles", () => {
 
   describe("createSignatureReviewLink", () => {
     it("sends roles to prepare-for-review with fields as [] when fields are omitted", async () => {
-      (global as unknown as { fetch: jest.Mock }).fetch = jest
+      (global as unknown as { fetch: Mock }).fetch = vi
         .fn()
         .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-2", status: "review_ready" } }));
 
@@ -152,7 +153,7 @@ describe("TurboSign template signer roles", () => {
     // Without roles the API answers a MISSING fields key with 400 FieldsRequired, but accepts an empty
     // list on a review link (the sender places fields in the preview). These calls worked in v0.8.0.
     it("sends fields as [] for a review link with fields: [] and no roles", async () => {
-      (global as unknown as { fetch: jest.Mock }).fetch = jest
+      (global as unknown as { fetch: Mock }).fetch = vi
         .fn()
         .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-3", status: "review_ready" } }));
 
@@ -167,7 +168,7 @@ describe("TurboSign template signer roles", () => {
     });
 
     it("sends fields as [] for a review link with no fields argument and no roles", async () => {
-      (global as unknown as { fetch: jest.Mock }).fetch = jest
+      (global as unknown as { fetch: Mock }).fetch = vi
         .fn()
         .mockResolvedValue(jsonResponse({ data: { success: true, documentId: "doc-4", status: "review_ready" } }));
 
@@ -182,7 +183,7 @@ describe("TurboSign template signer roles", () => {
 
   describe("createEmbeddedSignature", () => {
     it("passes each recipient's role through to the send", async () => {
-      (global as unknown as { fetch: jest.Mock }).fetch = jest
+      (global as unknown as { fetch: Mock }).fetch = vi
         .fn()
         .mockResolvedValueOnce(
           jsonResponse({
@@ -216,7 +217,7 @@ describe("TurboSign template signer roles", () => {
   describe("createEmbeddedSignature signing order with roles", () => {
     it("returns recipients in the template's signing order, not the order passed", async () => {
       // The template's roles sign client first; the API returns its signers in that order
-      (global as unknown as { fetch: jest.Mock }).fetch = jest
+      (global as unknown as { fetch: Mock }).fetch = vi
         .fn()
         .mockResolvedValueOnce(
           jsonResponse({
@@ -253,7 +254,7 @@ describe("TurboSign template signer roles", () => {
 
   describe("createEmbeddedSignature with a left-out role", () => {
     it("also mints an embed URL for the template's saved signer, in API order", async () => {
-      (global as unknown as { fetch: jest.Mock }).fetch = jest
+      (global as unknown as { fetch: Mock }).fetch = vi
         .fn()
         .mockResolvedValueOnce(
           jsonResponse({
@@ -288,7 +289,7 @@ describe("TurboSign template signer roles", () => {
     });
 
     it("gives the saved signer a null URL and pending status when it is not their turn", async () => {
-      (global as unknown as { fetch: jest.Mock }).fetch = jest
+      (global as unknown as { fetch: Mock }).fetch = vi
         .fn()
         .mockResolvedValueOnce(
           jsonResponse({
@@ -337,7 +338,7 @@ describe("TurboSign template signer roles", () => {
           },
         ],
       };
-      (global as unknown as { fetch: jest.Mock }).fetch = jest.fn().mockResolvedValue(jsonResponse({ data: summary }));
+      (global as unknown as { fetch: Mock }).fetch = vi.fn().mockResolvedValue(jsonResponse({ data: summary }));
 
       const result = await TurboSign.getTemplateSignatureSetup(TEMPLATE_ID);
 
@@ -347,7 +348,7 @@ describe("TurboSign template signer roles", () => {
     });
 
     it("URL-encodes the template id", async () => {
-      (global as unknown as { fetch: jest.Mock }).fetch = jest
+      (global as unknown as { fetch: Mock }).fetch = vi
         .fn()
         .mockResolvedValue(jsonResponse({ data: { templateId: "a/b", roles: [] } }));
 

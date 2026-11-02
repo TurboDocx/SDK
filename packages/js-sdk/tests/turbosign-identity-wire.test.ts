@@ -5,10 +5,11 @@
  * through smartUnwrap + the handler's `.results` unwrap. This is what catches a silent break if the
  * backend response shape or the client unwrap ever drifts.
  */
+import { type Mock, vi } from "vitest";
 import { TurboSign } from "../src/modules/sign";
 
 function mockFetchOnce(body: unknown, ok = true, status = 200): void {
-  (global as unknown as { fetch: jest.Mock }).fetch = jest.fn().mockResolvedValue({
+  (global as unknown as { fetch: Mock }).fetch = vi.fn().mockResolvedValue({
     ok,
     status,
     statusText: ok ? "OK" : "Error",
