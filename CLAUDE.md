@@ -28,6 +28,8 @@ packages/
 
 Root-level shortcuts (JS only): `npm run build:js`, `npm run test:js`
 
+js-sdk lint: `npm run lint:ci` (Oxlint, every rule category on, configured in `packages/js-sdk/.oxlintrc.json`). Code that predates a rule is listed in `.oxlint-baseline.json`; after fixing it, `npm run lint:baseline` shrinks the list, and it refuses to grow it.
+
 ## Commit Format
 
 ```

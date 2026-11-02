@@ -95,3 +95,6 @@ test-php-sdk/
 
 # Compiled CLI binary (build artifact — do not commit)
 packages/cli/cli
+
+# Temporary config written by packages/js-sdk/scripts/oxlint-baseline.mjs
+.oxlintrc.unbaselined.json
