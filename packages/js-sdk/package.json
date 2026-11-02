@@ -20,7 +20,10 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "lint": "echo 'add eslint here'",
+    "lint": "oxlint .",
+    "lint:types": "oxlint --type-aware .",
+    "lint:ci": "node scripts/oxlint-baseline.mjs --check",
+    "lint:baseline": "node scripts/oxlint-baseline.mjs",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -54,6 +57,8 @@
     "@types/node": "^26.1.2",
     "dotenv": "17.4.2",
     "jest": "^30.4.2",
+    "oxlint": "1.89.0",
+    "oxlint-tsgolint": "7.0.2005",
     "ts-jest": "^29.4.12",
     "tsrs": "0.20.0-ts7.1.0-beta",
     "typescript": "^6.0.3"
