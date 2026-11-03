@@ -63,7 +63,9 @@ jobs:
 
   test-py:
     name: Test Python SDK
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest is now 26.04, and actions/setup-python has no Python 3.9 build for it
+    # (3.9 builds exist for 22.04 and 24.04 only). 3.9 is the declared floor, so keep testing it.
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: packages/py-sdk
