@@ -16,6 +16,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "typecheck": "tsrs --noEmit -p tsconfig.json --checkers 4",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -54,6 +55,7 @@
     "dotenv": "17.4.2",
     "jest": "^30.4.2",
     "ts-jest": "^29.4.12",
+    "tsrs": "0.20.0-ts7.1.0-beta",
     "typescript": "^6.0.3"
   },
   "overrides": {

@@ -29,7 +29,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "jest",
     "test:watch": "jest --watch",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsrs --noEmit -p tsconfig.json --checkers 4",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -76,6 +76,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "ts-jest": "29.4.12",
+    "tsrs": "0.20.0-ts7.1.0-beta",
     "typescript": "6.0.3"
   },
   "overrides": {
