@@ -21,9 +21,14 @@ from typing import Any, Dict, List, Optional, Union
 from urllib.parse import quote
 
 import httpx
+from typing_extensions import Literal
 
 from ..http import HttpClient, NetworkError, TurboDocxError, ValidationError
 from ..utils.client_context import ClientContext
+
+# How the embedded signing page shows its page navigation (``create_signing_url``'s
+# ``page_navigation``): "auto" (default, sized to the iframe width), "collapsed" or "hidden".
+PageNavigationMode = Literal["auto", "collapsed", "hidden"]
 
 # Shorthand field key -> the concrete signature field type it emits plus its default size.
 # Note ``initials`` maps to the ``initial`` field type -- that is the literal in the field-type
@@ -903,6 +908,7 @@ class TurboSign:
         external_id: Optional[str] = None,
         identity_assertion: Optional[Dict[str, Any]] = None,
         return_url: Optional[str] = None,
+        page_navigation: Optional[PageNavigationMode] = None,
     ) -> Dict[str, Any]:
         """
         Mint an embedded signing URL for one recipient.
@@ -930,6 +936,13 @@ class TurboSign:
                 ``overrideEmailMatching`` (True skips the subjectEmail-equals-recipient
                 check; recorded on the audit trail).
             return_url: Where TurboSign returns the signer after completion. Must be https.
+            page_navigation: How the embedded signing page shows its page navigation when
+                loaded in an iframe. ``"auto"`` (default) sizes it to the iframe width: the
+                thumbnail rail is open at 1200px and wider, collapsed from 900px to 1199px, and
+                a "Pages" button in the bottom bar under 900px. ``"collapsed"`` starts the rail
+                collapsed at any width (the signer can still expand it). ``"hidden"`` shows no
+                rail and no "Pages" button. Applies to this issuance only: a later call without
+                it (or with ``"auto"``) resets to ``"auto"``. Sent as ``pageNavigation``.
 
         Returns:
             Dict with the signing URL and its metadata (camelCase, straight from the API):
@@ -982,6 +995,8 @@ class TurboSign:
             body["identityAssertion"] = identity_assertion
         if return_url:
             body["returnUrl"] = return_url
+        if page_navigation:
+            body["pageNavigation"] = page_navigation
 
         client = cls._get_client()
         # The endpoint replies { data: { results } }. The HTTP client strips the outer `data`,
@@ -1052,6 +1067,7 @@ class TurboSign:
         fields: Optional[List[Dict[str, Any]]] = None,
         send_email: Optional[bool] = None,
         return_url: Optional[str] = None,
+        page_navigation: Optional[PageNavigationMode] = None,
     ) -> Dict[str, Any]:
         """
         Create a signature request AND mint a per-recipient embedded signing URL in ONE call.
@@ -1078,6 +1094,7 @@ class TurboSign:
             - ``signing_order`` defaults to each recipient's index + 1.
             - ``send_email`` defaults to False (you own the UX; forwarded to the backend).
             - ``return_url`` is passed through to each embed URL only when provided (https).
+              ``page_navigation`` is passed through the same way.
 
         Turn-aware: with a real (sequential) signing order the backend only mints a URL for
         the signer whose turn it is. Rather than throw the whole call away, each result
@@ -1114,6 +1131,8 @@ class TurboSign:
                 the signing-link emails (and the initial CC notice) are suppressed. Passcode
                 and completed-copy emails are still sent.
             return_url: Optional https completion fallback, passed to each embed URL.
+            page_navigation: Optional ``"auto"`` | ``"collapsed"`` | ``"hidden"``, passed to
+                each embed URL (see :meth:`create_signing_url`).
 
         Returns:
             Dict with:
@@ -1262,6 +1281,7 @@ class TurboSign:
                     document_id,
                     recipient_id=recipient_id,
                     return_url=return_url,
+                    page_navigation=page_navigation,
                 )
                 results.append({
                     "recipientId": recipient_id,

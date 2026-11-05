@@ -146,7 +146,8 @@ function embeddedIdentityExample(): void
                 //     verifiedName: 'Jane Doe',
                 //     evidenceUrl: 'https://capa.example.com/verifications/capa_verif_8f2a91',
                 // ),
-                returnUrl: 'https://app.yourcompany.com/signed' // where the signer returns after signing (https)
+                returnUrl: 'https://app.yourcompany.com/signed', // where the signer returns after signing (https)
+                // pageNavigation: \TurboDocx\Types\PageNavigation::COLLAPSED, // page thumbnails in the iframe: AUTO (default) | COLLAPSED | HIDDEN
             )
         );
 

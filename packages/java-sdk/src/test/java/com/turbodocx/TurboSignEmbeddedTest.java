@@ -617,6 +617,73 @@ class TurboSignEmbeddedTest {
     }
 
     @Test
+    @DisplayName("PageNavigation has the three wire values")
+    void pageNavigationValues() {
+        assertEquals(3, PageNavigation.values().length);
+        assertEquals("auto", PageNavigation.AUTO.getValue());
+        assertEquals("collapsed", PageNavigation.COLLAPSED.getValue());
+        assertEquals("hidden", PageNavigation.HIDDEN.getValue());
+    }
+
+    @Test
+    @DisplayName("createSigningUrl sends pageNavigation when set and omits it otherwise")
+    void createSigningUrlPageNavigation() throws Exception {
+        enqueueJson(signingUrlEnvelope("rec-1", "https://app/sign/doc-1?token=AT", null));
+        client.turboSign().createSigningUrl(
+                "doc-1",
+                new CreateSigningUrlRequest.Builder()
+                        .recipientId("rec-1")
+                        .pageNavigation(PageNavigation.COLLAPSED)
+                        .build());
+        JsonObject withMode = takeBody();
+        assertEquals("collapsed", withMode.get("pageNavigation").getAsString());
+        assertEquals("rec-1", withMode.get("recipientId").getAsString());
+
+        enqueueJson(signingUrlEnvelope("rec-1", "https://app/sign/doc-1?token=AT", null));
+        client.turboSign().createSigningUrl(
+                "doc-1", new CreateSigningUrlRequest.Builder().recipientId("rec-1").build());
+        assertFalse(takeBody().has("pageNavigation"), "unset pageNavigation must be omitted");
+    }
+
+    @Test
+    @DisplayName("createSigningUrl keeps pageNavigation when it strips an empty returnUrl")
+    void createSigningUrlEmptyReturnUrlKeepsPageNavigation() throws Exception {
+        enqueueJson(signingUrlEnvelope("rec-1", "https://app/sign/doc-1?token=AT", null));
+        client.turboSign().createSigningUrl(
+                "doc-1",
+                new CreateSigningUrlRequest.Builder()
+                        .recipientId("rec-1")
+                        .returnUrl("")
+                        .pageNavigation(PageNavigation.HIDDEN)
+                        .build());
+        JsonObject body = takeBody();
+        assertFalse(body.has("returnUrl"));
+        assertEquals("hidden", body.get("pageNavigation").getAsString());
+    }
+
+    @Test
+    @DisplayName("createEmbeddedSignature forwards pageNavigation and returnUrl to the signing-url call")
+    void createEmbeddedSignatureForwardsPageNavigation() throws Exception {
+        enqueueJson(sendEnvelope("doc-11", new String[][]{{"rec-1", "Alice", "alice@example.com"}}));
+        enqueueJson(signingUrlEnvelope("rec-1", "https://app/sign/doc-11?token=A", null));
+
+        client.turboSign().createEmbeddedSignature(new CreateEmbeddedSignatureRequest.Builder()
+                .templateId("tmpl-1")
+                .recipients(Collections.singletonList(
+                        new EmbeddedSignatureRecipient.Builder()
+                                .name("Alice").email("alice@example.com").build()))
+                .returnUrl("https://app.example.com/done")
+                .pageNavigation(PageNavigation.HIDDEN)
+                .build());
+
+        server.takeRequest(); // sendSignature
+        JsonObject signing = takeBody();
+        assertEquals("rec-1", signing.get("recipientId").getAsString());
+        assertEquals("https://app.example.com/done", signing.get("returnUrl").getAsString());
+        assertEquals("hidden", signing.get("pageNavigation").getAsString());
+    }
+
+    @Test
     @DisplayName("createEmbeddedSignature fails fast with PhoneRequiredForSmsOtp for an SMS-OTP recipient with no phone, before any HTTP call")
     void createEmbeddedSignatureSmsWithoutPhoneFailsFast() {
         // SMS auth with a null phone number → identityVerification otp/sms but no resolvable phone.

@@ -138,6 +138,7 @@ public class TurboSignEmbeddedIdentity {
                     //     .evidenceUrl("https://capa.example.com/verifications/capa_verif_8f2a91")
                     //     .build())
                     .returnUrl("https://app.yourcompany.com/signed") // where the signer returns after signing (https)
+                    // .pageNavigation(PageNavigation.COLLAPSED) // page thumbnails in the iframe: AUTO (default) | COLLAPSED | HIDDEN
                     .build()
             );
 

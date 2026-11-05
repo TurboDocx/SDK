@@ -117,6 +117,7 @@ async function embeddedIdentityExample() {
     //   evidenceUrl: 'https://capa.example.com/verifications/capa_verif_8f2a91',
     // },
     returnUrl: 'https://app.yourcompany.com/signed', // where the signer returns after signing (https)
+    // pageNavigation: 'collapsed', // page thumbnails in the iframe: 'auto' (default) | 'collapsed' | 'hidden'
   });
 
   console.log('Open this URL for the signer (new tab, redirect, or iframe):');

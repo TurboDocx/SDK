@@ -53,6 +53,11 @@ const embedUrl = recipients[0].embedUrl;
 For an existing document, mint a fresh URL per signer with `TurboSign.createSigningUrl(documentId, { recipientId })`
 (or `{ externalId }`). Use `embedUrl` exactly as the SDK returns it; it is an `/e-signature/embed/...` URL.
 
+To control the signing page's page-thumbnail navigation inside your iframe, pass `pageNavigation` when you
+mint the URL (to `createSigningUrl` or `createEmbeddedSignature`): `'auto'` (the default, sized to the
+iframe width), `'collapsed'` (the rail starts collapsed; the signer can still open it) or `'hidden'` (no
+rail and no Pages button). It is set server-side per URL, so the widget has no prop for it.
+
 **API key role:** the key must belong to an **Administrator** or **Contributor**. The signing-url
 endpoint rejects User-role keys with `403`.
 

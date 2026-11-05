@@ -89,7 +89,26 @@ type CreateSigningURLRequest struct {
 	IdentityAssertion *IdentityAssertion `json:"identityAssertion,omitempty"`
 	// ReturnURL is where TurboSign returns the signer after completion (https only).
 	ReturnURL string `json:"returnUrl,omitempty"`
+	// PageNavigation is how the embedded signing page shows its page navigation when loaded in
+	// an iframe. Empty sends nothing (the API uses auto). Applies to this issuance only: a later
+	// call without it, or with PageNavigationAuto, resets to auto.
+	PageNavigation PageNavigationMode `json:"pageNavigation,omitempty"`
 }
+
+// PageNavigationMode is how the embedded signing page shows its page navigation (the
+// page-thumbnail rail and the "Pages" button) when the signing URL is loaded in an iframe.
+type PageNavigationMode string
+
+const (
+	// PageNavigationAuto (the default) sizes the navigation to the iframe width: the thumbnail rail
+	// is open at 1200px and wider, collapsed from 900px to 1199px, and a "Pages" button in the
+	// bottom bar under 900px.
+	PageNavigationAuto PageNavigationMode = "auto"
+	// PageNavigationCollapsed starts the rail collapsed at any width. The signer can still expand it.
+	PageNavigationCollapsed PageNavigationMode = "collapsed"
+	// PageNavigationHidden shows no rail and no "Pages" button.
+	PageNavigationHidden PageNavigationMode = "hidden"
+)
 
 // CreateSigningURLResponse is the embedded signing URL and its metadata: the reusable signing link
 // for otp / no-verification recipients, or a single-use link for external_idv / override recipients.
@@ -216,6 +235,9 @@ type CreateEmbeddedSignatureRequest struct {
 	SendEmail *bool
 	// ReturnURL is an optional completion fallback (https). Passed to each embed URL when set.
 	ReturnURL string
+	// PageNavigation is how each embedded signing page shows its page navigation. Passed to each
+	// embed URL when set.
+	PageNavigation PageNavigationMode
 }
 
 // EmbeddedSignatureRecipientResult is one resolved signer in a CreateEmbeddedSignatureResponse.
@@ -348,7 +370,8 @@ func expandRecipientFields(recipient EmbeddedSignatureRecipient) []Field {
 //
 // Provide exactly one of RecipientID or ExternalID (both or neither is a client-side
 // ValidationError). IdentityAssertion is only for external_idv recipients; ReturnURL, when set,
-// must be an https URL.
+// must be an https URL. PageNavigation optionally sets how the embedded page shows its page
+// navigation (PageNavigationAuto, PageNavigationCollapsed or PageNavigationHidden).
 func (c *TurboSignClient) CreateSigningURL(ctx context.Context, documentID string, req *CreateSigningURLRequest) (*CreateSigningURLResponse, error) {
 	// Fail fast with actionable messages; the server still enforces everything.
 	selectorCount := 0
@@ -418,7 +441,7 @@ func (c *TurboSignClient) GetEmbeddedSigningSettings(ctx context.Context) (*Embe
 //     Fields to override the shorthand with full field control.
 //   - SigningOrder defaults to each recipient's index + 1.
 //   - SendEmail defaults to false (you own the UX; forwarded to the backend).
-//   - ReturnURL is passed through to each embed URL only when provided.
+//   - ReturnURL and PageNavigation are passed through to each embed URL only when provided.
 //
 // Turn-aware: with a real (sequential) signing order the backend only mints a URL for the signer
 // whose turn it is. Rather than throw the whole call away, each result carries a Status:
@@ -585,7 +608,7 @@ func (c *TurboSignClient) CreateEmbeddedSignature(ctx context.Context, req *Crea
 		// whose turn hasn't come (RecipientNotInTurn / NotSignersTurn) or who already signed
 		// (RecipientAlreadySigned). Those are expected states, not failures — degrade to an empty
 		// URL + status so the caller can mint the URL later. Any OTHER error propagates.
-		signingReq := &CreateSigningURLRequest{RecipientID: recipientID}
+		signingReq := &CreateSigningURLRequest{RecipientID: recipientID, PageNavigation: req.PageNavigation}
 		if req.ReturnURL != "" {
 			signingReq.ReturnURL = req.ReturnURL
 		}

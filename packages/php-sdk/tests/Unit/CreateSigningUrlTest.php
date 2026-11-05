@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use TurboDocx\Exceptions\ValidationException;
 use TurboDocx\TurboSign;
 use TurboDocx\Types\IdentityAssertion;
+use TurboDocx\Types\PageNavigation;
 use TurboDocx\Types\Requests\CreateSigningUrlRequest;
 
 /**
@@ -105,6 +106,26 @@ final class CreateSigningUrlTest extends TestCase
         $body = $this->capturedJsonBody();
         $this->assertArrayNotHasKey('returnUrl', $body);
         $this->assertSame('r1', $body['recipientId']);
+    }
+
+    public function testSendsPageNavigationWhenGiven(): void
+    {
+        $this->injectTurboSignClient([
+            new Response(200, [], (string) json_encode([
+                'data' => ['results' => [
+                    'url' => 'https://sign.turbodocx.com/embed/abc',
+                    'recipientId' => 'r1',
+                    'pendingChecks' => [],
+                ]],
+            ])),
+        ], captureHistory: true);
+
+        TurboSign::createSigningUrl('doc-1', new CreateSigningUrlRequest(
+            recipientId: 'r1',
+            pageNavigation: PageNavigation::COLLAPSED,
+        ));
+
+        $this->assertSame(['recipientId' => 'r1', 'pageNavigation' => 'collapsed'], $this->capturedJsonBody());
     }
 
     // ---- Success path: double-envelope unwrap ----------------------------------------------

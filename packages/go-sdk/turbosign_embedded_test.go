@@ -175,6 +175,42 @@ func TestTurboSignClient_CreateSigningURL(t *testing.T) {
 		assert.Len(t, minimal, 4, "an unenriched assertion sends only the four required keys")
 	})
 
+	// PageNavigation is sent as pageNavigation when set and omitted when empty.
+	t.Run("sends pageNavigation only when set", func(t *testing.T) {
+		var bodies []map[string]interface{}
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var body map[string]interface{}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			bodies = append(bodies, body)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(okSigningResults("https://sign.example.com/embed/abc"))
+		}))
+		defer server.Close()
+
+		client := newEmbeddedTestClient(t, server.URL)
+		_, err := client.TurboSign.CreateSigningURL(context.Background(), "doc-1", &CreateSigningURLRequest{
+			RecipientID:    "rec-1",
+			PageNavigation: PageNavigationCollapsed,
+		})
+		require.NoError(t, err)
+		_, err = client.TurboSign.CreateSigningURL(context.Background(), "doc-1", &CreateSigningURLRequest{
+			RecipientID: "rec-1",
+		})
+		require.NoError(t, err)
+
+		require.Len(t, bodies, 2)
+		assert.Equal(t, map[string]interface{}{"recipientId": "rec-1", "pageNavigation": "collapsed"}, bodies[0])
+		_, has := bodies[1]["pageNavigation"]
+		assert.False(t, has, "unset PageNavigation must be omitted")
+	})
+
+	// The typed constants carry exactly the three wire values.
+	t.Run("PageNavigationMode constants", func(t *testing.T) {
+		assert.Equal(t, PageNavigationMode("auto"), PageNavigationAuto)
+		assert.Equal(t, PageNavigationMode("collapsed"), PageNavigationCollapsed)
+		assert.Equal(t, PageNavigationMode("hidden"), PageNavigationHidden)
+	})
+
 	// A non-https returnUrl is rejected client-side.
 	t.Run("rejects non-https returnUrl", func(t *testing.T) {
 		client := newEmbeddedTestClient(t, "https://unused.example.com")
@@ -258,6 +294,8 @@ type embeddedServerConfig struct {
 	signingResponder func(recipientID string) (int, map[string]interface{})
 	// captureSend, when non-nil, receives the decoded send-signature form body for assertions.
 	captureSend func(body map[string]interface{})
+	// captureSigning, when non-nil, receives each decoded signing-url JSON body.
+	captureSigning func(body map[string]interface{})
 }
 
 func newEmbeddedWrapperServer(t *testing.T, cfg embeddedServerConfig) *httptest.Server {
@@ -291,6 +329,9 @@ func newEmbeddedWrapperServer(t *testing.T, cfg embeddedServerConfig) *httptest.
 		case strings.HasSuffix(r.URL.Path, "/signing-url"):
 			var body map[string]interface{}
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			if cfg.captureSigning != nil {
+				cfg.captureSigning(body)
+			}
 			recipientID, _ := body["recipientId"].(string)
 			status, payload := cfg.signingResponder(recipientID)
 			w.WriteHeader(status)
@@ -356,6 +397,33 @@ func TestTurboSignClient_CreateEmbeddedSignature(t *testing.T) {
 		// Embedded default suppresses recipient emails; the multipart send carries sendEmail=false.
 		require.NotNil(t, sentBody)
 		assert.Equal(t, "false", sentBody["sendEmail"])
+	})
+
+	// PageNavigation (like ReturnURL) is forwarded to each signing-url call.
+	t.Run("forwards PageNavigation and ReturnURL to the signing-url call", func(t *testing.T) {
+		var signingBody map[string]interface{}
+		server := newEmbeddedWrapperServer(t, embeddedServerConfig{
+			sentRecipients: []map[string]string{{"id": "rec-1", "email": "a@example.com", "name": "A"}},
+			captureSigning: func(body map[string]interface{}) { signingBody = body },
+			signingResponder: func(recipientID string) (int, map[string]interface{}) {
+				return http.StatusOK, okSigningResults("https://sign.example.com/embed/1")
+			},
+		})
+		defer server.Close()
+
+		client := newEmbeddedTestClient(t, server.URL)
+		_, err := client.TurboSign.CreateEmbeddedSignature(context.Background(), &CreateEmbeddedSignatureRequest{
+			File:           []byte("pdf"),
+			Recipients:     []EmbeddedSignatureRecipient{{Name: "A", Email: "a@example.com"}},
+			ReturnURL:      "https://app.example.com/done",
+			PageNavigation: PageNavigationHidden,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]interface{}{
+			"recipientId":    "rec-1",
+			"returnUrl":      "https://app.example.com/done",
+			"pageNavigation": "hidden",
+		}, signingBody)
 	})
 
 	// Cross-language consistency: with no top-level Fields and no recipient shorthand, the

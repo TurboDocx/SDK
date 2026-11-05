@@ -126,6 +126,7 @@ async def embedded_identity_example():
         #     "evidenceUrl": "https://capa.example.com/verifications/capa_verif_8f2a91",
         # },
         return_url="https://app.yourcompany.com/signed",  # where the signer returns after signing (https)
+        # page_navigation="collapsed",  # page thumbnails in the iframe: "auto" (default) | "collapsed" | "hidden"
     )
 
     print("Open this URL for the signer (new tab, redirect, or iframe):")

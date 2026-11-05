@@ -361,6 +361,14 @@ the full runnable example — a host web-app that collects the signer's email, d
 simulated external identity verification), and completes via postMessage — in
 [`examples/embedded-web-app`](./examples/embedded-web-app).
 
+`createSigningUrl` (and `createEmbeddedSignature`) also take an optional `pageNavigation` that sets how the
+signing page shows its page thumbnails in your iframe: `auto` (the default) sizes it to the iframe width
+(the thumbnail rail is open at 1200px and wider, collapsed from 900px to 1199px, and a "Pages" button in the
+bottom bar under 900px), `collapsed` starts the rail collapsed at any width (the signer can still open it),
+and `hidden` shows no rail and no Pages button. It applies to that URL only. Python and Ruby name it
+`page_navigation`; Go uses `PageNavigation` with the `PageNavigationAuto` / `PageNavigationCollapsed` /
+`PageNavigationHidden` constants; PHP and Java use the `PageNavigation` enum.
+
 ### Field Types
 
 | Type | Description |

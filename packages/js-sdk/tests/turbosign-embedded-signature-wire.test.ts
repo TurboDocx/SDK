@@ -381,4 +381,36 @@ describe("TurboSign.createEmbeddedSignature — real wire contract", () => {
       })
     ).rejects.toMatchObject({ code: "EmbeddedRecipientNotReturned" });
   });
+  it("forwards pageNavigation (and returnUrl) to the createSigningUrl call, and omits it when not given", async () => {
+    const ok = (body: unknown) => ({
+      ok: true, status: 200, statusText: "OK", headers: { get: () => "application/json" },
+      json: async () => body,
+      text: async () => "",
+    });
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce(ok(sendEnvelope("doc-9", [{ id: "rec-1", name: "Alice", email: "alice@example.com" }])))
+      .mockResolvedValueOnce(ok(signingUrlEnvelope("rec-1", "https://app/sign/doc-9?token=A", null)))
+      .mockResolvedValueOnce(ok(sendEnvelope("doc-10", [{ id: "rec-2", name: "Bob", email: "bob@example.com" }])))
+      .mockResolvedValueOnce(ok(signingUrlEnvelope("rec-2", "https://app/sign/doc-10?token=B", null)));
+    (global as unknown as { fetch: jest.Mock }).fetch = fetchMock;
+
+    await TurboSign.createEmbeddedSignature({
+      templateId: "tmpl-1",
+      recipients: [{ name: "Alice", email: "alice@example.com" }],
+      returnUrl: "https://app.example.com/done",
+      pageNavigation: "hidden",
+    });
+    expect(bodyOf(1)).toEqual({
+      recipientId: "rec-1",
+      returnUrl: "https://app.example.com/done",
+      pageNavigation: "hidden",
+    });
+
+    await TurboSign.createEmbeddedSignature({
+      templateId: "tmpl-1",
+      recipients: [{ name: "Bob", email: "bob@example.com" }],
+    });
+    expect(bodyOf(3)).toEqual({ recipientId: "rec-2" });
+  });
 });

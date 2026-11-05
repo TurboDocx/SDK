@@ -214,6 +214,35 @@ class TestCreateSigningUrl:
             assert result["url"] == "https://app/sign/doc-flat?t=X"
 
     @pytest.mark.asyncio
+    async def test_sends_page_navigation_when_given_and_omits_it_otherwise(self):
+        """page_navigation maps to camelCase pageNavigation; left out when not given."""
+        with patch.object(TurboSign, "_get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.post = AsyncMock(
+                return_value=_signing_url_envelope("https://app/sign/doc-1", "rec-1")
+            )
+            mock_get_client.return_value = mock_client
+            TurboSign.configure(api_key="k", org_id="o", sender_email="s@example.com")
+
+            await TurboSign.create_signing_url(
+                "doc-1", recipient_id="rec-1", page_navigation="collapsed"
+            )
+            assert mock_client.post.call_args[1]["data"] == {
+                "recipientId": "rec-1",
+                "pageNavigation": "collapsed",
+            }
+
+            await TurboSign.create_signing_url("doc-1", recipient_id="rec-1")
+            assert "pageNavigation" not in mock_client.post.call_args[1]["data"]
+
+    def test_page_navigation_mode_is_typed_to_the_three_values(self):
+        from typing_extensions import get_args
+
+        from turbodocx_sdk import PageNavigationMode
+
+        assert get_args(PageNavigationMode) == ("auto", "collapsed", "hidden")
+
+    @pytest.mark.asyncio
     async def test_rejects_non_https_return_url(self):
         """Should raise ValidationError (code InvalidReturnUrl) for a non-https return_url."""
         with patch.object(TurboSign, "_get_client") as mock_get_client:
@@ -336,6 +365,35 @@ class TestCreateEmbeddedSignature:
             assert sent_fields[2]["template"]["size"] == {"width": 50, "height": 30}   # initials
             assert sent_fields[3]["template"]["size"] == {"width": 150, "height": 30}  # fullName
             assert sent_fields[3]["template"]["anchor"] == "{fullName1}"
+
+    @pytest.mark.asyncio
+    async def test_forwards_page_navigation_and_return_url_to_each_signing_url_call(self):
+        """page_navigation (like return_url) is passed through to create_signing_url."""
+        with patch.object(TurboSign, "_get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.upload_file = AsyncMock(
+                return_value=_send_envelope(
+                    "doc-1", [{"id": "rec-1", "name": "John", "email": "john@example.com"}]
+                )
+            )
+            mock_client.post = AsyncMock(
+                return_value=_signing_url_envelope("https://app/sign/doc-1?t=JOHN", "rec-1")
+            )
+            mock_get_client.return_value = mock_client
+            TurboSign.configure(api_key="k", org_id="o", sender_email="s@example.com")
+
+            await TurboSign.create_embedded_signature(
+                file=b"%PDF-1.4 fake",
+                recipients=[{"name": "John", "email": "john@example.com"}],
+                return_url="https://app.example.com/done",
+                page_navigation="hidden",
+            )
+
+            assert mock_client.post.call_args[1]["data"] == {
+                "recipientId": "rec-1",
+                "returnUrl": "https://app.example.com/done",
+                "pageNavigation": "hidden",
+            }
 
     @pytest.mark.asyncio
     async def test_maps_sms_auth_to_channel_sms_and_sets_phone(self):
