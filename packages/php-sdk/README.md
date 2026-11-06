@@ -326,6 +326,35 @@ $result = TurboSign::sendSignature(
 - `getTemplateSignatureSetup` throws `NotFoundException` (404, code `SignatureSetupNotFound`) when the template has no saved signature setup, or is not a template in your organization.
 - `role` works the same way on `createSignatureReviewLink()` (`Recipient`) and `createEmbeddedSignature()` (`EmbeddedSignatureRecipient`).
 
+#### Anchored fields (template tags as signature fields)
+
+A template's saved setup can also hold **anchored fields**: a field tied to a tag such as
+`{ClientSign}` for one role, placed wherever that tag appears in the generated document.
+`getTemplateSignatureSetup()` lists them in `$setup->anchors` (`TemplateSignatureAnchor`, with
+`notFound` true when the template has no such tag) and each role's `anchoredFieldCount`. Add and
+remove them with an administrator or contributor API key:
+
+```php
+use TurboDocx\TurboSign;
+use TurboDocx\Types\SignatureFieldType;
+use TurboDocx\Types\Requests\AddTemplateSignatureAnchorRequest;
+
+$added = TurboSign::addTemplateSignatureAnchor(new AddTemplateSignatureAnchorRequest(
+    templateId: 'your-template-id',
+    roleKey: 'signer_1', // on a template with no signer yet, signer_1 creates the first one
+    type: SignatureFieldType::SIGNATURE,
+    anchor: '{ClientSign}',
+    size: ['width' => 150, 'height' => 40], // optional, also offset, placement, defaultValue, isReadonly
+));
+
+TurboSign::removeTemplateSignatureAnchor('your-template-id', $added->fieldId);
+```
+
+- A tag belongs to one role and holds one field: another role's tag, or a second field on a tag, is a `ConflictException` (409, `$e->errorCode` `AnchorOwnedByOtherRole` or `AnchorTagHasField`).
+- An unknown role or field id is a `NotFoundException` (404, `SignerRoleNotFound` / `SetupFieldNotFound`).
+- `$added->signatureSetup` is the saved setup as stored (an array), and `$added->tagBecameSignatureField` is true when the tag was not a signature field before.
+- A role send (`Recipient` `role`) brings the role's anchored fields with it. On a send without roles, pass `applySignatureSetup: true` to `SendSignatureRequest` or `CreateSignatureReviewLinkRequest`: each field you send with a `template` anchor matching an anchored field of the setup (same tag and type) is treated as that field, so it fits its tag and a tag missing from the document is skipped instead of failing the send. It needs `templateId` or `deliverableId`.
+
 #### Signing in your own app (`sendEmail: false` + `createSigningUrl()`)
 
 Set `sendEmail: false` to create the signature request without emailing anyone, then mint a signing URL for each signer with `createSigningUrl()` when they are ready to sign in your app. For a signer with an email/SMS passcode or no verification, the URL is their reusable signing link for the life of the document, so treat it like a password; `external_idv` and `override` signers get a single-use URL that expires in about 5 minutes. Embedded signing must be enabled for your organization; check with `TurboSign::getEmbeddedSigningSettings()->enabled`.

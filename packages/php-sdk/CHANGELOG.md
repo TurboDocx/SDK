@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Anchored fields on template signature setups: `TurboSign::addTemplateSignatureAnchor(AddTemplateSignatureAnchorRequest)` (`POST /turbosign/templates/{id}/signature-setup/anchors`) adds a field tied to a tag such as `{ClientSign}` for one signer role, and `TurboSign::removeTemplateSignatureAnchor($templateId, $fieldId)` (`DELETE .../anchors/{fieldId}`) removes it. Both need an administrator or contributor API key and return the saved setup (`AddTemplateSignatureAnchorResponse`, `RemoveTemplateSignatureAnchorResponse`). A tag owned by another role or already holding a field is a `ConflictException` (`AnchorOwnedByOtherRole` / `AnchorTagHasField`).
+- `TemplateSignatureSetup::$anchors` lists the setup's anchored fields (new `TemplateSignatureAnchor` type), and `TemplateSignatureRole::$anchoredFieldCount` counts them per role.
+- `SendSignatureRequest` and `CreateSignatureReviewLinkRequest` take an optional `applySignatureSetup`: on a send without signer roles, each field sent with a `template` anchor matching an anchored field of the template's setup is treated as that field, and a tag missing from the document is skipped. Forwarded when set (an explicit `false` too), left out otherwise.
+
 ## [0.9.0] - 2026-10-20
 
 ### Added
