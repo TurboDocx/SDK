@@ -151,10 +151,9 @@ public final class TurboSign {
      * @throws IOException on transport failure
      */
     public TemplateSignatureSetup getTemplateSignatureSetup(String templateId) throws IOException {
-        String encodedId = URLEncoder.encode(templateId, StandardCharsets.UTF_8).replace("+", "%20");
         // HttpClient auto-unwraps the { data: ... } response
         return httpClient.get(
-                "/turbosign/templates/" + encodedId + "/signature-setup",
+                "/turbosign/templates/" + encodePathSegment(templateId) + "/signature-setup",
                 TemplateSignatureSetup.class
         );
     }
@@ -759,12 +758,6 @@ public final class TurboSign {
     }
 
     /**
-     * Add {@code fileName} to an upload's form fields when it is non-empty. It is a form field,
-     * not the part's filename: the API stores it as the document's file name, whatever its
-     * extension, and checks the uploaded part's own extension. An empty one is left out, so the
-     * API falls back to the part's name.
-     */
-    /**
      * Forward {@code applySignatureSetup} on both send paths (JSON body and multipart form field).
      * Tested with != null, like sendEmail: an explicit false is sent, not dropped.
      */
@@ -774,6 +767,12 @@ public final class TurboSign {
         }
     }
 
+    /**
+     * Add {@code fileName} to an upload's form fields when it is non-empty. It is a form field,
+     * not the part's filename: the API stores it as the document's file name, whatever its
+     * extension, and checks the uploaded part's own extension. An empty one is left out, so the
+     * API falls back to the part's name.
+     */
     private static void putFileName(Map<String, String> formData, String fileName) {
         if (isPresent(fileName)) {
             formData.put("fileName", fileName);

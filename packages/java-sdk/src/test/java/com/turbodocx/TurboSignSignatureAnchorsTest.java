@@ -129,7 +129,7 @@ class TurboSignSignatureAnchorsTest {
         enqueue(200, "{\"data\":{\"templateId\":\"" + TEMPLATE_ID + "\",\"roles\":[{\"key\":\"signer_1\","
                 + "\"label\":\"Signer 1\",\"order\":1,\"hasSavedSigner\":false,\"fieldCount\":2,\"anchoredFieldCount\":1}],"
                 + "\"anchors\":[{\"fieldId\":\"f1\",\"roleKey\":\"signer_1\",\"type\":\"signature\",\"anchor\":\"{ClientSign}\","
-                + "\"placement\":\"replace\",\"offset\":{\"x\":0,\"y\":5},\"size\":{\"width\":120,\"height\":30},\"notFound\":false},"
+                + "\"placement\":\"replace\",\"offset\":{\"x\":0,\"y\":5},\"size\":{\"width\":120.5,\"height\":30},\"notFound\":false},"
                 + "{\"roleKey\":\"signer_1\",\"type\":\"date\",\"anchor\":\"{SignDate}\",\"placement\":\"after\",\"notFound\":true}]}}");
 
         TemplateSignatureSetup setup = client.turboSign().getTemplateSignatureSetup(TEMPLATE_ID);
@@ -146,7 +146,7 @@ class TurboSignSignatureAnchorsTest {
         assertEquals("replace", first.getPlacement());
         assertEquals(0, first.getOffset().getX());
         assertEquals(5, first.getOffset().getY());
-        assertEquals(120, first.getSize().getWidth());
+        assertEquals(120.5, first.getSize().getWidth()); // fractional sizes decode
         assertEquals(30, first.getSize().getHeight());
         assertFalse(first.isNotFound());
 

@@ -107,7 +107,7 @@ public class AddTemplateSignatureAnchorRequest {
             return this;
         }
 
-        /** The field type, e.g. {@code signature}, {@code initials}, {@code date}, {@code text}. */
+        /** The field type, e.g. {@code signature}, {@code initial}, {@code date}, {@code text}. */
         public Builder type(String type) {
             this.type = type;
             return this;

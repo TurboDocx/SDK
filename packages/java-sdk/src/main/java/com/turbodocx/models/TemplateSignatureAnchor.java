@@ -10,8 +10,8 @@ public class TemplateSignatureAnchor {
     private String type;
     private String anchor;
     private String placement;
-    private Field.Offset offset;
-    private Field.Size size;
+    private Offset offset;
+    private Size size;
     private boolean notFound;
 
     /**
@@ -42,17 +42,45 @@ public class TemplateSignatureAnchor {
     }
 
     /** Offset from the tag, or null when none is saved. */
-    public Field.Offset getOffset() {
+    public Offset getOffset() {
         return offset;
     }
 
     /** Field size, or null when none is saved. */
-    public Field.Size getSize() {
+    public Size getSize() {
         return size;
     }
 
     /** True when the template has no variable (Word/PowerPoint) or text (PDF) with this tag. */
     public boolean isNotFound() {
         return notFound;
+    }
+
+    /** A saved offset from the tag. Doubles: the API stores any number, not only integers. */
+    public static class Offset {
+        private double x;
+        private double y;
+
+        public double getX() {
+            return x;
+        }
+
+        public double getY() {
+            return y;
+        }
+    }
+
+    /** A saved field size. Doubles: the API stores any number, not only integers. */
+    public static class Size {
+        private double width;
+        private double height;
+
+        public double getWidth() {
+            return width;
+        }
+
+        public double getHeight() {
+            return height;
+        }
     }
 }

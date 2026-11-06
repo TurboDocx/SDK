@@ -762,7 +762,8 @@ type AddTemplateSignatureAnchorRequest struct {
 	Offset *AnchorOffset `json:"offset,omitempty"`
 	// Placement is replace, before, after, above or below. Empty leaves the server default.
 	Placement    string `json:"placement,omitempty"`
-	DefaultValue string `json:"defaultValue,omitempty"`
+	// A pointer so "" (clear the default) is sent, not dropped
+	DefaultValue *string `json:"defaultValue,omitempty"`
 	// IsReadonly locks the field. A read-only field needs a default value, its own or its role's.
 	// Nil leaves it out; an explicit false is sent.
 	IsReadonly *bool `json:"isReadonly,omitempty"`

@@ -188,10 +188,10 @@ func TestTurboSignClient_AddTemplateSignatureAnchor(t *testing.T) {
 		client := newEmbeddedTestClient(t, server.URL)
 		_, err := client.TurboSign.AddTemplateSignatureAnchor(context.Background(), &AddTemplateSignatureAnchorRequest{
 			TemplateID: rolesTemplateID, RoleKey: "signer_1", Type: "text", Anchor: "{Company}",
-			DefaultValue: "Acme", IsReadonly: BoolPtr(false),
+			DefaultValue: StringPtr(""), IsReadonly: BoolPtr(false),
 		})
 		require.NoError(t, err)
-		assert.Equal(t, "Acme", body["defaultValue"])
+		assert.Equal(t, "", body["defaultValue"]) // an empty default is sent, so it can clear one
 		assert.Equal(t, false, body["isReadonly"])
 		assert.NotContains(t, body, "templateId")
 		assert.NotContains(t, body, "size")
