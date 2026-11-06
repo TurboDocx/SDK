@@ -495,7 +495,7 @@ export interface Field {
     /** Alternative: search for any text in document */
     searchText?: string;
     /** Where to place field relative to anchor/searchText */
-    placement?: 'replace' | 'before' | 'after' | 'above' | 'below';
+    placement?: SignatureAnchorPlacement;
     /** Size of the field */
     size?: { width: number; height: number };
     /** Offset from anchor position */
@@ -708,7 +708,8 @@ export interface CreateSignatureReviewLinkRequest {
   /**
    * Treat each field you send with a `template.anchor` whose tag and type match an anchored field
    * of the template's saved signature setup as that field: it fits its tag, and a tag missing from
-   * the document is skipped instead of failing the send. Needs `templateId` or `deliverableId`.
+   * the document is skipped instead of failing the send. Only has an effect with `templateId` or
+   * `deliverableId` (the setup is read from that template, or from the deliverable's template).
    * Applies to a send that names no `recipients[].role`. Omit it to keep the default behaviour.
    */
   applySignatureSetup?: boolean;
@@ -782,7 +783,8 @@ export interface SendSignatureRequest {
   /**
    * Treat each field you send with a `template.anchor` whose tag and type match an anchored field
    * of the template's saved signature setup as that field: it fits its tag, and a tag missing from
-   * the document is skipped instead of failing the send. Needs `templateId` or `deliverableId`.
+   * the document is skipped instead of failing the send. Only has an effect with `templateId` or
+   * `deliverableId` (the setup is read from that template, or from the deliverable's template).
    * Applies to a send that names no `recipients[].role`. Omit it to keep the default behaviour.
    */
   applySignatureSetup?: boolean;
