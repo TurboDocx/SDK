@@ -20,9 +20,19 @@ public class CreateSignatureReviewLinkRequest {
     private final List<String> ccEmails;
     /** Per-document reminder + expiration overrides; null inherits the org defaults. */
     private final SignatureSchedule schedule;
+    /**
+     * Treat each field you send with a {@code template.anchor} whose tag and type match an anchored
+     * field of the template's saved signature setup as that field: it fits its tag, and a tag
+     * missing from the document is skipped instead of failing the send. Applies to a send that
+     * names no {@code recipients[].role}. Needs {@code templateId} or {@code deliverableId} (the API
+     * rejects a file upload together with {@code templateId}, so on an upload the flag has nothing
+     * to apply). Null keeps the default behaviour; {@code false} is forwarded rather than dropped.
+     */
+    private final Boolean applySignatureSetup;
 
     private CreateSignatureReviewLinkRequest(Builder builder) {
         this.schedule = builder.schedule;
+        this.applySignatureSetup = builder.applySignatureSetup;
         this.file = builder.file;
         this.fileName = builder.fileName;
         this.fileLink = builder.fileLink;
@@ -89,6 +99,10 @@ public class CreateSignatureReviewLinkRequest {
         return schedule;
     }
 
+    public Boolean getApplySignatureSetup() {
+        return applySignatureSetup;
+    }
+
     public boolean hasFile() {
         return file != null && file.length > 0;
     }
@@ -107,6 +121,7 @@ public class CreateSignatureReviewLinkRequest {
         private String senderEmail;
         private List<String> ccEmails;
         private SignatureSchedule schedule;
+        private Boolean applySignatureSetup;
 
         public Builder file(byte[] file) {
             this.file = file;
@@ -177,6 +192,19 @@ public class CreateSignatureReviewLinkRequest {
         /** Per-document reminder + expiration overrides. Omit to inherit the org defaults. */
         public Builder schedule(SignatureSchedule schedule) {
             this.schedule = schedule;
+            return this;
+        }
+
+        /**
+         * Treat each field you send with a {@code template.anchor} whose tag and type match an anchored
+         * field of the template's saved signature setup as that field: it fits its tag, and a tag
+         * missing from the document is skipped instead of failing the send. Applies to a send that
+         * names no {@code recipients[].role}. Needs {@code templateId} or {@code deliverableId} (the API
+         * rejects a file upload together with {@code templateId}, so on an upload the flag has nothing
+         * to apply). Null keeps the default behaviour; {@code false} is forwarded rather than dropped.
+         */
+        public Builder applySignatureSetup(Boolean applySignatureSetup) {
+            this.applySignatureSetup = applySignatureSetup;
             return this;
         }
 

@@ -53,6 +53,8 @@ public final class TurboSign {
                 true
         );
 
+        putApplySignatureSetup(formData, request.getApplySignatureSetup());
+
         if (request.hasFile()) {
             putFileName(formData, request.getFileName());
             return httpClient.uploadFile(
@@ -103,6 +105,7 @@ public final class TurboSign {
         if (request.getSendEmail() != null) {
             formData.put("sendEmail", String.valueOf(request.getSendEmail()));
         }
+        putApplySignatureSetup(formData, request.getApplySignatureSetup());
 
         if (request.hasFile()) {
             putFileName(formData, request.getFileName());
@@ -154,6 +157,70 @@ public final class TurboSign {
                 "/turbosign/templates/" + encodedId + "/signature-setup",
                 TemplateSignatureSetup.class
         );
+    }
+
+    /**
+     * Add an anchored field to a template's saved signature setup: the field is placed on every
+     * occurrence of the tag (e.g. {@code {ClientSign}}) for one signer role. Requires an
+     * administrator or contributor API key. Sending the same type on the same tag for the same role
+     * again returns that field, updated with any {@code defaultValue} / {@code isReadonly} you send.
+     *
+     * <pre>{@code
+     * String fieldId = turboSign.addTemplateSignatureAnchor(new AddTemplateSignatureAnchorRequest.Builder()
+     *         .templateId(templateId).roleKey("signer_1").type("signature").anchor("{ClientSign}")
+     *         .build()).getFieldId();
+     * }</pre>
+     *
+     * @return the field's id and the saved setup
+     * @throws TurboDocxException.NotFoundException (404) {@code SignatureSetupNotFound},
+     *         {@code SignerRoleNotFound} or {@code TemplateNotFound}
+     * @throws TurboDocxException.ConflictException (409) {@code AnchorOwnedByOtherRole} (the tag
+     *         belongs to another role) or {@code AnchorTagHasField} (the tag already has a
+     *         different field)
+     * @throws TurboDocxException.ValidationException (400) e.g. {@code ReadonlyFieldNoDefaultValue},
+     *         or a malformed anchor
+     * @throws TurboDocxException (423, code {@code TemplateLocked}) when the template is locked
+     * @throws IOException on transport failure
+     */
+    public AddTemplateSignatureAnchorResponse addTemplateSignatureAnchor(AddTemplateSignatureAnchorRequest request)
+            throws IOException {
+        ResultsWrapper<AddTemplateSignatureAnchorResponse> wrapper = httpClient.post(
+                "/turbosign/templates/" + encodePathSegment(request.getTemplateId()) + "/signature-setup/anchors",
+                request.toBody(),
+                new TypeToken<ResultsWrapper<AddTemplateSignatureAnchorResponse>>() {}.getType()
+        );
+        return wrapper.results;
+    }
+
+    /**
+     * Remove an anchored field from a template's saved signature setup, by the {@code fieldId} that
+     * {@link #addTemplateSignatureAnchor} or {@link #getTemplateSignatureSetup} returned. Requires an
+     * administrator or contributor API key.
+     *
+     * @param templateId ID of the template
+     * @param fieldId    ID of the anchored field
+     * @return the saved setup without the field
+     * @throws TurboDocxException.NotFoundException (404) {@code SetupFieldNotFound} or
+     *         {@code SignatureSetupNotFound}
+     * @throws IOException on transport failure
+     */
+    public RemoveTemplateSignatureAnchorResponse removeTemplateSignatureAnchor(String templateId, String fieldId)
+            throws IOException {
+        ResultsWrapper<RemoveTemplateSignatureAnchorResponse> wrapper = httpClient.delete(
+                "/turbosign/templates/" + encodePathSegment(templateId) + "/signature-setup/anchors/"
+                        + encodePathSegment(fieldId),
+                new TypeToken<ResultsWrapper<RemoveTemplateSignatureAnchorResponse>>() {}.getType()
+        );
+        return wrapper.results;
+    }
+
+    /** The {@code { results: ... }} envelope the anchor routes return inside {@code data}. */
+    private static final class ResultsWrapper<T> {
+        private T results;
+    }
+
+    private static String encodePathSegment(String segment) {
+        return URLEncoder.encode(segment, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     /**
@@ -697,6 +764,16 @@ public final class TurboSign {
      * extension, and checks the uploaded part's own extension. An empty one is left out, so the
      * API falls back to the part's name.
      */
+    /**
+     * Forward {@code applySignatureSetup} on both send paths (JSON body and multipart form field).
+     * Tested with != null, like sendEmail: an explicit false is sent, not dropped.
+     */
+    private static void putApplySignatureSetup(Map<String, String> formData, Boolean applySignatureSetup) {
+        if (applySignatureSetup != null) {
+            formData.put("applySignatureSetup", String.valueOf(applySignatureSetup));
+        }
+    }
+
     private static void putFileName(Map<String, String> formData, String fileName) {
         if (isPresent(fileName)) {
             formData.put("fileName", fileName);

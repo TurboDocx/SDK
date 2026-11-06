@@ -312,6 +312,33 @@ SendSignatureResponse result = client.turboSign().sendSignature(
 - `role` works the same way on `createSignatureReviewLink` and, via `EmbeddedSignatureRecipient.Builder().role(...)`, on `createEmbeddedSignature`.
 - `new Recipient.Builder().role("client").name(...).email(...)` is the builder form, when you also need a phone or external id.
 
+#### Anchored fields (template tags as signature fields)
+
+A template's saved setup can also hold **anchored fields**: a field tied to a tag such as
+`{ClientSign}` for one role, placed wherever that tag appears in the generated document.
+`getTemplateSignatureSetup` lists them in `getAnchors()` (with `isNotFound()` true when the template
+has no such tag) and each role's `getAnchoredFieldCount()`. Add and remove them with an
+administrator or contributor API key:
+
+```java
+AddTemplateSignatureAnchorResponse added = client.turboSign().addTemplateSignatureAnchor(
+    new AddTemplateSignatureAnchorRequest.Builder()
+        .templateId("your-template-id")
+        .roleKey("signer_1") // on a template with no signer yet, signer_1 creates the first one
+        .type("signature")
+        .anchor("{ClientSign}")
+        .size(new Field.Size(150, 40)) // optional, also offset, placement, defaultValue, isReadonly
+        .build()
+);
+
+client.turboSign().removeTemplateSignatureAnchor("your-template-id", added.getFieldId());
+```
+
+- A tag belongs to one role and holds one field: another role's tag, or a second field on a tag, is a `TurboDocxException.ConflictException` (409, code `AnchorOwnedByOtherRole` or `AnchorTagHasField`).
+- An unknown role or field id is a `TurboDocxException.NotFoundException` (404, `SignerRoleNotFound` / `SetupFieldNotFound`).
+- `getSignatureSetup()` on both results is the saved setup as stored, as a `Map<String, Object>`.
+- A role send (`Recipient.withRole(...)`) brings the role's anchored fields with it. On a send without roles, call `.applySignatureSetup(true)` on the `SendSignatureRequest` or `CreateSignatureReviewLinkRequest` builder: each field you send with a `template.anchor` matching an anchored field of the setup (same tag and type) is treated as that field, so it fits its tag and a tag missing from the document is skipped instead of failing the send. It needs `templateId` or `deliverableId`.
+
 #### Embedded signing: `sendEmail(false)` + `createSigningUrl()`
 
 To show the signing page in your own app instead of emailing a link, send with `sendEmail(false)`, then mint each signer's URL with `createSigningUrl()` when they're ready to sign.
