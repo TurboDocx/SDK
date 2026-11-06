@@ -285,6 +285,30 @@ await TurboSign.sendSignature({
 - `getTemplateSignatureSetup` throws `NotFoundError` (404, code `SignatureSetupNotFound`) when the template has no saved signature setup, or is not a template in your organization.
 - `role` works the same way on `createSignatureReviewLink` and `createEmbeddedSignature`.
 
+#### Anchored fields (template tags as signature fields)
+
+A template's saved setup can also hold **anchored fields**: a field tied to a tag such as
+`{ClientSign}` for one role, placed wherever that tag appears in the generated document.
+`getTemplateSignatureSetup` lists them in `anchors` (with `notFound: true` when the template has no
+such tag) and each role's `anchoredFieldCount`. Add and remove them with an administrator or
+contributor API key:
+
+```typescript
+const { fieldId } = await TurboSign.addTemplateSignatureAnchor({
+  templateId: 'your-template-id',
+  roleKey: 'signer_1', // on a template with no signer yet, signer_1 creates the first one
+  type: 'signature',
+  anchor: '{ClientSign}',
+  size: { width: 150, height: 40 }, // optional, also offset, placement, defaultValue, isReadonly
+});
+
+await TurboSign.removeTemplateSignatureAnchor('your-template-id', fieldId);
+```
+
+- A tag belongs to one role and holds one field: another role's tag, or a second field on a tag, is a `ConflictError` (409, code `AnchorOwnedByOtherRole` or `AnchorTagHasField`).
+- An unknown role or field id is a `NotFoundError` (404, `SignerRoleNotFound` / `SetupFieldNotFound`).
+- A role send (`recipients[].role`) brings the role's anchored fields with it. On a send without roles, pass `applySignatureSetup: true` to `sendSignature` or `createSignatureReviewLink`: each field you send with a `template.anchor` matching an anchored field of the setup (same tag and type) is treated as that field, so it fits its tag and a tag missing from the document is skipped instead of failing the send.
+
 #### `sendReminder(documentId, recipientIds?)`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic
