@@ -16,9 +16,10 @@ final class TemplateSignatureRole
      * @param int $order Signing order of this role
      * @param bool $hasSavedSigner True when the template has a saved signer for this role, used if
      *     you leave the role out
-     * @param int $fieldCount How many fields are saved for this role
+     * @param int $fieldCount How many fields are saved for this role, placed and anchored
      * @param string|null $defaultName The saved signer's name (only when $hasSavedSigner)
      * @param string|null $defaultEmail The saved signer's email (only when $hasSavedSigner)
+     * @param int $anchoredFieldCount How many of those fields are anchored to a template tag
      */
     public function __construct(
         public string $key,
@@ -28,6 +29,7 @@ final class TemplateSignatureRole
         public int $fieldCount,
         public ?string $defaultName = null,
         public ?string $defaultEmail = null,
+        public int $anchoredFieldCount = 0,
     ) {}
 
     /**
@@ -43,6 +45,7 @@ final class TemplateSignatureRole
             fieldCount: (int) ($data['fieldCount'] ?? 0),
             defaultName: isset($data['defaultName']) ? (string) $data['defaultName'] : null,
             defaultEmail: isset($data['defaultEmail']) ? (string) $data['defaultEmail'] : null,
+            anchoredFieldCount: (int) ($data['anchoredFieldCount'] ?? 0),
         );
     }
 }

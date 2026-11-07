@@ -268,6 +268,32 @@ TurboDocxSdk::TurboSign.send_signature(
 - `get_template_signature_setup` throws `TurboDocxSdk::NotFoundError` (404, code `SignatureSetupNotFound`) when the template has no saved signature setup, or is not a template in your organization.
 - `role` works the same way on `create_signature_review_link` and `create_embedded_signature`.
 
+#### Anchored fields (template tags as signature fields)
+
+A template's saved setup can also hold **anchored fields**: a field tied to a tag such as
+`{ClientSign}` for one role, placed wherever that tag appears in the generated document.
+`get_template_signature_setup` lists them in `setup["anchors"]` (each with `"fieldId"`, `"roleKey"`,
+`"type"`, `"anchor"`, `"placement"`, optional `"offset"`/`"size"`, and `"notFound" => true` when the
+template has no such tag) and each role's `"anchoredFieldCount"`. Add and remove them with an
+administrator or contributor API key:
+
+```ruby
+result = TurboDocxSdk::TurboSign.add_template_signature_anchor(
+  templateId: "your-template-id",
+  roleKey: "signer_1", # on a template with no signer yet, signer_1 creates the first one
+  type: "signature",
+  anchor: "{ClientSign}",
+  size: { width: 150, height: 40 } # optional, also offset, placement, defaultValue, isReadonly
+)
+result["fieldId"] # also "signatureSetup" and "tagBecameSignatureField"
+
+TurboDocxSdk::TurboSign.remove_template_signature_anchor("your-template-id", result["fieldId"])
+```
+
+- A tag belongs to one role and holds one field: another role's tag, or a second field on a tag, raises `TurboDocxSdk::ConflictError` (409, `e.code` `AnchorOwnedByOtherRole` or `AnchorTagHasField`).
+- An unknown role or field id raises `TurboDocxSdk::NotFoundError` (404, `SignerRoleNotFound` / `SetupFieldNotFound`).
+- A role send (`recipients[].role`) brings the role's saved fields, anchored ones included, with no flag. On any send that passes its own fields by anchor, with or without roles, pass `applySignatureSetup: true` to `send_signature` or `create_signature_review_link` with a `templateId` or `deliverableId`: each field you send with a `template: { anchor: }` matching an anchored field of the setup (same tag and type) is treated as that field, so it fits its tag, centred on it, and a tag missing from the document is skipped instead of failing the send. Without the flag, your own anchor fields keep the standard placement and a tag missing from the document fails the send. An explicit `false` is sent as is; leave the key out for the default behaviour.
+
 #### `send_reminder(document_id, recipient_ids = nil)`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic
@@ -1413,6 +1439,12 @@ The API also returns more specific codes, passed through unchanged:
 | `SignerHasNoFields` | 400 | On a role send, a signer has no field to sign: neither the template nor your `fields` assigns one to them. Raised when sending (`send_signature`, embedded signing), not for a review link, where fields can be placed in the preview. |
 | `InvalidRecipient` | 400 | An entry in `recipients` is not an object (for example `null` or a string). |
 | `SignatureSetupNotFound` | 404 | `get_template_signature_setup` was called for a template with no saved signature setup, or one that is not in your organization. Thrown as `TurboDocxSdk::NotFoundError`. |
+| `SignerRoleNotFound` | 404 | `add_template_signature_anchor` named a `roleKey` that is not one of the template's roles. |
+| `SetupFieldNotFound` | 404 | `remove_template_signature_anchor` named a field id that is not in the signature setup. |
+| `AnchorOwnedByOtherRole` | 409 | The tag already belongs to another role. Thrown as `TurboDocxSdk::ConflictError`. |
+| `AnchorTagHasField` | 409 | The tag already holds a different field. Thrown as `TurboDocxSdk::ConflictError`. |
+| `ReadonlyFieldNoDefaultValue` | 400 | A read-only anchored field has no default value, its own or its role's. |
+| `TemplateLocked` | 423 | The template is locked and cannot be edited. Thrown as `TurboDocxSdk::TurboDocxError` with `status_code` 423. |
 | `QuoteHasNoLineItems` | 400 | The quote has no line items. Add at least one before sending. |
 | `QuoteExpired` | 400 | The quote is past its `validUntil` date. |
 | `QuoteValidUntilRequired` | 400 | The quote has no `validUntil` date set. |

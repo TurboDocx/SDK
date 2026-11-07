@@ -221,6 +221,18 @@ type CreateSignatureReviewLinkRequest struct {
 	SenderEmail         string
 	CCEmails            []string
 
+	// ApplySignatureSetup, on any send with or without Recipient.Role, treats each field you send
+	// with a Template.Anchor whose tag and type match an anchored field of the template's saved
+	// signature setup as that field: it fits its tag, centred on it, and a tag missing from the
+	// document is skipped instead of failing the send. When nil or false, your own anchor fields
+	// keep the standard placement and a missing tag fails the send; a role send still brings the
+	// role's saved fields regardless. Needs TemplateID or DeliverableID (the API rejects a File
+	// upload together with a templateId, so on the upload path the flag has nothing to apply).
+	// Leave nil to keep the default behaviour.
+	//
+	// A POINTER for the same reason as SendEmail: an explicit false is forwarded, nil is left out.
+	ApplySignatureSetup *bool
+
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
 	SignatureSchedule
 }
@@ -281,6 +293,18 @@ type SendSignatureRequest struct {
 	// check would drop it and silently let the backend email the recipients. Nil is not
 	// forwarded, so existing callers send a byte-identical request.
 	SendEmail *bool
+
+	// ApplySignatureSetup, on any send with or without Recipient.Role, treats each field you send
+	// with a Template.Anchor whose tag and type match an anchored field of the template's saved
+	// signature setup as that field: it fits its tag, centred on it, and a tag missing from the
+	// document is skipped instead of failing the send. When nil or false, your own anchor fields
+	// keep the standard placement and a missing tag fails the send; a role send still brings the
+	// role's saved fields regardless. Needs TemplateID or DeliverableID (the API rejects a File
+	// upload together with a templateId, so on the upload path the flag has nothing to apply).
+	// Leave nil to keep the default behaviour.
+	//
+	// A POINTER for the same reason as SendEmail: an explicit false is forwarded, nil is left out.
+	ApplySignatureSetup *bool
 
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
 	SignatureSchedule
@@ -544,6 +568,8 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 		formData["ccEmails"] = string(ccEmailsJSON)
 	}
 
+	setApplySignatureSetup(formData, req.ApplySignatureSetup)
+
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
 	if err := applyScheduleOverrides(formData, req.SignatureSchedule); err != nil {
 		return nil, err
@@ -629,6 +655,8 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 		formData["sendEmail"] = strconv.FormatBool(*req.SendEmail)
 	}
 
+	setApplySignatureSetup(formData, req.ApplySignatureSetup)
+
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
 	if err := applyScheduleOverrides(formData, req.SignatureSchedule); err != nil {
 		return nil, err
@@ -677,8 +705,41 @@ type TemplateSignatureRole struct {
 	DefaultName string `json:"defaultName,omitempty"`
 	// DefaultEmail is the saved signer's email (only when HasSavedSigner).
 	DefaultEmail string `json:"defaultEmail,omitempty"`
-	// FieldCount is how many fields are saved for this role.
+	// FieldCount is how many fields are saved for this role, placed and anchored.
 	FieldCount int `json:"fieldCount"`
+	// AnchoredFieldCount is how many of those fields are anchored to a template tag.
+	AnchoredFieldCount int `json:"anchoredFieldCount"`
+}
+
+// AnchorSize is an anchored field's width and height, in PDF points.
+type AnchorSize struct {
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+}
+
+// AnchorOffset moves an anchored field from its tag, in PDF points.
+type AnchorOffset struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+
+// TemplateSignatureAnchor is a field of a template's saved signature setup that is anchored to a
+// tag like "{ClientSign}".
+type TemplateSignatureAnchor struct {
+	// FieldID is the value to pass to RemoveTemplateSignatureAnchor (empty on older setups).
+	FieldID string `json:"fieldId,omitempty"`
+	// RoleKey is the key of the role that fills this field.
+	RoleKey string `json:"roleKey"`
+	// Type is the field type, e.g. "signature", "date", "text".
+	Type string `json:"type"`
+	// Anchor is the tag, in single braces.
+	Anchor string `json:"anchor"`
+	// Placement is where the field sits relative to its tag: replace, before, after, above, below.
+	Placement string        `json:"placement"`
+	Offset    *AnchorOffset `json:"offset,omitempty"`
+	Size      *AnchorSize   `json:"size,omitempty"`
+	// NotFound is true when the template has no variable (Word/PowerPoint) or text (PDF) with this tag.
+	NotFound bool `json:"notFound"`
 }
 
 // TemplateSignatureSetup is a template's signer roles, for sending it with Recipient.Role.
@@ -686,6 +747,47 @@ type TemplateSignatureSetup struct {
 	TemplateID string `json:"templateId"`
 	// Roles in signing order.
 	Roles []TemplateSignatureRole `json:"roles"`
+	// Anchors are the setup's anchored fields.
+	Anchors []TemplateSignatureAnchor `json:"anchors"`
+}
+
+// AddTemplateSignatureAnchorRequest is the request for AddTemplateSignatureAnchor.
+type AddTemplateSignatureAnchorRequest struct {
+	// TemplateID is the template to edit. It goes in the URL, not the body.
+	TemplateID string `json:"-"`
+	// RoleKey is the role's key, as listed by GetTemplateSignatureSetup. On a template with no
+	// signer yet, "signer_1" creates the first signer.
+	RoleKey string `json:"roleKey"`
+	// Type is the field type, e.g. "signature", "initial", "date", "text".
+	Type string `json:"type"`
+	// Anchor is one tag in single braces with no spaces, like "{ClientSign}".
+	Anchor string        `json:"anchor"`
+	Size   *AnchorSize   `json:"size,omitempty"`
+	Offset *AnchorOffset `json:"offset,omitempty"`
+	// Placement is replace, before, after, above or below. Empty leaves the server default.
+	Placement    string `json:"placement,omitempty"`
+	// A pointer so "" (clear the default) is sent, not dropped
+	DefaultValue *string `json:"defaultValue,omitempty"`
+	// IsReadonly locks the field. A read-only field needs a default value, its own or its role's.
+	// Nil leaves it out; an explicit false is sent.
+	IsReadonly *bool `json:"isReadonly,omitempty"`
+}
+
+// AddTemplateSignatureAnchorResponse is the result of AddTemplateSignatureAnchor.
+type AddTemplateSignatureAnchorResponse struct {
+	// FieldID is the anchored field's id.
+	FieldID string `json:"fieldId"`
+	// SignatureSetup is the template's saved signature setup as stored (roles, fields, ...).
+	SignatureSetup map[string]interface{} `json:"signatureSetup"`
+	// TagBecameSignatureField is true when the tag was not a signature field before; the
+	// template's own values for it were cleared.
+	TagBecameSignatureField bool `json:"tagBecameSignatureField"`
+}
+
+// RemoveTemplateSignatureAnchorResponse is the result of RemoveTemplateSignatureAnchor.
+type RemoveTemplateSignatureAnchorResponse struct {
+	// SignatureSetup is the template's saved signature setup as stored, without the field.
+	SignatureSetup map[string]interface{} `json:"signatureSetup"`
 }
 
 // GetTemplateSignatureSetup lists a template's signer roles, to send it with Recipient.Role.
@@ -706,6 +808,48 @@ func (c *TurboSignClient) GetTemplateSignatureSetup(ctx context.Context, templat
 	}
 
 	return &response, nil
+}
+
+// AddTemplateSignatureAnchor adds an anchored field to a template's saved signature setup: the field
+// is placed on every occurrence of the tag (e.g. "{ClientSign}") for one signer role. Requires an
+// administrator or contributor API key. Sending the same type on the same tag for the same role
+// again returns that field, updated with any DefaultValue / IsReadonly you send.
+//
+// Errors: *NotFoundError (404, code SignatureSetupNotFound, SignerRoleNotFound or TemplateNotFound);
+// *ConflictError (409, code AnchorOwnedByOtherRole when the tag belongs to another role, or
+// AnchorTagHasField when the tag already has a different field); *ValidationError (400, e.g.
+// ReadonlyFieldNoDefaultValue or a malformed anchor); a *TurboDocxError with StatusCode 423 and code
+// TemplateLocked while the template is locked.
+func (c *TurboSignClient) AddTemplateSignatureAnchor(ctx context.Context, req *AddTemplateSignatureAnchorRequest) (*AddTemplateSignatureAnchorResponse, error) {
+	var response struct {
+		Results AddTemplateSignatureAnchorResponse `json:"results"`
+	}
+
+	err := c.http.Post(ctx, "/turbosign/templates/"+url.PathEscape(req.TemplateID)+"/signature-setup/anchors", req, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response.Results, nil
+}
+
+// RemoveTemplateSignatureAnchor removes an anchored field from a template's saved signature setup,
+// by the FieldID that AddTemplateSignatureAnchor or GetTemplateSignatureSetup returned. Requires an
+// administrator or contributor API key.
+//
+// Errors: *NotFoundError (404, code SetupFieldNotFound or SignatureSetupNotFound); a
+// *TurboDocxError with StatusCode 423 and code TemplateLocked while the template is locked.
+func (c *TurboSignClient) RemoveTemplateSignatureAnchor(ctx context.Context, templateID, fieldID string) (*RemoveTemplateSignatureAnchorResponse, error) {
+	var response struct {
+		Results RemoveTemplateSignatureAnchorResponse `json:"results"`
+	}
+
+	path := "/turbosign/templates/" + url.PathEscape(templateID) + "/signature-setup/anchors/" + url.PathEscape(fieldID)
+	if err := c.http.Delete(ctx, path, &response); err != nil {
+		return nil, err
+	}
+
+	return &response.Results, nil
 }
 
 // GetStatus gets the status of a document
@@ -796,6 +940,14 @@ func (c *TurboSignClient) ResendEmail(ctx context.Context, documentID string, re
 	}
 
 	return &response, nil
+}
+
+// setApplySignatureSetup forwards applySignatureSetup only when set, so an explicit false is sent
+// and nil keeps the request unchanged. Works on the JSON and multipart paths alike.
+func setApplySignatureSetup(formData map[string]string, apply *bool) {
+	if apply != nil {
+		formData["applySignatureSetup"] = strconv.FormatBool(*apply)
+	}
 }
 
 // setFileName adds fileName to an upload's form fields when it is non-empty. It is a form field,

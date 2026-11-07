@@ -294,6 +294,33 @@ result, err := client.TurboSign.SendSignature(ctx, &turbodocx.SendSignatureReque
 - `GetTemplateSignatureSetup` throws `*NotFoundError` (404, code `SignatureSetupNotFound`) when the template has no saved signature setup, or is not a template in your organization.
 - `Role` works the same way on `CreateSignatureReviewLink` and on `EmbeddedSignatureRecipient` for `CreateEmbeddedSignature`.
 
+#### Anchored fields (template tags as signature fields)
+
+A template's saved setup can also hold **anchored fields**: a field tied to a tag such as
+`{ClientSign}` for one role, placed wherever that tag appears in the generated document.
+`GetTemplateSignatureSetup` lists them in `Anchors` (with `NotFound: true` when the template has no
+such tag) and each role's `AnchoredFieldCount`. Add and remove them with an administrator or
+contributor API key:
+
+```go
+added, err := client.TurboSign.AddTemplateSignatureAnchor(ctx, &turbodocx.AddTemplateSignatureAnchorRequest{
+    TemplateID: "your-template-id",
+    RoleKey:    "signer_1", // on a template with no signer yet, signer_1 creates the first one
+    Type:       "signature",
+    Anchor:     "{ClientSign}",
+    Size:       &turbodocx.AnchorSize{Width: 150, Height: 40}, // optional, also Offset, Placement, DefaultValue, IsReadonly
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+_, err = client.TurboSign.RemoveTemplateSignatureAnchor(ctx, "your-template-id", added.FieldID)
+```
+
+- A tag belongs to one role and holds one field: another role's tag, or a second field on a tag, is a `*turbodocx.ConflictError` (409, `Code` `"AnchorOwnedByOtherRole"` or `"AnchorTagHasField"`).
+- An unknown role or field id is a `*turbodocx.NotFoundError` (404, `"SignerRoleNotFound"` / `"SetupFieldNotFound"`).
+- A role send (`Recipient.Role`) brings the role's saved fields, anchored ones included, with no flag. On any send that passes its own fields by anchor, with or without roles, set `ApplySignatureSetup: turbodocx.BoolPtr(true)` on `SendSignatureRequest` or `CreateSignatureReviewLinkRequest`: each field you send with a `Template.Anchor` matching an anchored field of the setup (same tag and type) is treated as that field, so it fits its tag, centred on it, and a tag missing from the document is skipped instead of failing the send. Without the flag, your own anchor fields keep the standard placement and a tag missing from the document fails the send. It needs `TemplateID` or `DeliverableID`.
+
 #### `SendReminder`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the per-signer cap is spent, does not consume that cap, and only emails signers at the **current** signing order. Pass `nil` for `recipientIDs` to remind everyone eligible; do **not** pass an empty slice, which the API rejects.
@@ -1478,7 +1505,12 @@ The API also returns more specific codes, passed through unchanged:
 | `DuplicateRoleEmail` | 400 | Two roles resolve to the same email address (a recipient you passed or a signer saved on the template), or a recipient without a `role` uses a role's email address. Each signer needs their own email address. |
 | `SignerHasNoFields` | 400 | On a role send, a signer has no field to sign: neither the template nor your `fields` assigns one to them. Raised when sending (`SendSignature`, embedded signing), not for a review link, where fields can be placed in the preview. |
 | `InvalidRecipient` | 400 | An entry in `recipients` is not an object (for example `null` or a string). |
-| `SignatureSetupNotFound` | 404 | `GetTemplateSignatureSetup` was called for a template with no saved signature setup, or one that is not in your organization. Thrown as `*NotFoundError`. |
+| `SignatureSetupNotFound` | 404 | `GetTemplateSignatureSetup` (or an anchor edit) was called for a template with no saved signature setup, or one that is not in your organization. Thrown as `*NotFoundError`. |
+| `SignerRoleNotFound` | 404 | `AddTemplateSignatureAnchor` named a `RoleKey` that is not one of the template's roles. |
+| `SetupFieldNotFound` | 404 | `RemoveTemplateSignatureAnchor` named a field id that is not in the setup. |
+| `AnchorOwnedByOtherRole` | 409 | The tag already belongs to another role. Thrown as `*ConflictError`. |
+| `AnchorTagHasField` | 409 | The tag already holds a different field. Thrown as `*ConflictError`. |
+| `ReadonlyFieldNoDefaultValue` | 400 | A read-only anchored field has no default value, its own or its role's. |
 | `QuoteHasNoLineItems` | 400 | The quote has no line items. Add at least one before sending. |
 | `QuoteExpired` | 400 | The quote is past its `validUntil` date. |
 | `QuoteValidUntilRequired` | 400 | The quote has no `validUntil` date set. |

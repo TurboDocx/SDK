@@ -21,6 +21,17 @@ public class SendSignatureRequest {
     /** Per-document reminder + expiration overrides; null inherits the org defaults. */
     private final SignatureSchedule schedule;
     /**
+     * Treat each field you send with a {@code template.anchor} whose tag and type match an anchored
+     * field of the template's saved signature setup as that field: it fits its tag, centred on it,
+     * and a tag missing from the document is skipped instead of failing the send. Applies with or
+     * without {@code recipients[].role}. When null or false, your own anchor fields keep the
+     * standard placement and a missing tag fails the send; a role send still brings the role's
+     * saved fields regardless. Needs {@code templateId} or {@code deliverableId} (the API
+     * rejects a file upload together with {@code templateId}, so on an upload the flag has nothing
+     * to apply). Null keeps the default behaviour; {@code false} is forwarded rather than dropped.
+     */
+    private final Boolean applySignatureSetup;
+    /**
      * Whether the backend emails the recipients their signing link (and the initial CC notice).
      * Null keeps the default (emails sent). Set {@code false} for embedded signing, where your app
      * shows the signing page: the document still goes out for signing, and passcode and
@@ -31,6 +42,7 @@ public class SendSignatureRequest {
 
     private SendSignatureRequest(Builder builder) {
         this.schedule = builder.schedule;
+        this.applySignatureSetup = builder.applySignatureSetup;
         this.sendEmail = builder.sendEmail;
         this.file = builder.file;
         this.fileName = builder.fileName;
@@ -98,6 +110,10 @@ public class SendSignatureRequest {
         return schedule;
     }
 
+    public Boolean getApplySignatureSetup() {
+        return applySignatureSetup;
+    }
+
     public Boolean getSendEmail() {
         return sendEmail;
     }
@@ -120,6 +136,7 @@ public class SendSignatureRequest {
         private String senderEmail;
         private List<String> ccEmails;
         private SignatureSchedule schedule;
+        private Boolean applySignatureSetup;
         private Boolean sendEmail;
 
         public Builder file(byte[] file) {
@@ -200,6 +217,21 @@ public class SendSignatureRequest {
          */
         public Builder sendEmail(Boolean sendEmail) {
             this.sendEmail = sendEmail;
+            return this;
+        }
+
+        /**
+         * Treat each field you send with a {@code template.anchor} whose tag and type match an anchored
+         * field of the template's saved signature setup as that field: it fits its tag, centred on it,
+         * and a tag missing from the document is skipped instead of failing the send. Applies with or
+         * without {@code recipients[].role}. When null or false, your own anchor fields keep the
+         * standard placement and a missing tag fails the send; a role send still brings the role's
+         * saved fields regardless. Needs {@code templateId} or {@code deliverableId} (the API
+         * rejects a file upload together with {@code templateId}, so on an upload the flag has nothing
+         * to apply). Null keeps the default behaviour; {@code false} is forwarded rather than dropped.
+         */
+        public Builder applySignatureSetup(Boolean applySignatureSetup) {
+            this.applySignatureSetup = applySignatureSetup;
             return this;
         }
 

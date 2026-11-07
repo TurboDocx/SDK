@@ -9,6 +9,7 @@ Provides single-step signature operations:
 - void_document
 - resend_email
 - get_audit_trail
+- get_template_signature_setup, add_template_signature_anchor, remove_template_signature_anchor
 
 Plus the embedded-signing surface (host your own signing UX in an iframe / redirect):
 - create_signing_url
@@ -245,7 +246,8 @@ class TurboSign:
         expiration_enabled: Optional[bool] = None,
         expire_after: Optional[Dict[str, Any]] = None,
         expiration_warning: Optional[Dict[str, Any]] = None,
-        expiration_warning_interval: Optional[Dict[str, Any]] = None
+        expiration_warning_interval: Optional[Dict[str, Any]] = None,
+        apply_signature_setup: Optional[bool] = None
     ) -> Dict[str, Any]:
         """
         Create signature review link without sending emails
@@ -289,6 +291,17 @@ class TurboSign:
             sender_name: Sender name
             sender_email: Sender email
             cc_emails: List of CC email addresses
+            apply_signature_setup: On any send, with or without ``recipients[]["role"]``, treat
+                each field you send with a ``template.anchor`` whose tag and type match an
+                anchored field of the template's saved signature setup as that field: it fits
+                its tag, centred on it, and a tag missing from the document is skipped instead
+                of failing the send. When unset, your own anchor fields keep the standard
+                placement and a missing tag fails the send; a role send still brings the role's
+                saved fields regardless.
+                Needs ``template_id`` or ``deliverable_id`` (the API rejects a file upload
+                together with a template, so on the upload path there is no setup to apply).
+                Omit (None) to keep the default behaviour. Tested with ``is not None`` so an
+                explicit False is sent too.
 
         Returns:
             Response with documentId, status, previewUrl, and recipients (the API always
@@ -328,6 +341,9 @@ class TurboSign:
 
             if cc_emails:
                 form_data["ccEmails"] = json.dumps(cc_emails)
+            # ``is not None``, like send_email: an explicit False is forwarded
+            if apply_signature_setup is not None:
+                form_data["applySignatureSetup"] = apply_signature_setup
             TurboSign._apply_schedule_overrides(
                 form_data,
                 reminders_enabled=reminders_enabled,
@@ -367,6 +383,9 @@ class TurboSign:
 
             if cc_emails:
                 json_body["ccEmails"] = json.dumps(cc_emails)
+            # ``is not None``, like send_email: an explicit False is forwarded
+            if apply_signature_setup is not None:
+                json_body["applySignatureSetup"] = apply_signature_setup
             TurboSign._apply_schedule_overrides(
                 json_body,
                 reminders_enabled=reminders_enabled,
@@ -416,7 +435,8 @@ class TurboSign:
         expiration_enabled: Optional[bool] = None,
         expire_after: Optional[Dict[str, Any]] = None,
         expiration_warning: Optional[Dict[str, Any]] = None,
-        expiration_warning_interval: Optional[Dict[str, Any]] = None
+        expiration_warning_interval: Optional[Dict[str, Any]] = None,
+        apply_signature_setup: Optional[bool] = None
     ) -> Dict[str, Any]:
         """
         Send a document for signature
@@ -478,6 +498,17 @@ class TurboSign:
                 still sent. Tested with
                 ``is not None`` so an explicit False is honoured (a truthiness check would
                 silently drop it and let the backend email everyone).
+            apply_signature_setup: On any send, with or without ``recipients[]["role"]``, treat
+                each field you send with a ``template.anchor`` whose tag and type match an
+                anchored field of the template's saved signature setup as that field: it fits
+                its tag, centred on it, and a tag missing from the document is skipped instead
+                of failing the send. When unset, your own anchor fields keep the standard
+                placement and a missing tag fails the send; a role send still brings the role's
+                saved fields regardless.
+                Needs ``template_id`` or ``deliverable_id`` (the API rejects a file upload
+                together with a template, so on the upload path there is no setup to apply).
+                Omit (None) to keep the default behaviour. Tested with ``is not None`` so an
+                explicit False is sent too.
 
         Returns:
             Response with success, documentId, status, recipients, and message (the API always
@@ -522,6 +553,9 @@ class TurboSign:
             # the embedded flow relies on, and a truthiness check would drop it.
             if send_email is not None:
                 form_data["sendEmail"] = send_email
+            # ``is not None``, like send_email: an explicit False is forwarded
+            if apply_signature_setup is not None:
+                form_data["applySignatureSetup"] = apply_signature_setup
             TurboSign._apply_schedule_overrides(
                 form_data,
                 reminders_enabled=reminders_enabled,
@@ -565,6 +599,9 @@ class TurboSign:
             # truthiness) -- the embedded flow's False must survive.
             if send_email is not None:
                 json_body["sendEmail"] = send_email
+            # ``is not None``, like send_email: an explicit False is forwarded
+            if apply_signature_setup is not None:
+                json_body["applySignatureSetup"] = apply_signature_setup
             TurboSign._apply_schedule_overrides(
                 json_body,
                 reminders_enabled=reminders_enabled,
@@ -606,8 +643,15 @@ class TurboSign:
             Dict with:
                 - templateId: The template ID
                 - roles: Roles in signing order, each {key, label, order, hasSavedSigner,
-                  fieldCount} plus defaultName/defaultEmail when hasSavedSigner is true.
-                  ``key`` is the value to pass as a recipient's ``role``.
+                  fieldCount, anchoredFieldCount} plus defaultName/defaultEmail when
+                  hasSavedSigner is true. ``key`` is the value to pass as a recipient's
+                  ``role``. ``fieldCount`` counts placed and anchored fields;
+                  ``anchoredFieldCount`` counts the ones anchored to a template tag.
+                - anchors: The setup's anchored fields, each {fieldId, roleKey, type, anchor,
+                  placement, offset, size, notFound}. ``placement`` is always present
+                  ('replace', 'before', 'after', 'above' or 'below'); ``fieldId`` (absent on
+                  older setups), ``offset`` and ``size`` may be missing. ``notFound`` is True
+                  when the template has no variable (Word/PowerPoint) or text (PDF) with this tag.
 
         Raises:
             NotFoundError: (404, code ``SignatureSetupNotFound``) when the template has no saved
@@ -626,6 +670,111 @@ class TurboSign:
         return await client.get(
             f"/turbosign/templates/{quote(template_id, safe='')}/signature-setup"
         )
+
+    @classmethod
+    async def add_template_signature_anchor(
+        cls,
+        template_id: str,
+        role_key: str,
+        type: str,
+        anchor: str,
+        *,
+        size: Optional[Dict[str, Any]] = None,
+        offset: Optional[Dict[str, Any]] = None,
+        placement: Optional[str] = None,
+        default_value: Optional[str] = None,
+        is_readonly: Optional[bool] = None
+    ) -> Dict[str, Any]:
+        """
+        Add an anchored field to a template's saved signature setup
+
+        The field is placed on every occurrence of the tag (e.g. ``{ClientSign}``) for one
+        signer role. Requires an administrator or contributor API key. Sending the same type on
+        the same tag for the same role again returns that field, updated with any
+        ``default_value`` / ``is_readonly`` you send.
+
+        Args:
+            template_id: ID of the template
+            role_key: The role's key, as listed by :meth:`get_template_signature_setup`. On a
+                template with no signer yet, ``signer_1`` creates the first signer.
+            type: The field type, e.g. ``signature``, ``initial``, ``date``, ``text``
+            anchor: One tag in single braces with no spaces, like ``{ClientSign}``
+            size: Optional ``{"width": ..., "height": ...}``
+            offset: Optional ``{"x": ..., "y": ...}`` from the tag
+            placement: Where the field sits relative to its tag: 'replace', 'before',
+                'after', 'above' or 'below'
+            default_value: The field's default value
+            is_readonly: A read-only field needs a default value, its own or its role's
+
+        Returns:
+            Dict with:
+                - fieldId: The anchored field's id (pass it to
+                  :meth:`remove_template_signature_anchor`)
+                - signatureSetup: The saved setup as stored ({roles, fields, ...})
+                - tagBecameSignatureField: True when the tag was not a signature field before;
+                  the template's own values for it were cleared
+
+        Raises:
+            NotFoundError: (404) ``SignatureSetupNotFound``, ``SignerRoleNotFound`` or
+                ``TemplateNotFound``
+            ConflictError: (409) ``AnchorOwnedByOtherRole`` (the tag belongs to another role)
+                or ``AnchorTagHasField`` (the tag already has a different field)
+            ValidationError: (400) e.g. ``ReadonlyFieldNoDefaultValue``, or a malformed anchor
+            TurboDocxError: (423) ``TemplateLocked``
+
+        Example:
+            >>> added = await TurboSign.add_template_signature_anchor(
+            ...     template_id="template-id", role_key="signer_1",
+            ...     type="signature", anchor="{ClientSign}",
+            ... )
+            >>> added["fieldId"]
+        """
+        body: Dict[str, Any] = {"roleKey": role_key, "type": type, "anchor": anchor}
+        optional = {
+            "size": size,
+            "offset": offset,
+            "placement": placement,
+            "defaultValue": default_value,
+            "isReadonly": is_readonly,
+        }
+        body.update({key: value for key, value in optional.items() if value is not None})
+
+        client = cls._get_client()
+        # HTTP client unwraps {data: ...}; the handler nests the payload under results
+        response = await client.post(
+            f"/turbosign/templates/{quote(template_id, safe='')}/signature-setup/anchors",
+            data=body,
+        )
+        return response["results"]
+
+    @classmethod
+    async def remove_template_signature_anchor(cls, template_id: str, field_id: str) -> Dict[str, Any]:
+        """
+        Remove an anchored field from a template's saved signature setup
+
+        Takes the ``fieldId`` that :meth:`add_template_signature_anchor` or
+        :meth:`get_template_signature_setup` returned. Requires an administrator or contributor
+        API key.
+
+        Args:
+            template_id: ID of the template
+            field_id: ID of the anchored field
+
+        Returns:
+            Dict with ``signatureSetup``: the saved setup without the field
+
+        Raises:
+            NotFoundError: (404) ``SetupFieldNotFound`` or ``SignatureSetupNotFound``
+
+        Example:
+            >>> await TurboSign.remove_template_signature_anchor("template-id", field_id)
+        """
+        client = cls._get_client()
+        response = await client.delete(
+            f"/turbosign/templates/{quote(template_id, safe='')}/signature-setup/anchors/"
+            f"{quote(field_id, safe='')}"
+        )
+        return response["results"]
 
     @classmethod
     async def get_status(cls, document_id: str) -> Dict[str, Any]:

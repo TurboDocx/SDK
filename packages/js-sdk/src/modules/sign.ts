@@ -28,6 +28,9 @@ import {
   SignatureScheduleOptions,
   SendReminderResponse,
   TemplateSignatureSetup,
+  AddTemplateSignatureAnchorRequest,
+  AddTemplateSignatureAnchorResponse,
+  RemoveTemplateSignatureAnchorResponse,
 } from '../types/sign';
 
 /**
@@ -236,6 +239,9 @@ export class TurboSign {
         : JSON.stringify([request.ccEmails]);
     }
 
+    // `!== undefined`, like sendEmail: an explicit false is forwarded
+    if (request.applySignatureSetup !== undefined) formData.applySignatureSetup = request.applySignatureSetup;
+
     // Per-document reminder + expiration overrides; omitted keys inherit the org defaults.
     this.applyScheduleOverrides(formData, request);
 
@@ -328,6 +334,9 @@ export class TurboSign {
     // exactly like the schedule overrides below: `false` (do not email) is a meaningful value and a
     // truthiness check would drop it and silently let the backend email the recipients.
     if (request.sendEmail !== undefined) formData.sendEmail = request.sendEmail;
+
+    // `!== undefined`, like sendEmail: an explicit false is forwarded
+    if (request.applySignatureSetup !== undefined) formData.applySignatureSetup = request.applySignatureSetup;
 
     // Per-document reminder + expiration overrides; omitted keys inherit the org defaults.
     this.applyScheduleOverrides(formData, request);
@@ -774,6 +783,54 @@ export class TurboSign {
     return client.get<TemplateSignatureSetup>(
       `/turbosign/templates/${encodeURIComponent(templateId)}/signature-setup`
     );
+  }
+
+  /**
+   * Add an anchored field to a template's saved signature setup: the field is placed on every
+   * occurrence of the tag (e.g. `{ClientSign}`) for one signer role. Requires an administrator or
+   * contributor API key. Sending the same type on the same tag for the same role again returns that
+   * field, updated with any `defaultValue` / `isReadonly` you send.
+   *
+   * @returns The field's id and the saved setup
+   * @throws {NotFoundError} `SignatureSetupNotFound`, `SignerRoleNotFound` or `TemplateNotFound`
+   * @throws {ConflictError} `AnchorOwnedByOtherRole` (the tag belongs to another role) or
+   *   `AnchorTagHasField` (the tag already has a different field)
+   * @throws {ValidationError} e.g. `ReadonlyFieldNoDefaultValue`, or a malformed anchor
+   *
+   * @example
+   * ```typescript
+   * const { fieldId } = await TurboSign.addTemplateSignatureAnchor({
+   *   templateId, roleKey: 'signer_1', type: 'signature', anchor: '{ClientSign}',
+   * });
+   * ```
+   */
+  static async addTemplateSignatureAnchor(
+    request: AddTemplateSignatureAnchorRequest
+  ): Promise<AddTemplateSignatureAnchorResponse> {
+    const { templateId, ...body } = request;
+    const response = await this.getClient().post<{ results: AddTemplateSignatureAnchorResponse }>(
+      `/turbosign/templates/${encodeURIComponent(templateId)}/signature-setup/anchors`,
+      body
+    );
+    return response.results;
+  }
+
+  /**
+   * Remove an anchored field from a template's saved signature setup, by the `fieldId` that
+   * {@link TurboSign.addTemplateSignatureAnchor} or {@link TurboSign.getTemplateSignatureSetup}
+   * returned. Requires an administrator or contributor API key.
+   *
+   * @returns The saved setup without the field
+   * @throws {NotFoundError} `SetupFieldNotFound` or `SignatureSetupNotFound`
+   */
+  static async removeTemplateSignatureAnchor(
+    templateId: string,
+    fieldId: string
+  ): Promise<RemoveTemplateSignatureAnchorResponse> {
+    const response = await this.getClient().delete<{ results: RemoveTemplateSignatureAnchorResponse }>(
+      `/turbosign/templates/${encodeURIComponent(templateId)}/signature-setup/anchors/${encodeURIComponent(fieldId)}`
+    );
+    return response.results;
   }
 
   /**
