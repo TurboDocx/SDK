@@ -22,9 +22,11 @@ public class SendSignatureRequest {
     private final SignatureSchedule schedule;
     /**
      * Treat each field you send with a {@code template.anchor} whose tag and type match an anchored
-     * field of the template's saved signature setup as that field: it fits its tag, and a tag
-     * missing from the document is skipped instead of failing the send. Applies to a send that
-     * names no {@code recipients[].role}. Needs {@code templateId} or {@code deliverableId} (the API
+     * field of the template's saved signature setup as that field: it fits its tag, centred on it,
+     * and a tag missing from the document is skipped instead of failing the send. Applies with or
+     * without {@code recipients[].role}. When null or false, your own anchor fields keep the
+     * standard placement and a missing tag fails the send; a role send still brings the role's
+     * saved fields regardless. Needs {@code templateId} or {@code deliverableId} (the API
      * rejects a file upload together with {@code templateId}, so on an upload the flag has nothing
      * to apply). Null keeps the default behaviour; {@code false} is forwarded rather than dropped.
      */
@@ -220,9 +222,11 @@ public class SendSignatureRequest {
 
         /**
          * Treat each field you send with a {@code template.anchor} whose tag and type match an anchored
-         * field of the template's saved signature setup as that field: it fits its tag, and a tag
-         * missing from the document is skipped instead of failing the send. Applies to a send that
-         * names no {@code recipients[].role}. Needs {@code templateId} or {@code deliverableId} (the API
+         * field of the template's saved signature setup as that field: it fits its tag, centred on it,
+         * and a tag missing from the document is skipped instead of failing the send. Applies with or
+         * without {@code recipients[].role}. When null or false, your own anchor fields keep the
+         * standard placement and a missing tag fails the send; a role send still brings the role's
+         * saved fields regardless. Needs {@code templateId} or {@code deliverableId} (the API
          * rejects a file upload together with {@code templateId}, so on an upload the flag has nothing
          * to apply). Null keeps the default behaviour; {@code false} is forwarded rather than dropped.
          */

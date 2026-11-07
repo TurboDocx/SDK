@@ -41,10 +41,12 @@ final class SendSignatureRequest
      *     signing, where your app shows the signing page: the document still goes out for signing,
      *     and passcode and completed-copy emails are still sent. Presence is tested with
      *     `!== null`, so `false` is forwarded rather than dropped.
-     * @param bool|null $applySignatureSetup On a send that names no Recipient `role`, treat each
-     *     field you send with a `template` anchor whose tag and type match an anchored field of the
-     *     template's saved signature setup as that field: it fits its tag, and a tag missing from
-     *     the document is skipped instead of failing the send. Needs `templateId` or
+     * @param bool|null $applySignatureSetup On any send, with or without a Recipient `role`, treat
+     *     each field you send with a `template` anchor whose tag and type match an anchored field
+     *     of the template's saved signature setup as that field: it fits its tag, centred on it,
+     *     and a tag missing from the document is skipped instead of failing the send. When unset,
+     *     your own anchor fields keep the standard placement and a missing tag fails the send; a
+     *     role send still brings the role's saved fields regardless. Needs `templateId` or
      *     `deliverableId` (the API rejects a file upload together with `templateId`, so on an
      *     upload the flag has nothing to apply). Omit it to keep the default behaviour; `false` is
      *     forwarded rather than dropped.

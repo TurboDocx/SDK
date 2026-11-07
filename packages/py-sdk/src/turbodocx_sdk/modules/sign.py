@@ -291,10 +291,13 @@ class TurboSign:
             sender_name: Sender name
             sender_email: Sender email
             cc_emails: List of CC email addresses
-            apply_signature_setup: On a send that names no ``recipients[]["role"]``, treat each
-                field you send with a ``template.anchor`` whose tag and type match an anchored
-                field of the template's saved signature setup as that field: it fits its tag,
-                and a tag missing from the document is skipped instead of failing the send.
+            apply_signature_setup: On any send, with or without ``recipients[]["role"]``, treat
+                each field you send with a ``template.anchor`` whose tag and type match an
+                anchored field of the template's saved signature setup as that field: it fits
+                its tag, centred on it, and a tag missing from the document is skipped instead
+                of failing the send. When unset, your own anchor fields keep the standard
+                placement and a missing tag fails the send; a role send still brings the role's
+                saved fields regardless.
                 Needs ``template_id`` or ``deliverable_id`` (the API rejects a file upload
                 together with a template, so on the upload path there is no setup to apply).
                 Omit (None) to keep the default behaviour. Tested with ``is not None`` so an
@@ -495,10 +498,13 @@ class TurboSign:
                 still sent. Tested with
                 ``is not None`` so an explicit False is honoured (a truthiness check would
                 silently drop it and let the backend email everyone).
-            apply_signature_setup: On a send that names no ``recipients[]["role"]``, treat each
-                field you send with a ``template.anchor`` whose tag and type match an anchored
-                field of the template's saved signature setup as that field: it fits its tag,
-                and a tag missing from the document is skipped instead of failing the send.
+            apply_signature_setup: On any send, with or without ``recipients[]["role"]``, treat
+                each field you send with a ``template.anchor`` whose tag and type match an
+                anchored field of the template's saved signature setup as that field: it fits
+                its tag, centred on it, and a tag missing from the document is skipped instead
+                of failing the send. When unset, your own anchor fields keep the standard
+                placement and a missing tag fails the send; a role send still brings the role's
+                saved fields regardless.
                 Needs ``template_id`` or ``deliverable_id`` (the API rejects a file upload
                 together with a template, so on the upload path there is no setup to apply).
                 Omit (None) to keep the default behaviour. Tested with ``is not None`` so an

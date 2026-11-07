@@ -307,7 +307,7 @@ await TurboSign.removeTemplateSignatureAnchor('your-template-id', fieldId);
 
 - A tag belongs to one role and holds one field: another role's tag, or a second field on a tag, is a `ConflictError` (409, code `AnchorOwnedByOtherRole` or `AnchorTagHasField`).
 - An unknown role or field id is a `NotFoundError` (404, `SignerRoleNotFound` / `SetupFieldNotFound`).
-- A role send (`recipients[].role`) brings the role's anchored fields with it. On a send without roles, pass `applySignatureSetup: true` to `sendSignature` or `createSignatureReviewLink`: each field you send with a `template.anchor` matching an anchored field of the setup (same tag and type) is treated as that field, so it fits its tag and a tag missing from the document is skipped instead of failing the send. The flag only has an effect with `templateId` or `deliverableId`.
+- A role send (`recipients[].role`) brings the role's saved fields, anchored ones included, with no flag. On any send that passes its own fields by anchor, with or without roles, pass `applySignatureSetup: true` to `sendSignature` or `createSignatureReviewLink`: each field you send with a `template.anchor` matching an anchored field of the setup (same tag and type) is treated as that field, so it fits its tag, centred on it, and a tag missing from the document is skipped instead of failing the send. Without the flag, your own anchor fields keep the standard placement and a tag missing from the document fails the send. The flag only has an effect with `templateId` or `deliverableId`.
 
 #### `sendReminder(documentId, recipientIds?)`
 

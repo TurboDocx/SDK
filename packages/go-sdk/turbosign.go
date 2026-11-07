@@ -221,12 +221,14 @@ type CreateSignatureReviewLinkRequest struct {
 	SenderEmail         string
 	CCEmails            []string
 
-	// ApplySignatureSetup, on a send that names no Recipient.Role, treats each field you send with a
-	// Template.Anchor whose tag and type match an anchored field of the template's saved signature
-	// setup as that field: it fits its tag, and a tag missing from the document is skipped instead
-	// of failing the send. Needs TemplateID or DeliverableID (the API rejects a File upload together
-	// with a templateId, so on the upload path the flag has nothing to apply). Leave nil to keep the
-	// default behaviour.
+	// ApplySignatureSetup, on any send with or without Recipient.Role, treats each field you send
+	// with a Template.Anchor whose tag and type match an anchored field of the template's saved
+	// signature setup as that field: it fits its tag, centred on it, and a tag missing from the
+	// document is skipped instead of failing the send. When nil or false, your own anchor fields
+	// keep the standard placement and a missing tag fails the send; a role send still brings the
+	// role's saved fields regardless. Needs TemplateID or DeliverableID (the API rejects a File
+	// upload together with a templateId, so on the upload path the flag has nothing to apply).
+	// Leave nil to keep the default behaviour.
 	//
 	// A POINTER for the same reason as SendEmail: an explicit false is forwarded, nil is left out.
 	ApplySignatureSetup *bool
@@ -292,12 +294,14 @@ type SendSignatureRequest struct {
 	// forwarded, so existing callers send a byte-identical request.
 	SendEmail *bool
 
-	// ApplySignatureSetup, on a send that names no Recipient.Role, treats each field you send with a
-	// Template.Anchor whose tag and type match an anchored field of the template's saved signature
-	// setup as that field: it fits its tag, and a tag missing from the document is skipped instead
-	// of failing the send. Needs TemplateID or DeliverableID (the API rejects a File upload together
-	// with a templateId, so on the upload path the flag has nothing to apply). Leave nil to keep the
-	// default behaviour.
+	// ApplySignatureSetup, on any send with or without Recipient.Role, treats each field you send
+	// with a Template.Anchor whose tag and type match an anchored field of the template's saved
+	// signature setup as that field: it fits its tag, centred on it, and a tag missing from the
+	// document is skipped instead of failing the send. When nil or false, your own anchor fields
+	// keep the standard placement and a missing tag fails the send; a role send still brings the
+	// role's saved fields regardless. Needs TemplateID or DeliverableID (the API rejects a File
+	// upload together with a templateId, so on the upload path the flag has nothing to apply).
+	// Leave nil to keep the default behaviour.
 	//
 	// A POINTER for the same reason as SendEmail: an explicit false is forwarded, nil is left out.
 	ApplySignatureSetup *bool

@@ -707,10 +707,12 @@ export interface CreateSignatureReviewLinkRequest {
   templateId?: string;
   /**
    * Treat each field you send with a `template.anchor` whose tag and type match an anchored field
-   * of the template's saved signature setup as that field: it fits its tag, and a tag missing from
-   * the document is skipped instead of failing the send. Only has an effect with `templateId` or
-   * `deliverableId` (the setup is read from that template, or from the deliverable's template).
-   * Applies to a send that names no `recipients[].role`. Omit it to keep the default behaviour.
+   * of the template's saved signature setup as that field: it fits its tag, centred on it, and a
+   * tag missing from the document is skipped instead of failing the send. Only has an effect with
+   * `templateId` or `deliverableId` (the setup is read from that template, or from the
+   * deliverable's template). Applies with or without `recipients[].role`. Omit it to keep the
+   * default behaviour: your own anchor fields keep the standard placement and a missing tag fails
+   * the send; a role send still brings the role's saved fields regardless.
    */
   applySignatureSetup?: boolean;
   /** Recipients who will sign */
@@ -782,10 +784,12 @@ export interface SendSignatureRequest {
   templateId?: string;
   /**
    * Treat each field you send with a `template.anchor` whose tag and type match an anchored field
-   * of the template's saved signature setup as that field: it fits its tag, and a tag missing from
-   * the document is skipped instead of failing the send. Only has an effect with `templateId` or
-   * `deliverableId` (the setup is read from that template, or from the deliverable's template).
-   * Applies to a send that names no `recipients[].role`. Omit it to keep the default behaviour.
+   * of the template's saved signature setup as that field: it fits its tag, centred on it, and a
+   * tag missing from the document is skipped instead of failing the send. Only has an effect with
+   * `templateId` or `deliverableId` (the setup is read from that template, or from the
+   * deliverable's template). Applies with or without `recipients[].role`. Omit it to keep the
+   * default behaviour: your own anchor fields keep the standard placement and a missing tag fails
+   * the send; a role send still brings the role's saved fields regardless.
    */
   applySignatureSetup?: boolean;
   /** Recipients who will sign */

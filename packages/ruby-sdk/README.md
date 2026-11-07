@@ -292,7 +292,7 @@ TurboDocxSdk::TurboSign.remove_template_signature_anchor("your-template-id", res
 
 - A tag belongs to one role and holds one field: another role's tag, or a second field on a tag, raises `TurboDocxSdk::ConflictError` (409, `e.code` `AnchorOwnedByOtherRole` or `AnchorTagHasField`).
 - An unknown role or field id raises `TurboDocxSdk::NotFoundError` (404, `SignerRoleNotFound` / `SetupFieldNotFound`).
-- A role send (`recipients[].role`) brings the role's anchored fields with it. On a send without roles, pass `applySignatureSetup: true` to `send_signature` or `create_signature_review_link` with a `templateId` or `deliverableId`: each field you send with a `template: { anchor: }` matching an anchored field of the setup (same tag and type) is treated as that field, so it fits its tag and a tag missing from the document is skipped instead of failing the send. An explicit `false` is sent as is; leave the key out for the default behaviour.
+- A role send (`recipients[].role`) brings the role's saved fields, anchored ones included, with no flag. On any send that passes its own fields by anchor, with or without roles, pass `applySignatureSetup: true` to `send_signature` or `create_signature_review_link` with a `templateId` or `deliverableId`: each field you send with a `template: { anchor: }` matching an anchored field of the setup (same tag and type) is treated as that field, so it fits its tag, centred on it, and a tag missing from the document is skipped instead of failing the send. Without the flag, your own anchor fields keep the standard placement and a tag missing from the document fails the send. An explicit `false` is sent as is; leave the key out for the default behaviour.
 
 #### `send_reminder(document_id, recipient_ids = nil)`
 

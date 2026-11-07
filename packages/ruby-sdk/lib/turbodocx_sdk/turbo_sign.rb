@@ -72,11 +72,13 @@ module TurboDocxSdk
       #   +get_template_signature_setup+. An unknown role raises ValidationError, code
       #   "UnknownSignerRole".
       #
-      #   :applySignatureSetup (Boolean, optional): on a send that names no recipients' "role",
-      #   each field you send with a "template" => { "anchor" } whose tag and type match an
-      #   anchored field of the template's saved signature setup is treated as that field: it
-      #   fits its tag, and a tag missing from the document is skipped instead of failing the
-      #   send. Needs :templateId or :deliverableId (the API rejects a file upload together with
+      #   :applySignatureSetup (Boolean, optional): on any send, with or without a recipient
+      #   "role", each field you send with a "template" => { "anchor" } whose tag and type match
+      #   an anchored field of the template's saved signature setup is treated as that field: it
+      #   fits its tag, centred on it, and a tag missing from the document is skipped instead of
+      #   failing the send. When unset, your own anchor fields keep the standard placement and a
+      #   missing tag fails the send; a role send still brings the role's saved fields regardless.
+      #   Needs :templateId or :deliverableId (the API rejects a file upload together with
       #   a templateId, so on the upload path the flag has nothing to apply). An explicit false is
       #   sent; leave it out (nil) to keep the default behaviour.
       # @return [Hash] document info with review URL; the API always includes "recipients" on

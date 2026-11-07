@@ -353,7 +353,7 @@ TurboSign::removeTemplateSignatureAnchor('your-template-id', $added->fieldId);
 - A tag belongs to one role and holds one field: another role's tag, or a second field on a tag, is a `ConflictException` (409, `$e->errorCode` `AnchorOwnedByOtherRole` or `AnchorTagHasField`).
 - An unknown role or field id is a `NotFoundException` (404, `SignerRoleNotFound` / `SetupFieldNotFound`).
 - `$added->signatureSetup` is the saved setup as stored (an array), and `$added->tagBecameSignatureField` is true when the tag was not a signature field before.
-- A role send (`Recipient` `role`) brings the role's anchored fields with it. On a send without roles, pass `applySignatureSetup: true` to `SendSignatureRequest` or `CreateSignatureReviewLinkRequest`: each field you send with a `template` anchor matching an anchored field of the setup (same tag and type) is treated as that field, so it fits its tag and a tag missing from the document is skipped instead of failing the send. It needs `templateId` or `deliverableId`.
+- A role send (`Recipient` `role`) brings the role's saved fields, anchored ones included, with no flag. On any send that passes its own fields by anchor, with or without roles, pass `applySignatureSetup: true` to `SendSignatureRequest` or `CreateSignatureReviewLinkRequest`: each field you send with a `template` anchor matching an anchored field of the setup (same tag and type) is treated as that field, so it fits its tag, centred on it, and a tag missing from the document is skipped instead of failing the send. Without the flag, your own anchor fields keep the standard placement and a tag missing from the document fails the send. It needs `templateId` or `deliverableId`.
 
 #### Signing in your own app (`sendEmail: false` + `createSigningUrl()`)
 
