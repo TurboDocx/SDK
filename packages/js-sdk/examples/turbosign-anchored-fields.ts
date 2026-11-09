@@ -5,6 +5,9 @@
  * one signer role. Wherever the tag appears in a document generated from the template, the field
  * goes there, sized to fit the tag.
  *
+ * If the tag is already a signature field of the role, step 1 returns that saved field and the
+ * example leaves it in place at the end. It only removes a field this run created.
+ *
  * Before you run it:
  *   - A Word template containing the tag, with at least one signer role saved on its Signatures tab.
  *   - A deliverable generated from that template in which the tag still appears as text. Generate
@@ -46,24 +49,30 @@ async function anchoredFieldsExample() {
 
   try {
     // 1. Save a signature field on the tag for the role. Adding the same type on the same tag
-    //    for the same role again returns the existing field.
+    //    for the same role again returns the existing field (and would update any size, offset,
+    //    placement, defaultValue or isReadonly sent, so this sends none).
     const { fieldId, tagBecameSignatureField } = await TurboSign.addTemplateSignatureAnchor({
       templateId,
       roleKey,
       type: 'signature',
       anchor,
     });
-    console.log(`1. Anchored field ${fieldId} added on ${anchor} for role "${roleKey}"`);
-    if (tagBecameSignatureField) console.log('   The tag is now a signature field, not a text variable');
+    if (tagBecameSignatureField) {
+      console.log(`1. Anchored field ${fieldId} added on ${anchor} for role "${roleKey}"`);
+      console.log("   The tag is now a signature field: the template's own values for it were cleared");
+    } else {
+      console.log(`1. ${anchor} is already a signature field of role "${roleKey}" (field ${fieldId})`);
+    }
 
     // 2. Read the setup back: every anchored field, and how many each role has.
     const setup = await TurboSign.getTemplateSignatureSetup(templateId);
     console.log('2. Anchored fields on the template:');
-    setup.anchors.forEach((a) => {
+    // `anchors` is absent from older backends
+    (setup.anchors ?? []).forEach((a) => {
       console.log(`   ${a.anchor} -> ${a.roleKey} (${a.type})${a.notFound ? ', tag not in the template' : ''}`);
     });
     setup.roles.forEach((role) => {
-      console.log(`   Role ${role.key}: ${role.anchoredFieldCount} anchored of ${role.fieldCount} field(s)`);
+      console.log(`   Role ${role.key}: ${role.anchoredFieldCount ?? 0} anchored of ${role.fieldCount} field(s)`);
     });
 
     // 3. Prepare the deliverable for signing with your own field on the tag. applySignatureSetup
@@ -80,9 +89,15 @@ async function anchoredFieldsExample() {
     console.log(`3. Review link ready for document ${result.documentId}`);
     console.log(`   Preview: ${result.previewUrl}`);
 
-    // 4. Remove the anchored field. The tag goes back to being a text variable.
-    const { signatureSetup } = await TurboSign.removeTemplateSignatureAnchor(templateId, fieldId);
-    console.log(`4. Anchored field ${fieldId} removed, ${signatureSetup.fields.length} field(s) left in the setup`);
+    // 4. Remove the anchored field, but only if this run created it: a field that was already
+    //    saved on the tag is someone's real setup. Removing it does not bring back the values
+    //    the template's variable had before the tag became a signature field.
+    if (tagBecameSignatureField) {
+      const { signatureSetup } = await TurboSign.removeTemplateSignatureAnchor(templateId, fieldId);
+      console.log(`4. Anchored field ${fieldId} removed, ${signatureSetup.fields.length} field(s) left in the setup`);
+    } else {
+      console.log(`4. Anchored field ${fieldId} was already saved before this run, so it was left in place`);
+    }
   } catch (error) {
     // A role the template doesn't have is a NotFoundError (SignerRoleNotFound); a tag held by
     // another role, or already holding a different field, is a ConflictError.

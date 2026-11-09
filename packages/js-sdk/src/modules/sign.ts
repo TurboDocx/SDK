@@ -789,13 +789,17 @@ export class TurboSign {
    * Add an anchored field to a template's saved signature setup: the field is placed on every
    * occurrence of the tag (e.g. `{ClientSign}`) for one signer role. Requires an administrator or
    * contributor API key. Sending the same type on the same tag for the same role again returns that
-   * field, updated with any `defaultValue` / `isReadonly` you send.
+   * field (same `fieldId`, `tagBecameSignatureField: false`), updated with any `size`, `offset`,
+   * `placement`, `defaultValue` or `isReadonly` you send; a setting you leave out keeps its saved
+   * value.
    *
    * @returns The field's id and the saved setup
    * @throws {NotFoundError} `SignatureSetupNotFound`, `SignerRoleNotFound` or `TemplateNotFound`
    * @throws {ConflictError} `AnchorOwnedByOtherRole` (the tag belongs to another role) or
    *   `AnchorTagHasField` (the tag already has a different field)
    * @throws {ValidationError} e.g. `ReadonlyFieldNoDefaultValue`, or a malformed anchor
+   * @throws {TurboDocxError} `statusCode` 423 while the template is locked (being edited in
+   *   TurboDocx); the body carries no code, so check the status
    *
    * @example
    * ```typescript
@@ -822,6 +826,7 @@ export class TurboSign {
    *
    * @returns The saved setup without the field
    * @throws {NotFoundError} `SetupFieldNotFound` or `SignatureSetupNotFound`
+   * @throws {TurboDocxError} `statusCode` 423 while the template is locked
    */
   static async removeTemplateSignatureAnchor(
     templateId: string,

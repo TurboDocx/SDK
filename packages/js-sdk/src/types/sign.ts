@@ -706,13 +706,17 @@ export interface CreateSignatureReviewLinkRequest {
   /** TurboDocx template ID */
   templateId?: string;
   /**
-   * Treat each field you send with a `template.anchor` whose tag and type match an anchored field
-   * of the template's saved signature setup as that field: it fits its tag, centred on it, and a
-   * tag missing from the document is skipped instead of failing the send. Only has an effect with
-   * `templateId` or `deliverableId` (the setup is read from that template, or from the
-   * deliverable's template). Applies with or without `recipients[].role`. Omit it to keep the
-   * default behaviour: your own anchor fields keep the standard placement and a missing tag fails
-   * the send; a role send still brings the role's saved fields regardless.
+   * Mark each field you send with a `template.anchor` whose tag (case-insensitive) and type match
+   * an anchored field of the template's saved signature setup as that setup's field. For such a
+   * field, a tag missing from the document is skipped instead of failing the send (the send still
+   * fails if a signer is left with no field); with no `template.size` of its own it is sized to the
+   * tag (as wide as the tag, at least the type's default width, at the default height); and it is
+   * centred on the tag unless you set `template.alignment`. Your own size and alignment win. The
+   * saved field's size, offset, placement, default value and read-only setting are NOT copied onto
+   * your field. Only has an effect with `templateId` or `deliverableId` (the setup is read from that
+   * template, or from the deliverable's template), with or without `recipients[].role`. Omit it to
+   * keep the default behaviour: your own anchor fields keep the standard placement and a missing
+   * tag fails the send.
    */
   applySignatureSetup?: boolean;
   /** Recipients who will sign */
@@ -783,13 +787,17 @@ export interface SendSignatureRequest {
   /** TurboDocx template ID */
   templateId?: string;
   /**
-   * Treat each field you send with a `template.anchor` whose tag and type match an anchored field
-   * of the template's saved signature setup as that field: it fits its tag, centred on it, and a
-   * tag missing from the document is skipped instead of failing the send. Only has an effect with
-   * `templateId` or `deliverableId` (the setup is read from that template, or from the
-   * deliverable's template). Applies with or without `recipients[].role`. Omit it to keep the
-   * default behaviour: your own anchor fields keep the standard placement and a missing tag fails
-   * the send; a role send still brings the role's saved fields regardless.
+   * Mark each field you send with a `template.anchor` whose tag (case-insensitive) and type match
+   * an anchored field of the template's saved signature setup as that setup's field. For such a
+   * field, a tag missing from the document is skipped instead of failing the send (the send still
+   * fails if a signer is left with no field); with no `template.size` of its own it is sized to the
+   * tag (as wide as the tag, at least the type's default width, at the default height); and it is
+   * centred on the tag unless you set `template.alignment`. Your own size and alignment win. The
+   * saved field's size, offset, placement, default value and read-only setting are NOT copied onto
+   * your field. Only has an effect with `templateId` or `deliverableId` (the setup is read from that
+   * template, or from the deliverable's template), with or without `recipients[].role`. Omit it to
+   * keep the default behaviour: your own anchor fields keep the standard placement and a missing
+   * tag fails the send.
    */
   applySignatureSetup?: boolean;
   /** Recipients who will sign */
@@ -864,8 +872,8 @@ export interface TemplateSignatureRole {
   defaultEmail?: string;
   /** How many fields are saved for this role, placed and anchored */
   fieldCount: number;
-  /** How many of those fields are anchored to a template tag */
-  anchoredFieldCount: number;
+  /** How many of those fields are anchored to a template tag (absent from older backends) */
+  anchoredFieldCount?: number;
 }
 
 /** Where an anchored field sits relative to its tag */
@@ -892,8 +900,8 @@ export interface TemplateSignatureSetup {
   templateId: string;
   /** Roles in signing order */
   roles: TemplateSignatureRole[];
-  /** The setup's anchored fields */
-  anchors: TemplateSignatureAnchor[];
+  /** The setup's anchored fields (absent from older backends: treat as `[]`) */
+  anchors?: TemplateSignatureAnchor[];
 }
 
 /** Request for {@link TurboSign.addTemplateSignatureAnchor} */

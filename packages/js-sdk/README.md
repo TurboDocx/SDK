@@ -307,7 +307,22 @@ await TurboSign.removeTemplateSignatureAnchor('your-template-id', fieldId);
 
 - A tag belongs to one role and holds one field: another role's tag, or a second field on a tag, is a `ConflictError` (409, code `AnchorOwnedByOtherRole` or `AnchorTagHasField`).
 - An unknown role or field id is a `NotFoundError` (404, `SignerRoleNotFound` / `SetupFieldNotFound`).
-- A role send (`recipients[].role`) brings the role's saved fields, anchored ones included, with no flag. On any send that passes its own fields by anchor, with or without roles, pass `applySignatureSetup: true` to `sendSignature` or `createSignatureReviewLink`: each field you send with a `template.anchor` matching an anchored field of the setup (same tag and type) is treated as that field, so it fits its tag, centred on it, and a tag missing from the document is skipped instead of failing the send. Without the flag, your own anchor fields keep the standard placement and a tag missing from the document fails the send. The flag only has an effect with `templateId` or `deliverableId`.
+- Adding the same type on the same tag for the same role again returns that field (same `fieldId`, `tagBecameSignatureField` false), updated with any `size`, `offset`, `placement`, `defaultValue` or `isReadonly` you send; a setting you leave out keeps its saved value. `tagBecameSignatureField` is true only when the call created the field.
+- A locked template (open for editing in TurboDocx) is a 423 from the template lock check. Its body is `{"error": "Resource is locked", "message": "This template is currently being edited", "data": {"locked": true, "lockedBy": ..., "lockedOn": ...}}`, with no `code` or `type`, so detect it by the status: the SDK throws a `TurboDocxError` with `statusCode` 423.
+- A role send (`recipients[].role`) adds each role's saved fields, with no flag. Which saved fields depends on what you send:
+  - `templateId` of a PDF template: all of them, placed and anchored.
+  - `deliverableId` of a deliverable generated from a PDF template: the placed fields only; anchored fields are not used.
+  - `deliverableId` of a deliverable generated from a Word or PowerPoint template: the anchored fields only, found by their tags in the deliverable; placed fields are not used.
+  - `templateId` of a Word or PowerPoint template is refused (`TemplateRolesNeedPdfTemplate`).
+
+  Fields you pass yourself are sent too, alongside the saved ones.
+- Pass `applySignatureSetup: true` to `sendSignature` or `createSignatureReviewLink` (with `templateId` or `deliverableId`, with or without roles) and each field you send with a `template.anchor` whose tag (case-insensitive) and type match an anchored field of the saved setup is marked as that setup's field:
+  - a tag missing from the document is skipped instead of failing the send (the send still fails if a signer is left with no field);
+  - with no `template.size` of its own it is sized to the tag (as wide as the tag, at least the type's default width, at the default height) and centred on the tag unless you set `template.alignment`;
+  - your own size and alignment win;
+  - the saved field's size, offset, placement, default value and read-only setting are not copied onto your field.
+
+  Without the flag your own anchor fields keep the standard placement and a missing tag fails the send.
 
 #### `sendReminder(documentId, recipientIds?)`
 
@@ -1034,7 +1049,7 @@ For complete, working examples including template anchors, advanced field types,
 
 - [`turbosign-send-simple.ts`](./examples/turbosign-send-simple.ts) - Send document directly with template anchors
 - [`turbosign-template-roles.ts`](./examples/turbosign-template-roles.ts) - Send a template set up in TurboDocx by naming each signer's role
-- [`turbosign-anchored-fields.ts`](./examples/turbosign-anchored-fields.ts) - Add an anchored field to a template's signature setup, prepare a deliverable for signing with it, then remove it
+- [`turbosign-anchored-fields.ts`](./examples/turbosign-anchored-fields.ts) - Add an anchored field to a template's signature setup, prepare a deliverable for signing with it, then remove it if the run created it
 - [`turbosign-basic.ts`](./examples/turbosign-basic.ts) - Create review link first, then send manually
 - [`turbosign-advanced.ts`](./examples/turbosign-advanced.ts) - Advanced field types (checkbox, readonly, multiline text, etc.)
 

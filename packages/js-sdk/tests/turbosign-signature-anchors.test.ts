@@ -4,7 +4,8 @@
  * requests asserted here are exactly what goes over the wire.
  */
 import { TurboSign } from "../src/modules/sign";
-import { ConflictError, NotFoundError } from "../src/utils/errors";
+import { ConflictError, NotFoundError, TurboDocxError } from "../src/utils/errors";
+import type { TemplateSignatureSetup } from "../src/types/sign";
 
 const TEMPLATE_ID = "84759112-d9d6-443a-bb78-87c427bd7948";
 
@@ -91,7 +92,53 @@ describe("TurboSign anchored signature setup", () => {
       const setup = await TurboSign.getTemplateSignatureSetup(TEMPLATE_ID);
 
       expect(setup.roles[0].anchoredFieldCount).toBe(1);
-      expect(setup.anchors[0]).toEqual(summary.anchors[0]);
+      expect(setup.anchors?.[0]).toEqual(summary.anchors[0]);
+    });
+
+    it("accepts a setup from an older backend that sends no anchors or anchoredFieldCount", async () => {
+      // Typed as the SDK's own type: an older backend's summary must still be a TemplateSignatureSetup
+      const older: TemplateSignatureSetup = {
+        templateId: TEMPLATE_ID,
+        roles: [{ key: "signer_1", label: "Signer 1", order: 1, hasSavedSigner: false, fieldCount: 2 }],
+      };
+      mockFetch({ data: older });
+
+      const setup = await TurboSign.getTemplateSignatureSetup(TEMPLATE_ID);
+
+      expect(setup.anchors ?? []).toEqual([]);
+      expect(setup.roles[0].anchoredFieldCount ?? 0).toBe(0);
+    });
+  });
+
+  describe("a locked template", () => {
+    // The anchor routes' 423 comes from the template lock middleware: no code or type, the reason in `error`
+    const LOCKED_BODY = {
+      error: "Resource is locked",
+      message: "This template is currently being edited",
+      data: { locked: true, lockedBy: "user-1", lockedOn: "2026-11-09T10:00:00.000Z" },
+    };
+
+    it("surfaces the lock middleware's 423 as a TurboDocxError with statusCode 423", async () => {
+      mockFetch(LOCKED_BODY, 423);
+
+      const error = await TurboSign.addTemplateSignatureAnchor({
+        templateId: TEMPLATE_ID,
+        roleKey: "signer_1",
+        type: "signature",
+        anchor: "{ClientSign}",
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(TurboDocxError);
+      expect(error).toMatchObject({ statusCode: 423, message: "This template is currently being edited" });
+    });
+
+    it("surfaces a 423 on remove the same way", async () => {
+      mockFetch(LOCKED_BODY, 423);
+
+      await expect(TurboSign.removeTemplateSignatureAnchor(TEMPLATE_ID, "f1")).rejects.toMatchObject({
+        statusCode: 423,
+        message: "This template is currently being edited",
+      });
     });
   });
 
