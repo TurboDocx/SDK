@@ -56,10 +56,22 @@ public class TemplateSignatureAnchor {
         return notFound;
     }
 
-    /** A saved offset from the tag. Doubles: the API stores any number, not only integers. */
+    /**
+     * An offset from the tag. Doubles: the API stores any number, not only integers. Also what
+     * {@link AddTemplateSignatureAnchorRequest.Builder#offset(Offset)} takes.
+     */
     public static class Offset {
         private double x;
         private double y;
+
+        /** For Gson. */
+        Offset() {
+        }
+
+        public Offset(double x, double y) {
+            this.x = x;
+            this.y = y;
+        }
 
         public double getX() {
             return x;
@@ -70,10 +82,22 @@ public class TemplateSignatureAnchor {
         }
     }
 
-    /** A saved field size. Doubles: the API stores any number, not only integers. */
+    /**
+     * A field size. Doubles: the API stores any number, not only integers. Also what
+     * {@link AddTemplateSignatureAnchorRequest.Builder#size(Size)} takes.
+     */
     public static class Size {
         private double width;
         private double height;
+
+        /** For Gson. */
+        Size() {
+        }
+
+        public Size(double width, double height) {
+            this.width = width;
+            this.height = height;
+        }
 
         public double getWidth() {
             return width;

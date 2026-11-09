@@ -29,6 +29,11 @@ class TurboSignSignatureAnchorsTest {
             + "\"fields\":[{\"roleId\":\"r1\",\"type\":\"signature\",\"anchor\":\"{ClientSign}\",\"fieldId\":\"f1\"}],"
             + "\"savedOn\":\"2026-11-06T00:00:00.000Z\"}";
 
+    // The template lock middleware's 423 body on the anchor routes: no code or type
+    private static final String LOCKED_BODY = "{\"error\":\"Resource is locked\","
+            + "\"message\":\"This template is currently being edited\","
+            + "\"data\":{\"locked\":true,\"lockedBy\":\"user-1\",\"lockedOn\":\"2026-11-09T10:00:00.000Z\"}}";
+
     private MockWebServer server;
     private TurboDocxClient client;
 
@@ -158,6 +163,20 @@ class TurboSignSignatureAnchorsTest {
         assertTrue(second.isNotFound());
     }
 
+    @Test
+    @DisplayName("getTemplateSignatureSetup from an older backend (no anchors, no anchoredFieldCount) still decodes")
+    void setupFromOlderBackend() throws Exception {
+        enqueue(200, "{\"data\":{\"templateId\":\"" + TEMPLATE_ID + "\",\"roles\":[{\"key\":\"signer_1\","
+                + "\"label\":\"Signer 1\",\"order\":1,\"hasSavedSigner\":false,\"fieldCount\":2}]}}");
+
+        TemplateSignatureSetup setup = client.turboSign().getTemplateSignatureSetup(TEMPLATE_ID);
+
+        assertNotNull(setup.getAnchors());
+        assertTrue(setup.getAnchors().isEmpty());
+        assertEquals(0, setup.getRoles().get(0).getAnchoredFieldCount());
+        assertEquals(2, setup.getRoles().get(0).getFieldCount());
+    }
+
     @Nested
     @DisplayName("addTemplateSignatureAnchor")
     class AddAnchor {
@@ -227,17 +246,59 @@ class TurboSignSignatureAnchorsTest {
         }
 
         @Test
-        @DisplayName("surfaces a locked template (423) with its code")
+        @DisplayName("surfaces a locked template as a 423 TurboDocxException")
         void locked() {
-            enqueue(423, "{\"message\":\"Template is locked\",\"code\":\"TemplateLocked\"}");
+            enqueue(423, LOCKED_BODY);
 
             TurboDocxException err = assertThrows(TurboDocxException.class,
                     () -> client.turboSign().addTemplateSignatureAnchor(new AddTemplateSignatureAnchorRequest.Builder()
                             .templateId(TEMPLATE_ID).roleKey("signer_1").type("signature").anchor("{ClientSign}")
                             .build()));
 
-            assertEquals("TemplateLocked", err.getCode());
             assertEquals(423, err.getStatusCode());
+            assertEquals("This template is currently being edited", err.getMessage());
+        }
+
+        @Test
+        @DisplayName("sends a fractional size and offset exactly")
+        void fractionalSizeAndOffset() throws Exception {
+            enqueue(200, "{\"data\":{\"results\":{\"fieldId\":\"f1\",\"signatureSetup\":" + SAVED_SETUP
+                    + ",\"tagBecameSignatureField\":true}}}");
+
+            client.turboSign().addTemplateSignatureAnchor(new AddTemplateSignatureAnchorRequest.Builder()
+                    .templateId(TEMPLATE_ID).roleKey("signer_1").type("signature").anchor("{ClientSign}")
+                    .size(150.5, 40.25)
+                    .offset(1.5, -2.75)
+                    .build());
+
+            String raw = server.takeRequest().getBody().readUtf8();
+            JsonObject body = JsonParser.parseString(raw).getAsJsonObject();
+            assertEquals(150.5, body.getAsJsonObject("size").get("width").getAsDouble());
+            assertEquals(40.25, body.getAsJsonObject("size").get("height").getAsDouble());
+            assertEquals(1.5, body.getAsJsonObject("offset").get("x").getAsDouble());
+            assertEquals(-2.75, body.getAsJsonObject("offset").get("y").getAsDouble());
+            assertTrue(raw.contains("\"width\":150.5"), raw);
+            assertTrue(raw.contains("\"height\":40.25"), raw);
+        }
+
+        @Test
+        @DisplayName("takes a TemplateSignatureAnchor size and offset, and reads them back")
+        void anchorSizeTypes() throws Exception {
+            enqueue(200, "{\"data\":{\"results\":{\"fieldId\":\"f1\",\"signatureSetup\":" + SAVED_SETUP
+                    + ",\"tagBecameSignatureField\":true}}}");
+
+            AddTemplateSignatureAnchorRequest request = new AddTemplateSignatureAnchorRequest.Builder()
+                    .templateId(TEMPLATE_ID).roleKey("signer_1").type("signature").anchor("{ClientSign}")
+                    .size(new TemplateSignatureAnchor.Size(150.5, 40.25))
+                    .offset(new TemplateSignatureAnchor.Offset(0, 3.5))
+                    .build();
+            client.turboSign().addTemplateSignatureAnchor(request);
+
+            assertEquals(150.5, request.getSize().getWidth());
+            assertEquals(3.5, request.getOffset().getY());
+            JsonObject body = bodyOf(server.takeRequest());
+            assertEquals(40.25, body.getAsJsonObject("size").get("height").getAsDouble());
+            assertEquals(3.5, body.getAsJsonObject("offset").get("y").getAsDouble());
         }
     }
 
@@ -269,6 +330,17 @@ class TurboSignSignatureAnchorsTest {
                     () -> client.turboSign().removeTemplateSignatureAnchor(TEMPLATE_ID, "nope"));
 
             assertEquals("SetupFieldNotFound", err.getCode());
+        }
+
+        @Test
+        @DisplayName("surfaces a locked template as a 423 TurboDocxException")
+        void locked() {
+            enqueue(423, LOCKED_BODY);
+
+            TurboDocxException err = assertThrows(TurboDocxException.class,
+                    () -> client.turboSign().removeTemplateSignatureAnchor(TEMPLATE_ID, "f1"));
+
+            assertEquals(423, err.getStatusCode());
         }
     }
 }

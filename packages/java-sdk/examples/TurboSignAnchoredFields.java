@@ -5,6 +5,9 @@
  * one signer role. Wherever the tag appears in a document generated from the template, the field
  * goes there, sized to fit the tag.
  *
+ * If the tag is already a signature field of the role, step 1 returns that saved field and the
+ * example leaves it in place at the end. It only removes a field this run created.
+ *
  * Before you run it:
  *   - A Word template containing the tag, with at least one signer role saved on its Signatures tab.
  *   - A deliverable generated from that template in which the tag still appears as text. Generate
@@ -50,7 +53,8 @@ public class TurboSignAnchoredFields {
             String signerEmail = getEnv("SIGNER_EMAIL", "jane@example.com");
 
             // 1. Save a signature field on the tag for the role. Adding the same type on the same tag
-            //    for the same role again returns the existing field.
+            //    for the same role again returns the existing field (and would update any size,
+            //    offset, placement, defaultValue or isReadonly sent, so this sends none).
             AddTemplateSignatureAnchorResponse added = client.turboSign().addTemplateSignatureAnchor(
                 new AddTemplateSignatureAnchorRequest.Builder()
                     .templateId(templateId)
@@ -60,12 +64,16 @@ public class TurboSignAnchoredFields {
                     .build()
             );
             String fieldId = added.getFieldId();
-            System.out.println("1. Anchored field " + fieldId + " added on " + anchor + " for role \"" + roleKey + "\"");
-            if (added.isTagBecameSignatureField()) {
-                System.out.println("   The tag is now a signature field, not a text variable");
+            boolean created = added.isTagBecameSignatureField();
+            if (created) {
+                System.out.println("1. Anchored field " + fieldId + " added on " + anchor + " for role \"" + roleKey + "\"");
+                System.out.println("   The tag is now a signature field: the template's own values for it were cleared");
+            } else {
+                System.out.println("1. " + anchor + " is already a signature field of role \"" + roleKey + "\" (field " + fieldId + ")");
             }
 
-            // 2. Read the setup back: every anchored field, and how many each role has.
+            // 2. Read the setup back: every anchored field, and how many each role has. An older
+            //    backend sends neither, so getAnchors() is then empty and getAnchoredFieldCount() 0.
             TemplateSignatureSetup setup = client.turboSign().getTemplateSignatureSetup(templateId);
             System.out.println("2. Anchored fields on the template:");
             for (TemplateSignatureAnchor a : setup.getAnchors()) {
@@ -99,12 +107,18 @@ public class TurboSignAnchoredFields {
             System.out.println("3. Review link ready for document " + result.getDocumentId());
             System.out.println("   Preview: " + result.getPreviewUrl());
 
-            // 4. Remove the anchored field. The tag goes back to being a text variable.
-            RemoveTemplateSignatureAnchorResponse removed =
-                client.turboSign().removeTemplateSignatureAnchor(templateId, fieldId);
-            Object fields = removed.getSignatureSetup().get("fields");
-            int left = fields instanceof List ? ((List<?>) fields).size() : 0;
-            System.out.println("4. Anchored field " + fieldId + " removed, " + left + " field(s) left in the setup");
+            // 4. Remove the anchored field, but only if this run created it: a field that was already
+            //    saved on the tag is someone's real setup. Removing it does not bring back the values
+            //    the template's variable had before the tag became a signature field.
+            if (created) {
+                RemoveTemplateSignatureAnchorResponse removed =
+                    client.turboSign().removeTemplateSignatureAnchor(templateId, fieldId);
+                Object fields = removed.getSignatureSetup().get("fields");
+                int left = fields instanceof List ? ((List<?>) fields).size() : 0;
+                System.out.println("4. Anchored field " + fieldId + " removed, " + left + " field(s) left in the setup");
+            } else {
+                System.out.println("4. Anchored field " + fieldId + " was already saved before this run, so it was left in place");
+            }
 
         } catch (Exception error) {
             // A role the template doesn't have is a NotFoundException (SignerRoleNotFound); a tag held

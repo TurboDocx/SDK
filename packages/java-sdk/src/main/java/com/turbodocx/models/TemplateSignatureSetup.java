@@ -1,5 +1,6 @@
 package com.turbodocx.models;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -20,8 +21,11 @@ public class TemplateSignatureSetup {
         return roles;
     }
 
-    /** The setup's anchored fields: fields tied to a template tag like {@code {ClientSign}}. */
+    /**
+     * The setup's anchored fields: fields tied to a template tag like {@code {ClientSign}}. Never
+     * null: empty when the backend sends none (an older backend does not send the list at all).
+     */
     public List<TemplateSignatureAnchor> getAnchors() {
-        return anchors;
+        return anchors == null ? Collections.emptyList() : anchors;
     }
 }

@@ -162,7 +162,9 @@ public final class TurboSign {
      * Add an anchored field to a template's saved signature setup: the field is placed on every
      * occurrence of the tag (e.g. {@code {ClientSign}}) for one signer role. Requires an
      * administrator or contributor API key. Sending the same type on the same tag for the same role
-     * again returns that field, updated with any {@code defaultValue} / {@code isReadonly} you send.
+     * again returns that field (same {@code fieldId}, {@code tagBecameSignatureField} false), updated
+     * with any {@code size}, {@code offset}, {@code placement}, {@code defaultValue} or
+     * {@code isReadonly} you send; a setting you leave out keeps its saved value.
      *
      * <pre>{@code
      * String fieldId = turboSign.addTemplateSignatureAnchor(new AddTemplateSignatureAnchorRequest.Builder()
@@ -178,7 +180,8 @@ public final class TurboSign {
      *         different field)
      * @throws TurboDocxException.ValidationException (400) e.g. {@code ReadonlyFieldNoDefaultValue},
      *         or a malformed anchor
-     * @throws TurboDocxException (423, code {@code TemplateLocked}) when the template is locked
+     * @throws TurboDocxException (423) while the template is locked (being edited in TurboDocx); the
+     *         body carries no code, so check {@code getStatusCode() == 423}
      * @throws IOException on transport failure
      */
     public AddTemplateSignatureAnchorResponse addTemplateSignatureAnchor(AddTemplateSignatureAnchorRequest request)
@@ -201,6 +204,7 @@ public final class TurboSign {
      * @return the saved setup without the field
      * @throws TurboDocxException.NotFoundException (404) {@code SetupFieldNotFound} or
      *         {@code SignatureSetupNotFound}
+     * @throws TurboDocxException (423) while the template is locked; check {@code getStatusCode() == 423}
      * @throws IOException on transport failure
      */
     public RemoveTemplateSignatureAnchorResponse removeTemplateSignatureAnchor(String templateId, String fieldId)

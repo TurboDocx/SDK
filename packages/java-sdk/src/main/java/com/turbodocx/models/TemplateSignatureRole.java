@@ -48,7 +48,7 @@ public class TemplateSignatureRole {
         return fieldCount;
     }
 
-    /** How many of those fields are anchored to a template tag. */
+    /** How many of those fields are anchored to a template tag (0 from an older backend that does not send it). */
     public int getAnchoredFieldCount() {
         return anchoredFieldCount;
     }

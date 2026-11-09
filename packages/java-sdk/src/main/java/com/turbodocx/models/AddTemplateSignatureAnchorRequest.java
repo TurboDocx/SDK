@@ -12,8 +12,8 @@ public class AddTemplateSignatureAnchorRequest {
     private final String roleKey;
     private final String type;
     private final String anchor;
-    private final Field.Size size;
-    private final Field.Offset offset;
+    private final TemplateSignatureAnchor.Size size;
+    private final TemplateSignatureAnchor.Offset offset;
     private final String placement;
     private final String defaultValue;
     private final Boolean isReadonly;
@@ -46,11 +46,13 @@ public class AddTemplateSignatureAnchorRequest {
         return anchor;
     }
 
-    public Field.Size getSize() {
+    /** The field size, in doubles (a {@link Field.Size} passed to the builder is converted). */
+    public TemplateSignatureAnchor.Size getSize() {
         return size;
     }
 
-    public Field.Offset getOffset() {
+    /** The offset from the tag, in doubles (a {@link Field.Offset} passed to the builder is converted). */
+    public TemplateSignatureAnchor.Offset getOffset() {
         return offset;
     }
 
@@ -86,8 +88,8 @@ public class AddTemplateSignatureAnchorRequest {
         private String roleKey;
         private String type;
         private String anchor;
-        private Field.Size size;
-        private Field.Offset offset;
+        private TemplateSignatureAnchor.Size size;
+        private TemplateSignatureAnchor.Offset offset;
         private String placement;
         private String defaultValue;
         private Boolean isReadonly;
@@ -119,13 +121,35 @@ public class AddTemplateSignatureAnchorRequest {
             return this;
         }
 
-        public Builder size(Field.Size size) {
+        /** The field's width and height. The API takes any number, so fractions are sent exactly. */
+        public Builder size(double width, double height) {
+            return size(new TemplateSignatureAnchor.Size(width, height));
+        }
+
+        public Builder size(TemplateSignatureAnchor.Size size) {
             this.size = size;
             return this;
         }
 
-        public Builder offset(Field.Offset offset) {
+        /** Whole-number size, as used on {@link Field}. Null leaves the size out. */
+        public Builder size(Field.Size size) {
+            this.size = size == null ? null : new TemplateSignatureAnchor.Size(size.getWidth(), size.getHeight());
+            return this;
+        }
+
+        /** The offset from the tag. The API takes any number, so fractions are sent exactly. */
+        public Builder offset(double x, double y) {
+            return offset(new TemplateSignatureAnchor.Offset(x, y));
+        }
+
+        public Builder offset(TemplateSignatureAnchor.Offset offset) {
             this.offset = offset;
+            return this;
+        }
+
+        /** Whole-number offset, as used on {@link Field}. Null leaves the offset out. */
+        public Builder offset(Field.Offset offset) {
+            this.offset = offset == null ? null : new TemplateSignatureAnchor.Offset(offset.getX(), offset.getY());
             return this;
         }
 
