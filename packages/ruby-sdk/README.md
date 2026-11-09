@@ -303,7 +303,8 @@ TurboDocxSdk::TurboSign.remove_template_signature_anchor("your-template-id", res
   Fields you pass yourself are sent too, alongside the saved ones.
 - Pass `applySignatureSetup: true` to `send_signature` or `create_signature_review_link` (with `templateId` or `deliverableId`, with or without roles) and each field you send with a `template: { anchor: }` whose tag (case-insensitive) and type match an anchored field of the saved setup is marked as that setup's field:
   - a tag missing from the document is skipped instead of failing the send (the send still fails if a signer is left with no field);
-  - with no `size` of its own in `template:` it is sized to the tag (as wide as the tag, at least the type's default width, at the default height) and centred on the tag unless `template:` sets an `alignment`;
+  - with no `size` of its own in `template:` it is sized to the tag (as wide as the tag, at least the type's default width, at the default height);
+  - it is centred on the tag, with or without a size of its own, unless `template:` sets an `alignment`;
   - your own size and alignment win;
   - the saved field's size, offset, placement, default value and read-only setting are not copied onto your field.
 
