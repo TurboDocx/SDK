@@ -7,6 +7,9 @@
 // one signer role. Wherever the tag appears in a document generated from the template, the field
 // goes there, sized to fit the tag.
 //
+// If the tag is already a signature field of the role, step 1 returns that saved field and the
+// example leaves it in place at the end. It only removes a field this run created.
+//
 // Before you run it:
 //   - A Word template containing the tag, with at least one signer role saved on its Signatures tab.
 //   - A deliverable generated from that template in which the tag still appears as text. Generate
@@ -57,9 +60,10 @@ func main() {
 	ctx := context.Background()
 
 	// 1. Save a signature field on the tag for the role. Adding the same type on the same tag for
-	//    the same role again returns the existing field. A role the template doesn't have is a
-	//    *NotFoundError (SignerRoleNotFound); a tag held by another role, or already holding a
-	//    different field, is a *ConflictError.
+	//    the same role again returns the existing field (and would update any Size, Offset,
+	//    Placement, DefaultValue or IsReadonly sent, so this sends none). A role the template
+	//    doesn't have is a *NotFoundError (SignerRoleNotFound); a tag held by another role, or
+	//    already holding a different field, is a *ConflictError.
 	added, err := client.TurboSign.AddTemplateSignatureAnchor(ctx, &turbodocx.AddTemplateSignatureAnchorRequest{
 		TemplateID: templateID,
 		RoleKey:    roleKey,
@@ -69,12 +73,15 @@ func main() {
 	if err != nil {
 		fail("adding the anchored field", err)
 	}
-	fmt.Printf("1. Anchored field %s added on %s for role %q\n", added.FieldID, anchor, roleKey)
 	if added.TagBecameSignatureField {
-		fmt.Println("   The tag is now a signature field, not a text variable")
+		fmt.Printf("1. Anchored field %s added on %s for role %q\n", added.FieldID, anchor, roleKey)
+		fmt.Println("   The tag is now a signature field: the template's own values for it were cleared")
+	} else {
+		fmt.Printf("1. %s is already a signature field of role %q (field %s)\n", anchor, roleKey, added.FieldID)
 	}
 
-	// 2. Read the setup back: every anchored field, and how many each role has.
+	// 2. Read the setup back: every anchored field, and how many each role has. An older backend
+	//    sends neither, so Anchors is then empty and AnchoredFieldCount 0.
 	setup, err := client.TurboSign.GetTemplateSignatureSetup(ctx, templateID)
 	if err != nil {
 		fail("reading the setup", err)
@@ -110,7 +117,13 @@ func main() {
 	fmt.Printf("3. Review link ready for document %s\n", result.DocumentID)
 	fmt.Printf("   Preview: %s\n", result.PreviewURL)
 
-	// 4. Remove the anchored field. The tag goes back to being a text variable.
+	// 4. Remove the anchored field, but only if this run created it: a field that was already
+	//    saved on the tag is someone's real setup. Removing it does not bring back the values the
+	//    template's variable had before the tag became a signature field.
+	if !added.TagBecameSignatureField {
+		fmt.Printf("4. Anchored field %s was already saved before this run, so it was left in place\n", added.FieldID)
+		return
+	}
 	removed, err := client.TurboSign.RemoveTemplateSignatureAnchor(ctx, templateID, added.FieldID)
 	if err != nil {
 		fail("removing the anchored field", err)

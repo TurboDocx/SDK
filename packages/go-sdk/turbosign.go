@@ -221,12 +221,17 @@ type CreateSignatureReviewLinkRequest struct {
 	SenderEmail         string
 	CCEmails            []string
 
-	// ApplySignatureSetup, on any send with or without Recipient.Role, treats each field you send
-	// with a Template.Anchor whose tag and type match an anchored field of the template's saved
-	// signature setup as that field: it fits its tag, centred on it, and a tag missing from the
-	// document is skipped instead of failing the send. When nil or false, your own anchor fields
-	// keep the standard placement and a missing tag fails the send; a role send still brings the
-	// role's saved fields regardless. Needs TemplateID or DeliverableID (the API rejects a File
+	// ApplySignatureSetup, on any send with or without Recipient.Role, marks each field you send
+	// with a Template.Anchor whose tag (case-insensitive) and type match an anchored field of the
+	// template's saved signature setup as that setup's field. For such a field, a tag missing from
+	// the document is skipped instead of failing the send (the send still fails if a signer is
+	// left with no field); with no Template.Size of its own it is sized to the tag (as wide as the
+	// tag, at least the type's default width, at the default height); and it is centred on the tag
+	// (the API takes a template alignment to change that, which TemplateAnchor does not have yet).
+	// A Template.Size of your own wins. The saved field's size,
+	// offset, placement, default value and read-only setting are NOT copied onto your field. When
+	// nil or false, your own anchor fields keep the standard placement and a missing tag fails the
+	// send. Needs TemplateID or DeliverableID (the API rejects a File
 	// upload together with a templateId, so on the upload path the flag has nothing to apply).
 	// Leave nil to keep the default behaviour.
 	//
@@ -294,12 +299,17 @@ type SendSignatureRequest struct {
 	// forwarded, so existing callers send a byte-identical request.
 	SendEmail *bool
 
-	// ApplySignatureSetup, on any send with or without Recipient.Role, treats each field you send
-	// with a Template.Anchor whose tag and type match an anchored field of the template's saved
-	// signature setup as that field: it fits its tag, centred on it, and a tag missing from the
-	// document is skipped instead of failing the send. When nil or false, your own anchor fields
-	// keep the standard placement and a missing tag fails the send; a role send still brings the
-	// role's saved fields regardless. Needs TemplateID or DeliverableID (the API rejects a File
+	// ApplySignatureSetup, on any send with or without Recipient.Role, marks each field you send
+	// with a Template.Anchor whose tag (case-insensitive) and type match an anchored field of the
+	// template's saved signature setup as that setup's field. For such a field, a tag missing from
+	// the document is skipped instead of failing the send (the send still fails if a signer is
+	// left with no field); with no Template.Size of its own it is sized to the tag (as wide as the
+	// tag, at least the type's default width, at the default height); and it is centred on the tag
+	// (the API takes a template alignment to change that, which TemplateAnchor does not have yet).
+	// A Template.Size of your own wins. The saved field's size,
+	// offset, placement, default value and read-only setting are NOT copied onto your field. When
+	// nil or false, your own anchor fields keep the standard placement and a missing tag fails the
+	// send. Needs TemplateID or DeliverableID (the API rejects a File
 	// upload together with a templateId, so on the upload path the flag has nothing to apply).
 	// Leave nil to keep the default behaviour.
 	//
@@ -707,7 +717,8 @@ type TemplateSignatureRole struct {
 	DefaultEmail string `json:"defaultEmail,omitempty"`
 	// FieldCount is how many fields are saved for this role, placed and anchored.
 	FieldCount int `json:"fieldCount"`
-	// AnchoredFieldCount is how many of those fields are anchored to a template tag.
+	// AnchoredFieldCount is how many of those fields are anchored to a template tag (0 from an
+	// older backend that does not send it).
 	AnchoredFieldCount int `json:"anchoredFieldCount"`
 }
 
@@ -747,7 +758,7 @@ type TemplateSignatureSetup struct {
 	TemplateID string `json:"templateId"`
 	// Roles in signing order.
 	Roles []TemplateSignatureRole `json:"roles"`
-	// Anchors are the setup's anchored fields.
+	// Anchors are the setup's anchored fields (nil from an older backend that does not send them).
 	Anchors []TemplateSignatureAnchor `json:"anchors"`
 }
 
@@ -765,7 +776,7 @@ type AddTemplateSignatureAnchorRequest struct {
 	Size   *AnchorSize   `json:"size,omitempty"`
 	Offset *AnchorOffset `json:"offset,omitempty"`
 	// Placement is replace, before, after, above or below. Empty leaves the server default.
-	Placement    string `json:"placement,omitempty"`
+	Placement string `json:"placement,omitempty"`
 	// A pointer so "" (clear the default) is sent, not dropped
 	DefaultValue *string `json:"defaultValue,omitempty"`
 	// IsReadonly locks the field. A read-only field needs a default value, its own or its role's.
@@ -813,13 +824,16 @@ func (c *TurboSignClient) GetTemplateSignatureSetup(ctx context.Context, templat
 // AddTemplateSignatureAnchor adds an anchored field to a template's saved signature setup: the field
 // is placed on every occurrence of the tag (e.g. "{ClientSign}") for one signer role. Requires an
 // administrator or contributor API key. Sending the same type on the same tag for the same role
-// again returns that field, updated with any DefaultValue / IsReadonly you send.
+// again returns that field (same FieldID, TagBecameSignatureField false), updated with any Size,
+// Offset, Placement, DefaultValue or IsReadonly you send; a setting you leave out keeps its saved
+// value.
 //
 // Errors: *NotFoundError (404, code SignatureSetupNotFound, SignerRoleNotFound or TemplateNotFound);
 // *ConflictError (409, code AnchorOwnedByOtherRole when the tag belongs to another role, or
 // AnchorTagHasField when the tag already has a different field); *ValidationError (400, e.g.
-// ReadonlyFieldNoDefaultValue or a malformed anchor); a *TurboDocxError with StatusCode 423 and code
-// TemplateLocked while the template is locked.
+// ReadonlyFieldNoDefaultValue or a malformed anchor). While the template is locked (being edited in
+// TurboDocx) it is a *TurboDocxError with StatusCode 423: the body carries no code, so check the
+// status.
 func (c *TurboSignClient) AddTemplateSignatureAnchor(ctx context.Context, req *AddTemplateSignatureAnchorRequest) (*AddTemplateSignatureAnchorResponse, error) {
 	var response struct {
 		Results AddTemplateSignatureAnchorResponse `json:"results"`
@@ -838,7 +852,8 @@ func (c *TurboSignClient) AddTemplateSignatureAnchor(ctx context.Context, req *A
 // administrator or contributor API key.
 //
 // Errors: *NotFoundError (404, code SetupFieldNotFound or SignatureSetupNotFound); a
-// *TurboDocxError with StatusCode 423 and code TemplateLocked while the template is locked.
+// *TurboDocxError with StatusCode 423 while the template is locked (check the status, the body
+// carries no code).
 func (c *TurboSignClient) RemoveTemplateSignatureAnchor(ctx context.Context, templateID, fieldID string) (*RemoveTemplateSignatureAnchorResponse, error) {
 	var response struct {
 		Results RemoveTemplateSignatureAnchorResponse `json:"results"`

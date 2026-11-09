@@ -252,3 +252,63 @@ func TestTurboSignClient_RemoveTemplateSignatureAnchor(t *testing.T) {
 		assert.Equal(t, "SetupFieldNotFound", notFound.Code)
 	})
 }
+
+// lockedTemplateBody is the template lock middleware's 423 body on the anchor routes: no code or type
+var lockedTemplateBody = map[string]interface{}{
+	"error":   "Resource is locked",
+	"message": "This template is currently being edited",
+	"data":    map[string]interface{}{"locked": true, "lockedBy": "user-1", "lockedOn": "2026-11-09T10:00:00.000Z"},
+}
+
+func TestTurboSignClient_SignatureAnchorsLockedTemplate(t *testing.T) {
+	locked := func() *httptest.Server {
+		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			writeJSON(w, http.StatusLocked, lockedTemplateBody)
+		}))
+	}
+
+	t.Run("add surfaces the 423 as a *TurboDocxError with StatusCode 423", func(t *testing.T) {
+		server := locked()
+		defer server.Close()
+
+		client := newEmbeddedTestClient(t, server.URL)
+		_, err := client.TurboSign.AddTemplateSignatureAnchor(context.Background(), &AddTemplateSignatureAnchorRequest{
+			TemplateID: rolesTemplateID, RoleKey: "signer_1", Type: "signature", Anchor: "{ClientSign}",
+		})
+		var apiErr *TurboDocxError
+		require.ErrorAs(t, err, &apiErr)
+		assert.Equal(t, http.StatusLocked, apiErr.StatusCode)
+		assert.Equal(t, "This template is currently being edited", apiErr.Message)
+	})
+
+	t.Run("remove surfaces the 423 the same way", func(t *testing.T) {
+		server := locked()
+		defer server.Close()
+
+		client := newEmbeddedTestClient(t, server.URL)
+		_, err := client.TurboSign.RemoveTemplateSignatureAnchor(context.Background(), rolesTemplateID, "f1")
+		var apiErr *TurboDocxError
+		require.ErrorAs(t, err, &apiErr)
+		assert.Equal(t, http.StatusLocked, apiErr.StatusCode)
+	})
+}
+
+func TestTurboSignClient_GetTemplateSignatureSetupFromOlderBackend(t *testing.T) {
+	// An older backend sends neither anchors nor anchoredFieldCount
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]interface{}{"data": map[string]interface{}{
+			"templateId": rolesTemplateID,
+			"roles": []interface{}{map[string]interface{}{
+				"key": "signer_1", "label": "Signer 1", "order": 1, "hasSavedSigner": false, "fieldCount": 2,
+			}},
+		}})
+	}))
+	defer server.Close()
+
+	client := newEmbeddedTestClient(t, server.URL)
+	setup, err := client.TurboSign.GetTemplateSignatureSetup(context.Background(), rolesTemplateID)
+	require.NoError(t, err)
+	assert.Empty(t, setup.Anchors)
+	assert.Equal(t, 0, setup.Roles[0].AnchoredFieldCount)
+	assert.Equal(t, 2, setup.Roles[0].FieldCount)
+}

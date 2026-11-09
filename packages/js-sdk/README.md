@@ -318,8 +318,8 @@ await TurboSign.removeTemplateSignatureAnchor('your-template-id', fieldId);
   Fields you pass yourself are sent too, alongside the saved ones.
 - Pass `applySignatureSetup: true` to `sendSignature` or `createSignatureReviewLink` (with `templateId` or `deliverableId`, with or without roles) and each field you send with a `template.anchor` whose tag (case-insensitive) and type match an anchored field of the saved setup is marked as that setup's field:
   - a tag missing from the document is skipped instead of failing the send (the send still fails if a signer is left with no field);
-  - with no `template.size` of its own it is sized to the tag (as wide as the tag, at least the type's default width, at the default height) and centred on the tag unless you set `template.alignment`;
-  - your own size and alignment win;
+  - with no `template.size` of its own it is sized to the tag (as wide as the tag, at least the type's default width, at the default height) and centred on the tag (the API takes a `template.alignment` to change that, which this SDK's field type does not have yet);
+  - a size of your own wins;
   - the saved field's size, offset, placement, default value and read-only setting are not copied onto your field.
 
   Without the flag your own anchor fields keep the standard placement and a missing tag fails the send.
