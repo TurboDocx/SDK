@@ -8,6 +8,7 @@ use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use TurboDocx\Exceptions\ConflictException;
 use TurboDocx\Exceptions\NotFoundException;
+use TurboDocx\Exceptions\TurboDocxException;
 use TurboDocx\TurboSign;
 use TurboDocx\Types\Field;
 use TurboDocx\Types\FieldPlacement;
@@ -343,5 +344,77 @@ final class TurboSignSignatureAnchorsTest extends TestCase
         } catch (NotFoundException $e) {
             $this->assertSame('SetupFieldNotFound', $e->errorCode);
         }
+    }
+
+    /**
+     * The template lock middleware's 423 body on the anchor routes: no code or type.
+     */
+    private function locked(): Response
+    {
+        return new Response(423, ['Content-Type' => 'application/json'], (string) json_encode([
+            'error' => 'Resource is locked',
+            'message' => 'This template is currently being edited',
+            'data' => ['locked' => true, 'lockedBy' => 'user-1', 'lockedOn' => '2026-11-09T10:00:00.000Z'],
+        ]));
+    }
+
+    public function testAddTemplateSignatureAnchorSurfacesALockedTemplateAsA423(): void
+    {
+        $this->injectTurboSignClient([$this->locked()]);
+
+        try {
+            TurboSign::addTemplateSignatureAnchor(new AddTemplateSignatureAnchorRequest(
+                templateId: self::TEMPLATE_ID,
+                roleKey: 'signer_1',
+                type: SignatureFieldType::SIGNATURE,
+                anchor: '{ClientSign}',
+            ));
+            $this->fail('Expected TurboDocxException');
+        } catch (TurboDocxException $e) {
+            $this->assertSame(423, $e->statusCode);
+            $this->assertSame('This template is currently being edited', $e->getMessage());
+        }
+    }
+
+    public function testRemoveTemplateSignatureAnchorSurfacesALockedTemplateAsA423(): void
+    {
+        $this->injectTurboSignClient([$this->locked()]);
+
+        try {
+            TurboSign::removeTemplateSignatureAnchor(self::TEMPLATE_ID, 'f1');
+            $this->fail('Expected TurboDocxException');
+        } catch (TurboDocxException $e) {
+            $this->assertSame(423, $e->statusCode);
+        }
+    }
+
+    public function testAddTemplateSignatureAnchorReadsOnlyTheResultsEnvelope(): void
+    {
+        // Same as the JS, Python, Go and Java SDKs: the outer object is never read as the result
+        $this->injectTurboSignClient([
+            $this->ok(['fieldId' => 'outer', 'signatureSetup' => self::SAVED_SETUP, 'tagBecameSignatureField' => true]),
+        ]);
+
+        $result = TurboSign::addTemplateSignatureAnchor(new AddTemplateSignatureAnchorRequest(
+            templateId: self::TEMPLATE_ID,
+            roleKey: 'signer_1',
+            type: SignatureFieldType::SIGNATURE,
+            anchor: '{ClientSign}',
+        ));
+
+        $this->assertSame('', $result->fieldId);
+        $this->assertSame([], $result->signatureSetup);
+        $this->assertFalse($result->tagBecameSignatureField);
+    }
+
+    public function testRemoveTemplateSignatureAnchorReadsOnlyTheResultsEnvelope(): void
+    {
+        $this->injectTurboSignClient([
+            $this->ok(['signatureSetup' => self::SAVED_SETUP]),
+        ]);
+
+        $result = TurboSign::removeTemplateSignatureAnchor(self::TEMPLATE_ID, 'f1');
+
+        $this->assertSame([], $result->signatureSetup);
     }
 }

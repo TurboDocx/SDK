@@ -321,8 +321,9 @@ final class TurboSign
      *
      * The field is placed on every occurrence of the tag (e.g. `{ClientSign}`) for one signer
      * role. Requires an administrator or contributor API key. Sending the same type on the same
-     * tag for the same role again returns that field, updated with any `defaultValue` /
-     * `isReadonly` you send.
+     * tag for the same role again returns that field (same `fieldId`, `tagBecameSignatureField`
+     * false), updated with any `size`, `offset`, `placement`, `defaultValue` or `isReadonly` you
+     * send; a setting you leave out keeps its saved value.
      *
      * @param AddTemplateSignatureAnchorRequest $request The template, role, field type and tag
      * @return AddTemplateSignatureAnchorResponse The field's id and the saved setup
@@ -332,7 +333,8 @@ final class TurboSign
      *     tag belongs to another role, or `AnchorTagHasField` when the tag already has a different
      *     field)
      * @throws ValidationException (400, e.g. `ReadonlyFieldNoDefaultValue`, or a malformed anchor)
-     * @throws TurboDocxException (423, code `TemplateLocked`)
+     * @throws TurboDocxException (423) while the template is locked (being edited in TurboDocx).
+     *     The body carries no code, so check `$e->statusCode === 423`.
      *
      * @example
      * ```php
@@ -354,7 +356,8 @@ final class TurboSign
             '/turbosign/templates/' . rawurlencode($request->templateId) . '/signature-setup/anchors',
             $request->toArray()
         );
-        $results = is_array($response) ? ($response['results'] ?? $response) : [];
+        // Strictly `results`, as the other SDKs read it: the outer object is never taken as the result
+        $results = is_array($response) ? ($response['results'] ?? null) : null;
 
         return AddTemplateSignatureAnchorResponse::fromArray(is_array($results) ? $results : []);
     }
@@ -371,7 +374,7 @@ final class TurboSign
      * @return RemoveTemplateSignatureAnchorResponse The saved setup without the field
      * @throws \TurboDocx\Exceptions\NotFoundException (404, code `SetupFieldNotFound` or
      *     `SignatureSetupNotFound`)
-     * @throws TurboDocxException (423, code `TemplateLocked`)
+     * @throws TurboDocxException (423) while the template is locked; check `$e->statusCode === 423`
      *
      * @example
      * ```php
@@ -386,7 +389,7 @@ final class TurboSign
         $response = $client->delete(
             '/turbosign/templates/' . rawurlencode($templateId) . '/signature-setup/anchors/' . rawurlencode($fieldId)
         );
-        $results = is_array($response) ? ($response['results'] ?? $response) : [];
+        $results = is_array($response) ? ($response['results'] ?? null) : null;
 
         return RemoveTemplateSignatureAnchorResponse::fromArray(is_array($results) ? $results : []);
     }

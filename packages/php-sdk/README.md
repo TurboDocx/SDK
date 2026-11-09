@@ -353,7 +353,22 @@ TurboSign::removeTemplateSignatureAnchor('your-template-id', $added->fieldId);
 - A tag belongs to one role and holds one field: another role's tag, or a second field on a tag, is a `ConflictException` (409, `$e->errorCode` `AnchorOwnedByOtherRole` or `AnchorTagHasField`).
 - An unknown role or field id is a `NotFoundException` (404, `SignerRoleNotFound` / `SetupFieldNotFound`).
 - `$added->signatureSetup` is the saved setup as stored (an array), and `$added->tagBecameSignatureField` is true when the tag was not a signature field before.
-- A role send (`Recipient` `role`) brings the role's saved fields, anchored ones included, with no flag. On any send that passes its own fields by anchor, with or without roles, pass `applySignatureSetup: true` to `SendSignatureRequest` or `CreateSignatureReviewLinkRequest`: each field you send with a `template` anchor matching an anchored field of the setup (same tag and type) is treated as that field, so it fits its tag, centred on it, and a tag missing from the document is skipped instead of failing the send. Without the flag, your own anchor fields keep the standard placement and a tag missing from the document fails the send. It needs `templateId` or `deliverableId`.
+- Adding the same type on the same tag for the same role again returns that field (same `fieldId`, `tagBecameSignatureField` false), updated with any `size`, `offset`, `placement`, `defaultValue` or `isReadonly` you send; a setting you leave out keeps its saved value. `tagBecameSignatureField` is true only when the call created the field.
+- A locked template (open for editing in TurboDocx) is a 423 from the template lock check. Its body is `{"error": "Resource is locked", "message": "This template is currently being edited", "data": {"locked": true, "lockedBy": ..., "lockedOn": ...}}`, with no `code` or `type`, so detect it by the status: the SDK throws a `TurboDocxException` with `statusCode` 423 (its `errorCode` is the body's `error` text, so do not match on it).
+- A role send (`Recipient` `role`) adds each role's saved fields, with no flag. Which saved fields depends on what you send:
+  - `templateId` of a PDF template: all of them, placed and anchored.
+  - `deliverableId` of a deliverable generated from a PDF template: the placed fields only; anchored fields are not used.
+  - `deliverableId` of a deliverable generated from a Word or PowerPoint template: the anchored fields only, found by their tags in the deliverable; placed fields are not used.
+  - `templateId` of a Word or PowerPoint template is refused (`TemplateRolesNeedPdfTemplate`).
+
+  Fields you pass yourself are sent too, alongside the saved ones.
+- Pass `applySignatureSetup: true` to `SendSignatureRequest` or `CreateSignatureReviewLinkRequest` (with `templateId` or `deliverableId`, with or without roles) and each field you send with a `TemplateConfig` anchor whose tag (case-insensitive) and type match an anchored field of the saved setup is marked as that setup's field:
+  - a tag missing from the document is skipped instead of failing the send (the send still fails if a signer is left with no field);
+  - with no `TemplateConfig` size of its own it is sized to the tag (as wide as the tag, at least the type's default width, at the default height) and centred on the tag (the API takes a `template.alignment` to change that, which this SDK's `TemplateConfig` does not have yet);
+  - a size of your own wins;
+  - the saved field's size, offset, placement, default value and read-only setting are not copied onto your field.
+
+  Without the flag your own anchor fields keep the standard placement and a missing tag fails the send.
 
 #### Signing in your own app (`sendEmail: false` + `createSigningUrl()`)
 
@@ -1765,7 +1780,7 @@ TurboQuote::applyPriceBook($quote->id, $priceBook->id);
 
 For more examples, see:
 - [`examples/turbosign-template-roles.php`](./examples/turbosign-template-roles.php) — send a template set up in TurboDocx by naming each signer's role
-- [`examples/turbosign-anchored-fields.php`](./examples/turbosign-anchored-fields.php) - Add an anchored field to a template's signature setup, prepare a deliverable for signing with it, then remove it
+- [`examples/turbosign-anchored-fields.php`](./examples/turbosign-anchored-fields.php) - Add an anchored field to a template's signature setup, prepare a deliverable for signing with it, then remove it if the run created it
 - [`examples/turboquote-basic.php`](./examples/turboquote-basic.php) — full quote lifecycle
 - [`examples/turboquote-products.php`](./examples/turboquote-products.php) — products and bundles catalog CRUD
 - [`examples/turboquote-pricebooks.php`](./examples/turboquote-pricebooks.php) — price book management
