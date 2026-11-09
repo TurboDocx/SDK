@@ -295,7 +295,7 @@ class TurboSign:
                 each field you send with a ``template.anchor`` whose tag (case-insensitive) and
                 type match an anchored field of the template's saved signature setup as that
                 setup's field. For such a field, a tag missing from the document is skipped
-                instead of failing the send (the send still fails if a signer is left with no
+                instead of failing the send (the send or review link still fails (400 SignerHasNoFields) if a signer is left with no
                 field); with no ``template.size`` of its own it is sized to the tag (as wide as
                 the tag, at least the type's default width, at the default height); and it is
                 centred on the tag unless you set ``template.alignment``. Your own size and
@@ -506,7 +506,7 @@ class TurboSign:
                 each field you send with a ``template.anchor`` whose tag (case-insensitive) and
                 type match an anchored field of the template's saved signature setup as that
                 setup's field. For such a field, a tag missing from the document is skipped
-                instead of failing the send (the send still fails if a signer is left with no
+                instead of failing the send (the send or review link still fails (400 SignerHasNoFields) if a signer is left with no
                 field); with no ``template.size`` of its own it is sized to the tag (as wide as
                 the tag, at least the type's default width, at the default height); and it is
                 centred on the tag unless you set ``template.alignment``. Your own size and

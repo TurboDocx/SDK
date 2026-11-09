@@ -224,7 +224,7 @@ type CreateSignatureReviewLinkRequest struct {
 	// ApplySignatureSetup, on any send with or without Recipient.Role, marks each field you send
 	// with a Template.Anchor whose tag (case-insensitive) and type match an anchored field of the
 	// template's saved signature setup as that setup's field. For such a field, a tag missing from
-	// the document is skipped instead of failing the send (the send still fails if a signer is
+	// the document is skipped instead of failing the send (the send or review link still fails (400 SignerHasNoFields) if a signer is
 	// left with no field); with no Template.Size of its own it is sized to the tag (as wide as the
 	// tag, at least the type's default width, at the default height); and it is centred on the tag
 	// (the API takes a template alignment to change that, which TemplateAnchor does not have yet).
@@ -302,7 +302,7 @@ type SendSignatureRequest struct {
 	// ApplySignatureSetup, on any send with or without Recipient.Role, marks each field you send
 	// with a Template.Anchor whose tag (case-insensitive) and type match an anchored field of the
 	// template's saved signature setup as that setup's field. For such a field, a tag missing from
-	// the document is skipped instead of failing the send (the send still fails if a signer is
+	// the document is skipped instead of failing the send (the send or review link still fails (400 SignerHasNoFields) if a signer is
 	// left with no field); with no Template.Size of its own it is sized to the tag (as wide as the
 	// tag, at least the type's default width, at the default height); and it is centred on the tag
 	// (the API takes a template alignment to change that, which TemplateAnchor does not have yet).
