@@ -146,6 +146,25 @@ RSpec.describe TurboDocxSdk::TurboSign do
         expect(result["signatureSetup"]["fields"]).to eq([])
       end
     end
+
+    describe "the results envelope" do
+      # Same as the JS, Python, Go and Java SDKs: the outer object is never read as the result
+      it "add_template_signature_anchor reads only results" do
+        allow(mock_client).to receive(:post)
+          .and_return({ "fieldId" => "outer", "signatureSetup" => saved_setup, "tagBecameSignatureField" => true })
+
+        result = described_class.add_template_signature_anchor(templateId: template_id, roleKey: "signer_1",
+                                                               type: "signature", anchor: "{ClientSign}")
+
+        expect(result).to be_nil
+      end
+
+      it "remove_template_signature_anchor reads only results" do
+        allow(mock_client).to receive(:delete).and_return({ "signatureSetup" => saved_setup })
+
+        expect(described_class.remove_template_signature_anchor(template_id, "f1")).to be_nil
+      end
+    end
   end
 
   context "with the real HttpClient" do
@@ -179,17 +198,30 @@ RSpec.describe TurboDocxSdk::TurboSign do
       end.to raise_error(TurboDocxSdk::ConflictError) { |e| expect(e.code).to eq("AnchorOwnedByOtherRole") }
     end
 
-    it "surfaces a locked template as a 423 TurboDocxError with its code" do
-      stub_http(Net::HTTPLocked.new("1.1", "423", "Locked"),
-                { "message" => "The template is locked.", "code" => "TemplateLocked" })
+    # The anchor routes' 423 comes from the template lock middleware: no code or type
+    let(:locked_body) do
+      { "error" => "Resource is locked", "message" => "This template is currently being edited",
+        "data" => { "locked" => true, "lockedBy" => "user-1", "lockedOn" => "2026-11-09T10:00:00.000Z" } }
+    end
+
+    it "surfaces a locked template as a 423 TurboDocxError" do
+      stub_http(Net::HTTPLocked.new("1.1", "423", "Locked"), locked_body)
 
       expect do
         described_class.add_template_signature_anchor(templateId: template_id, roleKey: "signer_1",
                                                       type: "signature", anchor: "{ClientSign}")
       end.to raise_error(TurboDocxSdk::TurboDocxError) { |e|
         expect(e.status_code).to eq(423)
-        expect(e.code).to eq("TemplateLocked")
+        expect(e.message).to eq("This template is currently being edited")
       }
+    end
+
+    it "surfaces a locked template on remove as a 423 TurboDocxError" do
+      stub_http(Net::HTTPLocked.new("1.1", "423", "Locked"), locked_body)
+
+      expect do
+        described_class.remove_template_signature_anchor(template_id, "f1")
+      end.to raise_error(TurboDocxSdk::TurboDocxError) { |e| expect(e.status_code).to eq(423) }
     end
 
     it "sends a DELETE and surfaces an unknown field id as NotFoundError" do

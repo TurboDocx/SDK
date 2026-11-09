@@ -292,7 +292,22 @@ TurboDocxSdk::TurboSign.remove_template_signature_anchor("your-template-id", res
 
 - A tag belongs to one role and holds one field: another role's tag, or a second field on a tag, raises `TurboDocxSdk::ConflictError` (409, `e.code` `AnchorOwnedByOtherRole` or `AnchorTagHasField`).
 - An unknown role or field id raises `TurboDocxSdk::NotFoundError` (404, `SignerRoleNotFound` / `SetupFieldNotFound`).
-- A role send (`recipients[].role`) brings the role's saved fields, anchored ones included, with no flag. On any send that passes its own fields by anchor, with or without roles, pass `applySignatureSetup: true` to `send_signature` or `create_signature_review_link` with a `templateId` or `deliverableId`: each field you send with a `template: { anchor: }` matching an anchored field of the setup (same tag and type) is treated as that field, so it fits its tag, centred on it, and a tag missing from the document is skipped instead of failing the send. Without the flag, your own anchor fields keep the standard placement and a tag missing from the document fails the send. An explicit `false` is sent as is; leave the key out for the default behaviour.
+- Adding the same type on the same tag for the same role again returns that field (same `"fieldId"`, `"tagBecameSignatureField"` false), updated with any `size`, `offset`, `placement`, `defaultValue` or `isReadonly` you send; a setting you leave out keeps its saved value. `"tagBecameSignatureField"` is true only when the call created the field.
+- A locked template (open for editing in TurboDocx) is a 423 from the template lock check. Its body is `{"error": "Resource is locked", "message": "This template is currently being edited", "data": {"locked": true, "lockedBy": ..., "lockedOn": ...}}`, with no `code` or `type`, so detect it by the status: the SDK raises a `TurboDocxSdk::TurboDocxError` with `status_code` 423 (its `code` is the body's `error` text, so do not match on it).
+- A role send (`recipients[].role`) adds each role's saved fields, with no flag. Which saved fields depends on what you send:
+  - `templateId` of a PDF template: all of them, placed and anchored.
+  - `deliverableId` of a deliverable generated from a PDF template: the placed fields only; anchored fields are not used.
+  - `deliverableId` of a deliverable generated from a Word or PowerPoint template: the anchored fields only, found by their tags in the deliverable; placed fields are not used.
+  - `templateId` of a Word or PowerPoint template is refused (`TemplateRolesNeedPdfTemplate`).
+
+  Fields you pass yourself are sent too, alongside the saved ones.
+- Pass `applySignatureSetup: true` to `send_signature` or `create_signature_review_link` (with `templateId` or `deliverableId`, with or without roles) and each field you send with a `template: { anchor: }` whose tag (case-insensitive) and type match an anchored field of the saved setup is marked as that setup's field:
+  - a tag missing from the document is skipped instead of failing the send (the send still fails if a signer is left with no field);
+  - with no `size` of its own in `template:` it is sized to the tag (as wide as the tag, at least the type's default width, at the default height) and centred on the tag unless `template:` sets an `alignment`;
+  - your own size and alignment win;
+  - the saved field's size, offset, placement, default value and read-only setting are not copied onto your field.
+
+  Without the flag your own anchor fields keep the standard placement and a missing tag fails the send. An explicit `false` is sent as is; leave the key out for the default behaviour.
 
 #### `send_reminder(document_id, recipient_ids = nil)`
 
@@ -1277,7 +1292,7 @@ For complete, working examples, see the [`examples/`](./examples/) directory:
 
 - [`turbosign_basic.rb`](./examples/turbosign_basic.rb) — Send a document for signature, poll status, download the signed PDF
 - [`turbosign_template_roles.rb`](./examples/turbosign_template_roles.rb) — Send a template set up in TurboDocx by naming each signer's role
-- [`turbosign_anchored_fields.rb`](./examples/turbosign_anchored_fields.rb) - Add an anchored field to a template's signature setup, prepare a deliverable for signing with it, then remove it
+- [`turbosign_anchored_fields.rb`](./examples/turbosign_anchored_fields.rb) - Add an anchored field to a template's signature setup, prepare a deliverable for signing with it, then remove it if the run created it
 - [`turbowebhooks_crud.rb`](./examples/turbowebhooks_crud.rb) — Create/get/update/delete the signature webhook + verify HMAC signatures
 - [`turboquote_basic.rb`](./examples/turboquote_basic.rb) — Full quote lifecycle: create company, quote, line items, download PDF, send
 - [`turboquote_products.rb`](./examples/turboquote_products.rb) — Products and bundles catalog management
@@ -1445,7 +1460,7 @@ The API also returns more specific codes, passed through unchanged:
 | `AnchorOwnedByOtherRole` | 409 | The tag already belongs to another role. Thrown as `TurboDocxSdk::ConflictError`. |
 | `AnchorTagHasField` | 409 | The tag already holds a different field. Thrown as `TurboDocxSdk::ConflictError`. |
 | `ReadonlyFieldNoDefaultValue` | 400 | A read-only anchored field has no default value, its own or its role's. |
-| `TemplateLocked` | 423 | The template is locked and cannot be edited. Thrown as `TurboDocxSdk::TurboDocxError` with `status_code` 423. |
+| (no code) | 423 | `add_template_signature_anchor` / `remove_template_signature_anchor` on a template that is locked (open for editing in TurboDocx). The body is `{"error": "Resource is locked", "message": "This template is currently being edited", "data": {...}}` with no `code`, so check `status_code == 423` on the `TurboDocxSdk::TurboDocxError`. |
 | `QuoteHasNoLineItems` | 400 | The quote has no line items. Add at least one before sending. |
 | `QuoteExpired` | 400 | The quote is past its `validUntil` date. |
 | `QuoteValidUntilRequired` | 400 | The quote has no `validUntil` date set. |

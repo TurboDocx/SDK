@@ -73,11 +73,16 @@ module TurboDocxSdk
       #   "UnknownSignerRole".
       #
       #   :applySignatureSetup (Boolean, optional): on any send, with or without a recipient
-      #   "role", each field you send with a "template" => { "anchor" } whose tag and type match
-      #   an anchored field of the template's saved signature setup is treated as that field: it
-      #   fits its tag, centred on it, and a tag missing from the document is skipped instead of
-      #   failing the send. When unset, your own anchor fields keep the standard placement and a
-      #   missing tag fails the send; a role send still brings the role's saved fields regardless.
+      #   "role", each field you send with a "template" => { "anchor" } whose tag
+      #   (case-insensitive) and type match an anchored field of the template's saved signature
+      #   setup is marked as that setup's field. For such a field, a tag missing from the document
+      #   is skipped instead of failing the send (the send still fails if a signer is left with no
+      #   field); with no "size" of its own in "template" it is sized to the tag (as wide as the
+      #   tag, at least the type's default width, at the default height); and it is centred on the
+      #   tag unless its "template" sets an "alignment". Your own size and alignment win. The saved
+      #   field's size, offset, placement, default value and read-only setting are NOT copied onto
+      #   your field. When unset, your own anchor fields keep the standard placement and a missing
+      #   tag fails the send.
       #   Needs :templateId or :deliverableId (the API rejects a file upload together with
       #   a templateId, so on the upload path the flag has nothing to apply). An explicit false is
       #   sent; leave it out (nil) to keep the default behaviour.
@@ -543,7 +548,9 @@ module TurboDocxSdk
       # Add an anchored field to a template's saved signature setup: the field is placed on every
       # occurrence of the tag (e.g. "{ClientSign}") for one signer role. Requires an administrator
       # or contributor API key. Sending the same type on the same tag for the same role again
-      # returns that field, updated with any "defaultValue" / "isReadonly" you send.
+      # returns that field (same "fieldId", "tagBecameSignatureField" false), updated with any
+      # "size", "offset", "placement", "defaultValue" or "isReadonly" you send; a setting you leave
+      # out keeps its saved value.
       #
       # @example
       #   result = TurboDocxSdk::TurboSign.add_template_signature_anchor(
@@ -565,7 +572,8 @@ module TurboDocxSdk
       # @raise [ConflictError] code "AnchorOwnedByOtherRole" (the tag belongs to another role) or
       #   "AnchorTagHasField" (the tag already has a different field)
       # @raise [ValidationError] e.g. code "ReadonlyFieldNoDefaultValue", or a malformed anchor
-      # @raise [TurboDocxError] 423, code "TemplateLocked"
+      # @raise [TurboDocxError] status_code 423 while the template is locked (being edited in
+      #   TurboDocx); the body carries no code, so check the status
       def add_template_signature_anchor(request)
         template_id = req_val(request, :templateId)
         body = ANCHOR_BODY_KEYS.each_with_object({}) do |key, acc|
@@ -576,7 +584,8 @@ module TurboDocxSdk
         response = get_client.post(
           "/turbosign/templates/#{ERB::Util.url_encode(template_id.to_s)}/signature-setup/anchors", body
         )
-        response["results"] || response
+        # Strictly "results", as the other SDKs read it: the outer object is never taken as the result
+        response["results"]
       end
 
       # Remove an anchored field from a template's saved signature setup, by the "fieldId" that
@@ -587,12 +596,12 @@ module TurboDocxSdk
       # @param field_id [String]
       # @return [Hash] with "signatureSetup", the saved setup without the field
       # @raise [NotFoundError] code "SetupFieldNotFound" or "SignatureSetupNotFound"
-      # @raise [TurboDocxError] 423, code "TemplateLocked"
+      # @raise [TurboDocxError] status_code 423 while the template is locked; check the status
       def remove_template_signature_anchor(template_id, field_id)
         path = "/turbosign/templates/#{ERB::Util.url_encode(template_id.to_s)}" \
                "/signature-setup/anchors/#{ERB::Util.url_encode(field_id.to_s)}"
         response = get_client.delete(path)
-        response["results"] || response
+        response["results"]
       end
 
       # Get the status of a document.
