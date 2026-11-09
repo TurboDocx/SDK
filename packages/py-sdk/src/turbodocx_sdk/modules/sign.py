@@ -291,13 +291,17 @@ class TurboSign:
             sender_name: Sender name
             sender_email: Sender email
             cc_emails: List of CC email addresses
-            apply_signature_setup: On any send, with or without ``recipients[]["role"]``, treat
-                each field you send with a ``template.anchor`` whose tag and type match an
-                anchored field of the template's saved signature setup as that field: it fits
-                its tag, centred on it, and a tag missing from the document is skipped instead
-                of failing the send. When unset, your own anchor fields keep the standard
-                placement and a missing tag fails the send; a role send still brings the role's
-                saved fields regardless.
+            apply_signature_setup: On any send, with or without ``recipients[]["role"]``, mark
+                each field you send with a ``template.anchor`` whose tag (case-insensitive) and
+                type match an anchored field of the template's saved signature setup as that
+                setup's field. For such a field, a tag missing from the document is skipped
+                instead of failing the send (the send still fails if a signer is left with no
+                field); with no ``template.size`` of its own it is sized to the tag (as wide as
+                the tag, at least the type's default width, at the default height); and it is
+                centred on the tag unless you set ``template.alignment``. Your own size and
+                alignment win. The saved field's size, offset, placement, default value and
+                read-only setting are NOT copied onto your field. When unset, your own anchor
+                fields keep the standard placement and a missing tag fails the send.
                 Needs ``template_id`` or ``deliverable_id`` (the API rejects a file upload
                 together with a template, so on the upload path there is no setup to apply).
                 Omit (None) to keep the default behaviour. Tested with ``is not None`` so an
@@ -498,13 +502,17 @@ class TurboSign:
                 still sent. Tested with
                 ``is not None`` so an explicit False is honoured (a truthiness check would
                 silently drop it and let the backend email everyone).
-            apply_signature_setup: On any send, with or without ``recipients[]["role"]``, treat
-                each field you send with a ``template.anchor`` whose tag and type match an
-                anchored field of the template's saved signature setup as that field: it fits
-                its tag, centred on it, and a tag missing from the document is skipped instead
-                of failing the send. When unset, your own anchor fields keep the standard
-                placement and a missing tag fails the send; a role send still brings the role's
-                saved fields regardless.
+            apply_signature_setup: On any send, with or without ``recipients[]["role"]``, mark
+                each field you send with a ``template.anchor`` whose tag (case-insensitive) and
+                type match an anchored field of the template's saved signature setup as that
+                setup's field. For such a field, a tag missing from the document is skipped
+                instead of failing the send (the send still fails if a signer is left with no
+                field); with no ``template.size`` of its own it is sized to the tag (as wide as
+                the tag, at least the type's default width, at the default height); and it is
+                centred on the tag unless you set ``template.alignment``. Your own size and
+                alignment win. The saved field's size, offset, placement, default value and
+                read-only setting are NOT copied onto your field. When unset, your own anchor
+                fields keep the standard placement and a missing tag fails the send.
                 Needs ``template_id`` or ``deliverable_id`` (the API rejects a file upload
                 together with a template, so on the upload path there is no setup to apply).
                 Omit (None) to keep the default behaviour. Tested with ``is not None`` so an
@@ -652,6 +660,8 @@ class TurboSign:
                   ('replace', 'before', 'after', 'above' or 'below'); ``fieldId`` (absent on
                   older setups), ``offset`` and ``size`` may be missing. ``notFound`` is True
                   when the template has no variable (Word/PowerPoint) or text (PDF) with this tag.
+                  An older backend sends neither ``anchors`` nor ``anchoredFieldCount``: read
+                  them with ``.get()``.
 
         Raises:
             NotFoundError: (404, code ``SignatureSetupNotFound``) when the template has no saved
@@ -690,8 +700,10 @@ class TurboSign:
 
         The field is placed on every occurrence of the tag (e.g. ``{ClientSign}``) for one
         signer role. Requires an administrator or contributor API key. Sending the same type on
-        the same tag for the same role again returns that field, updated with any
-        ``default_value`` / ``is_readonly`` you send.
+        the same tag for the same role again returns that field (same ``fieldId``,
+        ``tagBecameSignatureField`` False), updated with any ``size``, ``offset``,
+        ``placement``, ``default_value`` or ``is_readonly`` you send; a setting you leave out
+        keeps its saved value.
 
         Args:
             template_id: ID of the template
@@ -720,7 +732,8 @@ class TurboSign:
             ConflictError: (409) ``AnchorOwnedByOtherRole`` (the tag belongs to another role)
                 or ``AnchorTagHasField`` (the tag already has a different field)
             ValidationError: (400) e.g. ``ReadonlyFieldNoDefaultValue``, or a malformed anchor
-            TurboDocxError: (423) ``TemplateLocked``
+            TurboDocxError: (423) while the template is locked (being edited in TurboDocx).
+                The body carries no code, so check ``status_code == 423``.
 
         Example:
             >>> added = await TurboSign.add_template_signature_anchor(
@@ -765,6 +778,7 @@ class TurboSign:
 
         Raises:
             NotFoundError: (404) ``SetupFieldNotFound`` or ``SignatureSetupNotFound``
+            TurboDocxError: (423) while the template is locked; check ``status_code == 423``
 
         Example:
             >>> await TurboSign.remove_template_signature_anchor("template-id", field_id)

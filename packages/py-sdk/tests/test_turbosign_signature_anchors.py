@@ -158,6 +158,14 @@ class TestGetTemplateSignatureSetupAnchors:
         assert setup["anchors"][0] == summary["anchors"][0]
 
 
+# The template lock middleware's 423 body (no code or type)
+LOCKED_BODY = {
+    "error": "Resource is locked",
+    "message": "This template is currently being edited",
+    "data": {"locked": True, "lockedBy": "user-1", "lockedOn": "2026-11-09T10:00:00.000Z"},
+}
+
+
 class TestAddTemplateSignatureAnchor:
     @pytest.mark.asyncio
     async def test_posts_field_without_template_id_and_unwraps_results(self):
@@ -234,8 +242,9 @@ class TestAddTemplateSignatureAnchor:
         assert exc_info.value.status_code == 409
 
     @pytest.mark.asyncio
-    async def test_locked_template_keeps_status_and_code(self):
-        patcher, _ = _patched_httpx("post", {"message": "Template is locked", "code": "TemplateLocked"}, 423)
+    async def test_locked_template_is_a_423_turbodocx_error(self):
+        # The anchor routes' 423 comes from the template lock middleware: no code or type
+        patcher, _ = _patched_httpx("post", LOCKED_BODY, 423)
         try:
             with pytest.raises(TurboDocxError) as exc_info:
                 await TurboSign.add_template_signature_anchor(
@@ -245,7 +254,7 @@ class TestAddTemplateSignatureAnchor:
             patcher.stop()
 
         assert exc_info.value.status_code == 423
-        assert exc_info.value.code == "TemplateLocked"
+        assert str(exc_info.value) == "This template is currently being edited"
 
 
 class TestRemoveTemplateSignatureAnchor:
@@ -276,3 +285,14 @@ class TestRemoveTemplateSignatureAnchor:
             patcher.stop()
 
         assert exc_info.value.code == "SetupFieldNotFound"
+
+    @pytest.mark.asyncio
+    async def test_locked_template_on_remove_is_a_423_turbodocx_error(self):
+        patcher, _ = _patched_httpx("delete", LOCKED_BODY, 423)
+        try:
+            with pytest.raises(TurboDocxError) as exc_info:
+                await TurboSign.remove_template_signature_anchor(TEMPLATE_ID, "f1")
+        finally:
+            patcher.stop()
+
+        assert exc_info.value.status_code == 423

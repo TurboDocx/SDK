@@ -5,6 +5,9 @@ An anchored field ties a signature field to a tag such as {ClientSign} in a Word
 one signer role. Wherever the tag appears in a document generated from the template, the field
 goes there, sized to fit the tag.
 
+If the tag is already a signature field of the role, step 1 returns that saved field and the
+example leaves it in place at the end. It only removes a field this run created.
+
 Before you run it:
   - A Word template containing the tag, with at least one signer role saved on its Signatures tab.
   - A deliverable generated from that template in which the tag still appears as text. Generate
@@ -49,7 +52,8 @@ async def anchored_fields_example():
 
     try:
         # 1. Save a signature field on the tag for the role. Adding the same type on the same tag
-        #    for the same role again returns the existing field.
+        #    for the same role again returns the existing field (and would update any size,
+        #    offset, placement, default_value or is_readonly sent, so this sends none).
         added = await TurboSign.add_template_signature_anchor(
             template_id=template_id,
             role_key=role_key,
@@ -57,19 +61,23 @@ async def anchored_fields_example():
             anchor=anchor,
         )
         field_id = added["fieldId"]
-        print(f'1. Anchored field {field_id} added on {anchor} for role "{role_key}"')
-        if added["tagBecameSignatureField"]:
-            print("   The tag is now a signature field, not a text variable")
+        created = added["tagBecameSignatureField"]
+        if created:
+            print(f'1. Anchored field {field_id} added on {anchor} for role "{role_key}"')
+            print("   The tag is now a signature field: the template's own values for it were cleared")
+        else:
+            print(f'1. {anchor} is already a signature field of role "{role_key}" (field {field_id})')
 
         # 2. Read the setup back: every anchored field, and how many each role has.
         setup = await TurboSign.get_template_signature_setup(template_id)
         print("2. Anchored fields on the template:")
-        for a in setup["anchors"]:
+        # "anchors" and "anchoredFieldCount" are absent from older backends
+        for a in setup.get("anchors") or []:
             missing = ", tag not in the template" if a["notFound"] else ""
             print(f"   {a['anchor']} -> {a['roleKey']} ({a['type']}){missing}")
         for role in setup["roles"]:
             print(
-                f"   Role {role['key']}: {role['anchoredFieldCount']} anchored "
+                f"   Role {role['key']}: {role.get('anchoredFieldCount', 0)} anchored "
                 f"of {role['fieldCount']} field(s)"
             )
 
@@ -90,10 +98,15 @@ async def anchored_fields_example():
         print(f"3. Review link ready for document {result['documentId']}")
         print(f"   Preview: {result.get('previewUrl')}")
 
-        # 4. Remove the anchored field. The tag goes back to being a text variable.
-        removed = await TurboSign.remove_template_signature_anchor(template_id, field_id)
-        left = len(removed["signatureSetup"]["fields"])
-        print(f"4. Anchored field {field_id} removed, {left} field(s) left in the setup")
+        # 4. Remove the anchored field, but only if this run created it: a field that was
+        #    already saved on the tag is someone's real setup. Removing it does not bring back
+        #    the values the template's variable had before the tag became a signature field.
+        if created:
+            removed = await TurboSign.remove_template_signature_anchor(template_id, field_id)
+            left = len(removed["signatureSetup"]["fields"])
+            print(f"4. Anchored field {field_id} removed, {left} field(s) left in the setup")
+        else:
+            print(f"4. Anchored field {field_id} was already saved before this run, so it was left in place")
 
     except Exception as error:
         # A role the template doesn't have is a NotFoundError (SignerRoleNotFound); a tag held by
