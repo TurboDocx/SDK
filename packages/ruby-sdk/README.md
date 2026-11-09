@@ -1277,6 +1277,7 @@ For complete, working examples, see the [`examples/`](./examples/) directory:
 
 - [`turbosign_basic.rb`](./examples/turbosign_basic.rb) — Send a document for signature, poll status, download the signed PDF
 - [`turbosign_template_roles.rb`](./examples/turbosign_template_roles.rb) — Send a template set up in TurboDocx by naming each signer's role
+- [`turbosign_anchored_fields.rb`](./examples/turbosign_anchored_fields.rb) - Add an anchored field to a template's signature setup, prepare a deliverable for signing with it, then remove it
 - [`turbowebhooks_crud.rb`](./examples/turbowebhooks_crud.rb) — Create/get/update/delete the signature webhook + verify HMAC signatures
 - [`turboquote_basic.rb`](./examples/turboquote_basic.rb) — Full quote lifecycle: create company, quote, line items, download PDF, send
 - [`turboquote_products.rb`](./examples/turboquote_products.rb) — Products and bundles catalog management

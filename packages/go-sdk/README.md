@@ -1269,6 +1269,7 @@ For complete, working examples see the [`examples/`](./examples/) directory:
 **TurboSign:**
 - [`turbosign_send_simple.go`](./examples/turbosign_send_simple.go) - Send document directly with template anchors
 - [`turbosign_template_roles.go`](./examples/turbosign_template_roles.go) - Send a template set up in TurboDocx by naming each signer's role
+- [`turbosign_anchored_fields.go`](./examples/turbosign_anchored_fields.go) - Add an anchored field to a template's signature setup, prepare a deliverable for signing with it, then remove it
 - [`turbosign_basic.go`](./examples/turbosign_basic.go) - Create review link first, then send manually
 - [`turbosign_advanced.go`](./examples/turbosign_advanced.go) - Advanced field types (checkbox, readonly, multiline text, etc.)
 

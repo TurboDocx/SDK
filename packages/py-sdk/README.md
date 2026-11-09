@@ -972,6 +972,7 @@ For complete, working examples including template anchors, advanced field types,
 
 - [`turbosign_send_simple.py`](./examples/turbosign_send_simple.py) - Send document directly with template anchors
 - [`turbosign_template_roles.py`](./examples/turbosign_template_roles.py) - Send a template set up in TurboDocx by naming each signer's role
+- [`turbosign_anchored_fields.py`](./examples/turbosign_anchored_fields.py) - Add an anchored field to a template's signature setup, prepare a deliverable for signing with it, then remove it
 - [`turbosign_basic.py`](./examples/turbosign_basic.py) - Create review link first, then send manually
 - [`turbosign_advanced.py`](./examples/turbosign_advanced.py) - Advanced field types (checkbox, readonly, multiline text, etc.)
 - [`turbopartner_basic.py`](./examples/turbopartner_basic.py) - Full organization lifecycle (create org, add users, create API keys)

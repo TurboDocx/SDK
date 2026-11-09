@@ -1034,6 +1034,7 @@ For complete, working examples including template anchors, advanced field types,
 
 - [`turbosign-send-simple.ts`](./examples/turbosign-send-simple.ts) - Send document directly with template anchors
 - [`turbosign-template-roles.ts`](./examples/turbosign-template-roles.ts) - Send a template set up in TurboDocx by naming each signer's role
+- [`turbosign-anchored-fields.ts`](./examples/turbosign-anchored-fields.ts) - Add an anchored field to a template's signature setup, prepare a deliverable for signing with it, then remove it
 - [`turbosign-basic.ts`](./examples/turbosign-basic.ts) - Create review link first, then send manually
 - [`turbosign-advanced.ts`](./examples/turbosign-advanced.ts) - Advanced field types (checkbox, readonly, multiline text, etc.)
 
