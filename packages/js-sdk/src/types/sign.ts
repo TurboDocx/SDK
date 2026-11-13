@@ -495,7 +495,7 @@ export interface Field {
     /** Alternative: search for any text in document */
     searchText?: string;
     /** Where to place field relative to anchor/searchText */
-    placement?: 'replace' | 'before' | 'after' | 'above' | 'below';
+    placement?: SignatureAnchorPlacement;
     /** Size of the field */
     size?: { width: number; height: number };
     /** Offset from anchor position */
@@ -705,6 +705,21 @@ export interface CreateSignatureReviewLinkRequest {
   deliverableId?: string;
   /** TurboDocx template ID */
   templateId?: string;
+  /**
+   * Mark each field you send with a `template.anchor` whose tag (case-insensitive) and type match
+   * an anchored field of the template's saved signature setup as that setup's field. For such a
+   * field, a tag missing from the document is skipped instead of failing the send (the send still
+   * fails if a signer is left with no field); with no `template.size` of its own it is sized to the
+   * tag (as wide as the tag, at least the type's default width, at the default height); and it is
+   * centred on the tag (the API takes a `template.alignment` to change that, which this SDK's
+   * Field type does not have yet). A `template.size` of your own wins. The
+   * saved field's size, offset, placement, default value and read-only setting are NOT copied onto
+   * your field. Only has an effect with `templateId` or `deliverableId` (the setup is read from that
+   * template, or from the deliverable's template), with or without `recipients[].role`. Omit it to
+   * keep the default behaviour: your own anchor fields keep the standard placement and a missing
+   * tag fails the send.
+   */
+  applySignatureSetup?: boolean;
   /** Recipients who will sign */
   recipients: Recipient[];
   /**
@@ -772,6 +787,21 @@ export interface SendSignatureRequest {
   deliverableId?: string;
   /** TurboDocx template ID */
   templateId?: string;
+  /**
+   * Mark each field you send with a `template.anchor` whose tag (case-insensitive) and type match
+   * an anchored field of the template's saved signature setup as that setup's field. For such a
+   * field, a tag missing from the document is skipped instead of failing the send (the send still
+   * fails if a signer is left with no field); with no `template.size` of its own it is sized to the
+   * tag (as wide as the tag, at least the type's default width, at the default height); and it is
+   * centred on the tag (the API takes a `template.alignment` to change that, which this SDK's
+   * Field type does not have yet). A `template.size` of your own wins. The
+   * saved field's size, offset, placement, default value and read-only setting are NOT copied onto
+   * your field. Only has an effect with `templateId` or `deliverableId` (the setup is read from that
+   * template, or from the deliverable's template), with or without `recipients[].role`. Omit it to
+   * keep the default behaviour: your own anchor fields keep the standard placement and a missing
+   * tag fails the send.
+   */
+  applySignatureSetup?: boolean;
   /** Recipients who will sign */
   recipients: Recipient[];
   /**
@@ -842,8 +872,29 @@ export interface TemplateSignatureRole {
   defaultName?: string;
   /** The saved signer's email (only when `hasSavedSigner`) */
   defaultEmail?: string;
-  /** How many fields are saved for this role */
+  /** How many fields are saved for this role, placed and anchored */
   fieldCount: number;
+  /** How many of those fields are anchored to a template tag (absent from older backends) */
+  anchoredFieldCount?: number;
+}
+
+/** Where an anchored field sits relative to its tag */
+export type SignatureAnchorPlacement = 'replace' | 'before' | 'after' | 'above' | 'below';
+
+/** A field of a template's saved signature setup that is anchored to a tag like `{ClientSign}` */
+export interface TemplateSignatureAnchor {
+  /** Pass to {@link TurboSign.removeTemplateSignatureAnchor} (absent on older setups) */
+  fieldId?: string;
+  /** The key of the role that fills this field */
+  roleKey: string;
+  type: SignatureFieldType;
+  /** The tag, in single braces */
+  anchor: string;
+  placement: SignatureAnchorPlacement;
+  offset?: { x: number; y: number };
+  size?: { width: number; height: number };
+  /** True when the template has no variable (Word/PowerPoint) or text (PDF) with this tag */
+  notFound: boolean;
 }
 
 /** A template's signer roles, for sending it with `recipients[].role` */
@@ -851,4 +902,46 @@ export interface TemplateSignatureSetup {
   templateId: string;
   /** Roles in signing order */
   roles: TemplateSignatureRole[];
+  /** The setup's anchored fields (absent from older backends: treat as `[]`) */
+  anchors?: TemplateSignatureAnchor[];
+}
+
+/** Request for {@link TurboSign.addTemplateSignatureAnchor} */
+export interface AddTemplateSignatureAnchorRequest {
+  templateId: string;
+  /**
+   * The role's key, as listed by {@link TurboSign.getTemplateSignatureSetup}. On a template with no
+   * signer yet, `signer_1` creates the first signer.
+   */
+  roleKey: string;
+  type: SignatureFieldType;
+  /** One tag in single braces with no spaces, like `{ClientSign}` */
+  anchor: string;
+  size?: { width: number; height: number };
+  offset?: { x: number; y: number };
+  placement?: SignatureAnchorPlacement;
+  defaultValue?: string;
+  /** A read-only field needs a default value, its own or its role's */
+  isReadonly?: boolean;
+}
+
+/** A template's saved signature setup as stored, returned after an anchor edit */
+export interface SavedTemplateSignatureSetup {
+  roles: Array<Record<string, unknown>>;
+  fields: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
+
+/** Result of {@link TurboSign.addTemplateSignatureAnchor} */
+export interface AddTemplateSignatureAnchorResponse {
+  /** The anchored field's id */
+  fieldId: string;
+  signatureSetup: SavedTemplateSignatureSetup;
+  /** True when the tag was not a signature field before; the template's own values for it were cleared */
+  tagBecameSignatureField: boolean;
+}
+
+/** Result of {@link TurboSign.removeTemplateSignatureAnchor} */
+export interface RemoveTemplateSignatureAnchorResponse {
+  signatureSetup: SavedTemplateSignatureSetup;
 }

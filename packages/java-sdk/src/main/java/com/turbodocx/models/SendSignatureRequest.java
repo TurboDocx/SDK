@@ -21,6 +21,21 @@ public class SendSignatureRequest {
     /** Per-document reminder + expiration overrides; null inherits the org defaults. */
     private final SignatureSchedule schedule;
     /**
+     * Mark each field you send with a {@code template.anchor} whose tag (case-insensitive) and type
+     * match an anchored field of the template's saved signature setup as that setup's field. For
+     * such a field, a tag missing from the document is skipped instead of failing the send (the
+     * send or review link still fails (400 SignerHasNoFields) if a signer is left with no field); with no {@code template.size} of its own
+     * it is sized to the tag (as wide as the tag, at least the type's default width, at the default
+     * height); and it is centred on the tag (the API takes a template alignment to change that,
+     * which {@link Field.TemplateAnchor} does not have yet). A size of your own wins. The saved
+     * field's size, offset, placement, default value and read-only setting are NOT copied onto your
+     * field. Applies with or without {@code recipients[].role}. When null or false, your own anchor
+     * fields keep the standard placement and a missing tag fails the send. Needs {@code templateId} or {@code deliverableId} (the API
+     * rejects a file upload together with {@code templateId}, so on an upload the flag has nothing
+     * to apply). Null keeps the default behaviour; {@code false} is forwarded rather than dropped.
+     */
+    private final Boolean applySignatureSetup;
+    /**
      * Whether the backend emails the recipients their signing link (and the initial CC notice).
      * Null keeps the default (emails sent). Set {@code false} for embedded signing, where your app
      * shows the signing page: the document still goes out for signing, and passcode and
@@ -31,6 +46,7 @@ public class SendSignatureRequest {
 
     private SendSignatureRequest(Builder builder) {
         this.schedule = builder.schedule;
+        this.applySignatureSetup = builder.applySignatureSetup;
         this.sendEmail = builder.sendEmail;
         this.file = builder.file;
         this.fileName = builder.fileName;
@@ -98,6 +114,10 @@ public class SendSignatureRequest {
         return schedule;
     }
 
+    public Boolean getApplySignatureSetup() {
+        return applySignatureSetup;
+    }
+
     public Boolean getSendEmail() {
         return sendEmail;
     }
@@ -120,6 +140,7 @@ public class SendSignatureRequest {
         private String senderEmail;
         private List<String> ccEmails;
         private SignatureSchedule schedule;
+        private Boolean applySignatureSetup;
         private Boolean sendEmail;
 
         public Builder file(byte[] file) {
@@ -200,6 +221,25 @@ public class SendSignatureRequest {
          */
         public Builder sendEmail(Boolean sendEmail) {
             this.sendEmail = sendEmail;
+            return this;
+        }
+
+        /**
+         * Mark each field you send with a {@code template.anchor} whose tag (case-insensitive) and type
+         * match an anchored field of the template's saved signature setup as that setup's field. For
+         * such a field, a tag missing from the document is skipped instead of failing the send (the
+         * send or review link still fails (400 SignerHasNoFields) if a signer is left with no field); with no {@code template.size} of its own
+         * it is sized to the tag (as wide as the tag, at least the type's default width, at the default
+         * height); and it is centred on the tag (the API takes a template alignment to change that,
+         * which {@link Field.TemplateAnchor} does not have yet). A size of your own wins. The saved
+         * field's size, offset, placement, default value and read-only setting are NOT copied onto your
+         * field. Applies with or without {@code recipients[].role}. When null or false, your own anchor
+         * fields keep the standard placement and a missing tag fails the send. Needs {@code templateId} or {@code deliverableId} (the API
+         * rejects a file upload together with {@code templateId}, so on an upload the flag has nothing
+         * to apply). Null keeps the default behaviour; {@code false} is forwarded rather than dropped.
+         */
+        public Builder applySignatureSetup(Boolean applySignatureSetup) {
+            this.applySignatureSetup = applySignatureSetup;
             return this;
         }
 

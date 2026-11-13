@@ -320,6 +320,56 @@ await TurboSign.send_signature(
 - `get_template_signature_setup` throws `NotFoundError` (404, code `SignatureSetupNotFound`) when the template has no saved signature setup, or is not a template in your organization.
 - `role` works the same way on `create_signature_review_link()` and `create_embedded_signature()`.
 
+#### Anchored fields (template tags as signature fields)
+
+A template's saved setup can also hold **anchored fields**: a field tied to a tag such as
+`{ClientSign}` for one role, placed wherever that tag appears in the generated document.
+`get_template_signature_setup()` lists them under `"anchors"` (with `"notFound": True` when the
+template has no such tag) and gives each role an `"anchoredFieldCount"`. Add and remove them with
+an administrator or contributor API key:
+
+```python
+added = await TurboSign.add_template_signature_anchor(
+    template_id="your-template-id",
+    role_key="signer_1",  # on a template with no signer yet, signer_1 creates the first one
+    type="signature",
+    anchor="{ClientSign}",
+    size={"width": 150, "height": 40},  # optional, also offset, placement, default_value, is_readonly
+)
+# added -> {"fieldId": "...", "signatureSetup": {...}, "tagBecameSignatureField": True}
+
+await TurboSign.remove_template_signature_anchor("your-template-id", added["fieldId"])
+```
+
+- A tag belongs to one role and holds one field: another role's tag, or a second field on a tag, raises `ConflictError` (409, code `AnchorOwnedByOtherRole` or `AnchorTagHasField`).
+- An unknown role or field id raises `NotFoundError` (404, `SignerRoleNotFound` / `SetupFieldNotFound`).
+- Adding the same type on the same tag for the same role again returns that field (same `fieldId`, `tagBecameSignatureField` false), updated with any `size`, `offset`, `placement`, `default_value` or `is_readonly` you send; a setting you leave out keeps its saved value. `tagBecameSignatureField` is true only when the call created the field.
+- A locked template (open for editing in TurboDocx) is a 423 from the template lock check. Its body is `{"error": "Resource is locked", "message": "This template is currently being edited", "data": {"locked": true, "lockedBy": ..., "lockedOn": ...}}`, with no `code` or `type`, so detect it by the status: the SDK raises a `TurboDocxError` with `status_code` 423 (its `code` is the body's `error` text, so do not match on it).
+- A role send (`recipients[]["role"]`) adds each role's saved fields, with no flag. Which saved fields depends on what you send:
+  - `template_id` of a PDF template: all of them, placed and anchored.
+  - `deliverable_id` of a deliverable generated from a PDF template: the placed fields only; anchored fields are not used.
+  - `deliverable_id` of a deliverable generated from a Word or PowerPoint template: the anchored fields only, found by their tags in the deliverable; placed fields are not used.
+  - `template_id` of a Word or PowerPoint template is refused (`TemplateRolesNeedPdfTemplate`).
+
+  Fields you pass yourself are sent too, alongside the saved ones.
+- Pass `apply_signature_setup=True` to `send_signature()` or `create_signature_review_link()` (with `template_id` or `deliverable_id`, with or without roles) and each field you send with a `template.anchor` whose tag (case-insensitive) and type match an anchored field of the saved setup is marked as that setup's field:
+  - a tag missing from the document is skipped instead of failing the send (the send, or the review link, then fails with 400 `SignerHasNoFields` if that leaves a signer with no field);
+  - with no `template.size` of its own it is sized to the tag (as wide as the tag, at least the type's default width, at the default height);
+  - it is centred on the tag, with or without a size of its own, unless you set `template.alignment`;
+  - your own size and alignment win;
+  - the saved field's size, offset, placement, default value and read-only setting are not copied onto your field.
+
+  Without the flag your own anchor fields keep the standard placement and a missing tag fails the send.
+
+```python
+await TurboSign.send_signature(
+    deliverable_id="your-deliverable-id",
+    recipients=[{"name": "Jane Doe", "email": "jane@client.com", "signingOrder": 1}],
+    fields=[{"type": "signature", "recipientEmail": "jane@client.com", "template": {"anchor": "{ClientSign}"}}],
+    apply_signature_setup=True,
+)
+```
+
 #### `send_reminder()`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the per-signer cap is already spent, does not consume that cap, and only emails signers at the *current* signing order. Omit `recipient_ids` to remind everyone eligible; do not pass an empty list, which the API rejects.
@@ -938,6 +988,7 @@ For complete, working examples including template anchors, advanced field types,
 
 - [`turbosign_send_simple.py`](./examples/turbosign_send_simple.py) - Send document directly with template anchors
 - [`turbosign_template_roles.py`](./examples/turbosign_template_roles.py) - Send a template set up in TurboDocx by naming each signer's role
+- [`turbosign_anchored_fields.py`](./examples/turbosign_anchored_fields.py) - Add an anchored field to a template's signature setup, prepare a deliverable for signing with it, then remove it if the run created it
 - [`turbosign_basic.py`](./examples/turbosign_basic.py) - Create review link first, then send manually
 - [`turbosign_advanced.py`](./examples/turbosign_advanced.py) - Advanced field types (checkbox, readonly, multiline text, etc.)
 - [`turbopartner_basic.py`](./examples/turbopartner_basic.py) - Full organization lifecycle (create org, add users, create API keys)
@@ -1123,12 +1174,18 @@ The API also returns more specific codes, passed through unchanged:
 | `DuplicateSignerRole` | 400 | More than one recipient was given for the same role. |
 | `SignerRoleUnfilled` | 400 | A role has no recipient and no signer saved on the template. |
 | `TemplateHasNoSignerRoles` | 400 | `role` was used on a template with no saved signature setup. |
-| `RoleRequiresTemplate` | 400 | `role` was used without a `templateId`. |
+| `RoleRequiresTemplate` | 400 | `role` was used without a `templateId` or `deliverableId`. |
 | `TemplateRolesNeedPdfTemplate` | 400 | Roles can only be sent for a PDF signature template. For a Word template, generate a deliverable and send it with `deliverableId`. |
 | `DuplicateRoleEmail` | 400 | Two roles resolve to the same email address (a recipient you passed or a signer saved on the template), or a recipient without a `role` uses a role's email address. Each signer needs their own email address. |
-| `SignerHasNoFields` | 400 | On a role send, a signer has no field to sign: neither the template nor your `fields` assigns one to them. Raised when sending (`send_signature`, embedded signing), not for a review link, where fields can be placed in the preview. |
+| `SignerHasNoFields` | 400 | On a role send, a signer has no field to sign: neither the template nor your `fields` assigns one to them. Raised when sending (`send_signature`, embedded signing), not for a review link, where fields can be placed in the preview. It is also raised, for a review link too, when fields come from the template's saved setup (a role send, or `applySignatureSetup: true`) and a tag missing from the document was skipped, leaving a signer with no field or only locked ones. |
 | `InvalidRecipient` | 400 | An entry in `recipients` is not an object (for example `null` or a string). |
 | `SignatureSetupNotFound` | 404 | `get_template_signature_setup` was called for a template with no saved signature setup, or one that is not in your organization. Thrown as `NotFoundError`. |
+| `SignerRoleNotFound` | 404 | `add_template_signature_anchor` named a `role_key` that is not one of the template's roles. Thrown as `NotFoundError`. |
+| `SetupFieldNotFound` | 404 | `remove_template_signature_anchor` was given a field id that is not in the template's signature setup. Thrown as `NotFoundError`. |
+| `AnchorOwnedByOtherRole` | 409 | The tag already belongs to another signer role. Thrown as `ConflictError`. |
+| `AnchorTagHasField` | 409 | The tag already holds a different field. Thrown as `ConflictError`. |
+| `ReadonlyFieldNoDefaultValue` | 400 | A read-only anchored field has no default value, its own or its role's. |
+| (no code) | 423 | `add_template_signature_anchor` / `remove_template_signature_anchor` on a template that is locked (open for editing in TurboDocx). The body is `{"error": "Resource is locked", "message": "This template is currently being edited", "data": {...}}` with no `code`, so check `status_code == 423` on the `TurboDocxError`. |
 | `QuoteHasNoLineItems` | 400 | The quote has no line items. Add at least one before sending. |
 | `QuoteExpired` | 400 | The quote is past its `validUntil` date. |
 | `QuoteValidUntilRequired` | 400 | The quote has no `validUntil` date set. |

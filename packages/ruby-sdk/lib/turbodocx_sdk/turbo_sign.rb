@@ -27,6 +27,9 @@ module TurboDocxSdk
       "fullName" => { type: "full_name", size: { "width" => 150, "height" => 30 } }
     }.freeze
 
+    # Request keys +add_template_signature_anchor+ forwards, camelCase as the API expects.
+    ANCHOR_BODY_KEYS = %w[roleKey type anchor size offset placement defaultValue isReadonly].freeze
+
     class << self
       # Configure the TurboSign module with API credentials.
       #
@@ -68,6 +71,21 @@ module TurboDocxSdk
       #   added). A role left out uses the template's saved signer. List a template's roles with
       #   +get_template_signature_setup+. An unknown role raises ValidationError, code
       #   "UnknownSignerRole".
+      #
+      #   :applySignatureSetup (Boolean, optional): on any send, with or without a recipient
+      #   "role", each field you send with a "template" => { "anchor" } whose tag
+      #   (case-insensitive) and type match an anchored field of the template's saved signature
+      #   setup is marked as that setup's field. For such a field, a tag missing from the document
+      #   is skipped instead of failing the send (the send or review link still fails (400 SignerHasNoFields) if a signer is left with no
+      #   field); with no "size" of its own in "template" it is sized to the tag (as wide as the
+      #   tag, at least the type's default width, at the default height); and it is centred on the
+      #   tag unless its "template" sets an "alignment". Your own size and alignment win. The saved
+      #   field's size, offset, placement, default value and read-only setting are NOT copied onto
+      #   your field. When unset, your own anchor fields keep the standard placement and a missing
+      #   tag fails the send.
+      #   Needs :templateId or :deliverableId (the API rejects a file upload together with
+      #   a templateId, so on the upload path the flag has nothing to apply). An explicit false is
+      #   sent; leave it out (nil) to keep the default behaviour.
       # @return [Hash] document info with review URL; the API always includes "recipients" on
       #   success (this method does not default it)
       # @raise [ValidationError] on invalid request data
@@ -110,7 +128,8 @@ module TurboDocxSdk
       # link and are never sent signing, reminder or resend emails. A blank or whitespace-only
       # +externalId+ counts as absent (stored as null).
       #
-      # @param request [Hash] same as create_signature_review_link, plus optional :sendEmail
+      # @param request [Hash] same as create_signature_review_link (including
+      #   :applySignatureSetup), plus optional :sendEmail
       # @return [Hash] document info with confirmation; the API always includes "recipients" on
       #   success (this method does not default it)
       # @raise [ValidationError] on invalid request data
@@ -504,15 +523,19 @@ module TurboDocxSdk
       # saved for that role come with it, so +fields+ can be left out. This returns each role's
       # "key" (the value for +role+), in signing order, whether the template has a saved signer
       # used when you leave the role out ("hasSavedSigner", plus "defaultName"/"defaultEmail"), and
-      # its "fieldCount".
+      # its "fieldCount" ("anchoredFieldCount" of those are anchored to a template tag). The
+      # setup's anchored fields are listed in "anchors"; see +add_template_signature_anchor+.
       #
       # @example
       #   setup = TurboDocxSdk::TurboSign.get_template_signature_setup("your-template-id")
       #   setup["roles"].first["key"] # => "client"
       #
       # @param template_id [String]
-      # @return [Hash] with "templateId" and "roles" (each "key", "label", "order",
-      #   "hasSavedSigner", optional "defaultName"/"defaultEmail", and "fieldCount")
+      # @return [Hash] with "templateId", "roles" (each "key", "label", "order",
+      #   "hasSavedSigner", optional "defaultName"/"defaultEmail", "fieldCount" and
+      #   "anchoredFieldCount") and "anchors" (each optional "fieldId", "roleKey", "type",
+      #   "anchor", "placement" (always present), optional "offset"/"size", and "notFound": true
+      #   when the template has no variable (Word/PowerPoint) or text (PDF) with this tag)
       # @raise [NotFoundError] (404, code "SignatureSetupNotFound") when the template has no saved
       #   signature setup, or is not a template in your organization
       # @raise [AuthenticationError] on invalid credentials
@@ -520,6 +543,65 @@ module TurboDocxSdk
       def get_template_signature_setup(template_id)
         client = get_client
         client.get("/turbosign/templates/#{ERB::Util.url_encode(template_id.to_s)}/signature-setup")
+      end
+
+      # Add an anchored field to a template's saved signature setup: the field is placed on every
+      # occurrence of the tag (e.g. "{ClientSign}") for one signer role. Requires an administrator
+      # or contributor API key. Sending the same type on the same tag for the same role again
+      # returns that field (same "fieldId", "tagBecameSignatureField" false), updated with any
+      # "size", "offset", "placement", "defaultValue" or "isReadonly" you send; a setting you leave
+      # out keeps its saved value.
+      #
+      # @example
+      #   result = TurboDocxSdk::TurboSign.add_template_signature_anchor(
+      #     templateId: "your-template-id", roleKey: "signer_1", type: "signature", anchor: "{ClientSign}"
+      #   )
+      #   result["fieldId"]
+      #
+      # @param request [Hash] :templateId and the camelCase body keys :roleKey (on a template with
+      #   no signer yet, "signer_1" creates the first one), :type, :anchor (one tag in single
+      #   braces with no spaces), and optional :size ({ width:, height: }), :offset ({ x:, y: }),
+      #   :placement ("replace" | "before" | "after" | "above" | "below"), :defaultValue and
+      #   :isReadonly (a read-only field needs a default value, its own or its role's). Unset
+      #   (nil) keys are left out; the caller's hash is not modified.
+      # @return [Hash] with "fieldId", "signatureSetup" (the saved setup) and
+      #   "tagBecameSignatureField" (true when the tag was not a signature field before; the
+      #   template's own values for it were cleared)
+      # @raise [NotFoundError] code "SignatureSetupNotFound", "SignerRoleNotFound" or
+      #   "TemplateNotFound"
+      # @raise [ConflictError] code "AnchorOwnedByOtherRole" (the tag belongs to another role) or
+      #   "AnchorTagHasField" (the tag already has a different field)
+      # @raise [ValidationError] e.g. code "ReadonlyFieldNoDefaultValue", or a malformed anchor
+      # @raise [TurboDocxError] status_code 423 while the template is locked (being edited in
+      #   TurboDocx); the body carries no code, so check the status
+      def add_template_signature_anchor(request)
+        template_id = req_val(request, :templateId)
+        body = ANCHOR_BODY_KEYS.each_with_object({}) do |key, acc|
+          value = req_val(request, key.to_sym)
+          acc[key] = value unless value.nil?
+        end
+
+        response = get_client.post(
+          "/turbosign/templates/#{ERB::Util.url_encode(template_id.to_s)}/signature-setup/anchors", body
+        )
+        # Strictly "results", as the other SDKs read it: the outer object is never taken as the result
+        response["results"]
+      end
+
+      # Remove an anchored field from a template's saved signature setup, by the "fieldId" that
+      # +add_template_signature_anchor+ or +get_template_signature_setup+ returned. Requires an
+      # administrator or contributor API key.
+      #
+      # @param template_id [String]
+      # @param field_id [String]
+      # @return [Hash] with "signatureSetup", the saved setup without the field
+      # @raise [NotFoundError] code "SetupFieldNotFound" or "SignatureSetupNotFound"
+      # @raise [TurboDocxError] status_code 423 while the template is locked; check the status
+      def remove_template_signature_anchor(template_id, field_id)
+        path = "/turbosign/templates/#{ERB::Util.url_encode(template_id.to_s)}" \
+               "/signature-setup/anchors/#{ERB::Util.url_encode(field_id.to_s)}"
+        response = get_client.delete(path)
+        response["results"]
       end
 
       # Get the status of a document.
@@ -714,6 +796,11 @@ module TurboDocxSdk
           cc_array = cc.is_a?(Array) ? cc : [cc]
           form_data["ccEmails"] = JSON.generate(cc_array)
         end
+
+        # nil? test, like sendEmail: an explicit false is forwarded. On the multipart upload path it
+        # travels as the string "true"/"false" via upload_file's value.to_s.
+        apply_setup = req_val(request, :applySignatureSetup)
+        form_data["applySignatureSetup"] = apply_setup unless apply_setup.nil?
 
         apply_schedule_overrides(form_data, request)
 

@@ -36,6 +36,20 @@ final class CreateSignatureReviewLinkRequest
      * @param array{value:int,unit:string}|null $expirationWarning How far before expiry warnings
      *     start. A zero value means no warnings at all.
      * @param array{value:int,unit:string}|null $expirationWarningInterval Gap between warnings
+     * @param bool|null $applySignatureSetup On any send, with or without a Recipient `role`, mark
+     *     each field you send with a `template` anchor whose tag (case-insensitive) and type match
+     *     an anchored field of the template's saved signature setup as that setup's field. For
+     *     such a field, a tag missing from the document is skipped instead of failing the send
+     *     (the send or review link still fails (400 SignerHasNoFields) if a signer is left with no field); with no `size` of its own it
+     *     is sized to the tag (as wide as the tag, at least the type's default width, at the
+     *     default height); and it is centred on the tag (the API takes a template alignment to
+     *     change that, which `TemplateConfig` does not have yet). A size of your own wins. The
+     *     saved field's size, offset, placement, default value and read-only setting are NOT
+     *     copied onto your field. When unset, your own anchor fields keep the standard placement
+     *     and a missing tag fails the send. Needs `templateId` or
+     *     `deliverableId` (the API rejects a file upload together with `templateId`, so on an
+     *     upload the flag has nothing to apply). Omit it to keep the default behaviour; `false` is
+     *     forwarded rather than dropped.
      */
     public function __construct(
         public array $recipients,
@@ -58,5 +72,6 @@ final class CreateSignatureReviewLinkRequest
         public ?array $expireAfter = null,
         public ?array $expirationWarning = null,
         public ?array $expirationWarningInterval = null,
+        public ?bool $applySignatureSetup = null,
     ) {}
 }
