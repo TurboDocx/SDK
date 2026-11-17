@@ -238,6 +238,7 @@ class TurboSign:
         sender_name: Optional[str] = None,
         sender_email: Optional[str] = None,
         cc_emails: Optional[List[str]] = None,
+        fit_anchored_tags: bool = False,
         reminders_enabled: Optional[bool] = None,
         reminder_delay: Optional[Dict[str, Any]] = None,
         reminder_interval: Optional[Dict[str, Any]] = None,
@@ -289,6 +290,13 @@ class TurboSign:
             sender_name: Sender name
             sender_email: Sender email
             cc_emails: List of CC email addresses
+            fit_anchored_tags: Places each field sent with a ``template.anchor`` that is one
+                single-brace tag such as ``{ClientSign}`` (with ``replace`` placement or none,
+                and without ``useRegex``) the way a template's saved setup field is placed:
+                measured from the document's text and, with no ``template.size``, fitted to its
+                tag's line; with a size, centred on its tag. A tag missing from the document
+                still fails the request. Works with ``file``, ``file_link``, ``template_id`` and
+                ``deliverable_id``. Off by default; sent only when True.
 
         Returns:
             Response with documentId, status, previewUrl, and recipients (the API always
@@ -328,6 +336,9 @@ class TurboSign:
 
             if cc_emails:
                 form_data["ccEmails"] = json.dumps(cc_emails)
+            # Sent only when True: the API treats False like a missing key, so False leaves it out.
+            if fit_anchored_tags:
+                form_data["fitAnchoredTags"] = True
             TurboSign._apply_schedule_overrides(
                 form_data,
                 reminders_enabled=reminders_enabled,
@@ -367,6 +378,9 @@ class TurboSign:
 
             if cc_emails:
                 json_body["ccEmails"] = json.dumps(cc_emails)
+            # Sent only when True: the API treats False like a missing key, so False leaves it out.
+            if fit_anchored_tags:
+                json_body["fitAnchoredTags"] = True
             TurboSign._apply_schedule_overrides(
                 json_body,
                 reminders_enabled=reminders_enabled,
@@ -409,6 +423,7 @@ class TurboSign:
         sender_email: Optional[str] = None,
         cc_emails: Optional[List[str]] = None,
         send_email: Optional[bool] = None,
+        fit_anchored_tags: bool = False,
         reminders_enabled: Optional[bool] = None,
         reminder_delay: Optional[Dict[str, Any]] = None,
         reminder_interval: Optional[Dict[str, Any]] = None,
@@ -478,6 +493,13 @@ class TurboSign:
                 still sent. Tested with
                 ``is not None`` so an explicit False is honoured (a truthiness check would
                 silently drop it and let the backend email everyone).
+            fit_anchored_tags: Places each field sent with a ``template.anchor`` that is one
+                single-brace tag such as ``{ClientSign}`` (with ``replace`` placement or none,
+                and without ``useRegex``) the way a template's saved setup field is placed:
+                measured from the document's text and, with no ``template.size``, fitted to its
+                tag's line; with a size, centred on its tag. A tag missing from the document
+                still fails the request. Works with ``file``, ``file_link``, ``template_id`` and
+                ``deliverable_id``. Off by default; sent only when True.
 
         Returns:
             Response with success, documentId, status, recipients, and message (the API always
@@ -522,6 +544,9 @@ class TurboSign:
             # the embedded flow relies on, and a truthiness check would drop it.
             if send_email is not None:
                 form_data["sendEmail"] = send_email
+            # Sent only when True: the API treats False like a missing key, so False leaves it out.
+            if fit_anchored_tags:
+                form_data["fitAnchoredTags"] = True
             TurboSign._apply_schedule_overrides(
                 form_data,
                 reminders_enabled=reminders_enabled,
@@ -565,6 +590,9 @@ class TurboSign:
             # truthiness) -- the embedded flow's False must survive.
             if send_email is not None:
                 json_body["sendEmail"] = send_email
+            # Sent only when True: the API treats False like a missing key, so False leaves it out.
+            if fit_anchored_tags:
+                json_body["fitAnchoredTags"] = True
             TurboSign._apply_schedule_overrides(
                 json_body,
                 reminders_enabled=reminders_enabled,
@@ -1051,6 +1079,7 @@ class TurboSign:
         cc_emails: Optional[List[str]] = None,
         fields: Optional[List[Dict[str, Any]]] = None,
         send_email: Optional[bool] = None,
+        fit_anchored_tags: bool = False,
         return_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
@@ -1113,6 +1142,10 @@ class TurboSign:
             send_email: Defaults to False for this flow: your app shows the signing page, so
                 the signing-link emails (and the initial CC notice) are suppressed. Passcode
                 and completed-copy emails are still sent.
+            fit_anchored_tags: As on :meth:`send_signature`: fields on single-brace tags are
+                placed like a template's saved setup fields. The per-recipient ``fields``
+                shorthand gives each field a size, so those fields are centred on their tags;
+                pass ``fields`` without a size to have them fitted. Sent only when True.
             return_url: Optional https completion fallback, passed to each embed URL.
 
         Returns:
@@ -1198,6 +1231,7 @@ class TurboSign:
             cc_emails=cc_emails,
             # Embedded flow default: suppress recipient emails (the host owns the UX).
             send_email=send_email if send_email is not None else False,
+            fit_anchored_tags=fit_anchored_tags,
         )
 
         # Match the backend's recipients back to the request by email so we can carry `name`
