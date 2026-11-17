@@ -28,6 +28,8 @@ public class CreateEmbeddedSignatureRequest {
     private final Boolean sendEmail;
     /** Optional completion fallback. Must be an https URL. Passed to each embed URL. */
     private final String returnUrl;
+    /** Fits fields on single-brace tags. See "Fit fields to their tags" in the README. */
+    private final boolean fitAnchoredTags;
 
     private CreateEmbeddedSignatureRequest(Builder builder) {
         this.file = builder.file;
@@ -44,6 +46,7 @@ public class CreateEmbeddedSignatureRequest {
         this.fields = builder.fields;
         this.sendEmail = builder.sendEmail;
         this.returnUrl = builder.returnUrl;
+        this.fitAnchoredTags = builder.fitAnchoredTags;
     }
 
     public byte[] getFile() {
@@ -102,6 +105,10 @@ public class CreateEmbeddedSignatureRequest {
         return returnUrl;
     }
 
+    public boolean isFitAnchoredTags() {
+        return fitAnchoredTags;
+    }
+
     public boolean hasFile() {
         return file != null && file.length > 0;
     }
@@ -121,6 +128,7 @@ public class CreateEmbeddedSignatureRequest {
         private List<Field> fields;
         private Boolean sendEmail;
         private String returnUrl;
+        private boolean fitAnchoredTags;
 
         public Builder file(byte[] file) {
             this.file = file;
@@ -198,6 +206,12 @@ public class CreateEmbeddedSignatureRequest {
         /** Completion fallback URL, forwarded to each embed URL (https only). */
         public Builder returnUrl(String returnUrl) {
             this.returnUrl = returnUrl;
+            return this;
+        }
+
+        /** Fits fields on single-brace tags. See "Fit fields to their tags" in the README. */
+        public Builder fitAnchoredTags(boolean fitAnchoredTags) {
+            this.fitAnchoredTags = fitAnchoredTags;
             return this;
         }
 

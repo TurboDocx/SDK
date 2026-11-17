@@ -320,6 +320,31 @@ await TurboSign.send_signature(
 - `get_template_signature_setup` throws `NotFoundError` (404, code `SignatureSetupNotFound`) when the template has no saved signature setup, or is not a template in your organization.
 - `role` works the same way on `create_signature_review_link()` and `create_embedded_signature()`.
 
+#### Fit fields to their tags (`fit_anchored_tags`)
+
+Pass `fit_anchored_tags=True` to `send_signature()`, `create_signature_review_link()` or `create_embedded_signature()` to place each field you send on a tag the way a template's saved setup field is placed. It applies to a field whose `template.anchor` is one tag in single braces with no spaces (such as `{ClientSign}`), with `replace` placement (or none) and without `useRegex`.
+
+```python
+with open("contract.pdf", "rb") as f:
+    pdf_bytes = f.read()
+
+await TurboSign.send_signature(
+    file=pdf_bytes,
+    recipients=[{"name": "Jane Doe", "email": "jane@client.com", "signingOrder": 1}],
+    fields=[
+        {"type": "signature", "recipientEmail": "jane@client.com", "template": {"anchor": "{ClientSign}"}}
+    ],
+    fit_anchored_tags=True,
+)
+```
+
+- With no `template.size`, the field is fitted to its tag's line: its height follows the line's font size and it starts where the tag starts.
+- With a size, the field keeps it and is centred on its tag.
+- A tag missing from the document still fails the request.
+- It works with `file`, `file_link`, `template_id` and `deliverable_id`. The template's saved setup is not read or changed.
+- It is off by default. It is sent only when it is `True` or the string `"true"` (any case); any other value, `"false"` and `1` included, sends nothing. Without it, your fields keep the standard placement.
+- With it on, the `create_embedded_signature()` per-recipient `fields` shorthand leaves out its default size, so those fields are fitted too. A size you give on top-level `fields` is kept.
+
 #### `send_reminder()`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the per-signer cap is already spent, does not consume that cap, and only emails signers at the *current* signing order. Omit `recipient_ids` to remind everyone eligible; do not pass an empty list, which the API rejects.

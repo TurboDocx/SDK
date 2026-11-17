@@ -294,6 +294,35 @@ result, err := client.TurboSign.SendSignature(ctx, &turbodocx.SendSignatureReque
 - `GetTemplateSignatureSetup` throws `*NotFoundError` (404, code `SignatureSetupNotFound`) when the template has no saved signature setup, or is not a template in your organization.
 - `Role` works the same way on `CreateSignatureReviewLink` and on `EmbeddedSignatureRecipient` for `CreateEmbeddedSignature`.
 
+#### Fit fields to their tags (`FitAnchoredTags`)
+
+Set `FitAnchoredTags: true` on `SendSignatureRequest`, `CreateSignatureReviewLinkRequest` or `CreateEmbeddedSignatureRequest` to place each field you send on a tag the way a template's saved setup field is placed. It applies to a field whose `Template.Anchor` is one tag in single braces with no spaces (such as `{ClientSign}`), with `replace` placement (or none) and without `UseRegex`.
+
+```go
+pdfBytes, err := os.ReadFile("contract.pdf")
+if err != nil {
+    log.Fatal(err)
+}
+
+result, err := client.TurboSign.SendSignature(ctx, &turbodocx.SendSignatureRequest{
+    File: pdfBytes,
+    Recipients: []turbodocx.Recipient{
+        {Name: "Jane Doe", Email: "jane@client.com", SigningOrder: 1},
+    },
+    Fields: []turbodocx.Field{
+        {Type: "signature", RecipientEmail: "jane@client.com", Template: &turbodocx.TemplateAnchor{Anchor: "{ClientSign}"}},
+    },
+    FitAnchoredTags: true,
+})
+```
+
+- With no `Template.Size`, the field is fitted to its tag's line: its height follows the line's font size and it starts where the tag starts.
+- With a size, the field keeps it and is centred on its tag.
+- A tag missing from the document still fails the request.
+- It works with `File`, `FileLink`, `TemplateID` and `DeliverableID`. The template's saved setup is not read or changed.
+- It is off by default and sent only when `true`. Without it, your fields keep the standard placement.
+- With it on, the `CreateEmbeddedSignature` per-recipient `Fields` shorthand leaves out its default size, so those fields are fitted too. A size you give on the request's `Fields` is kept.
+
 #### `SendReminder`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic reminder cadence — it works even when reminders are disabled or the per-signer cap is spent, does not consume that cap, and only emails signers at the **current** signing order. Pass `nil` for `recipientIDs` to remind everyone eligible; do **not** pass an empty slice, which the API rejects.

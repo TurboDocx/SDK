@@ -573,7 +573,7 @@ func TestExpandRecipientFields(t *testing.T) {
 			Initials:  "{init}",
 			FullName:  "{name}",
 		},
-	})
+	}, false)
 	require.Len(t, fields, 4)
 
 	// Deterministic order: signature, date, initial, full_name.
@@ -595,7 +595,7 @@ func TestExpandRecipientFields(t *testing.T) {
 	assert.Equal(t, 150, fields[3].Template.Size.Width)
 
 	// No shorthand -> no fields.
-	assert.Nil(t, expandRecipientFields(EmbeddedSignatureRecipient{Email: "x@example.com"}))
+	assert.Nil(t, expandRecipientFields(EmbeddedSignatureRecipient{Email: "x@example.com"}, false))
 }
 
 // Verifies the auth shorthand resolves to the right identity verification, with email winning.

@@ -63,11 +63,21 @@ def _resolve_identity_verification(auth: Optional[Dict[str, Any]]) -> Optional[D
     return None
 
 
-def _expand_recipient_fields(recipient: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _fit_anchored_tags_on(value: Any) -> bool:
+    """Whether ``fit_anchored_tags`` is on: True or the string "true" in any case.
+
+    Anything else, "false" and 1 included, is off and sends nothing. ``is True`` (not ``==``)
+    keeps 1 off, since ``1 == True`` in Python.
+    """
+    return value is True or (isinstance(value, str) and value.lower() == "true")
+
+
+def _expand_recipient_fields(recipient: Dict[str, Any], *, fit_anchored_tags: bool = False) -> List[Dict[str, Any]]:
     """Expand a recipient's ``fields`` shorthand into full field dicts.
 
     One field per provided key, anchored to the given text with ``placement: 'replace'`` and
-    the key's default size. Returns an empty list when the recipient has no ``fields``
+    the key's default size. With ``fit_anchored_tags`` on, the size is left out so the API fits
+    each field to its tag. Returns an empty list when the recipient has no ``fields``
     shorthand.
     """
     shorthand = recipient.get("fields")
@@ -82,10 +92,13 @@ def _expand_recipient_fields(recipient: Dict[str, Any]) -> List[Dict[str, Any]]:
             anchor = shorthand.get("full_name")
         if not anchor:
             continue
+        template: Dict[str, Any] = {"anchor": anchor, "placement": "replace"}
+        if not fit_anchored_tags:
+            template["size"] = spec["size"]
         fields.append({
             "type": spec["type"],
             "recipientEmail": recipient["email"],
-            "template": {"anchor": anchor, "placement": "replace", "size": spec["size"]},
+            "template": template,
         })
     return fields
 
@@ -172,6 +185,58 @@ class TurboSign:
         return {**form_data, "fileName": file_name} if file_name else form_data
 
     @staticmethod
+    def _build_signature_body(
+        *,
+        sender_config: Dict[str, Any],
+        recipients: List[Dict[str, Any]],
+        fields: Optional[List[Dict[str, Any]]],
+        for_review: bool,
+        document_name: Optional[str],
+        document_description: Optional[str],
+        sender_name: Optional[str],
+        sender_email: Optional[str],
+        cc_emails: Optional[List[str]],
+        send_email: Optional[bool] = None,
+        fit_anchored_tags: Any = False,
+        schedule: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        The body both send paths share, before the file input is added. The same keys go on the
+        multipart form (file upload) and on the JSON body (file link, deliverable or template), so
+        every send option is written here once. ``recipients`` and ``fields`` travel as JSON
+        strings on both. Request-body keys stay camelCase.
+        """
+        body: Dict[str, Any] = {
+            "recipients": json.dumps(recipients),
+        }
+
+        TurboSign._apply_fields(body, fields, for_review=for_review)
+
+        # Add optional fields
+        if document_name:
+            body["documentName"] = document_name
+        if document_description:
+            body["documentDescription"] = document_description
+
+        # Use request senderEmail/senderName if provided, otherwise fall back to configured values
+        body["senderEmail"] = sender_email or sender_config["sender_email"]
+        if sender_name or sender_config["sender_name"]:
+            body["senderName"] = sender_name or sender_config["sender_name"]
+
+        if cc_emails:
+            body["ccEmails"] = json.dumps(cc_emails)
+        # Forward email suppression (send path only) when explicitly set. Presence is tested with
+        # ``is not None`` (never truthiness): False (do not email) is the meaningful value the
+        # embedded flow relies on, and a truthiness check would drop it.
+        if send_email is not None:
+            body["sendEmail"] = send_email
+        # Sent only when on (see _fit_anchored_tags_on): the API treats False like a missing key.
+        if _fit_anchored_tags_on(fit_anchored_tags):
+            body["fitAnchoredTags"] = True
+        TurboSign._apply_schedule_overrides(body, **schedule)
+        return body
+
+    @staticmethod
     def _apply_schedule_overrides(
         target: Dict[str, Any],
         *,
@@ -245,7 +310,8 @@ class TurboSign:
         expiration_enabled: Optional[bool] = None,
         expire_after: Optional[Dict[str, Any]] = None,
         expiration_warning: Optional[Dict[str, Any]] = None,
-        expiration_warning_interval: Optional[Dict[str, Any]] = None
+        expiration_warning_interval: Optional[Dict[str, Any]] = None,
+        fit_anchored_tags: bool = False,
     ) -> Dict[str, Any]:
         """
         Create signature review link without sending emails
@@ -289,6 +355,7 @@ class TurboSign:
             sender_name: Sender name
             sender_email: Sender email
             cc_emails: List of CC email addresses
+            fit_anchored_tags: Fits fields on single-brace tags. See "Fit fields to their tags" in the README.
 
         Returns:
             Response with documentId, status, previewUrl, and recipients (the API always
@@ -302,95 +369,50 @@ class TurboSign:
             ... )
         """
         client = cls._get_client()
-
-        # Get sender config from client
-        sender_config = client.get_sender_config()
+        body = cls._build_signature_body(
+            sender_config=client.get_sender_config(),
+            recipients=recipients,
+            fields=fields,
+            for_review=True,
+            document_name=document_name,
+            document_description=document_description,
+            sender_name=sender_name,
+            sender_email=sender_email,
+            cc_emails=cc_emails,
+            fit_anchored_tags=fit_anchored_tags,
+            schedule=dict(
+                reminders_enabled=reminders_enabled,
+                reminder_delay=reminder_delay,
+                reminder_interval=reminder_interval,
+                max_reminders=max_reminders,
+                expiration_enabled=expiration_enabled,
+                expire_after=expire_after,
+                expiration_warning=expiration_warning,
+                expiration_warning_interval=expiration_warning_interval,
+            ),
+        )
 
         # Handle different file input methods
         if file:
-            # For file upload, use form data with JSON strings
-            form_data: Dict[str, Any] = {
-                "recipients": json.dumps(recipients),
-            }
-
-            cls._apply_fields(form_data, fields, for_review=True)
-
-            # Add optional fields
-            if document_name:
-                form_data["documentName"] = document_name
-            if document_description:
-                form_data["documentDescription"] = document_description
-
-            # Use request senderEmail/senderName if provided, otherwise fall back to configured values
-            form_data["senderEmail"] = sender_email or sender_config["sender_email"]
-            if sender_name or sender_config["sender_name"]:
-                form_data["senderName"] = sender_name or sender_config["sender_name"]
-
-            if cc_emails:
-                form_data["ccEmails"] = json.dumps(cc_emails)
-            TurboSign._apply_schedule_overrides(
-                form_data,
-                reminders_enabled=reminders_enabled,
-                reminder_delay=reminder_delay,
-                reminder_interval=reminder_interval,
-                max_reminders=max_reminders,
-                expiration_enabled=expiration_enabled,
-                expire_after=expire_after,
-                expiration_warning=expiration_warning,
-                expiration_warning_interval=expiration_warning_interval,
-            )
-
+            # File upload: the same keys as form data
             return await client.upload_file(
                 "/turbosign/single/prepare-for-review",
                 file=file,
-                additional_data=cls._with_file_name(form_data, file_name)
-            )
-        else:
-            # For JSON body (template_id, file_link, deliverable_id)
-            # Backend expects recipients/fields as JSON strings (same as form-data)
-            json_body: Dict[str, Any] = {
-                "recipients": json.dumps(recipients),
-            }
-
-            cls._apply_fields(json_body, fields, for_review=True)
-
-            # Add optional fields
-            if document_name:
-                json_body["documentName"] = document_name
-            if document_description:
-                json_body["documentDescription"] = document_description
-
-            # Use request senderEmail/senderName if provided, otherwise fall back to configured values
-            json_body["senderEmail"] = sender_email or sender_config["sender_email"]
-            if sender_name or sender_config["sender_name"]:
-                json_body["senderName"] = sender_name or sender_config["sender_name"]
-
-            if cc_emails:
-                json_body["ccEmails"] = json.dumps(cc_emails)
-            TurboSign._apply_schedule_overrides(
-                json_body,
-                reminders_enabled=reminders_enabled,
-                reminder_delay=reminder_delay,
-                reminder_interval=reminder_interval,
-                max_reminders=max_reminders,
-                expiration_enabled=expiration_enabled,
-                expire_after=expire_after,
-                expiration_warning=expiration_warning,
-                expiration_warning_interval=expiration_warning_interval,
+                additional_data=cls._with_file_name(body, file_name)
             )
 
-            # URL, deliverable, or template
-            if file_link:
-                json_body["fileLink"] = file_link
-            if deliverable_id:
-                json_body["deliverableId"] = deliverable_id
-            if template_id:
-                json_body["templateId"] = template_id
+        # JSON body (template_id, file_link, deliverable_id)
+        if file_link:
+            body["fileLink"] = file_link
+        if deliverable_id:
+            body["deliverableId"] = deliverable_id
+        if template_id:
+            body["templateId"] = template_id
 
-            return await client.post(
-                "/turbosign/single/prepare-for-review",
-                data=json_body
-            )
+        return await client.post(
+            "/turbosign/single/prepare-for-review",
+            data=body
+        )
 
     @classmethod
     async def send_signature(
@@ -416,7 +438,8 @@ class TurboSign:
         expiration_enabled: Optional[bool] = None,
         expire_after: Optional[Dict[str, Any]] = None,
         expiration_warning: Optional[Dict[str, Any]] = None,
-        expiration_warning_interval: Optional[Dict[str, Any]] = None
+        expiration_warning_interval: Optional[Dict[str, Any]] = None,
+        fit_anchored_tags: bool = False,
     ) -> Dict[str, Any]:
         """
         Send a document for signature
@@ -478,6 +501,7 @@ class TurboSign:
                 still sent. Tested with
                 ``is not None`` so an explicit False is honoured (a truthiness check would
                 silently drop it and let the backend email everyone).
+            fit_anchored_tags: Fits fields on single-brace tags. See "Fit fields to their tags" in the README.
 
         Returns:
             Response with success, documentId, status, recipients, and message (the API always
@@ -491,104 +515,51 @@ class TurboSign:
             ... )
         """
         client = cls._get_client()
-
-        # Get sender config from client
-        sender_config = client.get_sender_config()
+        body = cls._build_signature_body(
+            sender_config=client.get_sender_config(),
+            recipients=recipients,
+            fields=fields,
+            for_review=False,
+            document_name=document_name,
+            document_description=document_description,
+            sender_name=sender_name,
+            sender_email=sender_email,
+            cc_emails=cc_emails,
+                send_email=send_email,
+            fit_anchored_tags=fit_anchored_tags,
+            schedule=dict(
+                reminders_enabled=reminders_enabled,
+                reminder_delay=reminder_delay,
+                reminder_interval=reminder_interval,
+                max_reminders=max_reminders,
+                expiration_enabled=expiration_enabled,
+                expire_after=expire_after,
+                expiration_warning=expiration_warning,
+                expiration_warning_interval=expiration_warning_interval,
+            ),
+        )
 
         # Handle different file input methods
         if file:
-            # For file upload, use form data with JSON strings
-            form_data: Dict[str, Any] = {
-                "recipients": json.dumps(recipients),
-            }
-
-            cls._apply_fields(form_data, fields, for_review=False)
-
-            # Add optional fields
-            if document_name:
-                form_data["documentName"] = document_name
-            if document_description:
-                form_data["documentDescription"] = document_description
-
-            # Use request senderEmail/senderName if provided, otherwise fall back to configured values
-            form_data["senderEmail"] = sender_email or sender_config["sender_email"]
-            if sender_name or sender_config["sender_name"]:
-                form_data["senderName"] = sender_name or sender_config["sender_name"]
-
-            if cc_emails:
-                form_data["ccEmails"] = json.dumps(cc_emails)
-            # Forward email suppression only when explicitly set. Presence is tested with
-            # ``is not None`` (never truthiness): False (do not email) is the meaningful value
-            # the embedded flow relies on, and a truthiness check would drop it.
-            if send_email is not None:
-                form_data["sendEmail"] = send_email
-            TurboSign._apply_schedule_overrides(
-                form_data,
-                reminders_enabled=reminders_enabled,
-                reminder_delay=reminder_delay,
-                reminder_interval=reminder_interval,
-                max_reminders=max_reminders,
-                expiration_enabled=expiration_enabled,
-                expire_after=expire_after,
-                expiration_warning=expiration_warning,
-                expiration_warning_interval=expiration_warning_interval,
-            )
-
+            # File upload: the same keys as form data
             return await client.upload_file(
                 "/turbosign/single/prepare-for-signing",
                 file=file,
-                additional_data=cls._with_file_name(form_data, file_name)
-            )
-        else:
-            # For JSON body (template_id, file_link, deliverable_id)
-            # Backend expects recipients/fields as JSON strings (same as form-data)
-            json_body: Dict[str, Any] = {
-                "recipients": json.dumps(recipients),
-            }
-
-            cls._apply_fields(json_body, fields, for_review=False)
-
-            # Add optional fields
-            if document_name:
-                json_body["documentName"] = document_name
-            if document_description:
-                json_body["documentDescription"] = document_description
-
-            # Use request senderEmail/senderName if provided, otherwise fall back to configured values
-            json_body["senderEmail"] = sender_email or sender_config["sender_email"]
-            if sender_name or sender_config["sender_name"]:
-                json_body["senderName"] = sender_name or sender_config["sender_name"]
-
-            if cc_emails:
-                json_body["ccEmails"] = json.dumps(cc_emails)
-            # Forward email suppression only when explicitly set (``is not None``, never
-            # truthiness) -- the embedded flow's False must survive.
-            if send_email is not None:
-                json_body["sendEmail"] = send_email
-            TurboSign._apply_schedule_overrides(
-                json_body,
-                reminders_enabled=reminders_enabled,
-                reminder_delay=reminder_delay,
-                reminder_interval=reminder_interval,
-                max_reminders=max_reminders,
-                expiration_enabled=expiration_enabled,
-                expire_after=expire_after,
-                expiration_warning=expiration_warning,
-                expiration_warning_interval=expiration_warning_interval,
+                additional_data=cls._with_file_name(body, file_name)
             )
 
-            # URL, deliverable, or template
-            if file_link:
-                json_body["fileLink"] = file_link
-            if deliverable_id:
-                json_body["deliverableId"] = deliverable_id
-            if template_id:
-                json_body["templateId"] = template_id
+        # JSON body (template_id, file_link, deliverable_id)
+        if file_link:
+            body["fileLink"] = file_link
+        if deliverable_id:
+            body["deliverableId"] = deliverable_id
+        if template_id:
+            body["templateId"] = template_id
 
-            return await client.post(
-                "/turbosign/single/prepare-for-signing",
-                data=json_body
-            )
+        return await client.post(
+            "/turbosign/single/prepare-for-signing",
+            data=body
+        )
 
     @classmethod
     async def get_template_signature_setup(cls, template_id: str) -> Dict[str, Any]:
@@ -1052,6 +1023,7 @@ class TurboSign:
         fields: Optional[List[Dict[str, Any]]] = None,
         send_email: Optional[bool] = None,
         return_url: Optional[str] = None,
+        fit_anchored_tags: bool = False,
     ) -> Dict[str, Any]:
         """
         Create a signature request AND mint a per-recipient embedded signing URL in ONE call.
@@ -1073,7 +1045,8 @@ class TurboSign:
               ``override`` recipient, call :meth:`send_signature` with ``identityVerification``
               on the recipient, then :meth:`create_signing_url` for each signer (with
               ``identity_assertion`` for ``external_idv``).
-            - ``fields`` shorthand -> full field dicts (placement:'replace' + default size).
+            - ``fields`` shorthand -> full field dicts (placement:'replace' + default size, left
+              out when ``fit_anchored_tags`` is on so each field is fitted to its tag).
               Provide the top-level ``fields`` to override the shorthand with full control.
             - ``signing_order`` defaults to each recipient's index + 1.
             - ``send_email`` defaults to False (you own the UX; forwarded to the backend).
@@ -1114,6 +1087,7 @@ class TurboSign:
                 the signing-link emails (and the initial CC notice) are suppressed. Passcode
                 and completed-copy emails are still sent.
             return_url: Optional https completion fallback, passed to each embed URL.
+            fit_anchored_tags: Fits fields on single-brace tags. See "Fit fields to their tags" in the README.
 
         Returns:
             Dict with:
@@ -1180,7 +1154,9 @@ class TurboSign:
         # Full `fields` (when non-empty) win verbatim; otherwise expand each shorthand. An empty list
         # counts as absent, so it can't discard the shorthand and leave the send with no fields.
         expanded_fields: List[Dict[str, Any]] = fields if fields else [
-            field for r in recipients for field in _expand_recipient_fields(r)
+            field
+            for r in recipients
+            for field in _expand_recipient_fields(r, fit_anchored_tags=_fit_anchored_tags_on(fit_anchored_tags))
         ]
 
         sent = await cls.send_signature(
@@ -1198,6 +1174,7 @@ class TurboSign:
             cc_emails=cc_emails,
             # Embedded flow default: suppress recipient emails (the host owns the UX).
             send_email=send_email if send_email is not None else False,
+            fit_anchored_tags=fit_anchored_tags,
         )
 
         # Match the backend's recipients back to the request by email so we can carry `name`

@@ -20,9 +20,12 @@ public class CreateSignatureReviewLinkRequest {
     private final List<String> ccEmails;
     /** Per-document reminder + expiration overrides; null inherits the org defaults. */
     private final SignatureSchedule schedule;
+    /** Fits fields on single-brace tags. See "Fit fields to their tags" in the README. */
+    private final boolean fitAnchoredTags;
 
     private CreateSignatureReviewLinkRequest(Builder builder) {
         this.schedule = builder.schedule;
+        this.fitAnchoredTags = builder.fitAnchoredTags;
         this.file = builder.file;
         this.fileName = builder.fileName;
         this.fileLink = builder.fileLink;
@@ -89,6 +92,10 @@ public class CreateSignatureReviewLinkRequest {
         return schedule;
     }
 
+    public boolean isFitAnchoredTags() {
+        return fitAnchoredTags;
+    }
+
     public boolean hasFile() {
         return file != null && file.length > 0;
     }
@@ -107,6 +114,7 @@ public class CreateSignatureReviewLinkRequest {
         private String senderEmail;
         private List<String> ccEmails;
         private SignatureSchedule schedule;
+        private boolean fitAnchoredTags;
 
         public Builder file(byte[] file) {
             this.file = file;
@@ -177,6 +185,12 @@ public class CreateSignatureReviewLinkRequest {
         /** Per-document reminder + expiration overrides. Omit to inherit the org defaults. */
         public Builder schedule(SignatureSchedule schedule) {
             this.schedule = schedule;
+            return this;
+        }
+
+        /** Fits fields on single-brace tags. See "Fit fields to their tags" in the README. */
+        public Builder fitAnchoredTags(boolean fitAnchoredTags) {
+            this.fitAnchoredTags = fitAnchoredTags;
             return this;
         }
 

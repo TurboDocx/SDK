@@ -50,6 +50,7 @@ public final class TurboSign {
                 request.getSenderEmail(),
                 request.getCcEmails(),
                 request.getSchedule(),
+                request.isFitAnchoredTags(),
                 true
         );
 
@@ -95,6 +96,7 @@ public final class TurboSign {
                 request.getSenderEmail(),
                 request.getCcEmails(),
                 request.getSchedule(),
+                request.isFitAnchoredTags(),
                 false
         );
 
@@ -453,7 +455,7 @@ public final class TurboSign {
         } else {
             fields = new ArrayList<>();
             for (EmbeddedSignatureRecipient r : requestRecipients) {
-                fields.addAll(expandRecipientFields(r));
+                fields.addAll(expandRecipientFields(r, request.isFitAnchoredTags()));
             }
         }
 
@@ -461,7 +463,8 @@ public final class TurboSign {
                 .recipients(mappedRecipients)
                 .fields(fields)
                 // Embedded flow default: suppress recipient emails (the host owns the UX).
-                .sendEmail(request.getSendEmail() != null ? request.getSendEmail() : Boolean.FALSE);
+                .sendEmail(request.getSendEmail() != null ? request.getSendEmail() : Boolean.FALSE)
+                .fitAnchoredTags(request.isFitAnchoredTags());
 
         if (request.hasFile()) {
             sendBuilder.file(request.getFile());
@@ -646,9 +649,9 @@ public final class TurboSign {
     /**
      * Expand a recipient's {@code fields} shorthand into full {@link Field} objects — one per
      * provided key, anchored to the given text with placement {@code replace} and the key's default
-     * size.
+     * size. With {@code fitAnchoredTags} on, the size is left out so the API fits each field to its tag.
      */
-    private List<Field> expandRecipientFields(EmbeddedSignatureRecipient recipient) {
+    private List<Field> expandRecipientFields(EmbeddedSignatureRecipient recipient, boolean fitAnchoredTags) {
         List<Field> fields = new ArrayList<>();
         EmbeddedRecipientFields shorthand = recipient.getFields();
         if (shorthand == null) {
@@ -665,7 +668,7 @@ public final class TurboSign {
                     .template(new Field.TemplateAnchor.Builder()
                             .anchor(anchor)
                             .placement("replace")
-                            .size(new Field.Size(spec.width, spec.height))
+                            .size(fitAnchoredTags ? null : new Field.Size(spec.width, spec.height))
                             .build())
                     .build());
         }
@@ -726,6 +729,7 @@ public final class TurboSign {
             String senderEmail,
             List<String> ccEmails,
             SignatureSchedule schedule,
+            boolean fitAnchoredTags,
             boolean forReview
     ) {
         Map<String, String> formData = new HashMap<>();
@@ -758,6 +762,11 @@ public final class TurboSign {
         if (ccEmails != null && !ccEmails.isEmpty()) {
             // Use JSON for ccEmails instead of comma-join
             formData.put("ccEmails", gson.toJson(ccEmails));
+        }
+
+        // Sent only when true: the API treats false like a missing key, so false leaves it out.
+        if (fitAnchoredTags) {
+            formData.put("fitAnchoredTags", "true");
         }
 
         applyScheduleOverrides(formData, schedule);

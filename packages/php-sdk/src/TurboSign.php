@@ -107,40 +107,7 @@ final class TurboSign
         CreateSignatureReviewLinkRequest $request
     ): CreateSignatureReviewLinkResponse {
         $client = self::getClient();
-        $senderConfig = $client->getSenderConfig();
-
-        // Serialize recipients to a JSON string (as backend expects)
-        $recipientsJson = json_encode(array_map(fn($r) => $r->toArray(), $request->recipients));
-
-        // Build form data
-        $formData = [
-            'recipients' => $recipientsJson,
-        ];
-
-        // A review link may have no fields (they are placed in the preview), so send [] when none
-        // are given: the API rejects a MISSING key (FieldsRequired) unless a recipient names a role.
-        $formData['fields'] = json_encode(array_values(array_map(fn($f) => $f->toArray(), $request->fields)));
-
-        // Add optional fields
-        if ($request->documentName !== null) {
-            $formData['documentName'] = $request->documentName;
-        }
-        if ($request->documentDescription !== null) {
-            $formData['documentDescription'] = $request->documentDescription;
-        }
-
-        // Use request senderEmail/senderName if provided, otherwise fall back to configured values
-        $formData['senderEmail'] = $request->senderEmail ?? $senderConfig['sender_email'];
-        if ($request->senderName !== null || $senderConfig['sender_name'] !== null) {
-            $formData['senderName'] = $request->senderName ?? $senderConfig['sender_name'];
-        }
-
-        if ($request->ccEmails !== null) {
-            $formData['ccEmails'] = json_encode($request->ccEmails);
-        }
-
-        // Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
-        self::applyScheduleOverrides($formData, $request);
+        $formData = self::buildSignatureFormData(client: $client, request: $request, forReview: true);
 
         // Handle different file input methods
         if ($request->file !== null) {
@@ -197,49 +164,7 @@ final class TurboSign
         SendSignatureRequest $request
     ): SendSignatureResponse {
         $client = self::getClient();
-        $senderConfig = $client->getSenderConfig();
-
-        // Serialize recipients to a JSON string (as backend expects)
-        $recipientsJson = json_encode(array_map(fn($r) => $r->toArray(), $request->recipients));
-
-        // Build form data
-        $formData = [
-            'recipients' => $recipientsJson,
-        ];
-
-        // Leave 'fields' out when none are given. A role send then takes the template's saved fields,
-        // and any other send gets the API's 400 FieldsRequired instead of a document with nothing to sign.
-        if ($request->fields !== []) {
-            $formData['fields'] = json_encode(array_values(array_map(fn($f) => $f->toArray(), $request->fields)));
-        }
-
-        // Add optional fields
-        if ($request->documentName !== null) {
-            $formData['documentName'] = $request->documentName;
-        }
-        if ($request->documentDescription !== null) {
-            $formData['documentDescription'] = $request->documentDescription;
-        }
-
-        // Use request senderEmail/senderName if provided, otherwise fall back to configured values
-        $formData['senderEmail'] = $request->senderEmail ?? $senderConfig['sender_email'];
-        if ($request->senderName !== null || $senderConfig['sender_name'] !== null) {
-            $formData['senderName'] = $request->senderName ?? $senderConfig['sender_name'];
-        }
-
-        if ($request->ccEmails !== null) {
-            $formData['ccEmails'] = json_encode($request->ccEmails);
-        }
-
-        // Forward email suppression when explicitly set. Tested with `!== null` (never truthiness),
-        // exactly like the schedule overrides: `false` (do not email) is a meaningful value and a
-        // truthiness check would drop it and silently let the backend email the recipients.
-        if ($request->sendEmail !== null) {
-            $formData['sendEmail'] = $request->sendEmail;
-        }
-
-        // Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
-        self::applyScheduleOverrides($formData, $request);
+        $formData = self::buildSignatureFormData(client: $client, request: $request, forReview: false);
 
         // Handle different file input methods
         if ($request->file !== null) {
@@ -545,7 +470,7 @@ final class TurboSign
         if ($fields === null || $fields === []) {
             $fields = [];
             foreach ($request->recipients as $r) {
-                foreach (self::expandRecipientFields($r) as $field) {
+                foreach (self::expandRecipientFields($r, $request->fitAnchoredTags) as $field) {
                     $fields[] = $field;
                 }
             }
@@ -566,6 +491,7 @@ final class TurboSign
             senderEmail: $request->senderEmail,
             ccEmails: $request->ccEmails,
             sendEmail: $request->sendEmail ?? false,
+            fitAnchoredTags: $request->fitAnchoredTags,
         ));
 
         // Match the backend's recipients back to the request by email so we can carry `name` and
@@ -713,12 +639,15 @@ final class TurboSign
 
     /**
      * Expand a recipient's `fields` shorthand into full Field objects — one per provided key,
-     * anchored to the given text with placement 'replace' and the key's default size.
+     * anchored to the given text with placement 'replace' and the key's default size. With
+     * fitAnchoredTags on, the size is left out so the API fits each field to its tag.
      *
      * @return array<Field>
      */
-    private static function expandRecipientFields(EmbeddedSignatureRecipient $recipient): array
-    {
+    private static function expandRecipientFields(
+        EmbeddedSignatureRecipient $recipient,
+        bool $fitAnchoredTags = false
+    ): array {
         $shorthand = $recipient->fields;
         if ($shorthand === null) {
             return [];
@@ -743,7 +672,7 @@ final class TurboSign
                 template: new TemplateConfig(
                     anchor: $anchor,
                     placement: FieldPlacement::REPLACE,
-                    size: ['width' => $spec['width'], 'height' => $spec['height']],
+                    size: $fitAnchoredTags ? null : ['width' => $spec['width'], 'height' => $spec['height']],
                 ),
             );
         }
@@ -807,6 +736,72 @@ final class TurboSign
     private static function withFileName(array $formData, ?string $fileName): array
     {
         return $fileName !== null && $fileName !== '' ? [...$formData, 'fileName' => $fileName] : $formData;
+    }
+
+    /**
+     * The body both send paths share, before the file input is added. The same keys go on the
+     * multipart form (file upload) and on the JSON body (file link, deliverable or template), so
+     * every send option is written here once.
+     *
+     * @param CreateSignatureReviewLinkRequest|SendSignatureRequest $request
+     * @param bool $forReview True for the review link: it always sends `fields`, never `sendEmail`
+     * @return array<string, mixed>
+     */
+    private static function buildSignatureFormData(HttpClient $client, object $request, bool $forReview): array
+    {
+        $senderConfig = $client->getSenderConfig();
+
+        // Serialize recipients to a JSON string (as backend expects)
+        $recipientsJson = json_encode(array_map(fn($r) => $r->toArray(), $request->recipients));
+
+        // Build form data
+        $formData = [
+            'recipients' => $recipientsJson,
+        ];
+
+        // Without a role the API answers a MISSING 'fields' key with 400 FieldsRequired. A review
+        // link may have no fields (they are placed in the preview), so it sends []. A send leaves
+        // the key out: a role send then takes the template's saved fields, and any other send gets
+        // FieldsRequired instead of a document with nothing to sign.
+        if ($forReview || $request->fields !== []) {
+            $formData['fields'] = json_encode(array_values(array_map(fn($f) => $f->toArray(), $request->fields)));
+        }
+
+        // Add optional fields
+        if ($request->documentName !== null) {
+            $formData['documentName'] = $request->documentName;
+        }
+        if ($request->documentDescription !== null) {
+            $formData['documentDescription'] = $request->documentDescription;
+        }
+
+        // Use request senderEmail/senderName if provided, otherwise fall back to configured values
+        $formData['senderEmail'] = $request->senderEmail ?? $senderConfig['sender_email'];
+        if ($request->senderName !== null || $senderConfig['sender_name'] !== null) {
+            $formData['senderName'] = $request->senderName ?? $senderConfig['sender_name'];
+        }
+
+        if ($request->ccEmails !== null) {
+            $formData['ccEmails'] = json_encode($request->ccEmails);
+        }
+
+        // Forward email suppression (send path only) when explicitly set. Tested with `!== null`
+        // (never truthiness), exactly like the schedule overrides: `false` (do not email) is a
+        // meaningful value and a truthiness check would drop it and silently let the backend email
+        // the recipients.
+        if ($request instanceof SendSignatureRequest && $request->sendEmail !== null) {
+            $formData['sendEmail'] = $request->sendEmail;
+        }
+
+        // Sent only when true: the API treats false like a missing key, so false leaves it out.
+        if ($request->fitAnchoredTags) {
+            $formData['fitAnchoredTags'] = true;
+        }
+
+        // Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
+        self::applyScheduleOverrides($formData, $request);
+
+        return $formData;
     }
 
     /**
