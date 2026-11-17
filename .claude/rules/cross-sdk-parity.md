@@ -76,6 +76,14 @@ the field through as written. Never send the key on a truthiness check, which dr
 silently makes an optional field required. The API rejects `required: false` on `signature` and
 `initial` fields (`OptionalNotSupported`); the SDKs leave that check to the API.
 
+**`fitAnchoredTags`:** an optional flag on both send paths and on `createEmbeddedSignature` (which
+passes it to `sendSignature`). It is sent only when it is `true`, as `true` on a JSON body (`"true"`
+where the SDK sends every value as a string) and `"true"` on multipart. Unlike `sendEmail`, `false` is
+not forwarded: the API treats `false` exactly like a missing key, so leaving it out keeps every
+existing request body unchanged. That is why it is a plain `bool`/`boolean` defaulting to `false` in
+Go, Java and PHP (not a pointer, boxed type or nullable), `fit_anchored_tags: bool = False` in Python,
+and a `fitAnchoredTags` request key in JS and Ruby.
+
 **Configure note:** Go and Java do NOT expose a named `configure()` — Go configures via per-module
 constructors (`NewTurboSignClient`, `NewQuoteClient`, `NewWebhooksClient`, …) and Java via
 constructors/builders (`new TurboSign(httpClient)`, `TurboQuoteClient.builder()…build()`). That is
