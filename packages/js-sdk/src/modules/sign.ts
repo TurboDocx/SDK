@@ -30,6 +30,14 @@ import {
   TemplateSignatureSetup,
 } from '../types/sign';
 
+/** Parameters of {@link TurboSign.buildSignatureFormData}. */
+interface BuildSignatureFormDataParams {
+  client: HttpClient;
+  request: CreateSignatureReviewLinkRequest | SendSignatureRequest;
+  /** True for the review link (always sends `fields`, never `sendEmail`). */
+  forReview: boolean;
+}
+
 /**
  * Shorthand field key → the concrete {@link SignatureFieldType} it emits plus its default size.
  *
@@ -168,6 +176,68 @@ export class TurboSign {
   }
 
   /**
+   * The body both send paths share, before the file input is added. The same keys go on the
+   * multipart form (file upload) and on the JSON body (file link, deliverable or template), so
+   * every send option is written here once.
+   */
+  private static buildSignatureFormData(params: BuildSignatureFormDataParams): Record<string, any> {
+    const { client, request, forReview } = params;
+
+    // Get sender config from client
+    const senderConfig = client.getSenderConfig();
+
+    // Serialize recipients and fields to JSON strings (as n8n node does)
+    const formData: Record<string, any> = {
+      recipients: JSON.stringify(request.recipients),
+    };
+
+    // Without a role the API answers a MISSING `fields` key with 400 FieldsRequired. A review link
+    // may have no fields (they are placed in the preview), so it sends []. A send leaves the key
+    // out: a role send then takes the template's saved fields, and any other send gets
+    // FieldsRequired instead of a document with nothing to sign.
+    if (forReview) {
+      formData.fields = JSON.stringify(request.fields ?? []);
+    } else if (request.fields && request.fields.length > 0) {
+      formData.fields = JSON.stringify(request.fields);
+    }
+
+    // Add optional fields
+    if (request.documentName) formData.documentName = request.documentName;
+    if (request.documentDescription) formData.documentDescription = request.documentDescription;
+
+    // Use request senderEmail/senderName if provided, otherwise fall back to configured values
+    formData.senderEmail = request.senderEmail || senderConfig.senderEmail;
+    if (request.senderName || senderConfig.senderName) {
+      formData.senderName = request.senderName || senderConfig.senderName;
+    }
+
+    if (request.ccEmails) {
+      formData.ccEmails = Array.isArray(request.ccEmails)
+        ? JSON.stringify(request.ccEmails)
+        : JSON.stringify([request.ccEmails]);
+    }
+
+    // Forward email suppression (send path only) when explicitly set. Tested with `!== undefined`
+    // (never truthiness), exactly like the schedule overrides below: `false` (do not email) is a
+    // meaningful value and a truthiness check would drop it and silently let the backend email the
+    // recipients.
+    if (!forReview) {
+      const { sendEmail } = request as SendSignatureRequest;
+      if (sendEmail !== undefined) formData.sendEmail = sendEmail;
+    }
+
+    // Sent only when true: the API treats false like a missing key, so false and unset leave it out.
+    if (request.fitAnchoredTags === true) {
+      formData.fitAnchoredTags = true;
+    }
+
+    // Per-document reminder + expiration overrides; omitted keys inherit the org defaults.
+    this.applyScheduleOverrides(formData, request);
+
+    return formData;
+  }
+
+  /**
    * Create signature review link without sending emails
    *
    * This method uploads a document with signature fields and recipients,
@@ -204,45 +274,7 @@ export class TurboSign {
   static async createSignatureReviewLink(request: CreateSignatureReviewLinkRequest): Promise<CreateSignatureReviewLinkResponse> {
     validateRecipientsIdentity(request.recipients);
     const client = this.getClient();
-
-    // Get sender config from client
-    const senderConfig = client.getSenderConfig();
-
-    // Serialize recipients and fields to JSON strings (as n8n node does)
-    const recipientsJson = JSON.stringify(request.recipients);
-
-    // Build form data
-    const formData: Record<string, any> = {
-      recipients: recipientsJson,
-    };
-
-    // A review link may have no fields (they are placed in the preview), so send [] when none are
-    // given: the API rejects a MISSING key (FieldsRequired) unless a recipient names a role.
-    formData.fields = JSON.stringify(request.fields ?? []);
-
-    // Add optional fields
-    if (request.documentName) formData.documentName = request.documentName;
-    if (request.documentDescription) formData.documentDescription = request.documentDescription;
-
-    // Use request senderEmail/senderName if provided, otherwise fall back to configured values
-    formData.senderEmail = request.senderEmail || senderConfig.senderEmail;
-    if (request.senderName || senderConfig.senderName) {
-      formData.senderName = request.senderName || senderConfig.senderName;
-    }
-
-    if (request.ccEmails) {
-      formData.ccEmails = Array.isArray(request.ccEmails)
-        ? JSON.stringify(request.ccEmails)
-        : JSON.stringify([request.ccEmails]);
-    }
-
-    // Sent only when true: the API treats false like a missing key, so false and unset leave it out.
-    if (request.fitAnchoredTags === true) {
-      formData.fitAnchoredTags = true;
-    }
-
-    // Per-document reminder + expiration overrides; omitted keys inherit the org defaults.
-    this.applyScheduleOverrides(formData, request);
+    const formData = this.buildSignatureFormData({ client, request, forReview: true });
 
     // Handle different file input methods
     if (request.file) {
@@ -297,50 +329,7 @@ export class TurboSign {
   static async sendSignature(request: SendSignatureRequest): Promise<SendSignatureResponse> {
     validateRecipientsIdentity(request.recipients);
     const client = this.getClient();
-
-    // Get sender config from client
-    const senderConfig = client.getSenderConfig();
-
-    // Serialize recipients and fields to JSON strings (as n8n node does)
-    const recipientsJson = JSON.stringify(request.recipients);
-
-    // Build form data
-    const formData: Record<string, any> = {
-      recipients: recipientsJson,
-    };
-
-    // Leave `fields` out when none are given. A role send then takes the template's saved fields,
-    // and any other send gets the API's 400 FieldsRequired instead of a document with nothing to sign.
-    if (request.fields && request.fields.length > 0) formData.fields = JSON.stringify(request.fields);
-
-    // Add optional fields
-    if (request.documentName) formData.documentName = request.documentName;
-    if (request.documentDescription) formData.documentDescription = request.documentDescription;
-
-    // Use request senderEmail/senderName if provided, otherwise fall back to configured values
-    formData.senderEmail = request.senderEmail || senderConfig.senderEmail;
-    if (request.senderName || senderConfig.senderName) {
-      formData.senderName = request.senderName || senderConfig.senderName;
-    }
-
-    if (request.ccEmails) {
-      formData.ccEmails = Array.isArray(request.ccEmails)
-        ? JSON.stringify(request.ccEmails)
-        : JSON.stringify([request.ccEmails]);
-    }
-
-    // Forward email suppression when explicitly set. Tested with `!== undefined` (never truthiness),
-    // exactly like the schedule overrides below: `false` (do not email) is a meaningful value and a
-    // truthiness check would drop it and silently let the backend email the recipients.
-    if (request.sendEmail !== undefined) formData.sendEmail = request.sendEmail;
-
-    // Sent only when true: the API treats false like a missing key, so false and unset leave it out.
-    if (request.fitAnchoredTags === true) {
-      formData.fitAnchoredTags = true;
-    }
-
-    // Per-document reminder + expiration overrides; omitted keys inherit the org defaults.
-    this.applyScheduleOverrides(formData, request);
+    const formData = this.buildSignatureFormData({ client, request, forReview: false });
 
     // Handle different file input methods
     if (request.file) {

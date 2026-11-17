@@ -9,7 +9,7 @@
     "src/modules/deliverable.ts": 5,
     "src/modules/partner.ts": 1,
     "src/modules/quote.ts": 1,
-    "src/modules/sign.ts": 21,
+    "src/modules/sign.ts": 18,
     "src/utils/client-context.ts": 4,
     "src/utils/response-normalizer.ts": 2,
     "src/utils/verifyWebhookSignature.ts": 11,
@@ -440,7 +440,7 @@
     "manual-test-deliverable.ts": 1,
     "manual-test.ts": 1,
     "src/http.ts": 12,
-    "src/modules/sign.ts": 4,
+    "src/modules/sign.ts": 2,
     "src/utils/client-context.ts": 5,
     "tests/integration/turboquote-live.ts": 5
   },
@@ -490,7 +490,7 @@
     "src/modules/deliverable.ts": 1,
     "src/modules/partner.ts": 3,
     "src/modules/quote.ts": 2,
-    "src/modules/sign.ts": 43,
+    "src/modules/sign.ts": 36,
     "src/modules/webhooks.ts": 3,
     "src/utils/client-context.ts": 6,
     "tests/integration/turboquote-live.ts": 6
@@ -539,7 +539,6 @@
     "src/utils/client-context.ts": 3
   },
   "unicorn/no-immediate-mutation": {
-    "src/modules/sign.ts": 1,
     "src/utils/client-context.ts": 1
   },
   "unicorn/no-process-exit": {
