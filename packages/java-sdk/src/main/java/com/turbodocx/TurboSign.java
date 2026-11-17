@@ -455,7 +455,7 @@ public final class TurboSign {
         } else {
             fields = new ArrayList<>();
             for (EmbeddedSignatureRecipient r : requestRecipients) {
-                fields.addAll(expandRecipientFields(r));
+                fields.addAll(expandRecipientFields(r, request.isFitAnchoredTags()));
             }
         }
 
@@ -649,9 +649,9 @@ public final class TurboSign {
     /**
      * Expand a recipient's {@code fields} shorthand into full {@link Field} objects — one per
      * provided key, anchored to the given text with placement {@code replace} and the key's default
-     * size.
+     * size. With {@code fitAnchoredTags} on, the size is left out so the API fits each field to its tag.
      */
-    private List<Field> expandRecipientFields(EmbeddedSignatureRecipient recipient) {
+    private List<Field> expandRecipientFields(EmbeddedSignatureRecipient recipient, boolean fitAnchoredTags) {
         List<Field> fields = new ArrayList<>();
         EmbeddedRecipientFields shorthand = recipient.getFields();
         if (shorthand == null) {
@@ -668,7 +668,7 @@ public final class TurboSign {
                     .template(new Field.TemplateAnchor.Builder()
                             .anchor(anchor)
                             .placement("replace")
-                            .size(new Field.Size(spec.width, spec.height))
+                            .size(fitAnchoredTags ? null : new Field.Size(spec.width, spec.height))
                             .build())
                     .build());
         }

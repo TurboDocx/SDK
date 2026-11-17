@@ -157,10 +157,16 @@ class TurboSignFitAnchoredTagsTest {
     }
 
     private Map<String, String> embedWith(boolean fit) throws Exception {
+        return embedWith(fit, null);
+    }
+
+    /** embedWith with optional top-level fields (null uses the per-recipient shorthand). */
+    private Map<String, String> embedWith(boolean fit, List<Field> fields) throws Exception {
         enqueue(SENT);
         enqueue(SIGNING_URL);
         client.turboSign().createEmbeddedSignature(new CreateEmbeddedSignatureRequest.Builder()
                 .fileLink("https://example.com/contract.pdf")
+                .fields(fields)
                 .recipients(Collections.singletonList(new EmbeddedSignatureRecipient.Builder()
                         .name("Jane Doe")
                         .email("jane@example.com")
@@ -184,5 +190,41 @@ class TurboSignFitAnchoredTagsTest {
     @DisplayName("createEmbeddedSignature leaves the key out when false")
     void embeddedLeavesTheKeyOutWhenFalse() throws Exception {
         assertFalse(embedWith(false).containsKey("fitAnchoredTags"));
+    }
+
+    @Test
+    @DisplayName("createEmbeddedSignature leaves the default size off shorthand fields when true, so they are fitted")
+    void embeddedShorthandHasNoSizeWhenTrue() throws Exception {
+        assertEquals(
+                "[{\"type\":\"signature\",\"recipientEmail\":\"jane@example.com\","
+                        + "\"template\":{\"anchor\":\"{ClientSign}\",\"placement\":\"replace\"}}]",
+                embedWith(true).get("fields"));
+    }
+
+    @Test
+    @DisplayName("createEmbeddedSignature keeps the default size on shorthand fields when false")
+    void embeddedShorthandKeepsSizeWhenFalse() throws Exception {
+        assertEquals(
+                "[{\"type\":\"signature\",\"recipientEmail\":\"jane@example.com\","
+                        + "\"template\":{\"anchor\":\"{ClientSign}\",\"placement\":\"replace\","
+                        + "\"size\":{\"width\":100,\"height\":30}}}]",
+                embedWith(false).get("fields"));
+    }
+
+    @Test
+    @DisplayName("createEmbeddedSignature keeps a size the caller gave on top-level fields")
+    void embeddedKeepsCallerSize() throws Exception {
+        List<Field> sized = Collections.singletonList(new Field.Builder()
+                .type("signature")
+                .recipientEmail("jane@example.com")
+                .template(new Field.TemplateAnchor.Builder()
+                        .anchor("{ClientSign}")
+                        .size(new Field.Size(120, 40))
+                        .build())
+                .build());
+        assertEquals(
+                "[{\"type\":\"signature\",\"recipientEmail\":\"jane@example.com\","
+                        + "\"template\":{\"anchor\":\"{ClientSign}\",\"size\":{\"width\":120,\"height\":40}}}]",
+                embedWith(true, sized).get("fields"));
     }
 }

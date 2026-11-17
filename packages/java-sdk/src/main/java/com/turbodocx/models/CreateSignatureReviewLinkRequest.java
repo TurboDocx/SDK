@@ -20,14 +20,7 @@ public class CreateSignatureReviewLinkRequest {
     private final List<String> ccEmails;
     /** Per-document reminder + expiration overrides; null inherits the org defaults. */
     private final SignatureSchedule schedule;
-    /**
-     * Places each field sent with a template anchor that is one single-brace tag such as
-     * {@code {ClientSign}} (with {@code replace} placement or none, and without {@code useRegex}) the
-     * way a template's saved setup field is placed: measured from the document's text and, with no
-     * template size, fitted to its tag's line; with a size, centred on its tag. A tag missing from the
-     * document still fails the request. Works with a file, file link, template ID or deliverable ID.
-     * Off by default; sent only when true (the API treats false like a missing key).
-     */
+    /** Fits fields on single-brace tags. See "Fit fields to their tags" in the README. */
     private final boolean fitAnchoredTags;
 
     private CreateSignatureReviewLinkRequest(Builder builder) {
@@ -195,10 +188,7 @@ public class CreateSignatureReviewLinkRequest {
             return this;
         }
 
-        /**
-         * Place each field on a single-brace tag such as {@code {ClientSign}} the way a template's
-         * saved setup field is placed (fitted to its tag's line when it has no size). Off by default.
-         */
+        /** Fits fields on single-brace tags. See "Fit fields to their tags" in the README. */
         public Builder fitAnchoredTags(boolean fitAnchoredTags) {
             this.fitAnchoredTags = fitAnchoredTags;
             return this;

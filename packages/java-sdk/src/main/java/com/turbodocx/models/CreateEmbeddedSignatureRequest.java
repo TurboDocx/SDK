@@ -28,11 +28,7 @@ public class CreateEmbeddedSignatureRequest {
     private final Boolean sendEmail;
     /** Optional completion fallback. Must be an https URL. Passed to each embed URL. */
     private final String returnUrl;
-    /**
-     * Passed to sendSignature (see {@link SendSignatureRequest#isFitAnchoredTags()}). The
-     * per-recipient {@code fields} shorthand gives each field a size, so those fields are centred on
-     * their tags; pass {@code fields} without a size to have them fitted. Sent only when true.
-     */
+    /** Fits fields on single-brace tags. See "Fit fields to their tags" in the README. */
     private final boolean fitAnchoredTags;
 
     private CreateEmbeddedSignatureRequest(Builder builder) {
@@ -213,7 +209,7 @@ public class CreateEmbeddedSignatureRequest {
             return this;
         }
 
-        /** Passed to sendSignature: fields on single-brace tags are placed like saved setup fields. */
+        /** Fits fields on single-brace tags. See "Fit fields to their tags" in the README. */
         public Builder fitAnchoredTags(boolean fitAnchoredTags) {
             this.fitAnchoredTags = fitAnchoredTags;
             return this;

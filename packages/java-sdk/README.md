@@ -338,7 +338,7 @@ SendSignatureResponse result = client.turboSign().sendSignature(
 - A tag missing from the document still fails the request.
 - It works with `file`, `fileLink`, `templateId` and `deliverableId`. The template's saved setup is not read or changed.
 - It is off by default and sent only when `true`. Without it, your fields keep the standard placement.
-- The `createEmbeddedSignature()` per-recipient `fields` shorthand gives each field a size, so those fields are centred on their tags. Pass request `fields` without a size to have them fitted.
+- With it on, the `createEmbeddedSignature()` per-recipient `fields` shorthand leaves out its default size, so those fields are fitted too. A size you give on the request's `fields` is kept.
 
 #### Embedded signing: `sendEmail(false)` + `createSigningUrl()`
 
