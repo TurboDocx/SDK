@@ -285,6 +285,28 @@ await TurboSign.sendSignature({
 - `getTemplateSignatureSetup` throws `NotFoundError` (404, code `SignatureSetupNotFound`) when the template has no saved signature setup, or is not a template in your organization.
 - `role` works the same way on `createSignatureReviewLink` and `createEmbeddedSignature`.
 
+#### Fit fields to their tags (`fitAnchoredTags`)
+
+Set `fitAnchoredTags: true` on `sendSignature`, `createSignatureReviewLink` or `createEmbeddedSignature` to place each field you send on a tag the way a template's saved setup field is placed. It applies to a field whose `template.anchor` is one tag in single braces with no spaces (such as `{ClientSign}`), with `replace` placement (or none) and without `useRegex`.
+
+```typescript
+await TurboSign.sendSignature({
+  file: './contract.pdf',
+  recipients: [{ name: 'Jane Doe', email: 'jane@client.com', signingOrder: 1 }],
+  fields: [
+    { type: 'signature', recipientEmail: 'jane@client.com', template: { anchor: '{ClientSign}' } }
+  ],
+  fitAnchoredTags: true
+});
+```
+
+- With no `template.size`, the field is fitted to its tag's line: its height follows the line's font size and it starts where the tag starts.
+- With a size, the field keeps it and is centred on its tag.
+- A tag missing from the document still fails the request.
+- It works with `file`, `fileLink`, `templateId` and `deliverableId`. The template's saved setup is not read or changed.
+- It is off by default and sent only when `true`. Without it, your fields keep the standard placement.
+- The `createEmbeddedSignature` `fields` shorthand gives each field a size, so those fields are centred on their tags. Pass `fields` without a size to have them fitted.
+
 #### `sendReminder(documentId, recipientIds?)`
 
 Send a standalone reminder to whoever's turn it is to sign. It is independent of the automatic

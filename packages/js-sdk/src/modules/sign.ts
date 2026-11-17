@@ -236,6 +236,11 @@ export class TurboSign {
         : JSON.stringify([request.ccEmails]);
     }
 
+    // Sent only when true: the API treats false like a missing key, so false and unset leave it out.
+    if (request.fitAnchoredTags === true) {
+      formData.fitAnchoredTags = true;
+    }
+
     // Per-document reminder + expiration overrides; omitted keys inherit the org defaults.
     this.applyScheduleOverrides(formData, request);
 
@@ -328,6 +333,11 @@ export class TurboSign {
     // exactly like the schedule overrides below: `false` (do not email) is a meaningful value and a
     // truthiness check would drop it and silently let the backend email the recipients.
     if (request.sendEmail !== undefined) formData.sendEmail = request.sendEmail;
+
+    // Sent only when true: the API treats false like a missing key, so false and unset leave it out.
+    if (request.fitAnchoredTags === true) {
+      formData.fitAnchoredTags = true;
+    }
 
     // Per-document reminder + expiration overrides; omitted keys inherit the org defaults.
     this.applyScheduleOverrides(formData, request);
@@ -479,6 +489,7 @@ export class TurboSign {
       ...(request.senderName ? { senderName: request.senderName } : {}),
       ...(request.senderEmail ? { senderEmail: request.senderEmail } : {}),
       ...(request.ccEmails ? { ccEmails: request.ccEmails } : {}),
+      ...(request.fitAnchoredTags === true ? { fitAnchoredTags: true } : {}),
     };
 
     const sent = await this.sendSignature(sendRequest);
