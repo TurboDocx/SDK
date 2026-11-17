@@ -62,6 +62,13 @@ module TurboDocxSdk
       #   signer. Signature and initial fields are always required: the API rejects
       #   "required" => false on them with a 400.
       #
+      #   :fitAnchoredTags (Boolean) places each field sent with a template "anchor" that is one
+      #   single-brace tag such as "{ClientSign}" (with "replace" placement or none, and without
+      #   "useRegex") the way a template's saved setup field is placed: measured from the
+      #   document's text and, with no template "size", fitted to its tag's line; with a size,
+      #   centred on its tag. A tag missing from the document still fails the request. Works with
+      #   :file, :fileLink, :templateId and :deliverableId. Off by default; sent only when true.
+      #
       #   Template signer roles: when sending a +templateId+ whose signers and fields were set up
       #   in TurboDocx, give each recipient a "role" (e.g. "client") instead of a "signingOrder";
       #   the fields saved for that role are used, so :fields may be omitted (any passed are
@@ -250,6 +257,9 @@ module TurboDocxSdk
       #   (and the initial CC notice) are suppressed. Passcode and completed-copy emails still go out.
       # - +returnUrl+ is passed through to each embed URL only when provided (https, enforced by
       #   +create_signing_url+).
+      # - +fitAnchoredTags+ is passed through to +send_signature+. The +fields+ shorthand gives each
+      #   field a size, so those fields are centred on their tags; pass top-level +fields+ without a
+      #   size to have them fitted.
       #
       # Turn-aware: with a real (sequential) signing order the backend only mints a URL for the signer
       # whose turn it is. Rather than throw the whole call away, each result carries a "status":
@@ -263,7 +273,7 @@ module TurboDocxSdk
       #   :auth, :fields, :role -- the template signer role this recipient fills; a role left out
       #   falls back to the template's saved signer, who also gets an embed URL in the result), and any of :file/:fileName/:fileLink/:templateId/:deliverableId,
       #   :documentName, :documentDescription, :senderName, :senderEmail, :ccEmails, :fields (full
-      #   field override), :sendEmail, :returnUrl
+      #   field override), :sendEmail, :fitAnchoredTags, :returnUrl
       # @return [Hash] with "documentId" and "recipients" (each "recipientId", "name", "email",
       #   "embedUrl", "status", "identityVerificationMode"). For a "ready" signer
       #   "identityVerificationMode" is the mode the backend resolved for the URL; for "pending" /
@@ -327,7 +337,7 @@ module TurboDocxSdk
           "sendEmail" => req_val(request, :sendEmail).nil? ? false : req_val(request, :sendEmail)
         }
         %i[file fileName fileLink templateId deliverableId documentName documentDescription
-           senderName senderEmail ccEmails].each do |key|
+           senderName senderEmail ccEmails fitAnchoredTags].each do |key|
           value = req_val(request, key)
           send_request[key.to_s] = value unless value.nil?
         end
@@ -714,6 +724,9 @@ module TurboDocxSdk
           cc_array = cc.is_a?(Array) ? cc : [cc]
           form_data["ccEmails"] = JSON.generate(cc_array)
         end
+
+        # Sent only when true: the API treats false like a missing key, so false leaves it out.
+        form_data["fitAnchoredTags"] = true if req_val(request, :fitAnchoredTags) == true
 
         apply_schedule_overrides(form_data, request)
 
