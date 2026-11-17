@@ -36,12 +36,7 @@ final class CreateSignatureReviewLinkRequest
      * @param array{value:int,unit:string}|null $expirationWarning How far before expiry warnings
      *     start. A zero value means no warnings at all.
      * @param array{value:int,unit:string}|null $expirationWarningInterval Gap between warnings
-     * @param bool $fitAnchoredTags Places each field sent with a template anchor that is one
-     *     single-brace tag such as `{ClientSign}` (with `replace` placement or none, and without
-     *     `useRegex`) the way a template's saved setup field is placed: measured from the
-     *     document's text and, with no template size, fitted to its tag's line; with a size,
-     *     centred on its tag. A tag missing from the document still fails the request. Works with
-     *     a file, file link, template ID or deliverable ID. Off by default; sent only when true.
+     * @param bool $fitAnchoredTags Fits fields on single-brace tags. See "Fit fields to their tags" in the README.
      */
     public function __construct(
         public array $recipients,

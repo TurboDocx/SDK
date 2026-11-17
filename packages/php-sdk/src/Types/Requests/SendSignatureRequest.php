@@ -41,12 +41,7 @@ final class SendSignatureRequest
      *     signing, where your app shows the signing page: the document still goes out for signing,
      *     and passcode and completed-copy emails are still sent. Presence is tested with
      *     `!== null`, so `false` is forwarded rather than dropped.
-     * @param bool $fitAnchoredTags Places each field sent with a template anchor that is one
-     *     single-brace tag such as `{ClientSign}` (with `replace` placement or none, and without
-     *     `useRegex`) the way a template's saved setup field is placed: measured from the
-     *     document's text and, with no template size, fitted to its tag's line; with a size,
-     *     centred on its tag. A tag missing from the document still fails the request. Works with
-     *     a file, file link, template ID or deliverable ID. Off by default; sent only when true.
+     * @param bool $fitAnchoredTags Fits fields on single-brace tags. See "Fit fields to their tags" in the README.
      */
     public function __construct(
         public array $recipients,

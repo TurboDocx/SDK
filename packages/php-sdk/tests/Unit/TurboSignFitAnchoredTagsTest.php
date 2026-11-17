@@ -151,9 +151,10 @@ final class TurboSignFitAnchoredTagsTest extends TestCase
     }
 
     /**
+     * @param array<Field>|null $fields Top-level fields; null uses the per-recipient shorthand
      * @return array<string, mixed>
      */
-    private function embedWith(bool $fit): array
+    private function embedWith(bool $fit, ?array $fields = null): array
     {
         $this->injectTurboSignClient([
             $this->sentResponse(),
@@ -173,6 +174,7 @@ final class TurboSignFitAnchoredTagsTest extends TestCase
                 fields: new EmbeddedRecipientFields(signature: '{ClientSign}'),
             )],
             fileLink: 'https://example.com/contract.pdf',
+            fields: $fields,
             fitAnchoredTags: $fit,
         ));
 
@@ -191,5 +193,47 @@ final class TurboSignFitAnchoredTagsTest extends TestCase
     public function testEmbeddedSignatureLeavesTheKeyOutWhenFalse(): void
     {
         $this->assertArrayNotHasKey('fitAnchoredTags', $this->embedWith(false));
+    }
+
+    /**
+     * The template of each field sent, decoded from the body's JSON-string `fields`.
+     *
+     * @param array<string, mixed> $body
+     * @return array<int, mixed>
+     */
+    private function sentTemplates(array $body): array
+    {
+        $fields = json_decode((string) ($body['fields'] ?? ''), true);
+        $this->assertIsArray($fields);
+        return array_map(fn(array $f) => $f['template'] ?? null, $fields);
+    }
+
+    public function testEmbeddedSignatureLeavesTheDefaultSizeOffShorthandFieldsWhenTrue(): void
+    {
+        $this->assertSame(
+            [['anchor' => '{ClientSign}', 'placement' => 'replace']],
+            $this->sentTemplates($this->embedWith(true))
+        );
+    }
+
+    public function testEmbeddedSignatureKeepsTheDefaultSizeOnShorthandFieldsWhenFalse(): void
+    {
+        $this->assertSame(
+            [['anchor' => '{ClientSign}', 'placement' => 'replace', 'size' => ['width' => 100, 'height' => 30]]],
+            $this->sentTemplates($this->embedWith(false))
+        );
+    }
+
+    public function testEmbeddedSignatureKeepsASizeTheCallerGaveOnTopLevelFields(): void
+    {
+        $sized = [new Field(
+            SignatureFieldType::SIGNATURE,
+            'jane@example.com',
+            template: new TemplateConfig(anchor: '{ClientSign}', size: ['width' => 120, 'height' => 40]),
+        )];
+        $this->assertSame(
+            [['anchor' => '{ClientSign}', 'size' => ['width' => 120, 'height' => 40]]],
+            $this->sentTemplates($this->embedWith(true, $sized))
+        );
     }
 }

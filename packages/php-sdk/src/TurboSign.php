@@ -470,7 +470,7 @@ final class TurboSign
         if ($fields === null || $fields === []) {
             $fields = [];
             foreach ($request->recipients as $r) {
-                foreach (self::expandRecipientFields($r) as $field) {
+                foreach (self::expandRecipientFields($r, $request->fitAnchoredTags) as $field) {
                     $fields[] = $field;
                 }
             }
@@ -639,11 +639,15 @@ final class TurboSign
 
     /**
      * Expand a recipient's `fields` shorthand into full Field objects — one per provided key,
-     * anchored to the given text with placement 'replace' and the key's default size.
+     * anchored to the given text with placement 'replace' and the key's default size. With
+     * fitAnchoredTags on, the size is left out so the API fits each field to its tag.
      *
      * @return array<Field>
      */
-    private static function expandRecipientFields(EmbeddedSignatureRecipient $recipient): array
+    private static function expandRecipientFields(
+        EmbeddedSignatureRecipient $recipient,
+        bool $fitAnchoredTags = false
+    ): array
     {
         $shorthand = $recipient->fields;
         if ($shorthand === null) {
@@ -669,7 +673,7 @@ final class TurboSign
                 template: new TemplateConfig(
                     anchor: $anchor,
                     placement: FieldPlacement::REPLACE,
-                    size: ['width' => $spec['width'], 'height' => $spec['height']],
+                    size: $fitAnchoredTags ? null : ['width' => $spec['width'], 'height' => $spec['height']],
                 ),
             );
         }
