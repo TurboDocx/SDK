@@ -55,6 +55,14 @@ const EMBEDDED_FIELD_SPECS: Record<
 };
 
 /**
+ * Whether `fitAnchoredTags` is on: boolean `true` or the string "true" in any case (a plain-JS
+ * caller may pass a string). Anything else, `"false"` and `1` included, is off and sends nothing.
+ */
+function fitAnchoredTagsOn(value: unknown): boolean {
+  return value === true || (typeof value === 'string' && value.toLowerCase() === 'true');
+}
+
+/**
  * Client-side fail-fast validation of each recipient's identityVerification block. The server is
  * the source of truth; this catches the common mistakes early with actionable messages so an
  * integrator sees them at the call site rather than as an HTTP 400.
@@ -226,8 +234,8 @@ export class TurboSign {
       if (sendEmail !== undefined) formData.sendEmail = sendEmail;
     }
 
-    // Sent only when true: the API treats false like a missing key, so false and unset leave it out.
-    if (request.fitAnchoredTags === true) {
+    // Sent only when on (see fitAnchoredTagsOn): the API treats false like a missing key.
+    if (fitAnchoredTagsOn(request.fitAnchoredTags)) {
       formData.fitAnchoredTags = true;
     }
 
@@ -369,10 +377,12 @@ export class TurboSign {
 
   /**
    * Expand a recipient's `fields` shorthand into full {@link Field} objects — one per provided key,
-   * anchored to the given text with `placement: 'replace'` and the key's default size.
+   * anchored to the given text with `placement: 'replace'` and the key's default size. With
+   * `fitAnchoredTags` on, the size is left out so the API fits each field to its tag.
    */
   private static expandRecipientFields(
-    recipient: EmbeddedSignatureRecipient
+    recipient: EmbeddedSignatureRecipient,
+    fitAnchoredTags: boolean
   ): Field[] {
     const shorthand = recipient.fields;
     if (!shorthand) return [];
@@ -384,7 +394,7 @@ export class TurboSign {
       fields.push({
         type: spec.type,
         recipientEmail: recipient.email,
-        template: { anchor, placement: 'replace', size: spec.size },
+        template: { anchor, placement: 'replace', ...(fitAnchoredTags ? {} : { size: spec.size }) },
       });
     }
     return fields;
@@ -409,8 +419,9 @@ export class TurboSign {
    *   `auth` supports email or SMS passcodes only. For an `external_idv` or `override` recipient, call
    *   {@link TurboSign.sendSignature} with `identityVerification` on the recipient, then
    *   {@link TurboSign.createSigningUrl} for each signer (with `identityAssertion` for `external_idv`).
-   * - `fields` shorthand → {@link Field}[] (`placement:'replace'` + a default size). Provide the
-   *   top-level `fields` to override the shorthand with full field control.
+   * - `fields` shorthand → {@link Field}[] (`placement:'replace'` + a default size, left out when
+   *   `fitAnchoredTags` is on so each field is fitted to its tag). Provide the top-level `fields` to
+   *   override the shorthand with full field control.
    * - `signingOrder` defaults to each recipient's array index + 1.
    * - `sendEmail` defaults to `false` (you own the UX; forwarded to the backend).
    * - `returnUrl` is passed through to each embed URL only when provided (https, enforced by
@@ -461,7 +472,9 @@ export class TurboSign {
     const fields: Field[] =
       request.fields && request.fields.length > 0
         ? request.fields
-        : request.recipients.flatMap((r) => this.expandRecipientFields(r));
+        : request.recipients.flatMap((r) =>
+            this.expandRecipientFields(r, fitAnchoredTagsOn(request.fitAnchoredTags))
+          );
 
     const sendRequest: SendSignatureRequest = {
       recipients: mappedRecipients,
@@ -478,7 +491,7 @@ export class TurboSign {
       ...(request.senderName ? { senderName: request.senderName } : {}),
       ...(request.senderEmail ? { senderEmail: request.senderEmail } : {}),
       ...(request.ccEmails ? { ccEmails: request.ccEmails } : {}),
-      ...(request.fitAnchoredTags === true ? { fitAnchoredTags: true } : {}),
+      fitAnchoredTags: request.fitAnchoredTags,
     };
 
     const sent = await this.sendSignature(sendRequest);

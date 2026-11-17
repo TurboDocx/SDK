@@ -1,7 +1,8 @@
 /**
  * `fitAnchoredTags` on the two send paths (and the embedded wrapper over sendSignature). It is sent
- * only when it is `true`: the API treats `false` the same as a missing key, so leaving `false` and
- * unset out keeps every existing request body exactly as it was. Real HttpClient, mocked fetch.
+ * only when it is boolean `true` or the string "true" (any case): the API treats `false` the same as
+ * a missing key, so leaving everything else out keeps every existing request body exactly as it was.
+ * Real HttpClient, mocked fetch.
  */
 import { TurboSign } from "../src/modules/sign";
 
@@ -59,6 +60,11 @@ function jsonBody(fetchMock: jest.Mock): Record<string, unknown> {
   return JSON.parse(fetchMock.mock.calls[0][1].body as string);
 }
 
+/** Values a plain-JS caller may pass that turn the flag on (sent as boolean `true`). */
+const onValues: unknown[] = [true, "true", "TRUE", "True"];
+/** Values that leave the key out, exactly as if it were unset. */
+const offValues: unknown[] = [false, "false", "FALSE", 1, 0, "1", "yes", "", null];
+
 type Send = (request: Record<string, unknown>) => Promise<void>;
 const sends: [string, Send, string][] = [
   [
@@ -105,6 +111,16 @@ describe("TurboSign fitAnchoredTags", () => {
         expect(off).toStrictEqual(unset);
         expect(on.filter(([key]) => key !== "fitAnchoredTags")).toStrictEqual(unset);
       });
+
+      it.each(onValues)("sends fitAnchoredTags=true for %p", async (value) => {
+        const form = await sendWith({ fitAnchoredTags: value });
+        expect(form).toContainEqual(["fitAnchoredTags", "true"]);
+      });
+
+      it.each(offValues)("leaves the key out for %p", async (value) => {
+        const unset = await sendWith({});
+        await expect(sendWith({ fitAnchoredTags: value })).resolves.toStrictEqual(unset);
+      });
     });
 
     describe("with a file link (JSON)", () => {
@@ -129,6 +145,16 @@ describe("TurboSign fitAnchoredTags", () => {
         expect(off).toStrictEqual(unset);
         expect(fitAnchoredTags).toBe(true);
         expect(rest).toStrictEqual(unset);
+      });
+
+      it.each(onValues)("sends fitAnchoredTags: true (a boolean) for %p", async (value) => {
+        const body = await sendWith({ fitAnchoredTags: value });
+        expect(body.fitAnchoredTags).toBe(true);
+      });
+
+      it.each(offValues)("leaves the key out for %p", async (value) => {
+        const unset = await sendWith({});
+        await expect(sendWith({ fitAnchoredTags: value })).resolves.toStrictEqual(unset);
       });
     });
   });
@@ -180,6 +206,46 @@ describe("TurboSign fitAnchoredTags", () => {
 
       expect(unset).not.toHaveProperty("fitAnchoredTags");
       expect(off).toStrictEqual(unset);
+    });
+
+    it.each(onValues)("passes %p through as fitAnchoredTags: true", async (value) => {
+      const body = await embedWith({ fitAnchoredTags: value });
+      expect(body.fitAnchoredTags).toBe(true);
+    });
+
+    it.each(offValues)("leaves the key out for %p", async (value) => {
+      const unset = await embedWith({});
+      await expect(embedWith({ fitAnchoredTags: value })).resolves.toStrictEqual(unset);
+    });
+
+    /** The `template` of each field sent, parsed from the body's JSON-string `fields`. */
+    const sentTemplates = (body: Record<string, unknown>): Record<string, unknown>[] =>
+      (JSON.parse(body.fields as string) as { template: Record<string, unknown> }[]).map((f) => f.template);
+
+    it.each(onValues)("leaves the default size off shorthand fields when it is %p, so they are fitted", async (value) => {
+      const [template] = sentTemplates(await embedWith({ fitAnchoredTags: value }));
+      expect(template).toStrictEqual({ anchor: "{ClientSign}", placement: "replace" });
+    });
+
+    it.each([undefined, ...offValues])("keeps the default size on shorthand fields when it is %p", async (value) => {
+      const [template] = sentTemplates(await embedWith({ fitAnchoredTags: value }));
+      expect(template).toStrictEqual({
+        anchor: "{ClientSign}",
+        placement: "replace",
+        size: { width: 100, height: 30 },
+      });
+    });
+
+    it("keeps a size the caller gave on top-level fields", async () => {
+      const sized = [
+        {
+          type: "signature",
+          recipientEmail: "jane@example.com",
+          template: { anchor: "{ClientSign}", size: { width: 120, height: 40 } },
+        },
+      ];
+      const [template] = sentTemplates(await embedWith({ fitAnchoredTags: true, fields: sized }));
+      expect(template).toStrictEqual({ anchor: "{ClientSign}", size: { width: 120, height: 40 } });
     });
   });
 });

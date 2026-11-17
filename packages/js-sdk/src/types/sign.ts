@@ -367,15 +367,7 @@ export interface CreateEmbeddedSignatureRequest {
    * (and the initial CC notice) are suppressed. Passcode and completed-copy emails are still sent.
    */
   sendEmail?: boolean;
-  /**
-   * Places each field you send with a `template.anchor` that is one single-brace tag such as
-   * `{ClientSign}` (with `replace` placement or none, and without `useRegex`) the way a template's
-   * saved setup field is placed: measured from the document's text and, with no `template.size`,
-   * fitted to its tag's line; with a size, centred on its tag. A tag missing from the document still
-   * fails the request. Works with `file`, `fileLink`, `templateId` and `deliverableId`. Off by
-   * default; sent only when `true`. The per-recipient `fields` shorthand gives each field a size,
-   * so those fields are centred on their tags; pass `fields` without a size to have them fitted.
-   */
+  /** Fits fields sent on single-brace tags such as `{ClientSign}`. See "Fit fields to their tags" in the README. */
   fitAnchoredTags?: boolean;
   /**
    * Optional completion fallback. Must be an https URL — enforced client-side by
@@ -733,14 +725,7 @@ export interface CreateSignatureReviewLinkRequest {
   senderEmail?: string;
   /** CC emails (comma-separated or array) */
   ccEmails?: string | string[];
-  /**
-   * Places each field you send with a `template.anchor` that is one single-brace tag such as
-   * `{ClientSign}` (with `replace` placement or none, and without `useRegex`) the way a template's
-   * saved setup field is placed: measured from the document's text and, with no `template.size`,
-   * fitted to its tag's line; with a size, centred on its tag. A tag missing from the document still
-   * fails the request. Works with `file`, `fileLink`, `templateId` and `deliverableId`. Off by
-   * default; sent only when `true`.
-   */
+  /** Fits fields sent on single-brace tags such as `{ClientSign}`. See "Fit fields to their tags" in the README. */
   fitAnchoredTags?: boolean;
   /**
    * Per-document reminder + expiration overrides. Omit to inherit the organization's defaults.
@@ -817,14 +802,7 @@ export interface SendSignatureRequest {
    * dropped.
    */
   sendEmail?: boolean;
-  /**
-   * Places each field you send with a `template.anchor` that is one single-brace tag such as
-   * `{ClientSign}` (with `replace` placement or none, and without `useRegex`) the way a template's
-   * saved setup field is placed: measured from the document's text and, with no `template.size`,
-   * fitted to its tag's line; with a size, centred on its tag. A tag missing from the document still
-   * fails the request. Works with `file`, `fileLink`, `templateId` and `deliverableId`. Off by
-   * default; sent only when `true`.
-   */
+  /** Fits fields sent on single-brace tags such as `{ClientSign}`. See "Fit fields to their tags" in the README. */
   fitAnchoredTags?: boolean;
   /**
    * Per-document reminder + expiration overrides. Omit to inherit the organization's defaults.
