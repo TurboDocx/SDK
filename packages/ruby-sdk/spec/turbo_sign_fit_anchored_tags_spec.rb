@@ -3,8 +3,9 @@
 require "spec_helper"
 
 # fitAnchoredTags on the two send paths (and create_embedded_signature, which sends through
-# send_signature). It is sent only when it is true: the API treats false the same as a missing key,
-# so false and nil leave it out and every existing request body stays exactly as it was. Only the
+# send_signature). It is sent only when it is true or the string "true" in any case: the API treats
+# false the same as a missing key, so every other value ("false", 1 and nil included) leaves it out
+# and the request body stays exactly as it was. Only the
 # network send is stubbed, so the multipart parts are the ones upload_file builds. Mirrors the js-sdk
 # and py-sdk suites case for case.
 RSpec.describe "TurboSign fitAnchoredTags" do
@@ -22,6 +23,9 @@ RSpec.describe "TurboSign fitAnchoredTags" do
   let(:recipients) { [{ name: "Jane Doe", email: "jane@example.com", signingOrder: 1 }] }
   let(:fields) { [{ type: "signature", recipientEmail: "jane@example.com", template: { anchor: "{ClientSign}" } }] }
   let(:captured) { [] }
+  # Values that turn the flag on (sent as true) and values that leave it out.
+  on_values = [true, "true", "TRUE", "True"]
+  off_values = [false, "false", "FALSE", 1, 0, "1", "yes", "", nil]
 
   before do
     sign.instance_variable_set(:@client, nil)
@@ -70,6 +74,19 @@ RSpec.describe "TurboSign fitAnchoredTags" do
             expect(off).to eq(unset)
             expect(on.reject { |key, _| key == "fitAnchoredTags" }).to eq(unset)
           end
+
+          on_values.each do |value|
+            it "sends fitAnchoredTags for #{value.inspect}" do
+              expect(body_for(method, source, fitAnchoredTags: value).last["fitAnchoredTags"]).to eq(sent_value)
+            end
+          end
+
+          off_values.each do |value|
+            it "leaves the key out for #{value.inspect}" do
+              _, unset = body_for(method, source, {})
+              expect(body_for(method, source, fitAnchoredTags: value).last).to eq(unset)
+            end
+          end
         end
       end
     end
@@ -98,6 +115,38 @@ RSpec.describe "TurboSign fitAnchoredTags" do
 
       expect(unset).not_to have_key("fitAnchoredTags")
       expect(off).to eq(unset)
+    end
+
+    on_values.each do |value|
+      it "passes #{value.inspect} through as fitAnchoredTags true" do
+        expect(embedded_send_body(fitAnchoredTags: value)["fitAnchoredTags"]).to eq(true)
+      end
+
+      it "leaves the default size off shorthand fields for #{value.inspect}, so they are fitted" do
+        template = JSON.parse(embedded_send_body(fitAnchoredTags: value)["fields"]).first["template"]
+        expect(template).to eq("anchor" => "{ClientSign}", "placement" => "replace")
+      end
+    end
+
+    off_values.each do |value|
+      it "leaves the key out for #{value.inspect}" do
+        unset = embedded_send_body({})
+        expect(embedded_send_body(fitAnchoredTags: value)).to eq(unset)
+      end
+
+      it "keeps the default size on shorthand fields for #{value.inspect}" do
+        template = JSON.parse(embedded_send_body(fitAnchoredTags: value)["fields"]).first["template"]
+        expect(template).to eq(
+          "anchor" => "{ClientSign}", "placement" => "replace", "size" => { "width" => 100, "height" => 30 }
+        )
+      end
+    end
+
+    it "keeps a size the caller gave on top-level fields" do
+      sized = [{ "type" => "signature", "recipientEmail" => "jane@example.com",
+                 "template" => { "anchor" => "{ClientSign}", "size" => { "width" => 120, "height" => 40 } } }]
+      body = embedded_send_body(fitAnchoredTags: true, fields: sized)
+      expect(JSON.parse(body["fields"])).to eq(sized)
     end
   end
 end
