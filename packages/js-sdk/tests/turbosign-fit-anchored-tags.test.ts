@@ -25,8 +25,8 @@ const ok = (data: unknown): MockResponse => ({
   status: 200,
   statusText: "OK",
   headers: { get: (): string => "application/json" },
-  json: async (): Promise<unknown> => data,
-  text: async (): Promise<string> => "",
+  json: jest.fn().mockResolvedValue(data),
+  text: jest.fn().mockResolvedValue(""),
 });
 
 function mockFetch(): jest.Mock {
@@ -50,7 +50,7 @@ function formEntries(fetchMock: jest.Mock): [string, string][] {
   const formData = fetchMock.mock.calls[0][1].body as FormData;
   return [...formData.entries()].map(([key, value]) => [
     key,
-    typeof value === "string" ? value : (value as File).name,
+    typeof value === "string" ? value : value.name,
   ]);
 }
 
@@ -59,12 +59,20 @@ function jsonBody(fetchMock: jest.Mock): Record<string, unknown> {
   return JSON.parse(fetchMock.mock.calls[0][1].body as string);
 }
 
-type Send = (request: Record<string, unknown>) => Promise<unknown>;
+type Send = (request: Record<string, unknown>) => Promise<void>;
 const sends: [string, Send, string][] = [
-  ["sendSignature", (r) => TurboSign.sendSignature(r as never), "/turbosign/single/prepare-for-signing"],
+  [
+    "sendSignature",
+    async (r) => {
+      await TurboSign.sendSignature(r as never);
+    },
+    "/turbosign/single/prepare-for-signing",
+  ],
   [
     "createSignatureReviewLink",
-    (r) => TurboSign.createSignatureReviewLink(r as never),
+    async (r) => {
+      await TurboSign.createSignatureReviewLink(r as never);
+    },
     "/turbosign/single/prepare-for-review",
   ],
 ];
