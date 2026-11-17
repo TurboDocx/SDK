@@ -647,8 +647,7 @@ final class TurboSign
     private static function expandRecipientFields(
         EmbeddedSignatureRecipient $recipient,
         bool $fitAnchoredTags = false
-    ): array
-    {
+    ): array {
         $shorthand = $recipient->fields;
         if ($shorthand === null) {
             return [];
