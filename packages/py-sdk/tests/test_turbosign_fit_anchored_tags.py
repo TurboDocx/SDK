@@ -2,11 +2,12 @@
 TurboSign ``fit_anchored_tags``
 
 On the two send paths (and ``create_embedded_signature``, which sends through
-``send_signature``), ``fitAnchoredTags`` is sent only when ``fit_anchored_tags`` is True.
-The API treats False the same as a missing key, so False and None leave it out and every
-existing request body stays exactly as it was.
+``send_signature``), ``fitAnchoredTags`` is sent only when ``fit_anchored_tags`` is True or
+the string "true" in any case. The API treats False the same as a missing key, so every other
+value ("false", 1, None included) leaves it out and the request body stays exactly as it was.
 """
 
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -44,6 +45,10 @@ def _mock_client():
     client.upload_file = AsyncMock(return_value=SENT)
     return client
 
+
+# Values that turn the flag on (sent as the boolean True) and values that leave it out.
+ON_VALUES = [True, "true", "TRUE", "True"]
+OFF_VALUES = [False, "false", "FALSE", 1, 0, "1", "yes", "", None]
 
 SENDS = [
     ("send_signature", "/turbosign/single/prepare-for-signing"),
@@ -100,6 +105,18 @@ class TestFitAnchoredTagsOnSends:
         assert off == unset
         assert {k: v for k, v in on.items() if k != "fitAnchoredTags"} == unset
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("value", ON_VALUES)
+    async def test_sends_the_boolean_true_for_an_on_value(self, method, path, value):
+        assert (await _upload_form(method, path, fit_anchored_tags=value))["fitAnchoredTags"] is True
+        assert (await _json_body(method, path, fit_anchored_tags=value))["fitAnchoredTags"] is True
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("value", OFF_VALUES)
+    async def test_leaves_the_key_out_for_any_other_value(self, method, path, value):
+        assert await _upload_form(method, path, fit_anchored_tags=value) == await _upload_form(method, path)
+        assert await _json_body(method, path, fit_anchored_tags=value) == await _json_body(method, path)
+
 
 async def _embedded_send_body(**extra):
     client = _mock_client()
@@ -128,3 +145,43 @@ class TestFitAnchoredTagsOnEmbeddedSignature:
 
         assert "fitAnchoredTags" not in unset
         assert off == unset
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("value", ON_VALUES)
+    async def test_passes_an_on_value_through_as_true(self, value):
+        assert (await _embedded_send_body(fit_anchored_tags=value))["fitAnchoredTags"] is True
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("value", OFF_VALUES)
+    async def test_leaves_the_key_out_for_any_other_value(self, value):
+        assert await _embedded_send_body(fit_anchored_tags=value) == await _embedded_send_body()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("value", ON_VALUES)
+    async def test_leaves_the_default_size_off_shorthand_fields_when_on(self, value):
+        body = await _embedded_send_body(fit_anchored_tags=value)
+        [field] = json.loads(body["fields"])
+        assert field["template"] == {"anchor": "{ClientSign}", "placement": "replace"}
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("value", OFF_VALUES)
+    async def test_keeps_the_default_size_on_shorthand_fields_otherwise(self, value):
+        body = await _embedded_send_body(fit_anchored_tags=value)
+        [field] = json.loads(body["fields"])
+        assert field["template"] == {
+            "anchor": "{ClientSign}",
+            "placement": "replace",
+            "size": {"width": 100, "height": 30},
+        }
+
+    @pytest.mark.asyncio
+    async def test_keeps_a_size_the_caller_gave_on_top_level_fields(self):
+        sized = [
+            {
+                "type": "signature",
+                "recipientEmail": "jane@example.com",
+                "template": {"anchor": "{ClientSign}", "size": {"width": 120, "height": 40}},
+            }
+        ]
+        body = await _embedded_send_body(fit_anchored_tags=True, fields=sized)
+        assert json.loads(body["fields"]) == sized

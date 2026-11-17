@@ -63,11 +63,21 @@ def _resolve_identity_verification(auth: Optional[Dict[str, Any]]) -> Optional[D
     return None
 
 
-def _expand_recipient_fields(recipient: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _fit_anchored_tags_on(value: Any) -> bool:
+    """Whether ``fit_anchored_tags`` is on: True or the string "true" in any case.
+
+    Anything else, "false" and 1 included, is off and sends nothing. ``is True`` (not ``==``)
+    keeps 1 off, since ``1 == True`` in Python.
+    """
+    return value is True or (isinstance(value, str) and value.lower() == "true")
+
+
+def _expand_recipient_fields(recipient: Dict[str, Any], *, fit_anchored_tags: bool = False) -> List[Dict[str, Any]]:
     """Expand a recipient's ``fields`` shorthand into full field dicts.
 
     One field per provided key, anchored to the given text with ``placement: 'replace'`` and
-    the key's default size. Returns an empty list when the recipient has no ``fields``
+    the key's default size. With ``fit_anchored_tags`` on, the size is left out so the API fits
+    each field to its tag. Returns an empty list when the recipient has no ``fields``
     shorthand.
     """
     shorthand = recipient.get("fields")
@@ -82,10 +92,13 @@ def _expand_recipient_fields(recipient: Dict[str, Any]) -> List[Dict[str, Any]]:
             anchor = shorthand.get("full_name")
         if not anchor:
             continue
+        template: Dict[str, Any] = {"anchor": anchor, "placement": "replace"}
+        if not fit_anchored_tags:
+            template["size"] = spec["size"]
         fields.append({
             "type": spec["type"],
             "recipientEmail": recipient["email"],
-            "template": {"anchor": anchor, "placement": "replace", "size": spec["size"]},
+            "template": template,
         })
     return fields
 
@@ -217,8 +230,8 @@ class TurboSign:
         # embedded flow relies on, and a truthiness check would drop it.
         if send_email is not None:
             body["sendEmail"] = send_email
-        # Sent only when True: the API treats False like a missing key, so False leaves it out.
-        if fit_anchored_tags:
+        # Sent only when on (see _fit_anchored_tags_on): the API treats False like a missing key.
+        if _fit_anchored_tags_on(fit_anchored_tags):
             body["fitAnchoredTags"] = True
         TurboSign._apply_schedule_overrides(body, **schedule)
         return body
@@ -342,13 +355,7 @@ class TurboSign:
             sender_name: Sender name
             sender_email: Sender email
             cc_emails: List of CC email addresses
-            fit_anchored_tags: Places each field sent with a ``template.anchor`` that is one
-                single-brace tag such as ``{ClientSign}`` (with ``replace`` placement or none,
-                and without ``useRegex``) the way a template's saved setup field is placed:
-                measured from the document's text and, with no ``template.size``, fitted to its
-                tag's line; with a size, centred on its tag. A tag missing from the document
-                still fails the request. Works with ``file``, ``file_link``, ``template_id`` and
-                ``deliverable_id``. Off by default; sent only when True.
+            fit_anchored_tags: Fits fields on single-brace tags. See "Fit fields to their tags" in the README.
 
         Returns:
             Response with documentId, status, previewUrl, and recipients (the API always
@@ -494,13 +501,7 @@ class TurboSign:
                 still sent. Tested with
                 ``is not None`` so an explicit False is honoured (a truthiness check would
                 silently drop it and let the backend email everyone).
-            fit_anchored_tags: Places each field sent with a ``template.anchor`` that is one
-                single-brace tag such as ``{ClientSign}`` (with ``replace`` placement or none,
-                and without ``useRegex``) the way a template's saved setup field is placed:
-                measured from the document's text and, with no ``template.size``, fitted to its
-                tag's line; with a size, centred on its tag. A tag missing from the document
-                still fails the request. Works with ``file``, ``file_link``, ``template_id`` and
-                ``deliverable_id``. Off by default; sent only when True.
+            fit_anchored_tags: Fits fields on single-brace tags. See "Fit fields to their tags" in the README.
 
         Returns:
             Response with success, documentId, status, recipients, and message (the API always
@@ -1044,7 +1045,8 @@ class TurboSign:
               ``override`` recipient, call :meth:`send_signature` with ``identityVerification``
               on the recipient, then :meth:`create_signing_url` for each signer (with
               ``identity_assertion`` for ``external_idv``).
-            - ``fields`` shorthand -> full field dicts (placement:'replace' + default size).
+            - ``fields`` shorthand -> full field dicts (placement:'replace' + default size, left
+              out when ``fit_anchored_tags`` is on so each field is fitted to its tag).
               Provide the top-level ``fields`` to override the shorthand with full control.
             - ``signing_order`` defaults to each recipient's index + 1.
             - ``send_email`` defaults to False (you own the UX; forwarded to the backend).
@@ -1084,11 +1086,8 @@ class TurboSign:
             send_email: Defaults to False for this flow: your app shows the signing page, so
                 the signing-link emails (and the initial CC notice) are suppressed. Passcode
                 and completed-copy emails are still sent.
-            fit_anchored_tags: As on :meth:`send_signature`: fields on single-brace tags are
-                placed like a template's saved setup fields. The per-recipient ``fields``
-                shorthand gives each field a size, so those fields are centred on their tags;
-                pass ``fields`` without a size to have them fitted. Sent only when True.
             return_url: Optional https completion fallback, passed to each embed URL.
+            fit_anchored_tags: Fits fields on single-brace tags. See "Fit fields to their tags" in the README.
 
         Returns:
             Dict with:
@@ -1155,7 +1154,9 @@ class TurboSign:
         # Full `fields` (when non-empty) win verbatim; otherwise expand each shorthand. An empty list
         # counts as absent, so it can't discard the shorthand and leave the send with no fields.
         expanded_fields: List[Dict[str, Any]] = fields if fields else [
-            field for r in recipients for field in _expand_recipient_fields(r)
+            field
+            for r in recipients
+            for field in _expand_recipient_fields(r, fit_anchored_tags=_fit_anchored_tags_on(fit_anchored_tags))
         ]
 
         sent = await cls.send_signature(

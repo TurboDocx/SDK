@@ -342,8 +342,8 @@ await TurboSign.send_signature(
 - With a size, the field keeps it and is centred on its tag.
 - A tag missing from the document still fails the request.
 - It works with `file`, `file_link`, `template_id` and `deliverable_id`. The template's saved setup is not read or changed.
-- It is off by default and sent only when `True`. Without it, your fields keep the standard placement.
-- The `create_embedded_signature()` `fields` shorthand gives each field a size, so those fields are centred on their tags. Pass `fields` without a size to have them fitted.
+- It is off by default. It is sent only when it is `True` or the string `"true"` (any case); any other value, `"false"` and `1` included, sends nothing. Without it, your fields keep the standard placement.
+- With it on, the `create_embedded_signature()` per-recipient `fields` shorthand leaves out its default size, so those fields are fitted too. A size you give on top-level `fields` is kept.
 
 #### `send_reminder()`
 
