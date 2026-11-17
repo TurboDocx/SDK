@@ -139,6 +139,11 @@ final class TurboSign
             $formData['ccEmails'] = json_encode($request->ccEmails);
         }
 
+        // Sent only when true: the API treats false like a missing key, so false leaves it out.
+        if ($request->fitAnchoredTags) {
+            $formData['fitAnchoredTags'] = true;
+        }
+
         // Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
         self::applyScheduleOverrides($formData, $request);
 
@@ -236,6 +241,11 @@ final class TurboSign
         // truthiness check would drop it and silently let the backend email the recipients.
         if ($request->sendEmail !== null) {
             $formData['sendEmail'] = $request->sendEmail;
+        }
+
+        // Sent only when true: the API treats false like a missing key, so false leaves it out.
+        if ($request->fitAnchoredTags) {
+            $formData['fitAnchoredTags'] = true;
         }
 
         // Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
@@ -566,6 +576,7 @@ final class TurboSign
             senderEmail: $request->senderEmail,
             ccEmails: $request->ccEmails,
             sendEmail: $request->sendEmail ?? false,
+            fitAnchoredTags: $request->fitAnchoredTags,
         ));
 
         // Match the backend's recipients back to the request by email so we can carry `name` and

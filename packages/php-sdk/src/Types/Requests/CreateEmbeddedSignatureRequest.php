@@ -31,6 +31,9 @@ final class CreateEmbeddedSignatureRequest
      *     so the signing-link emails (and the initial CC notice) are suppressed. Passcode and
      *     completed-copy emails are still sent.
      * @param string|null $returnUrl Optional completion fallback (https). Passed to each embed URL.
+     * @param bool $fitAnchoredTags Passed to sendSignature (see SendSignatureRequest). The
+     *     per-recipient `fields` shorthand gives each field a size, so those fields are centred on
+     *     their tags; pass `fields` without a size to have them fitted. Sent only when true.
      */
     public function __construct(
         public array $recipients,
@@ -47,5 +50,6 @@ final class CreateEmbeddedSignatureRequest
         public ?array $fields = null,
         public ?bool $sendEmail = null,
         public ?string $returnUrl = null,
+        public bool $fitAnchoredTags = false,
     ) {}
 }

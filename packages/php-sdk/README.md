@@ -326,6 +326,37 @@ $result = TurboSign::sendSignature(
 - `getTemplateSignatureSetup` throws `NotFoundException` (404, code `SignatureSetupNotFound`) when the template has no saved signature setup, or is not a template in your organization.
 - `role` works the same way on `createSignatureReviewLink()` (`Recipient`) and `createEmbeddedSignature()` (`EmbeddedSignatureRecipient`).
 
+#### Fit fields to their tags (`fitAnchoredTags`)
+
+Pass `fitAnchoredTags: true` to `SendSignatureRequest`, `CreateSignatureReviewLinkRequest` or `CreateEmbeddedSignatureRequest` to place each field you send on a tag the way a template's saved setup field is placed. It applies to a field whose template `anchor` is one tag in single braces with no spaces (such as `{ClientSign}`), with `replace` placement (or none) and without `useRegex`.
+
+```php
+use TurboDocx\TurboSign;
+use TurboDocx\Types\Field;
+use TurboDocx\Types\Recipient;
+use TurboDocx\Types\Requests\SendSignatureRequest;
+use TurboDocx\Types\SignatureFieldType;
+use TurboDocx\Types\TemplateConfig;
+
+$result = TurboSign::sendSignature(
+    new SendSignatureRequest(
+        recipients: [new Recipient('Jane Doe', 'jane@client.com', 1)],
+        fields: [
+            new Field(SignatureFieldType::SIGNATURE, 'jane@client.com', template: new TemplateConfig(anchor: '{ClientSign}')),
+        ],
+        file: file_get_contents('contract.pdf'),
+        fitAnchoredTags: true,
+    )
+);
+```
+
+- With no template `size`, the field is fitted to its tag's line: its height follows the line's font size and it starts where the tag starts.
+- With a size, the field keeps it and is centred on its tag.
+- A tag missing from the document still fails the request.
+- It works with `file`, `fileLink`, `templateId` and `deliverableId`. The template's saved setup is not read or changed.
+- It is off by default and sent only when `true`. Without it, your fields keep the standard placement.
+- The `createEmbeddedSignature()` `fields` shorthand on each `EmbeddedSignatureRecipient` gives each field a size, so those fields are centred on their tags. Pass `fields` on the request without a size to have them fitted.
+
 #### Signing in your own app (`sendEmail: false` + `createSigningUrl()`)
 
 Set `sendEmail: false` to create the signature request without emailing anyone, then mint a signing URL for each signer with `createSigningUrl()` when they are ready to sign in your app. For a signer with an email/SMS passcode or no verification, the URL is their reusable signing link for the life of the document, so treat it like a password; `external_idv` and `override` signers get a single-use URL that expires in about 5 minutes. Embedded signing must be enabled for your organization; check with `TurboSign::getEmbeddedSigningSettings()->enabled`.

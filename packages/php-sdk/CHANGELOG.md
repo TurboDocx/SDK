@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `SendSignatureRequest`, `CreateSignatureReviewLinkRequest` and `CreateEmbeddedSignatureRequest` take an optional `fitAnchoredTags` (default `false`). When `true`, each field sent on a single-brace tag such as `{ClientSign}` is placed the way a template's saved setup field is placed: with no template size it is fitted to its tag's line, with a size it is centred on its tag. It is sent only when `true`, so existing requests are unchanged.
+
 ## [0.9.0] - 2026-10-20
 
 ### Added
