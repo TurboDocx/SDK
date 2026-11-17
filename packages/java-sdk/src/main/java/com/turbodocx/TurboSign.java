@@ -53,6 +53,11 @@ public final class TurboSign {
                 true
         );
 
+        // Sent only when true: the API treats false like a missing key, so false leaves it out.
+        if (request.isFitAnchoredTags()) {
+            formData.put("fitAnchoredTags", "true");
+        }
+
         if (request.hasFile()) {
             putFileName(formData, request.getFileName());
             return httpClient.uploadFile(
@@ -102,6 +107,11 @@ public final class TurboSign {
         // != null, not truthiness: false (do not email) is meaningful and must not be dropped.
         if (request.getSendEmail() != null) {
             formData.put("sendEmail", String.valueOf(request.getSendEmail()));
+        }
+
+        // Sent only when true: the API treats false like a missing key, so false leaves it out.
+        if (request.isFitAnchoredTags()) {
+            formData.put("fitAnchoredTags", "true");
         }
 
         if (request.hasFile()) {
@@ -461,7 +471,8 @@ public final class TurboSign {
                 .recipients(mappedRecipients)
                 .fields(fields)
                 // Embedded flow default: suppress recipient emails (the host owns the UX).
-                .sendEmail(request.getSendEmail() != null ? request.getSendEmail() : Boolean.FALSE);
+                .sendEmail(request.getSendEmail() != null ? request.getSendEmail() : Boolean.FALSE)
+                .fitAnchoredTags(request.isFitAnchoredTags());
 
         if (request.hasFile()) {
             sendBuilder.file(request.getFile());

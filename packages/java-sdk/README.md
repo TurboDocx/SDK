@@ -312,6 +312,34 @@ SendSignatureResponse result = client.turboSign().sendSignature(
 - `role` works the same way on `createSignatureReviewLink` and, via `EmbeddedSignatureRecipient.Builder().role(...)`, on `createEmbeddedSignature`.
 - `new Recipient.Builder().role("client").name(...).email(...)` is the builder form, when you also need a phone or external id.
 
+#### Fit fields to their tags (`fitAnchoredTags`)
+
+Call `.fitAnchoredTags(true)` on the `SendSignatureRequest`, `CreateSignatureReviewLinkRequest` or `CreateEmbeddedSignatureRequest` builder to place each field you send on a tag the way a template's saved setup field is placed. It applies to a field whose template anchor is one tag in single braces with no spaces (such as `{ClientSign}`), with `replace` placement (or none) and without `useRegex`.
+
+```java
+SendSignatureResponse result = client.turboSign().sendSignature(
+    new SendSignatureRequest.Builder()
+        .file(Files.readAllBytes(Paths.get("contract.pdf")))
+        .recipients(Arrays.asList(new Recipient("Jane Doe", "jane@client.com", 1)))
+        .fields(Arrays.asList(
+            new Field.Builder()
+                .type("signature")
+                .recipientEmail("jane@client.com")
+                .template(new Field.TemplateAnchor.Builder().anchor("{ClientSign}").build())
+                .build()
+        ))
+        .fitAnchoredTags(true)
+        .build()
+);
+```
+
+- With no template size, the field is fitted to its tag's line: its height follows the line's font size and it starts where the tag starts.
+- With a size, the field keeps it and is centred on its tag.
+- A tag missing from the document still fails the request.
+- It works with `file`, `fileLink`, `templateId` and `deliverableId`. The template's saved setup is not read or changed.
+- It is off by default and sent only when `true`. Without it, your fields keep the standard placement.
+- The `createEmbeddedSignature()` per-recipient `fields` shorthand gives each field a size, so those fields are centred on their tags. Pass request `fields` without a size to have them fitted.
+
 #### Embedded signing: `sendEmail(false)` + `createSigningUrl()`
 
 To show the signing page in your own app instead of emailing a link, send with `sendEmail(false)`, then mint each signer's URL with `createSigningUrl()` when they're ready to sign.
@@ -435,6 +463,7 @@ for (EmbeddedSignatureRecipientResult r : result.getRecipients()) {
 | `fields` (per recipient) | `EmbeddedRecipientFields`: `signature`, `date`, `initials`, `fullName`, each the anchor text to replace. |
 | `fields` (request) | Optional full `Field` list. When set, it replaces every recipient's shorthand. |
 | `sendEmail` | Defaults to `false`. |
+| `fitAnchoredTags` | Optional, off by default. Passed to `sendSignature()`; see [Fit fields to their tags](#fit-fields-to-their-tags-fitanchoredtags). |
 | `returnUrl` | Optional completion URL passed to each embed URL. https only. |
 
 `CreateEmbeddedSignatureResponse`: `getDocumentId()` and `getRecipients()`, in signing order. Each `EmbeddedSignatureRecipientResult` has `getRecipientId()`, `getName()`, `getEmail()`, `getStatus()` (`"ready"`, `"pending"` or `"completed"`), `getEmbedUrl()` (set only when `"ready"`; mint it later with `createSigningUrl()`) and `getIdentityVerificationMode()`.

@@ -28,10 +28,20 @@ public class SendSignatureRequest {
      * {@code false} is forwarded rather than dropped.
      */
     private final Boolean sendEmail;
+    /**
+     * Places each field sent with a template anchor that is one single-brace tag such as
+     * {@code {ClientSign}} (with {@code replace} placement or none, and without {@code useRegex}) the
+     * way a template's saved setup field is placed: measured from the document's text and, with no
+     * template size, fitted to its tag's line; with a size, centred on its tag. A tag missing from the
+     * document still fails the request. Works with a file, file link, template ID or deliverable ID.
+     * Off by default; sent only when true (the API treats false like a missing key).
+     */
+    private final boolean fitAnchoredTags;
 
     private SendSignatureRequest(Builder builder) {
         this.schedule = builder.schedule;
         this.sendEmail = builder.sendEmail;
+        this.fitAnchoredTags = builder.fitAnchoredTags;
         this.file = builder.file;
         this.fileName = builder.fileName;
         this.fileLink = builder.fileLink;
@@ -102,6 +112,10 @@ public class SendSignatureRequest {
         return sendEmail;
     }
 
+    public boolean isFitAnchoredTags() {
+        return fitAnchoredTags;
+    }
+
     public boolean hasFile() {
         return file != null && file.length > 0;
     }
@@ -121,6 +135,7 @@ public class SendSignatureRequest {
         private List<String> ccEmails;
         private SignatureSchedule schedule;
         private Boolean sendEmail;
+        private boolean fitAnchoredTags;
 
         public Builder file(byte[] file) {
             this.file = file;
@@ -200,6 +215,15 @@ public class SendSignatureRequest {
          */
         public Builder sendEmail(Boolean sendEmail) {
             this.sendEmail = sendEmail;
+            return this;
+        }
+
+        /**
+         * Place each field on a single-brace tag such as {@code {ClientSign}} the way a template's
+         * saved setup field is placed (fitted to its tag's line when it has no size). Off by default.
+         */
+        public Builder fitAnchoredTags(boolean fitAnchoredTags) {
+            this.fitAnchoredTags = fitAnchoredTags;
             return this;
         }
 
