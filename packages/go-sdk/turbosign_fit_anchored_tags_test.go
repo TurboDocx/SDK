@@ -125,6 +125,12 @@ func TestTurboSign_FitAnchoredTags_OnSends(t *testing.T) {
 
 func embedWith(t *testing.T, fit bool) capturedRequest {
 	t.Helper()
+	return embedWithFields(t, fit, nil)
+}
+
+// embedWithFields is embedWith with optional top-level Fields (nil uses the shorthand).
+func embedWithFields(t *testing.T, fit bool, fields []Field) capturedRequest {
+	t.Helper()
 	var captured []capturedRequest
 	server := fitAnchoredTagsServer(t, &captured)
 	defer server.Close()
@@ -135,6 +141,7 @@ func embedWith(t *testing.T, fit bool) capturedRequest {
 		Recipients: []EmbeddedSignatureRecipient{
 			{Name: "Jane Doe", Email: "jane@example.com", Fields: &EmbeddedRecipientFields{Signature: "{ClientSign}"}},
 		},
+		Fields:          fields,
 		FitAnchoredTags: fit,
 	})
 	require.NoError(t, err)
@@ -149,5 +156,24 @@ func TestTurboSign_FitAnchoredTags_OnEmbeddedSignature(t *testing.T) {
 	})
 	t.Run("leaves the key out when false", func(t *testing.T) {
 		assert.NotContains(t, embedWith(t, false).form, "fitAnchoredTags")
+	})
+	t.Run("leaves the default size off shorthand fields when true, so they are fitted", func(t *testing.T) {
+		assert.Equal(t,
+			`[{"type":"signature","recipientEmail":"jane@example.com","template":{"anchor":"{ClientSign}","placement":"replace"}}]`,
+			embedWith(t, true).form["fields"])
+	})
+	t.Run("keeps the default size on shorthand fields when false", func(t *testing.T) {
+		assert.Equal(t,
+			`[{"type":"signature","recipientEmail":"jane@example.com",`+
+				`"template":{"anchor":"{ClientSign}","placement":"replace","size":{"width":100,"height":30}}}]`,
+			embedWith(t, false).form["fields"])
+	})
+	t.Run("keeps a size the caller gave on top-level Fields", func(t *testing.T) {
+		sized := []Field{{Type: "signature", RecipientEmail: "jane@example.com",
+			Template: &TemplateAnchor{Anchor: "{ClientSign}", Size: &Size{Width: 120, Height: 40}}}}
+		assert.Equal(t,
+			`[{"type":"signature","recipientEmail":"jane@example.com",`+
+				`"template":{"anchor":"{ClientSign}","size":{"width":120,"height":40}}}]`,
+			embedWithFields(t, true, sized).form["fields"])
 	})
 }

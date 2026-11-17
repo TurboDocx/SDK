@@ -321,7 +321,7 @@ result, err := client.TurboSign.SendSignature(ctx, &turbodocx.SendSignatureReque
 - A tag missing from the document still fails the request.
 - It works with `File`, `FileLink`, `TemplateID` and `DeliverableID`. The template's saved setup is not read or changed.
 - It is off by default and sent only when `true`. Without it, your fields keep the standard placement.
-- The `CreateEmbeddedSignature` `Fields` shorthand on each recipient gives each field a size, so those fields are centred on their tags. Pass `Fields` on the request without a size to have them fitted.
+- With it on, the `CreateEmbeddedSignature` per-recipient `Fields` shorthand leaves out its default size, so those fields are fitted too. A size you give on the request's `Fields` is kept.
 
 #### `SendReminder`
 
