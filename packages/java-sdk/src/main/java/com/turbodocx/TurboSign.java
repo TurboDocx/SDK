@@ -50,13 +50,9 @@ public final class TurboSign {
                 request.getSenderEmail(),
                 request.getCcEmails(),
                 request.getSchedule(),
+                request.isFitAnchoredTags(),
                 true
         );
-
-        // Sent only when true: the API treats false like a missing key, so false leaves it out.
-        if (request.isFitAnchoredTags()) {
-            formData.put("fitAnchoredTags", "true");
-        }
 
         if (request.hasFile()) {
             putFileName(formData, request.getFileName());
@@ -100,6 +96,7 @@ public final class TurboSign {
                 request.getSenderEmail(),
                 request.getCcEmails(),
                 request.getSchedule(),
+                request.isFitAnchoredTags(),
                 false
         );
 
@@ -107,11 +104,6 @@ public final class TurboSign {
         // != null, not truthiness: false (do not email) is meaningful and must not be dropped.
         if (request.getSendEmail() != null) {
             formData.put("sendEmail", String.valueOf(request.getSendEmail()));
-        }
-
-        // Sent only when true: the API treats false like a missing key, so false leaves it out.
-        if (request.isFitAnchoredTags()) {
-            formData.put("fitAnchoredTags", "true");
         }
 
         if (request.hasFile()) {
@@ -737,6 +729,7 @@ public final class TurboSign {
             String senderEmail,
             List<String> ccEmails,
             SignatureSchedule schedule,
+            boolean fitAnchoredTags,
             boolean forReview
     ) {
         Map<String, String> formData = new HashMap<>();
@@ -769,6 +762,11 @@ public final class TurboSign {
         if (ccEmails != null && !ccEmails.isEmpty()) {
             // Use JSON for ccEmails instead of comma-join
             formData.put("ccEmails", gson.toJson(ccEmails));
+        }
+
+        // Sent only when true: the API treats false like a missing key, so false leaves it out.
+        if (fitAnchoredTags) {
+            formData.put("fitAnchoredTags", "true");
         }
 
         applyScheduleOverrides(formData, schedule);
