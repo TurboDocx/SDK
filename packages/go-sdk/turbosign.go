@@ -221,6 +221,14 @@ type CreateSignatureReviewLinkRequest struct {
 	SenderEmail         string
 	CCEmails            []string
 
+	// FitAnchoredTags places each field sent with a Template.Anchor that is one single-brace tag
+	// such as "{ClientSign}" (with "replace" placement or none, and without UseRegex) the way a
+	// template's saved setup field is placed: measured from the document's text and, with no
+	// Template.Size, fitted to its tag's line; with a size, centred on its tag. A tag missing from
+	// the document still fails the request. Works with File, FileLink, TemplateID and DeliverableID.
+	// Off by default; sent only when true (the API treats false like a missing key).
+	FitAnchoredTags bool
+
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
 	SignatureSchedule
 }
@@ -281,6 +289,14 @@ type SendSignatureRequest struct {
 	// check would drop it and silently let the backend email the recipients. Nil is not
 	// forwarded, so existing callers send a byte-identical request.
 	SendEmail *bool
+
+	// FitAnchoredTags places each field sent with a Template.Anchor that is one single-brace tag
+	// such as "{ClientSign}" (with "replace" placement or none, and without UseRegex) the way a
+	// template's saved setup field is placed: measured from the document's text and, with no
+	// Template.Size, fitted to its tag's line; with a size, centred on its tag. A tag missing from
+	// the document still fails the request. Works with File, FileLink, TemplateID and DeliverableID.
+	// Off by default; sent only when true (the API treats false like a missing key).
+	FitAnchoredTags bool
 
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
 	SignatureSchedule
@@ -544,6 +560,11 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 		formData["ccEmails"] = string(ccEmailsJSON)
 	}
 
+	// Sent only when true: the API treats false like a missing key, so false leaves it out.
+	if req.FitAnchoredTags {
+		formData["fitAnchoredTags"] = "true"
+	}
+
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
 	if err := applyScheduleOverrides(formData, req.SignatureSchedule); err != nil {
 		return nil, err
@@ -627,6 +648,11 @@ func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureR
 	// scalars rather than dropped by a truthiness check.
 	if req.SendEmail != nil {
 		formData["sendEmail"] = strconv.FormatBool(*req.SendEmail)
+	}
+
+	// Sent only when true: the API treats false like a missing key, so false leaves it out.
+	if req.FitAnchoredTags {
+		formData["fitAnchoredTags"] = "true"
 	}
 
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
