@@ -221,16 +221,11 @@ type CreateSignatureReviewLinkRequest struct {
 	SenderEmail         string
 	CCEmails            []string
 
-	// FitAnchoredTags places each field sent with a Template.Anchor that is one single-brace tag
-	// such as "{ClientSign}" (with "replace" placement or none, and without UseRegex) the way a
-	// template's saved setup field is placed: measured from the document's text and, with no
-	// Template.Size, fitted to its tag's line; with a size, centred on its tag. A tag missing from
-	// the document still fails the request. Works with File, FileLink, TemplateID and DeliverableID.
-	// Off by default; sent only when true (the API treats false like a missing key).
-	FitAnchoredTags bool
-
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
 	SignatureSchedule
+
+	// FitAnchoredTags fits fields on single-brace tags. See "Fit fields to their tags" in the README.
+	FitAnchoredTags bool
 }
 
 // ReviewRecipient represents a recipient in the review link response
@@ -290,16 +285,11 @@ type SendSignatureRequest struct {
 	// forwarded, so existing callers send a byte-identical request.
 	SendEmail *bool
 
-	// FitAnchoredTags places each field sent with a Template.Anchor that is one single-brace tag
-	// such as "{ClientSign}" (with "replace" placement or none, and without UseRegex) the way a
-	// template's saved setup field is placed: measured from the document's text and, with no
-	// Template.Size, fitted to its tag's line; with a size, centred on its tag. A tag missing from
-	// the document still fails the request. Works with File, FileLink, TemplateID and DeliverableID.
-	// Off by default; sent only when true (the API treats false like a missing key).
-	FitAnchoredTags bool
-
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
 	SignatureSchedule
+
+	// FitAnchoredTags fits fields on single-brace tags. See "Fit fields to their tags" in the README.
+	FitAnchoredTags bool
 }
 
 // SendSignatureResponse is the response from SendSignature

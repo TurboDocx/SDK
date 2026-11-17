@@ -214,12 +214,10 @@ type CreateEmbeddedSignatureRequest struct {
 	// signing-link emails (and the initial CC notice) are suppressed. Passcode and completed-copy
 	// emails are still sent. Set a pointer to override.
 	SendEmail *bool
-	// FitAnchoredTags is passed to SendSignature (see SendSignatureRequest.FitAnchoredTags). The
-	// per-recipient Fields shorthand gives each field a size, so those fields are centred on their
-	// tags; pass Fields without a size to have them fitted.
-	FitAnchoredTags bool
 	// ReturnURL is an optional completion fallback (https). Passed to each embed URL when set.
 	ReturnURL string
+	// FitAnchoredTags fits fields on single-brace tags. See "Fit fields to their tags" in the README.
+	FitAnchoredTags bool
 }
 
 // EmbeddedSignatureRecipientResult is one resolved signer in a CreateEmbeddedSignatureResponse.
