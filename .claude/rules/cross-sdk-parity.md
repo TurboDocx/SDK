@@ -20,6 +20,8 @@ All SDKs must implement the same operations. When adding a feature to one SDK, i
 | getEmbeddedSigningSettings | `getEmbeddedSigningSettings()` | `get_embedded_signing_settings()` | `GetEmbeddedSigningSettings()` | `getEmbeddedSigningSettings()` | `getEmbeddedSigningSettings()` | `get_embedded_signing_settings()` |
 | createEmbeddedSignature | `createEmbeddedSignature()` | `create_embedded_signature()` | `CreateEmbeddedSignature()` | `createEmbeddedSignature()` | `createEmbeddedSignature()` | `create_embedded_signature()` |
 | getTemplateSignatureSetup | `getTemplateSignatureSetup()` | `get_template_signature_setup()` | `GetTemplateSignatureSetup()` | `getTemplateSignatureSetup()` | `getTemplateSignatureSetup()` | `get_template_signature_setup()` |
+| addTemplateSignatureAnchor | `addTemplateSignatureAnchor()` | `add_template_signature_anchor()` | `AddTemplateSignatureAnchor()` | `addTemplateSignatureAnchor()` | `addTemplateSignatureAnchor()` | `add_template_signature_anchor()` |
+| removeTemplateSignatureAnchor | `removeTemplateSignatureAnchor()` | `remove_template_signature_anchor()` | `RemoveTemplateSignatureAnchor()` | `removeTemplateSignatureAnchor()` | `removeTemplateSignatureAnchor()` | `remove_template_signature_anchor()` |
 
 **getTemplateSignatureSetup note:** `GET /turbosign/templates/{id}/signature-setup` lists a
 template's signer roles (`key` is the value for `recipients[].role`), in signing order. JS, Go, PHP
@@ -27,6 +29,18 @@ and Java return a typed `TemplateSignatureSetup`; Python and Ruby return the raw
 (`templateId`, `roles`), matching how they handle every other TurboSign read. A template with no
 saved signature setup, or one outside the caller's org, is a 404 with code `SignatureSetupNotFound`
 (the not-found error class in each SDK); every SDK's docstring and README say so.
+
+**Anchored field notes:** the setup summary also carries `anchors` (`fieldId?`, `roleKey`, `type`,
+`anchor`, `placement` (always present), `offset?`, `size?`, `notFound`) and each role's
+`anchoredFieldCount`. `addTemplateSignatureAnchor` POSTs `{ roleKey, type, anchor, size?, offset?,
+placement?, defaultValue?, isReadonly? }` to `/turbosign/templates/{id}/signature-setup/anchors`;
+`removeTemplateSignatureAnchor` DELETEs `.../anchors/{fieldId}` (URL-encoded). Both unwrap
+`{ data: { results } }` (add: `fieldId`, `signatureSetup`, `tagBecameSignatureField`; remove:
+`signatureSetup`, the raw stored setup, typed loosely). Both need an administrator or contributor
+key. `applySignatureSetup` is an optional boolean on both send paths, forwarded when set (an
+explicit `false` too) and left out otherwise. The PUT `.../anchors/by-tag` route is not wrapped:
+its revert form takes variable-version ids the SDK cannot read, and its fields form is covered by
+add + remove.
 
 **Send `fields` rule:** without a role the API answers a MISSING `fields` key with 400
 `FieldsRequired`, but an empty list on a send would go out as a document with nothing to sign. So

@@ -311,13 +311,17 @@ public class HttpClient {
     }
 
     public <T> T delete(String path, Class<T> responseClass) throws IOException {
+        return delete(path, (Type) responseClass);
+    }
+
+    public <T> T delete(String path, Type responseType) throws IOException {
         Request request = new Request.Builder()
                 .url(baseUrl + path)
                 .headers(buildHeaders())
                 .delete()
                 .build();
 
-        return execute(request, responseClass);
+        return execute(request, responseType);
     }
 
     public <T> T postFormData(String path, MultipartBody body, Class<T> responseClass) throws IOException {

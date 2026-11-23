@@ -11,6 +11,7 @@ public class TemplateSignatureRole {
     private String defaultName;
     private String defaultEmail;
     private int fieldCount;
+    private int anchoredFieldCount;
 
     /** The value to pass as the recipient's {@code role}. */
     public String getKey() {
@@ -42,8 +43,13 @@ public class TemplateSignatureRole {
         return defaultEmail;
     }
 
-    /** How many fields are saved for this role. */
+    /** How many fields are saved for this role, placed and anchored. */
     public int getFieldCount() {
         return fieldCount;
+    }
+
+    /** How many of those fields are anchored to a template tag (0 from an older backend that does not send it). */
+    public int getAnchoredFieldCount() {
+        return anchoredFieldCount;
     }
 }

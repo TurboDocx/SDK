@@ -18,7 +18,9 @@ use TurboDocx\Types\Requests\CreateEmbeddedSignatureRequest;
 use TurboDocx\Types\Requests\CreateSignatureReviewLinkRequest;
 use TurboDocx\Types\Requests\CreateSigningUrlRequest;
 use TurboDocx\Types\Requests\EmbeddedSignatureRecipient;
+use TurboDocx\Types\Requests\AddTemplateSignatureAnchorRequest;
 use TurboDocx\Types\Requests\SendSignatureRequest;
+use TurboDocx\Types\Responses\AddTemplateSignatureAnchorResponse;
 use TurboDocx\Types\Responses\AuditTrailResponse;
 use TurboDocx\Types\Responses\CreateEmbeddedSignatureResponse;
 use TurboDocx\Types\Responses\CreateSignatureReviewLinkResponse;
@@ -27,6 +29,7 @@ use TurboDocx\Types\Responses\DocumentRecipientsResponse;
 use TurboDocx\Types\Responses\DocumentStatusResponse;
 use TurboDocx\Types\Responses\EmbeddedSignatureRecipientResult;
 use TurboDocx\Types\Responses\EmbeddedSigningSettings;
+use TurboDocx\Types\Responses\RemoveTemplateSignatureAnchorResponse;
 use TurboDocx\Types\Responses\ResendEmailResponse;
 use TurboDocx\Types\Responses\SendSignatureResponse;
 use TurboDocx\Types\Responses\TemplateSignatureSetup;
@@ -139,6 +142,11 @@ final class TurboSign
             $formData['ccEmails'] = json_encode($request->ccEmails);
         }
 
+        // Like sendEmail: tested with `!== null` so an explicit false is forwarded, not dropped.
+        if ($request->applySignatureSetup !== null) {
+            $formData['applySignatureSetup'] = $request->applySignatureSetup;
+        }
+
         // Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
         self::applyScheduleOverrides($formData, $request);
 
@@ -238,6 +246,11 @@ final class TurboSign
             $formData['sendEmail'] = $request->sendEmail;
         }
 
+        // Like sendEmail: tested with `!== null` so an explicit false is forwarded, not dropped.
+        if ($request->applySignatureSetup !== null) {
+            $formData['applySignatureSetup'] = $request->applySignatureSetup;
+        }
+
         // Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
         self::applyScheduleOverrides($formData, $request);
 
@@ -301,6 +314,84 @@ final class TurboSign
         // HTTP client auto-unwraps {data: ...} responses
         $response = $client->get('/turbosign/templates/' . rawurlencode($templateId) . '/signature-setup');
         return TemplateSignatureSetup::fromArray(is_array($response) ? $response : []);
+    }
+
+    /**
+     * Add an anchored field to a template's saved signature setup
+     *
+     * The field is placed on every occurrence of the tag (e.g. `{ClientSign}`) for one signer
+     * role. Requires an administrator or contributor API key. Sending the same type on the same
+     * tag for the same role again returns that field (same `fieldId`, `tagBecameSignatureField`
+     * false), updated with any `size`, `offset`, `placement`, `defaultValue` or `isReadonly` you
+     * send; a setting you leave out keeps its saved value.
+     *
+     * @param AddTemplateSignatureAnchorRequest $request The template, role, field type and tag
+     * @return AddTemplateSignatureAnchorResponse The field's id and the saved setup
+     * @throws \TurboDocx\Exceptions\NotFoundException (404, code `SignatureSetupNotFound`,
+     *     `SignerRoleNotFound` or `TemplateNotFound`)
+     * @throws \TurboDocx\Exceptions\ConflictException (409, code `AnchorOwnedByOtherRole` when the
+     *     tag belongs to another role, or `AnchorTagHasField` when the tag already has a different
+     *     field)
+     * @throws ValidationException (400, e.g. `ReadonlyFieldNoDefaultValue`, or a malformed anchor)
+     * @throws TurboDocxException (423) while the template is locked (being edited in TurboDocx).
+     *     The body carries no code, so check `$e->statusCode === 423`.
+     *
+     * @example
+     * ```php
+     * $added = TurboSign::addTemplateSignatureAnchor(new AddTemplateSignatureAnchorRequest(
+     *     templateId: $templateId,
+     *     roleKey: 'signer_1',
+     *     type: SignatureFieldType::SIGNATURE,
+     *     anchor: '{ClientSign}',
+     * ));
+     * echo $added->fieldId;
+     * ```
+     */
+    public static function addTemplateSignatureAnchor(
+        AddTemplateSignatureAnchorRequest $request
+    ): AddTemplateSignatureAnchorResponse {
+        $client = self::getClient();
+        // The endpoint replies { data: { results } }; the HTTP client strips `data`, so unwrap `results` here.
+        $response = $client->post(
+            '/turbosign/templates/' . rawurlencode($request->templateId) . '/signature-setup/anchors',
+            $request->toArray()
+        );
+        // Strictly `results`, as the other SDKs read it: the outer object is never taken as the result
+        $results = is_array($response) ? ($response['results'] ?? null) : null;
+
+        return AddTemplateSignatureAnchorResponse::fromArray(is_array($results) ? $results : []);
+    }
+
+    /**
+     * Remove an anchored field from a template's saved signature setup
+     *
+     * Takes the `fieldId` that {@see TurboSign::addTemplateSignatureAnchor()} or
+     * {@see TurboSign::getTemplateSignatureSetup()} returned. Requires an administrator or
+     * contributor API key.
+     *
+     * @param string $templateId ID of the template
+     * @param string $fieldId ID of the anchored field
+     * @return RemoveTemplateSignatureAnchorResponse The saved setup without the field
+     * @throws \TurboDocx\Exceptions\NotFoundException (404, code `SetupFieldNotFound` or
+     *     `SignatureSetupNotFound`)
+     * @throws TurboDocxException (423) while the template is locked; check `$e->statusCode === 423`
+     *
+     * @example
+     * ```php
+     * TurboSign::removeTemplateSignatureAnchor($templateId, $fieldId);
+     * ```
+     */
+    public static function removeTemplateSignatureAnchor(
+        string $templateId,
+        string $fieldId
+    ): RemoveTemplateSignatureAnchorResponse {
+        $client = self::getClient();
+        $response = $client->delete(
+            '/turbosign/templates/' . rawurlencode($templateId) . '/signature-setup/anchors/' . rawurlencode($fieldId)
+        );
+        $results = is_array($response) ? ($response['results'] ?? null) : null;
+
+        return RemoveTemplateSignatureAnchorResponse::fromArray(is_array($results) ? $results : []);
     }
 
     /**
