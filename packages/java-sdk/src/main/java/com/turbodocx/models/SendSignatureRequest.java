@@ -28,10 +28,13 @@ public class SendSignatureRequest {
      * {@code false} is forwarded rather than dropped.
      */
     private final Boolean sendEmail;
+    /** Fits fields on single-brace tags. See "Fit fields to their tags" in the README. */
+    private final boolean fitAnchoredTags;
 
     private SendSignatureRequest(Builder builder) {
         this.schedule = builder.schedule;
         this.sendEmail = builder.sendEmail;
+        this.fitAnchoredTags = builder.fitAnchoredTags;
         this.file = builder.file;
         this.fileName = builder.fileName;
         this.fileLink = builder.fileLink;
@@ -102,6 +105,10 @@ public class SendSignatureRequest {
         return sendEmail;
     }
 
+    public boolean isFitAnchoredTags() {
+        return fitAnchoredTags;
+    }
+
     public boolean hasFile() {
         return file != null && file.length > 0;
     }
@@ -121,6 +128,7 @@ public class SendSignatureRequest {
         private List<String> ccEmails;
         private SignatureSchedule schedule;
         private Boolean sendEmail;
+        private boolean fitAnchoredTags;
 
         public Builder file(byte[] file) {
             this.file = file;
@@ -200,6 +208,12 @@ public class SendSignatureRequest {
          */
         public Builder sendEmail(Boolean sendEmail) {
             this.sendEmail = sendEmail;
+            return this;
+        }
+
+        /** Fits fields on single-brace tags. See "Fit fields to their tags" in the README. */
+        public Builder fitAnchoredTags(boolean fitAnchoredTags) {
+            this.fitAnchoredTags = fitAnchoredTags;
             return this;
         }
 

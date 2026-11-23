@@ -36,6 +36,7 @@ final class CreateSignatureReviewLinkRequest
      * @param array{value:int,unit:string}|null $expirationWarning How far before expiry warnings
      *     start. A zero value means no warnings at all.
      * @param array{value:int,unit:string}|null $expirationWarningInterval Gap between warnings
+     * @param bool $fitAnchoredTags Fits fields on single-brace tags. See "Fit fields to their tags" in the README.
      */
     public function __construct(
         public array $recipients,
@@ -58,5 +59,6 @@ final class CreateSignatureReviewLinkRequest
         public ?array $expireAfter = null,
         public ?array $expirationWarning = null,
         public ?array $expirationWarningInterval = null,
+        public bool $fitAnchoredTags = false,
     ) {}
 }

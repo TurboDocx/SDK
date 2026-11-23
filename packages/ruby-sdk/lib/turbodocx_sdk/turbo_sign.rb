@@ -62,6 +62,8 @@ module TurboDocxSdk
       #   signer. Signature and initial fields are always required: the API rejects
       #   "required" => false on them with a 400.
       #
+      #   :fitAnchoredTags fits fields on single-brace tags. See "Fit fields to their tags" in the README.
+      #
       #   Template signer roles: when sending a +templateId+ whose signers and fields were set up
       #   in TurboDocx, give each recipient a "role" (e.g. "client") instead of a "signingOrder";
       #   the fields saved for that role are used, so :fields may be omitted (any passed are
@@ -243,13 +245,15 @@ module TurboDocxSdk
       #   For an external_idv or override recipient, call +send_signature+ with identityVerification
       #   on the recipient, then +create_signing_url+ for each signer (with +identity_assertion+ for
       #   external_idv).
-      # - +fields+ shorthand => full field objects (placement:"replace" + a default size). Provide the
-      #   top-level +fields+ to override the shorthand with full field control.
+      # - +fields+ shorthand => full field objects (placement:"replace" + a default size, left out when
+      #   +fitAnchoredTags+ is on so each field is fitted to its tag). Provide the top-level +fields+ to
+      #   override the shorthand with full field control.
       # - +signingOrder+ defaults to each recipient's array index + 1.
       # - +sendEmail+ defaults to false: your app shows the signing page, so the signing-link emails
       #   (and the initial CC notice) are suppressed. Passcode and completed-copy emails still go out.
       # - +returnUrl+ is passed through to each embed URL only when provided (https, enforced by
       #   +create_signing_url+).
+      # - +fitAnchoredTags+ fits fields on single-brace tags. See "Fit fields to their tags" in the README.
       #
       # Turn-aware: with a real (sequential) signing order the backend only mints a URL for the signer
       # whose turn it is. Rather than throw the whole call away, each result carries a "status":
@@ -263,7 +267,7 @@ module TurboDocxSdk
       #   :auth, :fields, :role -- the template signer role this recipient fills; a role left out
       #   falls back to the template's saved signer, who also gets an embed URL in the result), and any of :file/:fileName/:fileLink/:templateId/:deliverableId,
       #   :documentName, :documentDescription, :senderName, :senderEmail, :ccEmails, :fields (full
-      #   field override), :sendEmail, :returnUrl
+      #   field override), :sendEmail, :fitAnchoredTags, :returnUrl
       # @return [Hash] with "documentId" and "recipients" (each "recipientId", "name", "email",
       #   "embedUrl", "status", "identityVerificationMode"). For a "ready" signer
       #   "identityVerificationMode" is the mode the backend resolved for the URL; for "pending" /
@@ -317,7 +321,10 @@ module TurboDocxSdk
         # Full `fields` (when non-empty) win verbatim; otherwise expand each recipient's shorthand. An
         # empty list counts as absent, so it can't discard the shorthand and leave the send with no fields.
         fields = req_val(request, :fields)
-        fields = recipients.flat_map { |r| expand_recipient_fields(r) } if fields.nil? || fields.empty?
+        if fields.nil? || fields.empty?
+          fit = fit_anchored_tags_on?(req_val(request, :fitAnchoredTags))
+          fields = recipients.flat_map { |r| expand_recipient_fields(r, fit_anchored_tags: fit) }
+        end
 
         send_request = {
           "recipients" => mapped_recipients,
@@ -327,7 +334,7 @@ module TurboDocxSdk
           "sendEmail" => req_val(request, :sendEmail).nil? ? false : req_val(request, :sendEmail)
         }
         %i[file fileName fileLink templateId deliverableId documentName documentDescription
-           senderName senderEmail ccEmails].each do |key|
+           senderName senderEmail ccEmails fitAnchoredTags].each do |key|
           value = req_val(request, key)
           send_request[key.to_s] = value unless value.nil?
         end
@@ -628,9 +635,16 @@ module TurboDocxSdk
         nil
       end
 
+      # Whether fitAnchoredTags is on: true or the string "true" in any case. Anything else, "false"
+      # and 1 included, is off and sends nothing.
+      def fit_anchored_tags_on?(value)
+        value == true || (value.is_a?(String) && value.casecmp?("true"))
+      end
+
       # Expand a recipient's +fields+ shorthand into full field objects -- one per provided key,
-      # anchored to the given text with placement:"replace" and the key's default size.
-      def expand_recipient_fields(recipient)
+      # anchored to the given text with placement:"replace" and the key's default size. With
+      # fitAnchoredTags on, the size is left out so the API fits each field to its tag.
+      def expand_recipient_fields(recipient, fit_anchored_tags: false)
         shorthand = req_val(recipient, :fields)
         return [] if shorthand.nil?
 
@@ -639,11 +653,9 @@ module TurboDocxSdk
           anchor = req_val(shorthand, key.to_sym)
           next if anchor.nil?
 
-          fields << {
-            "type" => spec[:type],
-            "recipientEmail" => email,
-            "template" => { "anchor" => anchor, "placement" => "replace", "size" => spec[:size] }
-          }
+          template = { "anchor" => anchor, "placement" => "replace" }
+          template["size"] = spec[:size] unless fit_anchored_tags
+          fields << { "type" => spec[:type], "recipientEmail" => email, "template" => template }
         end
       end
 
@@ -714,6 +726,9 @@ module TurboDocxSdk
           cc_array = cc.is_a?(Array) ? cc : [cc]
           form_data["ccEmails"] = JSON.generate(cc_array)
         end
+
+        # Sent only when on (see fit_anchored_tags_on?): the API treats false like a missing key.
+        form_data["fitAnchoredTags"] = true if fit_anchored_tags_on?(req_val(request, :fitAnchoredTags))
 
         apply_schedule_overrides(form_data, request)
 

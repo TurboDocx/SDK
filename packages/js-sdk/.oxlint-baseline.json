@@ -936,7 +936,6 @@
     },
     {
       "files": [
-        "src/modules/sign.ts",
         "src/utils/client-context.ts"
       ],
       "rules": {

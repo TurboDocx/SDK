@@ -223,6 +223,9 @@ type CreateSignatureReviewLinkRequest struct {
 
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
 	SignatureSchedule
+
+	// FitAnchoredTags fits fields on single-brace tags. See "Fit fields to their tags" in the README.
+	FitAnchoredTags bool
 }
 
 // ReviewRecipient represents a recipient in the review link response
@@ -284,6 +287,9 @@ type SendSignatureRequest struct {
 
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
 	SignatureSchedule
+
+	// FitAnchoredTags fits fields on single-brace tags. See "Fit fields to their tags" in the README.
+	FitAnchoredTags bool
 }
 
 // SendSignatureResponse is the response from SendSignature
@@ -498,10 +504,26 @@ func setFieldsFormValue(formData map[string]string, fields []Field, forReview bo
 	return nil
 }
 
-// CreateSignatureReviewLink prepares a document for review without sending emails.
-// Use this to preview field placement before sending.
-func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *CreateSignatureReviewLinkRequest) (*CreateSignatureReviewLinkResponse, error) {
-	recipientsJSON, err := json.Marshal(req.Recipients)
+// signatureForm is what both send paths put on the request body.
+type signatureForm struct {
+	recipients          []Recipient
+	fields              []Field
+	forReview           bool
+	documentName        string
+	documentDescription string
+	senderName          string
+	senderEmail         string
+	ccEmails            []string
+	sendEmail           *bool
+	fitAnchoredTags     bool
+	schedule            SignatureSchedule
+}
+
+// buildSignatureFormData builds the body both send paths share, before the file input is added.
+// The same keys go on the multipart form (file upload) and on the JSON body (file link,
+// deliverable or template), so every send option is written here once.
+func (c *TurboSignClient) buildSignatureFormData(f signatureForm) (map[string]string, error) {
+	recipientsJSON, err := json.Marshal(f.recipients)
 	if err != nil {
 		return nil, fmt.Errorf("marshal recipients: %w", err)
 	}
@@ -513,39 +535,73 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 		"recipients": string(recipientsJSON),
 	}
 
-	if err := setFieldsFormValue(formData, req.Fields, true); err != nil {
+	if err := setFieldsFormValue(formData, f.fields, f.forReview); err != nil {
 		return nil, err
 	}
 
-	if req.DocumentName != "" {
-		formData["documentName"] = req.DocumentName
+	if f.documentName != "" {
+		formData["documentName"] = f.documentName
 	}
-	if req.DocumentDescription != "" {
-		formData["documentDescription"] = req.DocumentDescription
+	if f.documentDescription != "" {
+		formData["documentDescription"] = f.documentDescription
 	}
 
 	// Use request senderEmail/senderName if provided, otherwise fall back to configured values
-	if req.SenderEmail != "" {
-		formData["senderEmail"] = req.SenderEmail
+	if f.senderEmail != "" {
+		formData["senderEmail"] = f.senderEmail
 	} else {
 		formData["senderEmail"] = senderEmail
 	}
-	if req.SenderName != "" {
-		formData["senderName"] = req.SenderName
+	if f.senderName != "" {
+		formData["senderName"] = f.senderName
 	} else if senderName != "" {
 		formData["senderName"] = senderName
 	}
 
-	if len(req.CCEmails) > 0 {
-		ccEmailsJSON, err := json.Marshal(req.CCEmails)
+	if len(f.ccEmails) > 0 {
+		ccEmailsJSON, err := json.Marshal(f.ccEmails)
 		if err != nil {
 			return nil, fmt.Errorf("marshal ccEmails: %w", err)
 		}
 		formData["ccEmails"] = string(ccEmailsJSON)
 	}
 
+	// Forward email suppression (send path only) when explicitly set. Nil keeps the backend
+	// default (send); false is a meaningful "do not email" and must survive, so it is formatted
+	// like the schedule scalars rather than dropped by a truthiness check.
+	if f.sendEmail != nil {
+		formData["sendEmail"] = strconv.FormatBool(*f.sendEmail)
+	}
+
+	// Sent only when true: the API treats false like a missing key, so false leaves it out.
+	if f.fitAnchoredTags {
+		formData["fitAnchoredTags"] = "true"
+	}
+
 	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
-	if err := applyScheduleOverrides(formData, req.SignatureSchedule); err != nil {
+	if err := applyScheduleOverrides(formData, f.schedule); err != nil {
+		return nil, err
+	}
+
+	return formData, nil
+}
+
+// CreateSignatureReviewLink prepares a document for review without sending emails.
+// Use this to preview field placement before sending.
+func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *CreateSignatureReviewLinkRequest) (*CreateSignatureReviewLinkResponse, error) {
+	formData, err := c.buildSignatureFormData(signatureForm{
+		recipients:          req.Recipients,
+		fields:              req.Fields,
+		forReview:           true,
+		documentName:        req.DocumentName,
+		documentDescription: req.DocumentDescription,
+		senderName:          req.SenderName,
+		senderEmail:         req.SenderEmail,
+		ccEmails:            req.CCEmails,
+		fitAnchoredTags:     req.FitAnchoredTags,
+		schedule:            req.SignatureSchedule,
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -579,58 +635,19 @@ func (c *TurboSignClient) CreateSignatureReviewLink(ctx context.Context, req *Cr
 
 // SendSignature prepares a document for signing and sends emails in a single call.
 func (c *TurboSignClient) SendSignature(ctx context.Context, req *SendSignatureRequest) (*SendSignatureResponse, error) {
-	recipientsJSON, err := json.Marshal(req.Recipients)
+	formData, err := c.buildSignatureFormData(signatureForm{
+		recipients:          req.Recipients,
+		fields:              req.Fields,
+		documentName:        req.DocumentName,
+		documentDescription: req.DocumentDescription,
+		senderName:          req.SenderName,
+		senderEmail:         req.SenderEmail,
+		ccEmails:            req.CCEmails,
+		sendEmail:           req.SendEmail,
+		fitAnchoredTags:     req.FitAnchoredTags,
+		schedule:            req.SignatureSchedule,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("marshal recipients: %w", err)
-	}
-
-	// Get sender config from client
-	senderEmail, senderName := c.http.GetSenderConfig()
-
-	formData := map[string]string{
-		"recipients": string(recipientsJSON),
-	}
-
-	if err := setFieldsFormValue(formData, req.Fields, false); err != nil {
-		return nil, err
-	}
-
-	if req.DocumentName != "" {
-		formData["documentName"] = req.DocumentName
-	}
-	if req.DocumentDescription != "" {
-		formData["documentDescription"] = req.DocumentDescription
-	}
-
-	// Use request senderEmail/senderName if provided, otherwise fall back to configured values
-	if req.SenderEmail != "" {
-		formData["senderEmail"] = req.SenderEmail
-	} else {
-		formData["senderEmail"] = senderEmail
-	}
-	if req.SenderName != "" {
-		formData["senderName"] = req.SenderName
-	} else if senderName != "" {
-		formData["senderName"] = senderName
-	}
-
-	if len(req.CCEmails) > 0 {
-		ccEmailsJSON, err := json.Marshal(req.CCEmails)
-		if err != nil {
-			return nil, fmt.Errorf("marshal ccEmails: %w", err)
-		}
-		formData["ccEmails"] = string(ccEmailsJSON)
-	}
-
-	// Forward email suppression only when explicitly set. Nil keeps the backend default (send);
-	// false is a meaningful "do not email" and must survive, so it is formatted like the schedule
-	// scalars rather than dropped by a truthiness check.
-	if req.SendEmail != nil {
-		formData["sendEmail"] = strconv.FormatBool(*req.SendEmail)
-	}
-
-	// Per-document reminder + expiration overrides; omitted fields inherit the org defaults.
-	if err := applyScheduleOverrides(formData, req.SignatureSchedule); err != nil {
 		return nil, err
 	}
 

@@ -216,6 +216,8 @@ type CreateEmbeddedSignatureRequest struct {
 	SendEmail *bool
 	// ReturnURL is an optional completion fallback (https). Passed to each embed URL when set.
 	ReturnURL string
+	// FitAnchoredTags fits fields on single-brace tags. See "Fit fields to their tags" in the README.
+	FitAnchoredTags bool
 }
 
 // EmbeddedSignatureRecipientResult is one resolved signer in a CreateEmbeddedSignatureResponse.
@@ -303,10 +305,11 @@ func resolveIdentityVerification(auth *EmbeddedRecipientAuth) *IdentityVerificat
 
 // expandRecipientFields expands a recipient's Fields shorthand into full Field objects — one per
 // provided key, anchored to the given text with Placement "replace" and the key's default size.
+// With fitAnchoredTags on, the size is left out so the API fits each field to its tag.
 //
 // The keys are checked in a fixed order (not by ranging a map, whose iteration order Go
 // randomizes) so the produced slice is deterministic.
-func expandRecipientFields(recipient EmbeddedSignatureRecipient) []Field {
+func expandRecipientFields(recipient EmbeddedSignatureRecipient, fitAnchoredTags bool) []Field {
 	shorthand := recipient.Fields
 	if shorthand == nil {
 		return nil
@@ -328,14 +331,14 @@ func expandRecipientFields(recipient EmbeddedSignatureRecipient) []Field {
 		if e.anchor == "" {
 			continue
 		}
+		template := &TemplateAnchor{Anchor: e.anchor, Placement: "replace"}
+		if !fitAnchoredTags {
+			template.Size = &Size{Width: e.spec.width, Height: e.spec.height}
+		}
 		fields = append(fields, Field{
 			Type:           e.spec.fieldType,
 			RecipientEmail: recipient.Email,
-			Template: &TemplateAnchor{
-				Anchor:    e.anchor,
-				Placement: "replace",
-				Size:      &Size{Width: e.spec.width, Height: e.spec.height},
-			},
+			Template:       template,
 		})
 	}
 	return fields
@@ -475,7 +478,7 @@ func (c *TurboSignClient) CreateEmbeddedSignature(ctx context.Context, req *Crea
 	if len(fields) == 0 {
 		fields = nil
 		for _, r := range req.Recipients {
-			fields = append(fields, expandRecipientFields(r)...)
+			fields = append(fields, expandRecipientFields(r, req.FitAnchoredTags)...)
 		}
 	}
 
@@ -490,6 +493,7 @@ func (c *TurboSignClient) CreateEmbeddedSignature(ctx context.Context, req *Crea
 		Recipients:          mappedRecipients,
 		Fields:              fields,
 		SendEmail:           sendEmail,
+		FitAnchoredTags:     req.FitAnchoredTags,
 		File:                req.File,
 		FileName:            req.FileName,
 		FileLink:            req.FileLink,

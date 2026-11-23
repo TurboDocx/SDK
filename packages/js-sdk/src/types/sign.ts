@@ -367,6 +367,8 @@ export interface CreateEmbeddedSignatureRequest {
    * (and the initial CC notice) are suppressed. Passcode and completed-copy emails are still sent.
    */
   sendEmail?: boolean;
+  /** Fits fields sent on single-brace tags such as `{ClientSign}`. See "Fit fields to their tags" in the README. */
+  fitAnchoredTags?: boolean;
   /**
    * Optional completion fallback. Must be an https URL — enforced client-side by
    * {@link TurboSign.createSigningUrl} when the signing URL is minted. Passed to each embed URL.
@@ -723,6 +725,8 @@ export interface CreateSignatureReviewLinkRequest {
   senderEmail?: string;
   /** CC emails (comma-separated or array) */
   ccEmails?: string | string[];
+  /** Fits fields sent on single-brace tags such as `{ClientSign}`. See "Fit fields to their tags" in the README. */
+  fitAnchoredTags?: boolean;
   /**
    * Per-document reminder + expiration overrides. Omit to inherit the organization's defaults.
    * @see SignatureScheduleOptions
@@ -798,6 +802,8 @@ export interface SendSignatureRequest {
    * dropped.
    */
   sendEmail?: boolean;
+  /** Fits fields sent on single-brace tags such as `{ClientSign}`. See "Fit fields to their tags" in the README. */
+  fitAnchoredTags?: boolean;
   /**
    * Per-document reminder + expiration overrides. Omit to inherit the organization's defaults.
    * @see SignatureScheduleOptions

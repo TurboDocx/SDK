@@ -41,6 +41,7 @@ final class SendSignatureRequest
      *     signing, where your app shows the signing page: the document still goes out for signing,
      *     and passcode and completed-copy emails are still sent. Presence is tested with
      *     `!== null`, so `false` is forwarded rather than dropped.
+     * @param bool $fitAnchoredTags Fits fields on single-brace tags. See "Fit fields to their tags" in the README.
      */
     public function __construct(
         public array $recipients,
@@ -64,5 +65,6 @@ final class SendSignatureRequest
         public ?array $expirationWarning = null,
         public ?array $expirationWarningInterval = null,
         public ?bool $sendEmail = null,
+        public bool $fitAnchoredTags = false,
     ) {}
 }
